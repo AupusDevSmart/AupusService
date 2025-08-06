@@ -9,10 +9,11 @@ export interface BaseEntity {
 
 export type ModalMode = 'create' | 'edit' | 'view';
 
-export interface ModalState<T extends BaseEntity> {
+export interface ModalState<T = any> {
   isOpen: boolean;
   mode: ModalMode;
   entity: T | null;
+  preselectedData?: any;
 }
 
 export interface BaseFilters {

@@ -9,14 +9,31 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   Eye, 
   Edit3, 
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  MoreHorizontal
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BaseEntity, TableColumn, Pagination } from '@/types/base';
+
+// NOVA: Interface para ações customizadas
+interface CustomAction<T> {
+  key: string;
+  label: string;
+  handler: (entity: T) => void;
+  condition?: (entity: T) => boolean;
+  icon?: React.ReactNode;
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+}
 
 interface BaseTableProps<T extends BaseEntity> {
   data: T[];
@@ -27,6 +44,7 @@ interface BaseTableProps<T extends BaseEntity> {
   onView?: (entity: T) => void;
   onEdit?: (entity: T) => void;
   onDelete?: (entity: T) => void;
+  customActions?: CustomAction<T>[]; // NOVA: Ações customizadas
   emptyMessage?: string;
   emptyIcon?: React.ReactNode;
 }
@@ -40,10 +58,28 @@ export function BaseTable<T extends BaseEntity>({
   onView,
   onEdit,
   onDelete,
+  customActions = [], // NOVA: Array de ações customizadas
   emptyMessage = "Nenhum registro encontrado.",
   emptyIcon
 }: BaseTableProps<T>) {
-  const hasActions = onView || onEdit || onDelete;
+  const hasDefaultActions = onView || onEdit || onDelete;
+  const hasCustomActions = customActions.length > 0;
+  const hasActions = hasDefaultActions || hasCustomActions;
+
+  // NOVA: Função para executar ação customizada
+  const handleCustomAction = (actionKey: string, entity: T) => {
+    const action = customActions.find(a => a.key === actionKey);
+    if (action) {
+      action.handler(entity);
+    }
+  };
+
+  // NOVA: Filtrar ações customizadas que devem aparecer para uma entidade
+  const getVisibleCustomActions = (entity: T) => {
+    return customActions.filter(action => 
+      !action.condition || action.condition(entity)
+    );
+  };
 
   if (loading) {
     return (
@@ -109,49 +145,108 @@ export function BaseTable<T extends BaseEntity>({
               </TableCell>
             </TableRow>
           ) : (
-            data.map((entity) => (
-              <TableRow key={entity.id} className="hover:bg-muted/50">
-                {columns.map((column, index) => (
-                  <TableCell 
-                    key={index}
-                    className={`${column.className || ''} ${
-                      column.hideOnMobile ? 'hidden lg:table-cell' : ''
-                    } ${column.hideOnTablet ? 'hidden xl:table-cell' : ''}`}
-                  >
-                    {column.render 
-                      ? column.render(entity)
-                      : String((entity as any)[column.key] || '')
-                    }
-                  </TableCell>
-                ))}
-                {hasActions && (
-                  <TableCell>
-                    <div className="flex gap-1">
-                      {onView && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => onView(entity)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {onEdit && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => onEdit(entity)}
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))
+            data.map((entity) => {
+              const visibleCustomActions = getVisibleCustomActions(entity);
+              
+              return (
+                <TableRow key={entity.id} className="hover:bg-muted/50">
+                  {columns.map((column, index) => (
+                    <TableCell 
+                      key={index}
+                      className={`${column.className || ''} ${
+                        column.hideOnMobile ? 'hidden lg:table-cell' : ''
+                      } ${column.hideOnTablet ? 'hidden xl:table-cell' : ''}`}
+                    >
+                      {column.render 
+                        ? column.render(entity, { onCustomAction: handleCustomAction })
+                        : String((entity as any)[column.key] || '')
+                      }
+                    </TableCell>
+                  ))}
+                  {hasActions && (
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        {/* Ações padrão (sempre como ícones) */}
+                        {onView && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => onView(entity)}
+                            title="Visualizar"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {onEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => onEdit(entity)}
+                            title="Editar"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {/* NOVA: Ações customizadas */}
+                        {visibleCustomActions.length > 0 && (
+                          <>
+                            {/* Mostrar primeiras 2 ações como botões diretos */}
+                            {visibleCustomActions.slice(0, 2).map((action) => (
+                              <Button
+                                key={action.key}
+                                variant={action.variant || "ghost"}
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => action.handler(entity)}
+                                title={action.label}
+                              >
+                                {action.icon}
+                              </Button>
+                            ))}
+                            
+                            {/* Se tiver mais de 2 ações, mostrar dropdown */}
+                            {visibleCustomActions.length > 2 && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {visibleCustomActions.slice(2).map((action) => (
+                                    <DropdownMenuItem
+                                      key={action.key}
+                                      onClick={() => action.handler(entity)}
+                                      className={
+                                        action.variant === 'destructive' 
+                                          ? 'text-red-600 focus:text-red-600' 
+                                          : ''
+                                      }
+                                    >
+                                      {action.icon && (
+                                        <span className="mr-2">{action.icon}</span>
+                                      )}
+                                      {action.label}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>
@@ -229,3 +324,6 @@ export function BaseTable<T extends BaseEntity>({
     </div>
   );
 }
+
+// NOVA: Exportar o tipo para uso em outros arquivos
+export type { CustomAction };

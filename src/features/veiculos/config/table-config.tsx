@@ -2,56 +2,61 @@
 import React from 'react';
 import { 
   Car, 
+  Truck, 
+  Bus, 
+  Bike, 
+  Users, 
+  Package, 
   Fuel, 
-  Calendar, 
-  MapPin, 
-  User,
-  FileText,
-  Gauge,
-  Package,
-  DollarSign
+  MapPin,
+  Calendar,
+  Wrench,
+  Shield,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Clock
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TableColumn } from '@/types/base';
-import { Veiculo, TipoCombustivel, StatusVeiculo } from '../types';
-
-// Função para formatar o tipo de combustível
-const formatarTipoCombustivel = (tipo: TipoCombustivel) => {
-  const tipos = {
-    gasolina: 'Gasolina',
-    etanol: 'Etanol',
-    diesel: 'Diesel',
-    flex: 'Flex',
-    eletrico: 'Elétrico',
-    hibrido: 'Híbrido',
-    gnv: 'GNV'
-  };
-  return tipos[tipo] || tipo;
-};
+import { Veiculo, StatusVeiculo, TipoVeiculo, TipoCombustivel } from '../../reservas/types';
 
 // Função para formatar o status
 const formatarStatus = (status: StatusVeiculo) => {
   const configs = {
-    disponivel: { label: 'Disponível', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' },
-    em_uso: { label: 'Em Uso', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' },
-    manutencao: { label: 'Manutenção', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' },
-    inativo: { label: 'Inativo', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300' }
+    disponivel: { label: 'Disponível', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300', icon: CheckCircle },
+    em_uso: { label: 'Em Uso', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300', icon: Clock },
+    manutencao: { label: 'Manutenção', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300', icon: Wrench },
+    inativo: { label: 'Inativo', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300', icon: XCircle }
   };
-  return configs[status] || { label: status, color: 'bg-gray-100 text-gray-800' };
+  return configs[status];
 };
 
-// Função para formatar valores monetários
-const formatarMoeda = (valor: number) => {
-  return valor.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  });
+// Ícone por tipo de veículo
+const getVeiculoIcon = (tipo: TipoVeiculo) => {
+  const iconProps = { className: "h-4 w-4" };
+  switch (tipo) {
+    case 'carro': return <Car {...iconProps} />;
+    case 'van': return <Bus {...iconProps} />;
+    case 'caminhonete': return <Truck {...iconProps} />;
+    case 'caminhao': return <Truck {...iconProps} />;
+    case 'onibus': return <Bus {...iconProps} />;
+    case 'moto': return <Bike {...iconProps} />;
+    default: return <Car {...iconProps} />;
+  }
 };
 
-// Função para formatar quilometragem
-const formatarQuilometragem = (km?: number) => {
-  if (!km) return 'N/A';
-  return `${km.toLocaleString('pt-BR')} km`;
+// Cor por tipo de combustível
+const getCombustivelColor = (combustivel: TipoCombustivel) => {
+  switch (combustivel) {
+    case 'gasolina': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+    case 'etanol': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+    case 'diesel': return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+    case 'eletrico': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+    case 'hibrido': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+    case 'gnv': return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300';
+    default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+  }
 };
 
 export const veiculosTableColumns: TableColumn<Veiculo>[] = [
@@ -59,34 +64,29 @@ export const veiculosTableColumns: TableColumn<Veiculo>[] = [
     key: 'dados_principais',
     label: 'Veículo',
     sortable: true,
-    render: (veiculo) => (
-      <div className="space-y-1">
-        <div className="flex items-center gap-2 font-medium text-foreground">
-          <Car className="h-4 w-4 text-blue-600" />
-          <span className="truncate">{veiculo.nome}</span>
-        </div>
-        <div className="text-xs font-mono text-muted-foreground">
-          {veiculo.placa} • {veiculo.codigoPatrimonial}
-        </div>
-        <div className="text-xs text-muted-foreground">
-          {veiculo.marca} {veiculo.modelo} ({veiculo.anoFabricacao})
-        </div>
-      </div>
-    )
-  },
-  {
-    key: 'status_combustivel',
-    label: 'Status & Combustível',
     render: (veiculo) => {
       const statusConfig = formatarStatus(veiculo.status);
+      const StatusIcon = statusConfig.icon;
+      
       return (
-        <div className="space-y-2">
-          <Badge className={`text-xs ${statusConfig.color}`}>
-            {statusConfig.label}
-          </Badge>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Fuel className="h-3 w-3" />
-            {formatarTipoCombustivel(veiculo.tipoCombustivel)}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            {getVeiculoIcon(veiculo.tipo)}
+            <span className="font-medium text-foreground truncate max-w-48" title={veiculo.nome}>
+              {veiculo.nome}
+            </span>
+            <div className="flex items-center gap-1">
+              <StatusIcon className="h-3 w-3" />
+              <Badge className={`text-xs ${statusConfig.color}`}>
+                {statusConfig.label}
+              </Badge>
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {veiculo.marca} {veiculo.modelo} {veiculo.ano}
+          </div>
+          <div className="text-xs font-mono text-muted-foreground">
+            {veiculo.placa}
           </div>
         </div>
       );
@@ -95,78 +95,114 @@ export const veiculosTableColumns: TableColumn<Veiculo>[] = [
   {
     key: 'especificacoes',
     label: 'Especificações',
-    hideOnMobile: true,
     render: (veiculo) => (
       <div className="space-y-1">
-        <div className="flex items-center gap-1 text-xs">
-          <Package className="h-3 w-3 text-muted-foreground" />
-          <span>{veiculo.capacidadeCarga}kg</span>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            {veiculo.tipo.charAt(0).toUpperCase() + veiculo.tipo.slice(1)}
+          </Badge>
+          <Badge className={`text-xs ${getCombustivelColor(veiculo.tipoCombustivel)}`}>
+            {veiculo.tipoCombustivel}
+          </Badge>
         </div>
-        {veiculo.tipoCombustivel !== 'eletrico' && (
-          <div className="flex items-center gap-1 text-xs">
-            <Gauge className="h-3 w-3 text-muted-foreground" />
-            <span>{veiculo.autonomiaMedia} km/l</span>
+        
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <Users className="h-3 w-3" />
+            <span>{veiculo.capacidadePassageiros}</span>
           </div>
-        )}
+          {veiculo.capacidadeCarga && (
+            <div className="flex items-center gap-1">
+              <Package className="h-3 w-3" />
+              <span>{veiculo.capacidadeCarga}kg</span>
+            </div>
+          )}
+        </div>
+        
         <div className="text-xs text-muted-foreground">
-          {formatarQuilometragem(veiculo.quilometragem)}
+          {veiculo.kmAtual.toLocaleString('pt-BR')} km
         </div>
       </div>
     )
   },
   {
-    key: 'responsavel_localizacao',
-    label: 'Responsável & Local',
+    key: 'localizacao_responsavel',
+    label: 'Localização & Responsável',
+    hideOnMobile: true,
     render: (veiculo) => (
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <User className="h-3 w-3 text-muted-foreground" />
-          <span className="text-sm truncate max-w-32" title={veiculo.responsavel}>
-            {veiculo.responsavel}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
           <MapPin className="h-3 w-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground truncate max-w-40" title={veiculo.localizacaoAtual}>
+          <span className="text-sm truncate max-w-40" title={veiculo.localizacaoAtual}>
             {veiculo.localizacaoAtual}
           </span>
         </div>
+        <div className="flex items-center gap-2">
+          <Wrench className="h-3 w-3 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground truncate max-w-40" title={veiculo.responsavelManutencao}>
+            {veiculo.responsavelManutencao}
+          </span>
+        </div>
       </div>
     )
   },
   {
-    key: 'valor_documentacao',
-    label: 'Valor & Docs',
+    key: 'manutencao_seguro',
+    label: 'Manutenção & Seguro',
     hideOnTablet: true,
-    render: (veiculo) => (
-      <div className="space-y-1">
-        <div className="flex items-center gap-1">
-          <DollarSign className="h-3 w-3 text-green-600" />
-          <span className="text-sm font-medium text-green-600">
-            {formatarMoeda(veiculo.valorDiaria)}/dia
-          </span>
+    render: (veiculo) => {
+      const proximaRevisao = new Date(veiculo.proximaRevisao);
+      const hoje = new Date();
+      const diasParaRevisao = Math.ceil((proximaRevisao.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+      const revisaoProxima = diasParaRevisao <= 30;
+      
+      let seguroStatus = null;
+      if (veiculo.vencimentoSeguro) {
+        const vencimentoSeguro = new Date(veiculo.vencimentoSeguro);
+        const diasParaVencimento = Math.ceil((vencimentoSeguro.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+        seguroStatus = {
+          vencimento: vencimentoSeguro,
+          diasRestantes: diasParaVencimento,
+          proximo: diasParaVencimento <= 30
+        };
+      }
+      
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1">
+            <Calendar className="h-3 w-3 text-muted-foreground" />
+            <span className={`text-xs ${revisaoProxima ? 'text-orange-600' : 'text-muted-foreground'}`}>
+              Revisão: {proximaRevisao.toLocaleDateString('pt-BR')}
+            </span>
+            {revisaoProxima && <AlertTriangle className="h-3 w-3 text-orange-600" />}
+          </div>
+          
+          {seguroStatus && (
+            <div className="flex items-center gap-1">
+              <Shield className="h-3 w-3 text-muted-foreground" />
+              <span className={`text-xs ${seguroStatus.proximo ? 'text-red-600' : 'text-muted-foreground'}`}>
+                Seguro: {seguroStatus.vencimento.toLocaleDateString('pt-BR')}
+              </span>
+              {seguroStatus.proximo && <AlertTriangle className="h-3 w-3 text-red-600" />}
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-1">
-          <FileText className="h-3 w-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">
-            {veiculo.documentacao.length} doc{veiculo.documentacao.length !== 1 ? 's' : ''}
-          </span>
-        </div>
-      </div>
-    )
+      );
+    }
   },
   {
-    key: 'informacoes_cadastro',
-    label: 'Cadastro',
+    key: 'documentos',
+    label: 'Documentos',
     hideOnMobile: true,
     render: (veiculo) => (
       <div className="space-y-1">
-        {veiculo.criadoEm && (
-          <div className="flex items-center gap-2">
-            <Calendar className="h-3 w-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">
-              {new Date(veiculo.criadoEm).toLocaleDateString('pt-BR')}
-            </span>
+        <div className="text-xs text-muted-foreground">
+          <div>Chassi: {veiculo.chassi?.slice(-6) || 'N/A'}</div>
+          <div>Renavam: {veiculo.renavam?.slice(-6) || 'N/A'}</div>
+        </div>
+        {veiculo.seguradora && (
+          <div className="text-xs text-blue-600">
+            {veiculo.seguradora}
           </div>
         )}
       </div>

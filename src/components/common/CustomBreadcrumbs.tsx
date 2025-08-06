@@ -44,11 +44,17 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
       label: 'Aupus Energia',
       path: null,
     },
-    // ✅ NOVO: Adicionar configurações para as novas páginas
+    // 📊 DASHBOARD
+    {
+      path: '/dashboard',
+      label: 'Dashboard',
+    },
+    // 👥 GESTÃO DE PESSOAS
     {
       path: '/usuarios',
       label: 'Usuários',
     },
+    // 🏭 INFRAESTRUTURA
     {
       path: '/plantas',
       label: 'Plantas',
@@ -57,7 +63,65 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
       path: '/equipamentos',
       label: 'Equipamentos',
     },
-    // Configurações existentes
+    // 🔧 MANUTENÇÃO
+    {
+      path: '/planos-manutencao',
+      label: 'Planos de Manutenção',
+      isDropdown: true,
+      dropdownItems: [
+        { label: 'Gerenciar Planos', href: '/planos-manutencao' },
+        { label: 'Associar Equipamentos', href: '/planos-manutencao/associar' },
+      ],
+    },
+    {
+      path: '/planos-manutencao/associar',
+      label: 'Associar Equipamentos',
+    },
+    {
+      path: '/tarefas',
+      label: 'Tarefas',
+    },
+    {
+      path: '/programacao-os',
+      label: 'Programação OS',
+    },
+    {
+      path: '/execucao-os',
+      label: 'Execução OS',
+    },
+    {
+      path: '/anomalias',
+      label: 'Anomalias',
+    },
+    // 📦 RECURSOS
+    {
+      path: '/veiculos',
+      label: 'Veículos',
+    },
+    {
+      path: '/ferramentas',
+      label: 'Ferramentas',
+    },
+    {
+      path: '/reservas',
+      label: 'Reservas',
+    },
+    // 🤝 FORNECEDORES
+    {
+      path: '/fornecedores',
+      label: 'Fornecedores',
+    },
+    // ⚙️ CONFIGURAÇÕES
+    {
+      path: '/configuracoes',
+      label: 'Configurações',
+      isDropdown: true,
+      dropdownItems: [
+        { label: 'Perfil', href: '/configuracoes/perfil' },
+        { label: 'Aparência', href: '/configuracoes/aparencia' },
+      ],
+    },
+    // Configurações antigas (manter compatibilidade)
     {
       path: '/financeiro',
       label: 'Financeiro',
@@ -80,15 +144,6 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
       dropdownItems: [
         { label: 'Monitoramento de Clientes', href: '/administrador/monitoramento-de-clientes' },
         { label: 'Clube Aupus', href: '/administrador/clube-aupus' },
-      ],
-    },
-    {
-      path: '/configuracoes',
-      label: 'Configurações',
-      isDropdown: true,
-      dropdownItems: [
-        { label: 'Perfil', href: '/configuracoes/perfil' },
-        { label: 'Aparência', href: '/configuracoes/aparencia' },
       ],
     },
   ];

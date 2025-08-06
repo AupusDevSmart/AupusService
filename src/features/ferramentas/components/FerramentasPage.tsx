@@ -1,13 +1,13 @@
-// src/features/ferramentas/components/FerramentasPage.tsx - CORREÇÃO FINAL
-import React, { useState, useEffect } from 'react';
+// src/features/ferramentas/components/FerramentasPage.tsx - DESIGN SIMPLIFICADO
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable } from '@/components/common/base-table/BaseTable';
+import { BaseTable, CustomAction } from '@/components/common/base-table/BaseTable';
 import { BaseFilters } from '@/components/common/base-filters/BaseFilters';
 import { BaseModal } from '@/components/common/base-modal/BaseModal';
 import { Button } from '@/components/ui/button';
-import { Plus, Wrench, AlertTriangle, CheckCircle, Calendar } from 'lucide-react';
+import { Plus, Wrench, AlertTriangle, CheckCircle, Calendar, Settings, Package } from 'lucide-react';
 import { useGenericTable } from '@/hooks/useGenericTable';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { Ferramenta, FerramentasFilters } from '../types';
@@ -106,13 +106,11 @@ export function FerramentasPage() {
   };
 
   const handleSubmit = async (data: any) => {
-    // ✅ CORREÇÃO: Processar dados de calibração e garantir tipo
+    // Processar dados de calibração e garantir tipo
     const formattedData = {
       ...data,
       valorDiaria: parseFloat(String(data.valorDiaria)),
-      tipo: 'ferramenta', // ✅ Sempre definir como 'ferramenta'
-      
-      // ✅ CORREÇÃO: Processar dados de calibração corretamente
+      tipo: 'ferramenta',
       necessitaCalibracao: data.calibracao?.necessitaCalibracao || false,
       proximaDataCalibracao: data.calibracao?.proximaDataCalibracao || undefined,
     };
@@ -137,25 +135,22 @@ export function FerramentasPage() {
   };
 
   const getModalIcon = () => {
-    return <Wrench className="h-5 w-5 text-blue-600" />;
+    return <Wrench className="h-5 w-5 text-primary" />;
   };
 
-  // ✅ CORREÇÃO: Preparar dados para o modal sem loops
+  // Preparar dados para o modal
   const getModalEntity = () => {
     const entity = modalState.entity;
     
-    // Para modo create
     if (modalState.mode === 'create') {
       return {
         tipo: 'ferramenta',
         status: 'disponivel',
         necessitaCalibracao: false,
         proximaDataCalibracao: '',
-        // ✅ Não criar objeto calibracao para evitar loops
       };
     }
     
-    // Para view/edit, retorna os dados da entidade
     return entity;
   };
 
@@ -169,6 +164,30 @@ export function FerramentasPage() {
     openModal('edit', ferramenta);
   };
 
+  // Ações customizadas para a tabela
+  const customActions: CustomAction<Ferramenta>[] = useMemo(() => [
+    {
+      key: 'manutencao',
+      label: 'Manutenção',
+      icon: <Settings className="h-4 w-4" />,
+      variant: 'secondary',
+      condition: (ferramenta) => ferramenta.status === 'disponivel',
+      handler: (ferramenta) => {
+        alert(`Enviando ${ferramenta.nome} para manutenção`);
+      }
+    },
+    {
+      key: 'calibrar',
+      label: 'Calibrar',
+      icon: <CheckCircle className="h-4 w-4" />,
+      variant: 'outline',
+      condition: (ferramenta) => ferramenta.necessitaCalibracao && ferramenta.status === 'disponivel',
+      handler: (ferramenta) => {
+        alert(`Agendando calibração para ${ferramenta.nome}`);
+      }
+    }
+  ], []);
+
   return (
     <Layout>
       <Layout.Main>
@@ -179,80 +198,88 @@ export function FerramentasPage() {
             description="Gerencie as ferramentas e equipamentos de medição"
           />
           
-          {/* Dashboard de Estatísticas */}
+          {/* Dashboard de Estatísticas - Design mais limpo */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
-            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="bg-card border rounded-lg p-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <Wrench className="h-8 w-8 text-blue-600" />
+                <div className="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-full">
+                  <Package className="h-5 w-5 text-primary" />
+                </div>
                 <div>
-                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</p>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">Total</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+                  <p className="text-sm text-muted-foreground">Total</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <div className="bg-card border rounded-lg p-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">✓</span>
+                <div className="flex items-center justify-center w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full">
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.disponiveis}</p>
-                  <p className="text-sm text-green-700 dark:text-green-300">Disponíveis</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.disponiveis}</p>
+                  <p className="text-sm text-muted-foreground">Disponíveis</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="bg-card border rounded-lg p-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">●</span>
+                <div className="flex items-center justify-center w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                  <div className="w-3 h-3 bg-blue-600 dark:bg-blue-500 rounded-full"></div>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.emUso}</p>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">Em Uso</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.emUso}</p>
+                  <p className="text-sm text-muted-foreground">Em Uso</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="bg-card border rounded-lg p-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-yellow-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">⚠</span>
+                <div className="flex items-center justify-center w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-full">
+                  <Settings className="h-5 w-5 text-yellow-600 dark:text-yellow-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{stats.manutencao}</p>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">Manutenção</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Calendar className="h-8 w-8 text-purple-600" />
-                <div>
-                  <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.necessitamCalibracao}</p>
-                  <p className="text-sm text-purple-700 dark:text-purple-300">C/ Calibração</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.manutencao}</p>
+                  <p className="text-sm text-muted-foreground">Manutenção</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="bg-card border rounded-lg p-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <AlertTriangle className="h-8 w-8 text-red-600" />
+                <div className="flex items-center justify-center w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+                  <Calendar className="h-5 w-5 text-purple-600 dark:text-purple-500" />
+                </div>
                 <div>
-                  <p className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.calibracaoVencida}</p>
-                  <p className="text-sm text-red-700 dark:text-red-300">Cal. Vencida</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.necessitamCalibracao}</p>
+                  <p className="text-sm text-muted-foreground">C/ Calibração</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <div className="bg-card border rounded-lg p-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <CheckCircle className="h-8 w-8 text-amber-600" />
+                <div className="flex items-center justify-center w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full">
+                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-500" />
+                </div>
                 <div>
-                  <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{stats.calibracaoVencendo}</p>
-                  <p className="text-sm text-amber-700 dark:text-amber-300">Cal. Vencendo</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.calibracaoVencida}</p>
+                  <p className="text-sm text-muted-foreground">Cal. Vencida</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-card border rounded-lg p-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full">
+                  <Calendar className="h-5 w-5 text-orange-600 dark:text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{stats.calibracaoVencendo}</p>
+                  <p className="text-sm text-muted-foreground">Cal. Vencendo</p>
                 </div>
               </div>
             </div>
@@ -269,7 +296,7 @@ export function FerramentasPage() {
             </div>
             <Button 
               onClick={() => openModal('create')}
-              className="bg-primary hover:bg-primary/90 shrink-0"
+              className="shrink-0"
             >
               <Plus className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Nova Ferramenta</span>
@@ -277,15 +304,15 @@ export function FerramentasPage() {
             </Button>
           </div>
 
-          {/* Alertas de Calibração */}
+          {/* Alertas de Calibração - Design mais sutil */}
           {(stats.calibracaoVencida > 0 || stats.calibracaoVencendo > 0) && (
             <div className="mb-6 space-y-3">
               {stats.calibracaoVencida > 0 && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-950 dark:border-red-800">
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                <div className="p-4 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800/50 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <h4 className="font-medium text-red-900 dark:text-red-100">
+                      <h4 className="font-medium text-red-900 dark:text-red-100 mb-1">
                         Calibrações Vencidas
                       </h4>
                       <p className="text-sm text-red-700 dark:text-red-300">
@@ -298,14 +325,14 @@ export function FerramentasPage() {
               )}
               
               {stats.calibracaoVencendo > 0 && (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-950 dark:border-amber-800">
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-5 w-5 text-amber-600" />
+                <div className="p-4 bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800/50 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="h-5 w-5 text-orange-600 dark:text-orange-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <h4 className="font-medium text-amber-900 dark:text-amber-100">
+                      <h4 className="font-medium text-orange-900 dark:text-orange-100 mb-1">
                         Calibrações Vencendo
                       </h4>
-                      <p className="text-sm text-amber-700 dark:text-amber-300">
+                      <p className="text-sm text-orange-700 dark:text-orange-300">
                         {stats.calibracaoVencendo} ferramenta(s) com calibração vencendo em 30 dias. 
                         Agende a calibração preventivamente.
                       </p>
@@ -326,6 +353,7 @@ export function FerramentasPage() {
               onPageChange={handlePageChange}
               onView={handleView}
               onEdit={handleEdit}
+              customActions={customActions}
               emptyMessage="Nenhuma ferramenta encontrada."
               emptyIcon={<Wrench className="h-8 w-8 text-muted-foreground/50" />}
             />
