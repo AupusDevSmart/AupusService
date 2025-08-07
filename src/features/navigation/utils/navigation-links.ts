@@ -66,13 +66,22 @@ export const navigationLinks: Array<NavigationLink> = [
 
   // 🏭 INFRAESTRUTURA
   {
-    key: 'infraestrutura',
+    key: 'cadastros',
     featureKey: 'Plantas',
-    path: '/infraestrutura',
+    path: '/cadastros',
     icon: Building2,
-    label: 'Infraestrutura',
-    hint: 'Infraestrutura',
+    label: 'Cadastros',
+    hint: 'Cadastros',
     links: [
+      // 👥 USUÁRIOS
+      {
+        key: 'usuarios',
+        featureKey: 'Usuarios',
+        path: '/usuarios',
+        icon: Users,
+        label: 'Usuários',
+        hint: 'Usuários',
+      },
       {
         key: 'plantas',
         featureKey: 'Plantas',
@@ -189,14 +198,4 @@ export const navigationLinks: Array<NavigationLink> = [
     label: 'Fornecedores',
     hint: 'Fornecedores',
   },
-
-  // 👥 USUÁRIOS
-  {
-    key: 'usuarios',
-    featureKey: 'Usuarios',
-    path: '/usuarios',
-    icon: Users,
-    label: 'Usuários',
-    hint: 'Usuários',
-  }
 ];
