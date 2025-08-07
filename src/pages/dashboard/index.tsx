@@ -83,7 +83,7 @@ export function DashboardPage() {
           description="Visão geral completa do sistema e operações"
         />
         
-        <div className="space-y-6">
+        <div className="space-y-6 w-full">
           {/* Primeira linha - Overview, Service Severity e Opevode */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Visão Geral */}
