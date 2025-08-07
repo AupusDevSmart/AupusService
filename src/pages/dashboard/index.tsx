@@ -84,6 +84,11 @@ export function DashboardPage() {
         />
         
         <div className="space-y-6 w-full">
+          {/* Terceira linha - Cards de Status do Sistema */}
+          <div className="grid grid-cols-1">
+            <SystemStatusCards data={dashboardData.systemStatus} />
+          </div>
+          
           {/* Primeira linha - Overview, Service Severity e Opevode */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Visão Geral */}
@@ -116,11 +121,6 @@ export function DashboardPage() {
             <div className="lg:col-span-8">
               <PlannedVsCompletedChart data={dashboardData.plannedVsCompleted} />
             </div>
-          </div>
-
-          {/* Terceira linha - Cards de Status do Sistema */}
-          <div className="grid grid-cols-1">
-            <SystemStatusCards data={dashboardData.systemStatus} />
           </div>
         </div>
       </Layout.Main>
