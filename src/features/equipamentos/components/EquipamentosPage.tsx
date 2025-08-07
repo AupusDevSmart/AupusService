@@ -301,7 +301,7 @@ export function EquipamentosPage() {
                 <span className="sm:hidden">Novo UC</span>
               </Button>
               
-              <Button 
+              {/* <Button 
                 variant="outline"
                 onClick={() => openUARModal('create')}
                 className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto"
@@ -309,7 +309,7 @@ export function EquipamentosPage() {
                 <Component className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Novo Componente UAR</span>
                 <span className="sm:hidden">Novo UAR</span>
-              </Button>
+              </Button> */}
             </div>
           </div>
 
