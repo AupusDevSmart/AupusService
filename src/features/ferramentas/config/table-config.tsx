@@ -1,5 +1,4 @@
 // src/features/ferramentas/config/table-config.tsx
-import React from 'react';
 import { 
   Wrench, 
   Calendar, 
@@ -8,8 +7,7 @@ import {
   DollarSign,
   CheckCircle,
   XCircle,
-  AlertTriangle,
-  Building
+  AlertTriangle
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TableColumn } from '@/types/base';

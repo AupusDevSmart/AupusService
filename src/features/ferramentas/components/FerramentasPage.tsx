@@ -1,6 +1,5 @@
 // src/features/ferramentas/components/FerramentasPage.tsx - DESIGN SIMPLIFICADO
-import React, { useState, useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable, CustomAction } from '@/components/common/base-table/BaseTable';
@@ -10,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Wrench, AlertTriangle, CheckCircle, Calendar, Settings, Package } from 'lucide-react';
 import { useGenericTable } from '@/hooks/useGenericTable';
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { Ferramenta, FerramentasFilters } from '../types';
+import { Ferramenta, FerramentasFilters, StatusFerramenta } from '../types';
 import { ferramentasTableColumns } from '../config/table-config';
 import { ferramentasFilterConfig } from '../config/filter-config';
 import { ferramentasFormFields } from '../config/form-config';
@@ -26,10 +25,26 @@ const initialFilters: FerramentasFilters = {
   limit: 10
 };
 
+interface FerramentaFormShape {
+  nome: string;
+  codigoPatrimonial: string;
+  fabricante: string;
+  modelo: string;
+  numeroSerie: string;
+  calibracao: {
+    necessitaCalibracao: boolean;
+    proximaDataCalibracao?: string;
+  };
+  valorDiaria: string; // It's a string from the input
+  localizacaoAtual: string;
+  responsavel: string;
+  dataAquisicao: string;
+  status: StatusFerramenta;
+  observacoes?: string;
+  foto?: string;
+}
+
 export function FerramentasPage() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  
   const {
     paginatedData: ferramentas,
     pagination,
@@ -105,18 +120,16 @@ export function FerramentasPage() {
     closeModal();
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: FerramentaFormShape) => {
     // Processar dados de calibração e garantir tipo
+    const { calibracao, ...rest } = data;
     const formattedData = {
-      ...data,
+      ...rest,
       valorDiaria: parseFloat(String(data.valorDiaria)),
-      tipo: 'ferramenta',
-      necessitaCalibracao: data.calibracao?.necessitaCalibracao || false,
-      proximaDataCalibracao: data.calibracao?.proximaDataCalibracao || undefined,
+      tipo: 'ferramenta' as const,
+      necessitaCalibracao: calibracao?.necessitaCalibracao || false,
+      proximaDataCalibracao: calibracao?.proximaDataCalibracao || undefined,
     };
-    
-    // Remover o campo 'calibracao' temporário
-    delete formattedData.calibracao;
     
     console.log('Dados da ferramenta para salvar:', formattedData);
     
@@ -144,10 +157,22 @@ export function FerramentasPage() {
     
     if (modalState.mode === 'create') {
       return {
+        id: 0, // Add a temporary ID
+        nome: '',
         tipo: 'ferramenta',
-        status: 'disponivel',
+        codigoPatrimonial: '',
+        fabricante: '',
+        modelo: '',
+        numeroSerie: '',
         necessitaCalibracao: false,
         proximaDataCalibracao: '',
+        valorDiaria: 0,
+        localizacaoAtual: '',
+        responsavel: '',
+        dataAquisicao: new Date().toISOString().split('T')[0],
+        status: 'disponivel',
+        criadoEm: new Date().toISOString(),
+        atualizadoEm: new Date().toISOString(),
       };
     }
     
