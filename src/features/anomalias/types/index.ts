@@ -32,7 +32,7 @@ export interface Anomalia extends BaseEntity {
 
 // Interface para histórico da anomalia
 export interface HistoricoAnomalia {
-  id: string;
+  id: number;
   acao: string;
   usuario: string;
   data: string;

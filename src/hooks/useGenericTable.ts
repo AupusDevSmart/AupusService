@@ -6,6 +6,7 @@ interface UseGenericTableProps<T extends BaseEntity, F extends BaseFilters> {
   data: T[];
   initialFilters: F;
   searchFields?: (keyof T)[];
+  customFilters?: Record<string, (item: T, value: any) => boolean>;
 }
 
 interface UseGenericTableReturn<T, F> {
@@ -23,7 +24,8 @@ interface UseGenericTableReturn<T, F> {
 export function useGenericTable<T extends BaseEntity, F extends BaseFilters>({
   data,
   initialFilters,
-  searchFields = []
+  searchFields = [],
+  customFilters = {}
 }: UseGenericTableProps<T, F>): UseGenericTableReturn<T, F> {
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<F>(initialFilters);
@@ -41,16 +43,22 @@ export function useGenericTable<T extends BaseEntity, F extends BaseFilters>({
         if (!matchesSearch) return false;
       }
 
-      // Filtros customizados
+      // Aplicar filtros customizados e padrões
       return Object.entries(filters).every(([key, value]) => {
         if (key === 'search' || key === 'page' || key === 'limit') return true;
         if (value === 'all' || value === '' || value === null || value === undefined) return true;
         
+        // Verificar se existe um filtro customizado para esta chave
+        if (customFilters[key]) {
+          return customFilters[key](item, value);
+        }
+        
+        // Filtro padrão
         const itemValue = (item as any)[key];
         return itemValue === value || itemValue?.toString() === value?.toString();
       });
     });
-  }, [data, filters, searchFields]);
+  }, [data, filters, searchFields, customFilters]);
 
   // Paginar dados
   const paginatedData = useMemo(() => {

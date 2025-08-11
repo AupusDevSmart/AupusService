@@ -2,7 +2,7 @@
 import { NavigateFunction } from 'react-router-dom';
 
 interface Anomalia {
-  id: string;
+  id: number;
   descricao: string;
   local: string;
   ativo: string;

@@ -7,7 +7,7 @@ import { AlertTriangle, CheckCircle, History } from 'lucide-react';
 import { Ferramenta, HistoricoCalibracao } from '../types';
 
 // ✅ COMPONENTE SIMPLIFICADO: Controle de Calibração
-export const CalibracaoController = ({ value, onChange, disabled, entity, mode }: FormFieldProps & { entity?: Ferramenta | null; mode?: string }) => {
+export const CalibracaoController = ({ onChange, disabled, entity, mode }: FormFieldProps & { entity?: Ferramenta | null; mode?: string }) => {
   // Valores diretamente do entity para evitar loops
   const necessitaCalibracao = entity?.necessitaCalibracao || false;
   const proximaDataCalibracao = entity?.proximaDataCalibracao || '';

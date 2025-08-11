@@ -9,20 +9,20 @@ interface UseAnomaliasReturn {
   
   // Operações CRUD
   criarAnomalia: (dados: AnomaliaFormData) => Promise<Anomalia>;
-  editarAnomalia: (id: string, dados: Partial<AnomaliaFormData>) => Promise<Anomalia>;
-  obterAnomalia: (id: string) => Promise<Anomalia | null>;
-  excluirAnomalia: (id: string) => Promise<boolean>;
+  editarAnomalia: (id: number, dados: Partial<AnomaliaFormData>) => Promise<Anomalia>;
+  obterAnomalia: (id: number) => Promise<Anomalia | null>;
+  excluirAnomalia: (id: number) => Promise<boolean>;
   
   // Operações específicas de anomalias
-  gerarOS: (anomaliaId: string) => Promise<Anomalia>;
-  resolverAnomalia: (anomaliaId: string, observacoes?: string) => Promise<Anomalia>;
-  cancelarAnomalia: (anomaliaId: string, motivo?: string) => Promise<Anomalia>;
-  adicionarHistorico: (anomaliaId: string, acao: string, observacoes?: string) => Promise<Anomalia>;
+  gerarOS: (anomaliaId: number) => Promise<Anomalia>;
+  resolverAnomalia: (anomaliaId: number, observacoes?: string) => Promise<Anomalia>;
+  cancelarAnomalia: (anomaliaId: number, motivo?: string) => Promise<Anomalia>;
+  adicionarHistorico: (anomaliaId: number, acao: string, observacoes?: string) => Promise<Anomalia>;
   
   // Operações em lote
-  gerarOSLote: (anomaliaIds: string[]) => Promise<Anomalia[]>;
-  resolverLote: (anomaliaIds: string[], observacoes?: string) => Promise<Anomalia[]>;
-  cancelarLote: (anomaliaIds: string[], motivo?: string) => Promise<Anomalia[]>;
+  gerarOSLote: (anomaliaIds: number[]) => Promise<Anomalia[]>;
+  resolverLote: (anomaliaIds: number[], observacoes?: string) => Promise<Anomalia[]>;
+  cancelarLote: (anomaliaIds: number[], motivo?: string) => Promise<Anomalia[]>;
 }
 
 export function useAnomalias(): UseAnomaliasReturn {
@@ -32,6 +32,19 @@ export function useAnomalias(): UseAnomaliasReturn {
   const simulateDelay = (ms: number = 1000) => 
     new Promise(resolve => setTimeout(resolve, ms));
 
+  // Gerar próximo ID disponível
+  const getNextId = (): number => {
+    const maxId = Math.max(...mockAnomalias.map(a => a.id), 0);
+    return maxId + 1;
+  };
+
+  // Gerar próximo ID para histórico
+  const getNextHistoricoId = (): number => {
+    const allHistoricos = mockAnomalias.flatMap(a => a.historico || []);
+    const maxId = Math.max(...allHistoricos.map(h => h.id), 0);
+    return maxId + 1;
+  };
+
   // Criar anomalia
   const criarAnomalia = useCallback(async (dados: AnomaliaFormData): Promise<Anomalia> => {
     setLoading(true);
@@ -39,7 +52,7 @@ export function useAnomalias(): UseAnomaliasReturn {
       await simulateDelay();
       
       const novaAnomalia: Anomalia = {
-        id: String(Date.now()),
+        id: getNextId(),
         criadoEm: new Date().toISOString(),
         ...dados,
         data: new Date().toISOString(),
@@ -47,7 +60,7 @@ export function useAnomalias(): UseAnomaliasReturn {
         criadoPor: 'Usuário Atual',
         historico: [
           {
-            id: String(Date.now()),
+            id: getNextHistoricoId(),
             acao: 'Anomalia criada',
             usuario: 'Usuário Atual',
             data: new Date().toISOString(),
@@ -65,7 +78,7 @@ export function useAnomalias(): UseAnomaliasReturn {
   }, []);
 
   // Editar anomalia
-  const editarAnomalia = useCallback(async (id: string, dados: Partial<AnomaliaFormData>): Promise<Anomalia> => {
+  const editarAnomalia = useCallback(async (id: number, dados: Partial<AnomaliaFormData>): Promise<Anomalia> => {
     setLoading(true);
     try {
       await simulateDelay();
@@ -82,7 +95,7 @@ export function useAnomalias(): UseAnomaliasReturn {
         historico: [
           ...(mockAnomalias[index].historico || []),
           {
-            id: String(Date.now()),
+            id: getNextHistoricoId(),
             acao: 'Anomalia atualizada',
             usuario: 'Usuário Atual',
             data: new Date().toISOString(),
@@ -98,7 +111,7 @@ export function useAnomalias(): UseAnomaliasReturn {
   }, []);
 
   // Obter anomalia por ID
-  const obterAnomalia = useCallback(async (id: string): Promise<Anomalia | null> => {
+  const obterAnomalia = useCallback(async (id: number): Promise<Anomalia | null> => {
     setLoading(true);
     try {
       await simulateDelay(300);
@@ -109,7 +122,7 @@ export function useAnomalias(): UseAnomaliasReturn {
   }, []);
 
   // Excluir anomalia
-  const excluirAnomalia = useCallback(async (id: string): Promise<boolean> => {
+  const excluirAnomalia = useCallback(async (id: number): Promise<boolean> => {
     setLoading(true);
     try {
       await simulateDelay();
@@ -127,7 +140,7 @@ export function useAnomalias(): UseAnomaliasReturn {
   }, []);
 
   // Gerar OS
-  const gerarOS = useCallback(async (anomaliaId: string): Promise<Anomalia> => {
+  const gerarOS = useCallback(async (anomaliaId: number): Promise<Anomalia> => {
     setLoading(true);
     try {
       await simulateDelay();
@@ -146,7 +159,7 @@ export function useAnomalias(): UseAnomaliasReturn {
         historico: [
           ...(mockAnomalias[index].historico || []),
           {
-            id: String(Date.now()),
+            id: getNextHistoricoId(),
             acao: 'Ordem de Serviço gerada',
             usuario: 'Usuário Atual',
             data: new Date().toISOString(),
@@ -163,7 +176,7 @@ export function useAnomalias(): UseAnomaliasReturn {
   }, []);
 
   // Resolver anomalia
-  const resolverAnomalia = useCallback(async (anomaliaId: string, observacoes?: string): Promise<Anomalia> => {
+  const resolverAnomalia = useCallback(async (anomaliaId: number, observacoes?: string): Promise<Anomalia> => {
     setLoading(true);
     try {
       await simulateDelay();
@@ -180,7 +193,7 @@ export function useAnomalias(): UseAnomaliasReturn {
         historico: [
           ...(mockAnomalias[index].historico || []),
           {
-            id: String(Date.now()),
+            id: getNextHistoricoId(),
             acao: 'Anomalia resolvida',
             usuario: 'Usuário Atual',
             data: new Date().toISOString(),
@@ -197,7 +210,7 @@ export function useAnomalias(): UseAnomaliasReturn {
   }, []);
 
   // Cancelar anomalia
-  const cancelarAnomalia = useCallback(async (anomaliaId: string, motivo?: string): Promise<Anomalia> => {
+  const cancelarAnomalia = useCallback(async (anomaliaId: number, motivo?: string): Promise<Anomalia> => {
     setLoading(true);
     try {
       await simulateDelay();
@@ -214,7 +227,7 @@ export function useAnomalias(): UseAnomaliasReturn {
         historico: [
           ...(mockAnomalias[index].historico || []),
           {
-            id: String(Date.now()),
+            id: getNextHistoricoId(),
             acao: 'Anomalia cancelada',
             usuario: 'Usuário Atual',
             data: new Date().toISOString(),
@@ -231,7 +244,7 @@ export function useAnomalias(): UseAnomaliasReturn {
   }, []);
 
   // Adicionar entrada no histórico
-  const adicionarHistorico = useCallback(async (anomaliaId: string, acao: string, observacoes?: string): Promise<Anomalia> => {
+  const adicionarHistorico = useCallback(async (anomaliaId: number, acao: string, observacoes?: string): Promise<Anomalia> => {
     setLoading(true);
     try {
       await simulateDelay(300);
@@ -247,7 +260,7 @@ export function useAnomalias(): UseAnomaliasReturn {
         historico: [
           ...(mockAnomalias[index].historico || []),
           {
-            id: String(Date.now()),
+            id: getNextHistoricoId(),
             acao,
             usuario: 'Usuário Atual',
             data: new Date().toISOString(),
@@ -264,7 +277,7 @@ export function useAnomalias(): UseAnomaliasReturn {
   }, []);
 
   // Gerar OS em lote
-  const gerarOSLote = useCallback(async (anomaliaIds: string[]): Promise<Anomalia[]> => {
+  const gerarOSLote = useCallback(async (anomaliaIds: number[]): Promise<Anomalia[]> => {
     setLoading(true);
     try {
       const resultados: Anomalia[] = [];
@@ -281,7 +294,7 @@ export function useAnomalias(): UseAnomaliasReturn {
   }, [gerarOS]);
 
   // Resolver em lote
-  const resolverLote = useCallback(async (anomaliaIds: string[], observacoes?: string): Promise<Anomalia[]> => {
+  const resolverLote = useCallback(async (anomaliaIds: number[], observacoes?: string): Promise<Anomalia[]> => {
     setLoading(true);
     try {
       const resultados: Anomalia[] = [];
@@ -298,7 +311,7 @@ export function useAnomalias(): UseAnomaliasReturn {
   }, [resolverAnomalia]);
 
   // Cancelar em lote
-  const cancelarLote = useCallback(async (anomaliaIds: string[], motivo?: string): Promise<Anomalia[]> => {
+  const cancelarLote = useCallback(async (anomaliaIds: number[], motivo?: string): Promise<Anomalia[]> => {
     setLoading(true);
     try {
       const resultados: Anomalia[] = [];

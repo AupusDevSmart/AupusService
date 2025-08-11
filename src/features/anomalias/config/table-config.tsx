@@ -1,9 +1,7 @@
-// src/features/anomalias/config/table-config.tsx - CORES MAIS SUTIS
-import React from 'react';
+// src/features/anomalias/config/table-config.tsx
 import { 
   AlertTriangle, 
   Clock, 
-  FileText, 
   CheckCircle,
   XCircle,
   User,
@@ -93,7 +91,7 @@ export const anomaliasTableColumns: TableColumn<Anomalia>[] = [
           </span>
         </div>
         <div className="text-xs font-mono text-muted-foreground">
-          ID: {anomalia.id.slice(-8)}
+          ID: {String(anomalia.id || '').slice(-8) || anomalia.id}
         </div>
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           {getCondicaoIcon(anomalia.condicao)}
@@ -178,7 +176,7 @@ export const anomaliasTableColumns: TableColumn<Anomalia>[] = [
         <div className="flex items-center gap-2">
           <Calendar className="h-3 w-3 text-muted-foreground" />
           <span className="text-sm">
-            {new Date(anomalia.data).toLocaleDateString('pt-BR')}
+            {anomalia.data ? new Date(anomalia.data).toLocaleDateString('pt-BR') : 'N/A'}
           </span>
         </div>
         {anomalia.criadoPor && (
@@ -201,7 +199,7 @@ export const anomaliasTableColumns: TableColumn<Anomalia>[] = [
         <div className="flex items-center gap-2">
           <Calendar className="h-3 w-3 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">
-            {new Date(anomalia.criadoEm).toLocaleDateString('pt-BR')}
+            {anomalia.criadoEm ? new Date(anomalia.criadoEm).toLocaleDateString('pt-BR') : 'N/A'}
           </span>
         </div>
         {anomalia.atualizadoEm && (

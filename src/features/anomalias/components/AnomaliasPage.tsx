@@ -1,6 +1,6 @@
 // src/features/anomalias/components/AnomaliasPage.tsx - COM PLANEJAR OS
-import React, { useState, useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable, CustomAction } from '@/components/common/base-table/BaseTable';
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, AlertTriangle, CheckCircle, Clock, FileText, BarChart3, Download, Upload, XCircle, Settings, Calendar } from 'lucide-react';
 import { useGenericTable } from '@/hooks/useGenericTable';
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { Anomalia, AnomaliasFilters } from '../types';
+import { Anomalia, AnomaliasFilters, AnomaliaFormData } from '../types';
 import { anomaliasTableColumns } from '../config/table-config';
 import { anomaliasFilterConfig } from '../config/filter-config';
 import { anomaliasFormFields } from '../config/form-config';
@@ -29,7 +29,6 @@ const initialFilters: AnomaliasFilters = {
 };
 
 export function AnomaliasPage() {
-  const location = useLocation();
   const navigate = useNavigate();
   
   const {
@@ -143,7 +142,7 @@ export function AnomaliasPage() {
     closeModal();
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: AnomaliaFormData) => {
     console.log('Dados da anomalia para salvar:', data);
     await new Promise(resolve => setTimeout(resolve, 1500));
     await handleSuccess();
@@ -167,10 +166,17 @@ export function AnomaliasPage() {
     
     if (modalState.mode === 'create') {
       return {
+        id: 0,
+        descricao: '',
+        local: '',
+        ativo: '',
+        data: new Date().toISOString(),
         condicao: 'FUNCIONANDO',
         origem: 'OPERADOR',
+        status: 'AGUARDANDO',
         prioridade: 'MEDIA',
-        status: 'AGUARDANDO'
+        criadoEm: new Date().toISOString(),
+        atualizadoEm: new Date().toISOString(),
       };
     }
     
@@ -188,10 +194,10 @@ export function AnomaliasPage() {
   };
 
   // ✅ NOVA FUNCIONALIDADE: Planejar OS
-  const handlePlanejarOS = (anomalia: Anomalia) => {
+  const handlePlanejarOS = useCallback((anomalia: Anomalia) => {
     console.log('🚨 Planejando OS para anomalia:', anomalia.id);
     planejarOSComAnomalia(anomalia, navigate);
-  };
+  }, [navigate]);
 
   // Handlers para outras ações
   const handleGerarOS = async (anomalia: Anomalia) => {
@@ -253,7 +259,7 @@ export function AnomaliasPage() {
         alert(`Iniciando análise da anomalia ${anomalia.id}`);
       }
     }
-  ], [navigate]);
+  ], [handlePlanejarOS]);
 
   return (
     <Layout>

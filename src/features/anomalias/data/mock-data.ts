@@ -3,7 +3,7 @@ import { Anomalia } from '../types';
 
 export const mockAnomalias: Anomalia[] = [
   {
-    id: '1',
+    id: 1,
     criadoEm: '2025-01-15T10:35:00Z',
     descricao: 'Vazamento de óleo detectado no sistema principal',
     local: 'Planta Industrial São Paulo',
@@ -19,7 +19,7 @@ export const mockAnomalias: Anomalia[] = [
     equipamentoId: 1,
     historico: [
       {
-        id: '1',
+        id: 1,
         acao: 'Anomalia criada',
         usuario: 'João Silva',
         data: '2025-01-15T10:35:00Z',
@@ -27,7 +27,7 @@ export const mockAnomalias: Anomalia[] = [
     ]
   },
   {
-    id: '2',
+    id: 2,
     criadoEm: '2025-01-14T14:25:00Z',
     descricao: 'Ruído anormal detectado no sensor de vibração',
     local: 'Planta Industrial São Paulo',
@@ -44,13 +44,13 @@ export const mockAnomalias: Anomalia[] = [
     equipamentoId: 11,
     historico: [
       {
-        id: '2',
+        id: 2,
         acao: 'Anomalia criada automaticamente',
         usuario: 'Sistema SCADA',
         data: '2025-01-14T14:25:00Z',
       },
       {
-        id: '3',
+        id: 3,
         acao: 'Status alterado para Em Análise',
         usuario: 'Maria Santos',
         data: '2025-01-14T15:00:00Z',
@@ -59,7 +59,7 @@ export const mockAnomalias: Anomalia[] = [
     ]
   },
   {
-    id: '3',
+    id: 3,
     criadoEm: '2025-01-13T09:20:00Z',
     descricao: 'Falha na comunicação do relé de proteção',
     local: 'Planta Subestação Central',
@@ -77,13 +77,13 @@ export const mockAnomalias: Anomalia[] = [
     equipamentoId: 12,
     historico: [
       {
-        id: '4',
+        id: 4,
         acao: 'Anomalia criada',
         usuario: 'Pedro Costa',
         data: '2025-01-13T09:20:00Z',
       },
       {
-        id: '5',
+        id: 5,
         acao: 'Ordem de Serviço gerada',
         usuario: 'Pedro Costa',
         data: '2025-01-13T10:30:00Z',
@@ -92,7 +92,7 @@ export const mockAnomalias: Anomalia[] = [
     ]
   },
   {
-    id: '4',
+    id: 4,
     criadoEm: '2025-01-12T16:50:00Z',
     descricao: 'Superaquecimento no motor da bomba centrífuga',
     local: 'Estação de Bombeamento Sul',
@@ -110,19 +110,19 @@ export const mockAnomalias: Anomalia[] = [
     equipamentoId: 13,
     historico: [
       {
-        id: '6',
+        id: 6,
         acao: 'Anomalia criada',
         usuario: 'Ana Lima',
         data: '2025-01-12T16:50:00Z',
       },
       {
-        id: '7',
+        id: 7,
         acao: 'OS gerada para manutenção urgente',
         usuario: 'Ana Lima',
         data: '2025-01-12T17:00:00Z',
       },
       {
-        id: '8',
+        id: 8,
         acao: 'Anomalia resolvida',
         usuario: 'Carlos Ferreira',
         data: '2025-01-13T08:00:00Z',
@@ -131,7 +131,7 @@ export const mockAnomalias: Anomalia[] = [
     ]
   },
   {
-    id: '5',
+    id: 5,
     criadoEm: '2025-01-11T11:25:00Z',
     descricao: 'Pressão baixa detectada no sensor de pressão',
     local: 'Estação de Bombeamento Sul',
@@ -148,20 +148,20 @@ export const mockAnomalias: Anomalia[] = [
     equipamentoId: 14,
     historico: [
       {
-        id: '9',
+        id: 9,
         acao: 'Anomalia criada automaticamente',
         usuario: 'Sistema SCADA',
         data: '2025-01-11T11:25:00Z',
       },
       {
-        id: '10',
+        id: 10,
         acao: 'Investigação realizada',
         usuario: 'Roberto Silva',
         data: '2025-01-11T13:00:00Z',
         observacoes: 'Verificação in loco - pressão normal'
       },
       {
-        id: '11',
+        id: 11,
         acao: 'Anomalia cancelada',
         usuario: 'Roberto Silva',
         data: '2025-01-11T14:30:00Z',
@@ -171,7 +171,7 @@ export const mockAnomalias: Anomalia[] = [
   },
   // Dados para outros períodos
   {
-    id: '6',
+    id: 6,
     criadoEm: '2025-02-10T13:25:00Z',
     descricao: 'Obstrução detectada no filtro de ar',
     local: 'Oficina João Silva',
@@ -187,7 +187,7 @@ export const mockAnomalias: Anomalia[] = [
     equipamentoId: 15,
   },
   {
-    id: '7',
+    id: 7,
     criadoEm: '2025-02-15T08:45:00Z',
     descricao: 'Vibração excessiva no compressor principal',
     local: 'Oficina João Silva',
@@ -203,7 +203,7 @@ export const mockAnomalias: Anomalia[] = [
     equipamentoId: 4,
   },
   {
-    id: '8',
+    id: 8,
     criadoEm: '2025-03-05T16:15:00Z',
     descricao: 'Válvula de segurança acionada',
     local: 'Oficina João Silva',
@@ -220,7 +220,7 @@ export const mockAnomalias: Anomalia[] = [
     equipamentoId: 16,
   },
   {
-    id: '9',
+    id: 9,
     criadoEm: '2025-04-08T14:25:00Z',
     descricao: 'Leitura incorreta no manômetro digital',
     local: 'Oficina João Silva',
@@ -236,7 +236,7 @@ export const mockAnomalias: Anomalia[] = [
     equipamentoId: 17,
   },
   {
-    id: '10',
+    id: 10,
     criadoEm: '2025-04-01T11:00:00Z',
     descricao: 'Vazamento na válvula hidráulica principal',
     local: 'Estação de Bombeamento Sul',

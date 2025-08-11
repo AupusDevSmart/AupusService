@@ -17,6 +17,7 @@ interface BaseModalProps<T extends BaseEntity> {
   onSubmit: (data: any) => Promise<void>;
   width?: string;
   children?: React.ReactNode;
+  groups?: { key: string; title: string }[];
 }
 
 export function BaseModal<T extends BaseEntity>({
@@ -29,7 +30,8 @@ export function BaseModal<T extends BaseEntity>({
   onClose,
   onSubmit,
   width = "w-[500px]",
-  children
+  children,
+  groups
 }: BaseModalProps<T>) {
   const [formData, setFormData] = useState<any>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -162,6 +164,7 @@ export function BaseModal<T extends BaseEntity>({
                   onChange={setFormData}
                   mode={mode}
                   entity={entity}
+                  groups={groups}
                 />
                 
                 {children}

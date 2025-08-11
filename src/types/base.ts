@@ -9,11 +9,11 @@ export interface BaseEntity {
 
 export type ModalMode = 'create' | 'edit' | 'view';
 
-export interface ModalState<T = any> {
+export interface ModalState<T extends BaseEntity> {
   isOpen: boolean;
   mode: ModalMode;
   entity: T | null;
-  preselectedData?: any;
+  preselectedData?: unknown;
 }
 
 export interface BaseFilters {
@@ -50,8 +50,8 @@ export interface FilterConfig {
 
 // ✅ ATUALIZADO: Adicionar mode e entity ao FormFieldProps
 export interface FormFieldProps {
-  value: any;
-  onChange: (value: any) => void;
+  value: unknown;
+  onChange: (value: unknown) => void;
   disabled: boolean;
   error?: string;
   mode?: ModalMode; // ✅ NOVO: Para saber em que modo estamos
@@ -64,19 +64,23 @@ export interface FormField {
   type: 'text' | 'select' | 'textarea' | 'custom';
   required?: boolean;
   placeholder?: string;
-  options?: Array<{ value: any; label: string }>;
-  validation?: (value: any) => string | null;
+  options?: Array<{ value: unknown; label: string }>;
+  validation?: (value: unknown) => string | null;
   render?: React.ComponentType<FormFieldProps>; // ✅ Usar ComponentType para melhor tipagem
   group?: string;
   className?: string;
   hideOnMobile?: boolean;
   hideOnTablet?: boolean;
+  colSpan?: number; // ✅ NOVO: Para controlar o span do grid
+  showOnlyOnMode?: ModalMode[]; // ✅ NOVO: Para mostrar apenas em modos específicos
+  hideOnMode?: ModalMode[]; // ✅ NOVO: Para esconder em modos específicos
 }
 
 export interface UseGenericTableProps<T extends BaseEntity, F extends BaseFilters> {
   data: T[];
   initialFilters: F;
   searchFields: (keyof T | string)[];
+  customFilters?: Record<string, (item: T, value: unknown) => boolean>;
 }
 
 export interface UseGenericTableReturn<T extends BaseEntity, F extends BaseFilters> {
@@ -85,6 +89,6 @@ export interface UseGenericTableReturn<T extends BaseEntity, F extends BaseFilte
   filters: F;
   loading: boolean;
   setLoading: (loading: boolean) => void;
-  handleFilterChange: (key: keyof F, value: any) => void;
+  handleFilterChange: (key: keyof F, value: unknown) => void;
   handlePageChange: (page: number) => void;
 }

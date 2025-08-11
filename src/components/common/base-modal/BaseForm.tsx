@@ -15,30 +15,32 @@ import { FormField, FormFieldProps, ModalMode, BaseEntity } from '@/types/base';
 
 interface BaseFormProps {
   fields: FormField[];
-  data: any;
+  data: Record<string, unknown>;
   errors: Record<string, string>;
   disabled: boolean;
-  onChange: (data: any) => void;
+  onChange: (data: Record<string, unknown>) => void;
   mode?: ModalMode; // ✅ NOVO: Adicionar mode
   entity?: BaseEntity | null; // ✅ NOVO: Adicionar entity
+  groups?: { key: string; title: string }[];
 }
 
-export function BaseForm({ 
-  fields, 
-  data, 
-  errors, 
-  disabled, 
-  onChange, 
-  mode, 
-  entity 
+export function BaseForm({
+  fields,
+  data,
+  errors,
+  disabled,
+  onChange,
+  mode,
+  entity,
+  groups
 }: BaseFormProps) {
-  const handleFieldChange = (key: string, value: any) => {
+  const handleFieldChange = (key: string, value: unknown) => {
     if (key.includes('.')) {
       const [parent, child] = key.split('.');
       onChange({
         ...data,
         [parent]: {
-          ...data[parent],
+          ...(data[parent] as Record<string, unknown>),
           [child]: value
         }
       });
@@ -50,16 +52,31 @@ export function BaseForm({
     }
   };
 
-  const getValue = (key: string) => {
+  const getValue = (key: string): unknown => {
     if (key.includes('.')) {
       const [parent, child] = key.split('.');
-      return data[parent]?.[child] || '';
+      return (data[parent] as Record<string, unknown>)?.[child] || '';
     }
     return data[key] || '';
   };
 
-  // Agrupar campos por grupo
-  const groupedFields = fields.reduce((acc, field) => {
+  // Filtrar campos baseado no modo e agrupar por grupo
+  const visibleFields = fields.filter((field) => {
+    // Se tem showOnlyOnMode, só mostrar nos modos especificados
+    if (field.showOnlyOnMode && mode) {
+      return field.showOnlyOnMode.includes(mode);
+    }
+    
+    // Se tem hideOnMode, esconder nos modos especificados
+    if (field.hideOnMode && mode) {
+      return !field.hideOnMode.includes(mode);
+    }
+    
+    // Por padrão, mostrar o campo
+    return true;
+  });
+
+  const groupedFields = visibleFields.reduce((acc, field) => {
     const group = field.group || 'main';
     if (!acc[group]) acc[group] = [];
     acc[group].push(field);
@@ -80,15 +97,16 @@ export function BaseForm({
       entity, // ✅ NOVO: Passar entity
     };
 
+    // ✅ CORREÇÃO: Renderizar componente personalizado usando React.createElement
     if (field.render) {
-      return field.render(fieldProps);
+      return React.createElement(field.render, fieldProps);
     }
 
     switch (field.type) {
       case 'text':
         return (
           <Input
-            value={value}
+            value={value as string}
             onChange={(e) => handleFieldChange(field.key, e.target.value)}
             disabled={disabled}
             placeholder={field.placeholder}
@@ -99,7 +117,7 @@ export function BaseForm({
       case 'textarea':
         return (
           <Textarea
-            value={value}
+            value={value as string}
             onChange={(e) => handleFieldChange(field.key, e.target.value)}
             disabled={disabled}
             placeholder={field.placeholder}
@@ -110,7 +128,7 @@ export function BaseForm({
       case 'select':
         return (
           <Select
-            value={value}
+            value={value as string}
             onValueChange={(newValue) => handleFieldChange(field.key, newValue)}
             disabled={disabled}
           >
@@ -119,7 +137,7 @@ export function BaseForm({
             </SelectTrigger>
             <SelectContent>
               {field.options?.map((option) => (
-                <SelectItem key={option.value} value={String(option.value)}>
+                <SelectItem key={String(option.value)} value={String(option.value)}>
                   {option.label}
                 </SelectItem>
               ))}
@@ -140,7 +158,7 @@ export function BaseForm({
           
           {groupName !== 'main' && (
             <h3 className="text-base font-semibold border-b pb-2 capitalize">
-              {groupName.replace(/_/g, ' ')}
+              {groups?.find(g => g.key === groupName)?.title || groupName.replace(/_/g, ' ')}
             </h3>
           )}
           
