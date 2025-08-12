@@ -280,7 +280,7 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
   };
 
   const getCriticidadeConfig = (criticidade: string) => {
-    const configs = {
+    const configs: Record<string, { color: string; label: string }> = {
       '5': { color: 'bg-red-100 text-red-800 border-red-200', label: 'Muito Alta' },
       '4': { color: 'bg-orange-100 text-orange-800 border-orange-200', label: 'Alta' },
       '3': { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', label: 'Média' },

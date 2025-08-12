@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Select, 
@@ -20,11 +19,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Wrench, Component, Save, X, Plus, Trash2 } from 'lucide-react';
 import { Equipamento } from '../../types';
+import { CheckedState } from '@radix-ui/react-checkbox';
 
 // ============================================================================
 // CAMPOS TÉCNICOS DINÂMICOS POR TIPO DE EQUIPAMENTO
 // ============================================================================
-const CAMPOS_TECNICOS_POR_TIPO = {
+const CAMPOS_TECNICOS_POR_TIPO: Record<string, any[]> = {
   'motor_inducao': [
     { key: 'potencia', label: 'Potência', type: 'number', unit: 'kW' },
     { key: 'tensaoNominal', label: 'Tensão Nominal', type: 'number', unit: 'V' },
@@ -140,7 +140,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   }, [entity, mode]);
 
   const handleFieldChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
   const renderCamposTecnicos = () => {
@@ -153,7 +153,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
           Dados Técnicos - {TIPOS_EQUIPAMENTOS.find(t => t.value === formData.tipoEquipamento)?.label}
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {campos.map((campo) => (
+          {campos.map((campo: any) => (
             <div key={campo.key}>
               <label className="text-sm font-medium">
                 {campo.label} {campo.unit && <span className="text-muted-foreground">({campo.unit})</span>}
@@ -168,7 +168,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {campo.options?.map(option => (
+                    {campo.options?.map((option: any) => (
                       <SelectItem key={option} value={option}>{option}</SelectItem>
                     ))}
                   </SelectContent>
@@ -448,7 +448,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
               <Checkbox 
                 id="mcpse" 
                 checked={mcpse}
-                onCheckedChange={setMcpse}
+                onCheckedChange={(checked: CheckedState) => setMcpse(checked === true)}
                 disabled={isReadOnly}
               />
               <label htmlFor="mcpse" className="text-sm font-medium">

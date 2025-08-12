@@ -1,5 +1,4 @@
 // src/features/equipamentos/config/table-config.tsx - ESTRUTURA SIMPLIFICADA
-import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Wrench, Building2, Factory, AlertTriangle, AlertCircle, CheckCircle, Component, MapPin } from 'lucide-react';

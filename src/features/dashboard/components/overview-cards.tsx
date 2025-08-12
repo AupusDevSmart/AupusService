@@ -1,15 +1,6 @@
 // src/features/dashboard/components/overview-cards.tsx
-import React from 'react';
 import { Card } from '@/components/ui/card';
-
-interface OverviewData {
-  totalAssets: number;
-  assetsFaults: number;
-  assetsDown: number;
-  openWorker: number;
-  workInProgress: number;
-  completed: number;
-}
+import { OverviewData } from '../types';
 
 interface OverviewCardsProps {
   data: OverviewData;
@@ -35,6 +26,15 @@ function MetricCard({ title, value, className = "" }: MetricCardProps) {
 }
 
 export function OverviewCards({ data }: OverviewCardsProps) {
+  const metrics = [
+    { title: "Total de Ativos", value: data.totalAssets },
+    { title: "Ativos com Falhas", value: data.assetsFaults },
+    { title: "Ativos Parados", value: data.assetsDown },
+    { title: "Ordens Abertas", value: data.openWorker },
+    { title: "Em Execução", value: data.workInProgress },
+    { title: "Concluídas", value: data.completed }
+  ];
+
   return (
     <Card className="p-6 h-full">
       <h3 className="text-lg font-semibold mb-6 text-foreground">
@@ -42,30 +42,13 @@ export function OverviewCards({ data }: OverviewCardsProps) {
       </h3>
       
       <div className="grid grid-cols-3 gap-4">
-        <MetricCard 
-          title="Total de Ativos" 
-          value={data.totalAssets}
-        />
-        <MetricCard 
-          title="Ativos com Falhas" 
-          value={data.assetsFaults}
-        />
-        <MetricCard 
-          title="Ativos Parados" 
-          value={data.assetsDown}
-        />
-        <MetricCard 
-          title="Ordens Abertas" 
-          value={data.openWorker}
-        />
-        <MetricCard 
-          title="Em Execução" 
-          value={data.workInProgress}
-        />
-        <MetricCard 
-          title="Concluídas" 
-          value={data.completed}
-        />
+        {metrics.map((metric, index) => (
+          <MetricCard 
+            key={index}
+            title={metric.title} 
+            value={metric.value}
+          />
+        ))}
       </div>
     </Card>
   );

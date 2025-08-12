@@ -1,5 +1,4 @@
 // src/pages/dashboard/index.tsx
-import React from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { OverviewCards } from '@/features/dashboard/components/overview-cards';
@@ -8,9 +7,10 @@ import { ServiceSeverityCharts } from '@/features/dashboard/components/service-s
 import { PlannedVsCompletedChart } from '@/features/dashboard/components/planned-vs-completed-chart';
 import { SystemStatusCards } from '@/features/dashboard/components/system-status-cards';
 import { WorkOrdersPanel } from '@/features/dashboard/components/work-orders-panel';
+import { DashboardData } from '@/features/dashboard/types';
 
-// Dados simulados - normalmente viriam de uma API
-const dashboardData = {
+// Dados simulados - normalmente viriam de uma API ou hook personalizado
+const dashboardData: DashboardData = {
   overview: {
     totalAssets: 30,
     assetsFaults: 5,
@@ -84,13 +84,13 @@ export function DashboardPage() {
         />
         
         <div className="space-y-6 w-full">
-          {/* Terceira linha - Cards de Status do Sistema */}
-          <div className="grid grid-cols-1">
+          {/* Cards de Status do Sistema - Primeira seção */}
+          <section aria-labelledby="system-status-title">
             <SystemStatusCards data={dashboardData.systemStatus} />
-          </div>
+          </section>
           
-          {/* Primeira linha - Overview, Service Severity e Opevode */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Seção principal com métricas e gráficos */}
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6" aria-labelledby="main-metrics-title">
             {/* Visão Geral */}
             <div className="lg:col-span-4">
               <OverviewCards data={dashboardData.overview} />
@@ -108,10 +108,10 @@ export function DashboardPage() {
             <div className="lg:col-span-4">
               <WorkOrdersPanel data={dashboardData.workOrders} />
             </div>
-          </div>
+          </section>
 
-          {/* Segunda linha - Prioridades de Tarefas e Planejadas vs Concluídas */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Seção de análise temporal */}
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6" aria-labelledby="temporal-analysis-title">
             {/* Prioridades de Tarefas */}
             <div className="lg:col-span-4">
               <TaskPriorities tasks={dashboardData.taskPriorities} />
@@ -121,7 +121,7 @@ export function DashboardPage() {
             <div className="lg:col-span-8">
               <PlannedVsCompletedChart data={dashboardData.plannedVsCompleted} />
             </div>
-          </div>
+          </section>
         </div>
       </Layout.Main>
     </Layout>

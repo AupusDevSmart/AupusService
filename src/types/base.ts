@@ -7,7 +7,7 @@ export interface BaseEntity {
   atualizadoEm?: string;
 }
 
-export type ModalMode = 'create' | 'edit' | 'view';
+export type ModalMode = 'create' | 'edit' | 'view' | 'finalizar' | 'anexos';
 
 export interface ModalState<T extends BaseEntity> {
   isOpen: boolean;
@@ -36,7 +36,7 @@ export interface TableColumn<T extends BaseEntity> {
   className?: string;
   hideOnMobile?: boolean;
   hideOnTablet?: boolean;
-  render?: (entity: T) => React.ReactNode;
+  render?: (entity: T, actions?: { onCustomAction: (actionKey: string, entity: T) => void }) => React.ReactNode;
 }
 
 export interface FilterConfig {
@@ -56,12 +56,13 @@ export interface FormFieldProps {
   error?: string;
   mode?: ModalMode; // ✅ NOVO: Para saber em que modo estamos
   entity?: BaseEntity | null; // ✅ NOVO: Para acessar dados da entidade
+  formData?: any; // Adicionado para o form-config
 }
 
 export interface FormField {
   key: string;
   label: string;
-  type: 'text' | 'select' | 'textarea' | 'custom';
+  type: 'text' | 'select' | 'textarea' | 'custom' | 'date' | 'checkbox';
   required?: boolean;
   placeholder?: string;
   options?: Array<{ value: unknown; label: string }>;
@@ -74,6 +75,7 @@ export interface FormField {
   colSpan?: number; // ✅ NOVO: Para controlar o span do grid
   showOnlyOnMode?: ModalMode[]; // ✅ NOVO: Para mostrar apenas em modos específicos
   hideOnMode?: ModalMode[]; // ✅ NOVO: Para esconder em modos específicos
+  condition?: (formData: any) => boolean; // Adicionado para o form-config
 }
 
 export interface UseGenericTableProps<T extends BaseEntity, F extends BaseFilters> {

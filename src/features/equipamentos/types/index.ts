@@ -73,10 +73,14 @@ export interface Equipamento extends BaseEntity {
   
   // ✅ LOCALIZAÇÃO: Campo de texto livre para indicar a área
   localizacao?: string; // Ex: "Produção", "Logística", "Administrativo"
+  localizacaoEspecifica?: string;
+  observacoes?: string;
   
   // Componentes UAR (apenas para UC)
   componentesUAR?: Equipamento[]; // Lista de UARs que pertencem a este UC
   totalComponentes?: number; // Contagem de UARs
+  tuc?: string;
+  mcpse?: boolean;
 }
 
 // ============================================================================
@@ -127,6 +131,7 @@ export interface EquipamentosFilters extends BaseFiltersType {
   proprietarioId: string;
   plantaId: string;
   criticidade: string;
+  classificacao: string;
   equipamentoPaiId?: string; // Para filtrar por equipamento pai
 }
 

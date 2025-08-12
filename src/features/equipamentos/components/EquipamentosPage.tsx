@@ -1,14 +1,13 @@
 // src/features/equipamentos/components/EquipamentosPage.tsx - CORRIGIDO
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/components/common/base-table/BaseTable';
 import { BaseFilters } from '@/components/common/base-filters/BaseFilters';
 import { Button } from '@/components/ui/button';
-import { Plus, Wrench, Component, ArrowLeft } from 'lucide-react';
+import { Wrench, ArrowLeft } from 'lucide-react';
 import { useGenericTable } from '@/hooks/useGenericTable';
-import { useGenericModal } from '@/hooks/useGenericModal';
 import { Equipamento, EquipamentosFilters } from '../types';
 import { getEquipamentosTableColumns } from '../config/table-config';
 import { equipamentosFilterConfig } from '../config/filter-config';
@@ -100,8 +99,8 @@ export function EquipamentosPage() {
       const urlParams = new URLSearchParams(location.search);
       const plantaId = urlParams.get('plantaId');
       
-      const initialData = plantaId ? { plantaId: parseInt(plantaId) } : null;
-      setModalUC({ isOpen: true, mode, entity: initialData });
+      const initialData = plantaId ? { plantaId: parseInt(plantaId) } : {};
+      setModalUC({ isOpen: true, mode, entity: initialData as Equipamento });
     } else {
       setModalUC({ isOpen: true, mode, entity });
     }

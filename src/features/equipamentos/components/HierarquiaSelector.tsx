@@ -1,5 +1,5 @@
 // src/features/equipamentos/components/HierarquiaSelector.tsx - CORRIGIDO
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { FormFieldProps } from '@/types/base';
 import { 
   Select, 
@@ -69,7 +69,7 @@ const mockMaquinas = [
   { id: 6, nome: 'Cilindro Pneumático 01', conjuntoId: 3 }
 ];
 
-interface HierarquiaSelectorProps extends FormFieldProps {
+interface HierarquiaSelectorProps {
   value: any;
   onChange: (value: any) => void;
   disabled?: boolean;

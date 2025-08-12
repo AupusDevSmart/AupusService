@@ -1,5 +1,4 @@
 // src/features/equipamentos/config/form-config.tsx - FORMULÁRIO DINÂMICO POR TIPO
-import React from 'react';
 import { FormField } from '@/types/base';
 import { 
   Select, 
@@ -73,8 +72,13 @@ const TIPOS_DEPRECIACAO = [
   { value: 'uso', label: 'Uso' }
 ];
 
-// Componente para campos específicos por tipo de equipamento
-const CamposEspecificosPorTipo = ({ tipoEquipamento, formData, onChange }) => {
+interface CamposEspecificosPorTipoProps {
+  tipoEquipamento: string;
+  formData: any;
+  onChange: (field: string, value: any) => void;
+}
+
+const CamposEspecificosPorTipo = ({ tipoEquipamento, formData, onChange }: CamposEspecificosPorTipoProps) => {
   const renderCamposPorTipo = () => {
     switch (tipoEquipamento) {
       case 'motor_inducao':

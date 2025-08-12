@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Select, 
@@ -17,9 +16,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { Wrench, Component, Save, X, Plus } from 'lucide-react';
 import { Equipamento } from '../types';
+import { CheckedState } from '@radix-ui/react-checkbox';
 
 // Tipos de equipamentos
 const TIPOS_EQUIPAMENTOS = [
@@ -42,30 +41,6 @@ const TIPOS_EQUIPAMENTOS = [
   { value: 'cercamento', label: 'Cercamento' }
 ];
 
-const CLASSIFICACOES = [
-  { value: 'novo', label: 'Novo' },
-  { value: 'usado', label: 'Usado' }
-];
-
-const CRITICIDADES = [
-  { value: '1', label: '1 a 5' },
-  { value: '2', label: '1 a 5' },
-  { value: '3', label: '1 a 5' },
-  { value: '4', label: '1 a 5' },
-  { value: '5', label: '1 a 5' }
-];
-
-const OPCOES_SIM_NAO = [
-  { value: 'sim', label: 'Sim/Não' },
-  { value: 'nao', label: 'Sim/Não' }
-];
-
-const TIPOS_DEPRECIACAO = [
-  { value: 'linear', label: 'Linear/Uso' },
-  { value: 'uso', label: 'Linear/Uso' }
-];
-
-// Mock de dados
 const mockPlantas = [
   { id: 1, nome: 'Planta Industrial São Paulo' },
   { id: 2, nome: 'Centro de Distribuição Rio' },
@@ -119,7 +94,11 @@ export const EquipamentoModalCustom: React.FC<EquipamentoModalCustomProps> = ({
   }, [entity, mode, isUAR]);
 
   const handleFieldChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const handleCheckboxChange = (checked: CheckedState) => {
+    setTemTUC(checked === true);
   };
 
   const handleSubmit = () => {
@@ -497,7 +476,7 @@ export const EquipamentoModalCustom: React.FC<EquipamentoModalCustomProps> = ({
                 <Checkbox 
                   id="temTUC" 
                   checked={temTUC}
-                  onCheckedChange={setTemTUC}
+                  onCheckedChange={handleCheckboxChange}
                   disabled={isReadOnly}
                 />
                 <label htmlFor="temTUC" className="text-sm font-medium">

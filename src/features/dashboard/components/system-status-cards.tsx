@@ -2,15 +2,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, AlertTriangle, Activity, Wrench, Zap } from 'lucide-react';
-
-interface SystemStatusData {
-  scheduledDowntime: number;
-  assetStatus: number;
-  assetClass: number;
-  unscheduledDowntime: number;
-  faultsCausingDamage: number;
-  sensorsDamaged: number;
-}
+import { SystemStatusData, StatusVariant } from '../types';
 
 interface SystemStatusCardsProps {
   data: SystemStatusData;
@@ -20,11 +12,18 @@ interface StatusCardProps {
   title: string;
   value: number;
   icon: React.ReactNode;
-  variant?: 'default' | 'warning' | 'danger' | 'success';
+  variant?: StatusVariant;
+}
+
+interface StatusCardConfig {
+  key: keyof SystemStatusData;
+  title: string;
+  icon: React.ReactNode;
+  variant: StatusVariant;
 }
 
 function StatusCard({ title, value, icon, variant = 'default' }: StatusCardProps) {
-  const variantClasses = {
+  const variantClasses: Record<StatusVariant, string> = {
     default: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800",
     warning: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
     danger: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
@@ -51,49 +50,56 @@ function StatusCard({ title, value, icon, variant = 'default' }: StatusCardProps
 }
 
 export function SystemStatusCards({ data }: SystemStatusCardsProps) {
+  const statusCards: StatusCardConfig[] = [
+    {
+      key: 'scheduledDowntime',
+      title: 'Paradas Programadas',
+      icon: <Activity />,
+      variant: 'default'
+    },
+    {
+      key: 'assetStatus',
+      title: 'Status de Ativos',
+      icon: <TrendingUp />,
+      variant: 'warning'
+    },
+    {
+      key: 'assetClass',
+      title: 'Classe de Ativos',
+      icon: <Wrench />,
+      variant: 'default'
+    },
+    {
+      key: 'unscheduledDowntime',
+      title: 'Paradas Não Programadas',
+      icon: <TrendingDown />,
+      variant: 'danger'
+    },
+    {
+      key: 'faultsCausingDamage',
+      title: 'Falhas Causando Danos',
+      icon: <AlertTriangle />,
+      variant: 'danger'
+    },
+    {
+      key: 'sensorsDamaged',
+      title: 'Sensores Danificados',
+      icon: <Zap />,
+      variant: 'warning'
+    }
+  ];
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-      <StatusCard
-        title="Paradas Programadas"
-        value={data.scheduledDowntime}
-        icon={<Activity />}
-        variant="default"
-      />
-      
-      <StatusCard
-        title="Status de Ativos"
-        value={data.assetStatus}
-        icon={<TrendingUp />}
-        variant="warning"
-      />
-      
-      <StatusCard
-        title="Classe de Ativos"
-        value={data.assetClass}
-        icon={<Wrench />}
-        variant="default"
-      />
-      
-      <StatusCard
-        title="Paradas Não Programadas"
-        value={data.unscheduledDowntime}
-        icon={<TrendingDown />}
-        variant="danger"
-      />
-      
-      <StatusCard
-        title="Falhas Causando Danos"
-        value={data.faultsCausingDamage}
-        icon={<AlertTriangle />}
-        variant="danger"
-      />
-      
-      <StatusCard
-        title="Sensores Danificados"
-        value={data.sensorsDamaged}
-        icon={<Zap />}
-        variant="warning"
-      />
+      {statusCards.map((card) => (
+        <StatusCard
+          key={card.key}
+          title={card.title}
+          value={data[card.key]}
+          icon={card.icon}
+          variant={card.variant}
+        />
+      ))}
     </div>
   );
 }

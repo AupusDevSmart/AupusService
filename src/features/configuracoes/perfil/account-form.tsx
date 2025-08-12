@@ -69,11 +69,10 @@ const profileFormSchema = z.object({
     .string()
     .optional(),
   image: z
-    .instanceof(FileList)
-    .refine(files => files.length === 0 || files.length === 1, {
-      message: 'Por favor, selecione uma imagem.',
+    .instanceof(File)
+    .refine(file => file.size < 2 * 1024 * 1024, {
+      message: 'A imagem deve ter no máximo 2MB.',
     })
-    .transform(files => files.length > 0 ? files[0] : null)
     .optional(),
 }).refine((data) => {
   if (data.newPassword && !data.password) {
@@ -95,7 +94,6 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>
 
-// Dados iniciais (podem vir do banco de dados ou API)
 const defaultValues: Partial<ProfileFormValues> = {
   name: 'João Silva',
   cpf: '123.456.789-00',
@@ -112,20 +110,17 @@ export function AccountForm() {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues,
+    mode: 'onChange',
   })
 
   function onSubmit(data: ProfileFormValues) {
-    // Ação mockada
     toast({
       title: 'Você enviou os seguintes valores:',
       description: (
         <pre className='mt-2 w-[340px] rounded-md bg-slate-950 p-4'>
           <code className='text-white'>
             {JSON.stringify({
-              name: data.name,
-              cpf: data.cpf,
-              email: data.email,
-              phone: data.phone,
+              ...data,
               passwordChanged: !!data.newPassword,
               image: data.image ? data.image.name : null
             }, null, 2)}
@@ -140,8 +135,7 @@ export function AccountForm() {
     if (file) {
       const url = URL.createObjectURL(file)
       setPreviewUrl(url)
-      //@ts-ignore
-      form.setValue('image', e.target.files as FileList)
+      form.setValue('image', file)
     }
   }
 
@@ -251,7 +245,7 @@ export function AccountForm() {
                       <FormItem>
                         <FormLabel>CPF</FormLabel>
                         <FormControl>
-                          <Input placeholder='123.456.789-00' {...field} />
+                          <Input placeholder='123.456.789-00' {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormDescription>
                           Seu CPF será usado apenas para fins de identificação.
@@ -297,7 +291,7 @@ export function AccountForm() {
                       <FormItem>
                         <FormLabel>Telefone</FormLabel>
                         <FormControl>
-                          <Input placeholder='(11) 98765-4321' {...field} />
+                          <Input placeholder='(11) 98765-4321' {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormDescription>
                           Seu telefone para contato.
@@ -332,6 +326,7 @@ export function AccountForm() {
                             type={showPassword ? "text" : "password"}
                             placeholder='••••••••'
                             {...field}
+                            value={field.value ?? ''}
                           />
                           <button
                             type="button"
@@ -362,6 +357,7 @@ export function AccountForm() {
                             type={showNewPassword ? "text" : "password"}
                             placeholder='••••••••'
                             {...field}
+                            value={field.value ?? ''}
                           />
                           <button
                             type="button"
@@ -392,6 +388,7 @@ export function AccountForm() {
                             type={showConfirmPassword ? "text" : "password"}
                             placeholder='••••••••'
                             {...field}
+                            value={field.value ?? ''}
                           />
                           <button
                             type="button"
@@ -414,7 +411,7 @@ export function AccountForm() {
           </div>
 
 
-          <Button type='submit' className="w-auto rounded-sm bg-card-foreground text-card">Atualizar perfil</Button>
+          <Button type='submit' className="w-auto rounded-sm">Atualizar perfil</Button>
         </div>
       </form>
     </Form>

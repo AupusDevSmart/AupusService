@@ -20,7 +20,7 @@ import React, { useEffect, useState } from 'react';
 import { Equipamento } from '../../types';
 
 // Reutilizando os mesmos campos técnicos do UC
-const CAMPOS_TECNICOS_POR_TIPO = {
+const CAMPOS_TECNICOS_POR_TIPO: Record<string, any[]> = {
   'motor_inducao': [
     { key: 'potencia', label: 'Potência', type: 'number', unit: 'kW' },
     { key: 'tensaoNominal', label: 'Tensão Nominal', type: 'number', unit: 'V' },
@@ -184,7 +184,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   }, [entity, mode, equipamentoPai]);
 
   const handleFieldChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
   const renderCamposTecnicos = () => {
@@ -197,7 +197,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
           Dados Técnicos - {TIPOS_COMPONENTES.find(t => t.value === formData.tipoComponente)?.label}
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {campos.map((campo) => (
+          {campos.map((campo: any) => (
             <div key={campo.key}>
               <label className="text-sm font-medium">
                 {campo.label} {campo.unit && <span className="text-muted-foreground">({campo.unit})</span>}
@@ -212,7 +212,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {campo.options?.map(option => (
+                    {campo.options?.map((option: any) => (
                       <SelectItem key={option} value={option}>{option}</SelectItem>
                     ))}
                   </SelectContent>

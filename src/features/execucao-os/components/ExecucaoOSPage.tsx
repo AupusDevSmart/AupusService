@@ -1,5 +1,4 @@
 // src/features/execucao-os/components/ExecucaoOSPage.tsx
-import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -11,12 +10,10 @@ import {
   Play, 
   Pause, 
   CheckCircle, 
-  XCircle, 
   Eye, 
   Edit, 
   Calendar,
   Timer,
-  Users,
   AlertTriangle,
   Clock,
   FileText,
@@ -62,7 +59,7 @@ export function ExecucaoOSPage() {
   } = useGenericTable({
     data: mockExecucoesOS,
     initialFilters,
-    searchFields: ['os.numeroOS', 'os.descricao', 'os.local', 'os.ativo', 'responsavelExecucao'],
+    searchFields: ['responsavelExecucao'],
     customFilters: {
       periodo: (item: ExecucaoOS, value: string) => {
         if (value === 'all') return true;
@@ -189,7 +186,7 @@ export function ExecucaoOSPage() {
       };
       
       if (modalState.mode === 'finalizar') {
-        await finalizarExecucao(modalState.entity.id, {
+        await finalizarExecucao(String(modalState.entity.id), {
           resultadoServico: data.resultadoServico,
           problemasEncontrados: data.problemasEncontrados,
           recomendacoes: data.recomendacoes,
@@ -200,7 +197,7 @@ export function ExecucaoOSPage() {
           observacoesQualidade: data.observacoesQualidade
         });
       } else {
-        await editarExecucao(modalState.entity.id, dadosExecucao);
+        await editarExecucao(String(modalState.entity.id), dadosExecucao);
       }
       
       await handleSuccess();
@@ -237,6 +234,7 @@ export function ExecucaoOSPage() {
     
     // Transformar dados para o formato do formulário
     return {
+      id: execucao.id, // Adicionar o ID aqui
       numeroOS: execucao.os.numeroOS,
       descricaoOS: execucao.os.descricao,
       localAtivo: `${execucao.os.local} - ${execucao.os.ativo}`,
@@ -306,7 +304,7 @@ export function ExecucaoOSPage() {
       const motivo = prompt('Motivo do cancelamento:');
       if (!motivo) return;
       
-      await cancelarExecucao(execucao.id, motivo);
+      await cancelarExecucao(String(execucao.id), motivo);
       setLoading(true);
       await new Promise(resolve => setTimeout(resolve, 1000));
       setLoading(false);
@@ -323,7 +321,7 @@ export function ExecucaoOSPage() {
   const handleExportar = async () => {
     console.log('Exportando execuções...');
     try {
-      const ids = execucoes.map(exec => exec.id);
+      const ids = execucoes.map(exec => String(exec.id));
       const blob = await exportarDadosExecucao(ids);
       
       // Criar download do arquivo
@@ -343,7 +341,7 @@ export function ExecucaoOSPage() {
   const handleGerarRelatorio = async (execucao: ExecucaoOS) => {
     console.log('Gerando relatório de execução:', execucao.id);
     try {
-      const blob = await gerarRelatorioExecucao(execucao.id);
+      const blob = await gerarRelatorioExecucao(String(execucao.id));
       
       // Criar download do arquivo
       const url = window.URL.createObjectURL(blob);

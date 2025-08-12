@@ -9,7 +9,6 @@ import {
   Clock, 
   Wrench,
   AlertTriangle,
-  Calendar,
   User,
   FileText
 } from 'lucide-react';
@@ -118,7 +117,7 @@ export const SelecionarTarefasModal: React.FC<SelecionarTarefasModalProps> = ({
   };
 
   const formatarCriticidade = (criticidade: string) => {
-    const config = {
+    const config: Record<string, { label: string; color: string }> = {
       '1': { label: 'Muito Baixa', color: 'text-gray-600' },
       '2': { label: 'Baixa', color: 'text-green-600' },
       '3': { label: 'Média', color: 'text-yellow-600' },

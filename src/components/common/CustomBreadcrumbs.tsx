@@ -22,7 +22,7 @@ interface DropdownItem {
 }
 
 interface BreadcrumbConfigItem {
-  path: string;
+  path: string | null;
   label: string;
   isDropdown?: boolean;
   dropdownItems?: DropdownItem[];
