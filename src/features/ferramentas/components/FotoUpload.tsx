@@ -29,7 +29,7 @@ export const FotoUpload = ({ value, onChange, disabled }: FormFieldProps) => {
         <div className="space-y-3">
           <div className="relative inline-block">
             <img 
-              src={value} 
+              src={typeof value === 'string' ? value : ''} 
               alt="Foto da ferramenta" 
               className="w-32 h-24 object-cover rounded-lg border"
             />

@@ -144,7 +144,7 @@ export function FerramentasPage() {
       edit: 'Editar Ferramenta', 
       view: 'Visualizar Ferramenta'
     };
-    return titles[modalState.mode];
+    return titles[modalState.mode as keyof typeof titles] || 'Ferramenta';
   };
 
   const getModalIcon = () => {

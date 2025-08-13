@@ -77,7 +77,7 @@ export const ferramentasFormFields: FormField[] = [
     placeholder: 'Ex: 25.00',
     validation: (value) => {
       if (!value) return null;
-      const valor = parseFloat(value);
+      const valor = parseFloat(String(value));
       if (valor <= 0) {
         return 'Valor deve ser maior que zero';
       }
@@ -109,7 +109,7 @@ export const ferramentasFormFields: FormField[] = [
     placeholder: 'Data de aquisição da ferramenta',
     validation: (value) => {
       if (!value) return null;
-      const data = new Date(value);
+      const data = new Date(String(value));
       const hoje = new Date();
       if (data > hoje) {
         return 'Data de aquisição não pode ser futura';
