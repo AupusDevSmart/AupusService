@@ -1,7 +1,7 @@
 // src/features/veiculos/config/form-config.tsx
 import React from 'react';
 import { Car, Users, Weight, Fuel, MapPin } from 'lucide-react';
-import { Veiculo } from '../types';
+import { Veiculo } from '../../reservas/types';
 
 export interface FormField {
   key: string;
@@ -75,7 +75,7 @@ export const veiculosTableConfig: TableColumn<Veiculo>[] = [
       <div className="space-y-1 text-sm">
         <div className="flex items-center gap-1">
           <Users className="w-3 h-3 text-gray-400" />
-          <span>{veiculo.numeroPassageiros || veiculo.capacidadePassageiros} passageiros</span>
+          <span>{veiculo.capacidadePassageiros || veiculo.numeroPassageiros || 0} passageiros</span>
         </div>
         <div className="flex items-center gap-1">
           <Weight className="w-3 h-3 text-gray-400" />
@@ -94,7 +94,7 @@ export const veiculosTableConfig: TableColumn<Veiculo>[] = [
     sortable: true,
     render: (veiculo) => (
       <div>
-        <div className="font-medium text-gray-900">{veiculo.responsavel || veiculo.responsavelManutencao}</div>
+        <div className="font-medium text-gray-900">{veiculo.responsavel || veiculo.responsavelManutencao || 'Não informado'}</div>
         <div className="text-sm text-gray-500 flex items-center gap-1">
           <MapPin className="w-3 h-3" />
           {veiculo.localizacaoAtual}

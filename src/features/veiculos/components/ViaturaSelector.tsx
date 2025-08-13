@@ -13,7 +13,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
   dataFim,
   horaInicio,
   horaFim,
-  solicitanteId,
+  // solicitanteId é usado na destruturação mas não é usado na função
   responsavel,
   finalidade,
   mode = 'complete',
@@ -79,7 +79,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
   const selecionarVeiculo = (veiculoId: number) => {
     if (disabled) return;
 
-    const veiculo = mockVeiculos.find(v => parseInt(v.id) === veiculoId);
+    const veiculo = mockVeiculos.find(v => v.id === veiculoId);
     if (!veiculo) return;
 
     if (mode === 'simple') {
@@ -163,7 +163,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
   }
 
   const veiculosParaExibir = mockVeiculos.filter(v => 
-    veiculosDisponiveis.includes(parseInt(v.id))
+    veiculosDisponiveis.includes(v.id)
   );
 
   return (
@@ -191,8 +191,8 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
       {/* Lista de veículos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {veiculosParaExibir.map(veiculo => {
-          const isSelected = veiculoSelecionadoId === parseInt(veiculo.id);
-          const custo = calcularCustoReserva(parseInt(veiculo.id), dataInicio, dataFim);
+          const isSelected = veiculoSelecionadoId === veiculo.id;
+          const custo = calcularCustoReserva(veiculo.id, dataInicio, dataFim);
 
           return (
             <div
@@ -204,7 +204,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
                   ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
                   : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
               }`}
-              onClick={() => selecionarVeiculo(parseInt(veiculo.id))}
+              onClick={() => selecionarVeiculo(veiculo.id)}
             >
               {/* Indicador de seleção */}
               {isSelected && (
@@ -230,11 +230,11 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
               <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-600">{veiculo.numeroPassageiros} passageiros</span>
+                  <span className="text-gray-600">{veiculo.capacidadePassageiros || veiculo.numeroPassageiros || 0} passageiros</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Weight className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-600">{veiculo.capacidadeCarga}kg</span>
+                  <span className="text-gray-600">{veiculo.capacidadeCarga || 0}kg</span>
                 </div>
                 <div className="flex items-center gap-2 col-span-2">
                   <Fuel className="w-4 h-4 text-gray-400" />
@@ -250,7 +250,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
               {/* Custo */}
               <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                 <span className="text-sm font-medium text-gray-700">
-                  R$ {veiculo.valorDiaria.toFixed(2)}/dia
+                  R$ {(veiculo.valorDiaria || 0).toFixed(2)}/dia
                 </span>
                 <span className="text-sm font-bold text-blue-600">
                   Total: R$ {custo.toFixed(2)}
@@ -284,7 +284,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
               {typeof value === 'object' ? (
                 <div className="text-sm text-green-700 mt-1">
                   <p className="font-medium">
-                    {mockVeiculos.find(v => parseInt(v.id) === value.veiculoId)?.nome}
+                    {mockVeiculos.find(v => v.id === value.veiculoId)?.nome}
                   </p>
                   <p>Período: {value.dataInicio} às {value.horaInicio} até {value.dataFim} às {value.horaFim}</p>
                   {value.responsavel && <p>Responsável: {value.responsavel}</p>}
@@ -295,7 +295,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
                 </div>
               ) : (
                 <p className="text-sm text-green-700 mt-1">
-                  {mockVeiculos.find(v => parseInt(v.id) === value)?.nome} (ID: {value})
+                  {mockVeiculos.find(v => v.id === value)?.nome} (ID: {value})
                 </p>
               )}
             </div>

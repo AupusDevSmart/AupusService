@@ -32,6 +32,7 @@ interface UseReservasVeiculosReturn {
   // Utilitários
   validarPeriodoReserva: (dataInicio: string, dataFim: string, horaInicio: string, horaFim: string) => string | null;
   obterReservaPorSolicitante: (solicitanteId: string, tipo: TipoSolicitante) => ReservaVeiculo | null;
+  calcularCustoReserva: (veiculoId: number, dataInicio: string, dataFim: string) => number;
 }
 
 export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
@@ -424,6 +425,22 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
     ) || null;
   }, [reservasState]);
 
+  // Calcular custo da reserva
+  const calcularCustoReserva = useCallback((
+    veiculoId: number, 
+    dataInicio: string, 
+    dataFim: string
+  ): number => {
+    const veiculo = mockVeiculos.find(v => v.id === veiculoId);
+    if (!veiculo || !veiculo.valorDiaria) return 0;
+
+    const inicio = new Date(dataInicio);
+    const fim = new Date(dataFim);
+    const diasReserva = Math.ceil((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+    
+    return diasReserva * veiculo.valorDiaria;
+  }, []);
+
   return {
     loading,
     reservas: reservasState,
@@ -436,6 +453,7 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
     criarReservaAutomatica,
     liberarReservaAutomatica,
     validarPeriodoReserva,
-    obterReservaPorSolicitante
+    obterReservaPorSolicitante,
+    calcularCustoReserva
   };
 };

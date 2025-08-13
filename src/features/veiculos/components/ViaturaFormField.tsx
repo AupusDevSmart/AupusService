@@ -173,7 +173,7 @@ export const ViaturaFormField: React.FC<ViaturaFormFieldProps> = ({
       )}
 
       <ViaturaSelector
-        value={value}
+        value={value || null}
         onChange={onChange}
         dataInicio={extrairDadosEntity.dataInicio}
         dataFim={extrairDadosEntity.dataFim}

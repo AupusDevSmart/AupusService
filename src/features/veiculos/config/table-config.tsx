@@ -1,5 +1,4 @@
 // src/features/veiculos/config/table-config.tsx
-import React from 'react';
 import { 
   Car, 
   Truck, 
@@ -7,7 +6,6 @@ import {
   Bike, 
   Users, 
   Package, 
-  Fuel, 
   MapPin,
   Calendar,
   Wrench,
@@ -71,7 +69,7 @@ export const veiculosTableColumns: TableColumn<Veiculo>[] = [
       return (
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            {getVeiculoIcon(veiculo.tipo)}
+            {getVeiculoIcon(veiculo.tipo || 'carro')}
             <span className="font-medium text-foreground truncate max-w-48" title={veiculo.nome}>
               {veiculo.nome}
             </span>
@@ -99,7 +97,7 @@ export const veiculosTableColumns: TableColumn<Veiculo>[] = [
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs">
-            {veiculo.tipo.charAt(0).toUpperCase() + veiculo.tipo.slice(1)}
+            {(veiculo.tipo || 'carro').charAt(0).toUpperCase() + (veiculo.tipo || 'carro').slice(1)}
           </Badge>
           <Badge className={`text-xs ${getCombustivelColor(veiculo.tipoCombustivel)}`}>
             {veiculo.tipoCombustivel}
@@ -109,7 +107,7 @@ export const veiculosTableColumns: TableColumn<Veiculo>[] = [
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <Users className="h-3 w-3" />
-            <span>{veiculo.capacidadePassageiros}</span>
+            <span>{veiculo.capacidadePassageiros || veiculo.numeroPassageiros || 0}</span>
           </div>
           {veiculo.capacidadeCarga && (
             <div className="flex items-center gap-1">
@@ -120,7 +118,7 @@ export const veiculosTableColumns: TableColumn<Veiculo>[] = [
         </div>
         
         <div className="text-xs text-muted-foreground">
-          {veiculo.kmAtual.toLocaleString('pt-BR')} km
+          {(veiculo.kmAtual || veiculo.quilometragem || 0).toLocaleString('pt-BR')} km
         </div>
       </div>
     )
@@ -139,8 +137,8 @@ export const veiculosTableColumns: TableColumn<Veiculo>[] = [
         </div>
         <div className="flex items-center gap-2">
           <Wrench className="h-3 w-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground truncate max-w-40" title={veiculo.responsavelManutencao}>
-            {veiculo.responsavelManutencao}
+          <span className="text-xs text-muted-foreground truncate max-w-40" title={veiculo.responsavelManutencao || veiculo.responsavel}>
+            {veiculo.responsavelManutencao || veiculo.responsavel || 'Não informado'}
           </span>
         </div>
       </div>
@@ -151,10 +149,10 @@ export const veiculosTableColumns: TableColumn<Veiculo>[] = [
     label: 'Manutenção & Seguro',
     hideOnTablet: true,
     render: (veiculo) => {
-      const proximaRevisao = new Date(veiculo.proximaRevisao);
+      const proximaRevisao = veiculo.proximaRevisao ? new Date(veiculo.proximaRevisao) : null;
       const hoje = new Date();
-      const diasParaRevisao = Math.ceil((proximaRevisao.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-      const revisaoProxima = diasParaRevisao <= 30;
+      const diasParaRevisao = proximaRevisao ? Math.ceil((proximaRevisao.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+      const revisaoProxima = proximaRevisao && diasParaRevisao <= 30;
       
       let seguroStatus = null;
       if (veiculo.vencimentoSeguro) {
@@ -169,13 +167,15 @@ export const veiculosTableColumns: TableColumn<Veiculo>[] = [
       
       return (
         <div className="space-y-2">
-          <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3 text-muted-foreground" />
-            <span className={`text-xs ${revisaoProxima ? 'text-orange-600' : 'text-muted-foreground'}`}>
-              Revisão: {proximaRevisao.toLocaleDateString('pt-BR')}
-            </span>
-            {revisaoProxima && <AlertTriangle className="h-3 w-3 text-orange-600" />}
-          </div>
+          {proximaRevisao && (
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3 text-muted-foreground" />
+              <span className={`text-xs ${revisaoProxima ? 'text-orange-600' : 'text-muted-foreground'}`}>
+                Revisão: {proximaRevisao.toLocaleDateString('pt-BR')}
+              </span>
+              {revisaoProxima && <AlertTriangle className="h-3 w-3 text-orange-600" />}
+            </div>
+          )}
           
           {seguroStatus && (
             <div className="flex items-center gap-1">

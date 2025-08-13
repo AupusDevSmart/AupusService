@@ -1,5 +1,5 @@
 // src/features/veiculos/components/VeiculosPage.tsx
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable, CustomAction } from '@/components/common/base-table/BaseTable';
@@ -62,7 +62,8 @@ export function VeiculosPage() {
         const novoVeiculo: Veiculo = {
           id: Date.now(),
           criadoEm: new Date().toISOString(),
-          ...data
+          ...data,
+          status: data.status || 'disponivel'
         };
         setVeiculos(prev => [...prev, novoVeiculo]);
       } else if (modalState.mode === 'edit' && modalState.entity) {
@@ -82,13 +83,14 @@ export function VeiculosPage() {
   const getModalEntity = () => {
     if (modalState.mode === 'create') {
       return {
-        status: 'disponivel',
-        tipo: 'carro',
-        tipoCombustivel: 'gasolina',
+        status: 'disponivel' as const,
+        tipo: 'carro' as const,
+        tipoCombustivel: 'gasolina' as const,
         capacidadePassageiros: 5,
         kmAtual: 0,
         proximaRevisao: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 90 dias
-        ano: new Date().getFullYear()
+        ano: new Date().getFullYear(),
+        localizacaoAtual: 'Garagem Principal'
       };
     }
     return modalState.entity;
@@ -187,14 +189,13 @@ export function VeiculosPage() {
         <BaseModal
           isOpen={modalState.isOpen}
           mode={modalState.mode}
-          entity={getModalEntity()}
+          entity={getModalEntity() as any}
           title={`${modalState.mode === 'create' ? 'Novo' : modalState.mode === 'edit' ? 'Editar' : 'Visualizar'} Veículo`}
           icon={<Car className="h-5 w-5 text-blue-600" />}
           formFields={veiculosFormFields}
           onClose={closeModal}
           onSubmit={handleSubmit}
           width="w-[800px]"
-          readOnly={modalState.mode === 'view'}
         />
       </Layout.Main>
     </Layout>

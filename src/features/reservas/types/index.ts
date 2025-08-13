@@ -167,6 +167,24 @@ export interface VeiculoModalState {
 
 export { type ModalMode };
 
+// Interface para ViaturaSelectorProps
+export interface ViaturaSelectorProps {
+  value: number | ViaturaReservada | null;
+  onChange: (value: number | ViaturaReservada | null) => void;
+  dataInicio: string;
+  dataFim: string;
+  horaInicio: string;
+  horaFim: string;
+  solicitanteId?: string;
+  responsavel?: string;
+  finalidade?: string;
+  mode?: 'simple' | 'complete';
+  disabled?: boolean;
+  required?: boolean;
+  showPeriodSummary?: boolean;
+  reservaIdParaExcluir?: string;
+}
+
 export type Pagination = {
   page: number;
   limit: number;
