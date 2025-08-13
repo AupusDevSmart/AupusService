@@ -1,5 +1,4 @@
 // src/features/fornecedores/config/table-config.tsx
-import React from 'react';
 import { 
   Building2, 
   User, 
@@ -8,7 +7,6 @@ import {
   Mail,
   Calendar,
   Star,
-  Badge as BadgeIcon
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TableColumn } from '@/types/base';

@@ -177,7 +177,7 @@ const StatusSelector = ({ value, onChange, disabled }: FormFieldProps) => {
 
 // ✅ ENDEREÇO SIMPLIFICADO
 const EnderecoSimples = ({ value, onChange, disabled }: FormFieldProps) => {
-  const endereco = value || {};
+  const endereco = (value as any) || {};
 
   const updateEndereco = (campo: string, valor: string) => {
     onChange({
@@ -282,7 +282,7 @@ const EnderecoSimples = ({ value, onChange, disabled }: FormFieldProps) => {
 
 // ✅ GERENCIADOR DE MATERIAIS
 const TiposMateriaisManager = ({ value, onChange, disabled }: FormFieldProps) => {
-  const materiais: string[] = value || [];
+  const materiais: string[] = Array.isArray(value) ? value : [];
   const [novoMaterial, setNovoMaterial] = React.useState('');
 
   const adicionarMaterial = () => {
@@ -374,7 +374,7 @@ const createFieldsForType = (tipo: 'pessoa_fisica' | 'pessoa_juridica'): FormFie
         placeholder: '00.000.000/0000-00',
         validation: (value) => {
           if (!value) return null;
-          const cleaned = value.replace(/\D/g, '');
+          const cleaned = String(value).replace(/\D/g, '');
           if (cleaned.length !== 14) return 'CNPJ deve ter 14 dígitos';
           return null;
         },
@@ -421,7 +421,7 @@ const createFieldsForType = (tipo: 'pessoa_fisica' | 'pessoa_juridica'): FormFie
         placeholder: '000.000.000-00',
         validation: (value) => {
           if (!value) return null;
-          const cleaned = value.replace(/\D/g, '');
+          const cleaned = String(value).replace(/\D/g, '');
           if (cleaned.length !== 11) return 'CPF deve ter 11 dígitos';
           return null;
         },
@@ -458,7 +458,7 @@ const createCamposBase = (onTypeChange?: (tipo: string) => void): FormField[] =>
     validation: (value) => {
       if (!value) return null;
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(value)) return 'E-mail inválido';
+      if (!emailRegex.test(String(value))) return 'E-mail inválido';
       return null;
     },
     group: 'contato'

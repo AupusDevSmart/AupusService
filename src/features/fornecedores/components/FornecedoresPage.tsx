@@ -1,5 +1,5 @@
 // src/features/fornecedores/components/FornecedoresPage.tsx - SOLUÇÃO COMPLETA
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/components/common/base-table/BaseTable';
@@ -50,7 +50,7 @@ const FornecedorModal = ({
     setModalKey(prev => prev + 1); // ✅ Força re-render completo
     
     // ✅ Atualizar entidade local
-    setLocalEntity(prev => ({
+    setLocalEntity((prev: any) => ({
       ...prev,
       tipo: novoTipo
     }));
@@ -79,7 +79,7 @@ const FornecedorModal = ({
       icon={<Users className="h-5 w-5 text-blue-600" />}
       formFields={currentFormFields}
       onClose={onClose}
-      onSubmit={onSubmit}
+      onSubmit={(data: any) => Promise.resolve(onSubmit(data))}
       width="w-[800px]"
     />
   );
@@ -189,7 +189,7 @@ export function FornecedoresPage() {
         {/* ✅ MODAL CUSTOMIZADO - SOLUÇÃO DEFINITIVA */}
         <FornecedorModal
           isOpen={modalState.isOpen}
-          mode={modalState.mode}
+          mode={modalState.mode as 'view' | 'create' | 'edit'}
           entity={getModalEntity()}
           onClose={closeModal}
           onSubmit={handleSubmit}
