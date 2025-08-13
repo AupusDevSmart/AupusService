@@ -1,6 +1,5 @@
 // src/features/plantas/components/ProprietarioSelector.tsx
 import React, { useState, useMemo } from 'react';
-import { FormFieldProps } from '@/types/base';
 import { 
   Select, 
   SelectContent, 

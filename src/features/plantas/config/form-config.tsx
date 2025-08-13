@@ -9,7 +9,7 @@ import { ProprietarioSelector } from '../components/ProprietarioSelector';
 import { useEstadosIBGE, useCidadesIBGE, useViaCEP, formatarCEP, validarCEP } from '@/hooks/useEstadosIBGE';
 
 // ✅ COMPONENTE COMPLETO: UF, Cidade e CEP com busca automática - SEM MUDANÇAS
-const EnderecoCompleto = ({ value, onChange, disabled, entity }: FormFieldProps & { entity?: any }) => {
+const EnderecoCompleto = ({ onChange, disabled, entity }: FormFieldProps & { entity?: any }) => {
   const [selectedUF, setSelectedUF] = React.useState<string>('');
   const [selectedCidade, setSelectedCidade] = React.useState<string>('');
   const [cep, setCep] = React.useState<string>('');
@@ -346,7 +346,7 @@ export const plantasFormFields: FormField[] = [
     placeholder: '00.000.000/0000-00',
     validation: (value) => {
       if (!value) return null;
-      const cleaned = value.replace(/\D/g, '');
+      const cleaned = String(value).replace(/\D/g, '');
       if (cleaned.length !== 14) {
         return 'CNPJ deve ter 14 dígitos';
       }
@@ -361,7 +361,7 @@ export const plantasFormFields: FormField[] = [
     required: true,
     render: ({ value, onChange, disabled }) => (
       <ProprietarioSelector 
-        value={value} 
+        value={value as number | null} 
         onChange={onChange} 
         disabled={disabled}
       />
@@ -400,7 +400,7 @@ export const plantasFormFields: FormField[] = [
     type: 'custom',
     required: false,
     render: ({ entity, mode }) => (
-      <GestaoEquipamentosButton entity={entity} mode={mode} />
+      <GestaoEquipamentosButton entity={entity} mode={mode as 'view' | 'create' | 'edit'} />
     ),
   }
 ];

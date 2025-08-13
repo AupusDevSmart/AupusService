@@ -1,14 +1,11 @@
 // src/features/plantas/config/table-config.tsx - TABELA MELHORADA
-import React from 'react';
 import { 
   Factory, 
   Building2, 
   MapPin, 
   Clock, 
   Calendar,
-  Badge
 } from 'lucide-react';
-import { Badge as UIBadge } from '@/components/ui/badge';
 import { TableColumn } from '@/types/base';
 import { Planta } from '../types';
 

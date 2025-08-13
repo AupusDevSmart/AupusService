@@ -1,5 +1,5 @@
 // src/features/plantas/components/PlantasPage.tsx - ATUALIZADO
-import React, { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -113,7 +113,7 @@ export function PlantasPage() {
       edit: 'Editar Planta', 
       view: 'Visualizar Planta'
     };
-    return titles[modalState.mode];
+    return titles[modalState.mode as keyof typeof titles] || 'Planta';
   };
 
   const getModalIcon = () => {
@@ -130,6 +130,7 @@ export function PlantasPage() {
       const proprietarioId = urlParams.get('proprietarioId');
       
       return {
+        id: 0,
         // ✅ Pré-selecionar proprietário se veio do filtro
         proprietarioId: proprietarioId ? parseInt(proprietarioId) : null
       };
