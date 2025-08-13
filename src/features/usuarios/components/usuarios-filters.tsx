@@ -1,5 +1,5 @@
 // src/features/usuarios/components/usuarios-filters.tsx
-import React from 'react';
+// Removed unused React import
 import { BaseFilters } from '@/components/common/base-filters/BaseFilters';
 import { UsuariosFilters as UsuariosFiltersType } from '../types';
 import { usuariosFilterConfig } from '../config/filter-config';

@@ -1,5 +1,4 @@
 // src/features/usuarios/config/form-config.tsx
-import React from 'react';
 import { FormField } from '@/types/base';
 import { Permissao } from '@/types/dtos/usuarios-dto';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -85,7 +84,7 @@ export const usuariosFormFields: FormField[] = [
     validation: (value) => {
       if (!value) return null;
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(value)) {
+      if (!emailRegex.test(String(value))) {
         return 'E-mail deve ter um formato válido';
       }
       return null;

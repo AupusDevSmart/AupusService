@@ -1,5 +1,5 @@
 // src/features/usuarios/components/UsuariosPage.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -11,7 +11,7 @@ import { UsuarioModal } from './usuario-modal';
 import { useUsuarios } from '../hooks/useUsuarios';
 import { Usuario, ModalState } from '../types';
 
-export function UsuariosPage(): JSX.Element {
+export function UsuariosPage() {
   const navigate = useNavigate();
   
   const {

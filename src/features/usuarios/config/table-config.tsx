@@ -1,5 +1,4 @@
 // src/features/usuarios/config/table-config.tsx
-import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { 
   Building2, 

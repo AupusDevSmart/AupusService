@@ -1,5 +1,5 @@
 // src/features/usuarios/components/usuarios-table.tsx
-import React from 'react';
+// Removed unused React import
 import { BaseTable } from '@/components/common/base-table/BaseTable';
 import { Users } from 'lucide-react';
 import { Usuario, Pagination } from '../types';
@@ -22,7 +22,7 @@ export function UsuariosTable({
   onPageChange, 
   onView, 
   onEdit,
-  onPlantasClick // ✅ Recebido mas não usado - só pelo modal
+  onPlantasClick: _onPlantasClick // ✅ Recebido mas não usado - só pelo modal
 }: UsuariosTableProps) {
 
   return (

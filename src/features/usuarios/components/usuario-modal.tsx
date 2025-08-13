@@ -67,7 +67,7 @@ export function UsuarioModal({
       edit: 'Editar Usuário', 
       view: 'Visualizar Usuário'
     };
-    return titles[mode];
+    return titles[mode as keyof typeof titles];
   };
 
   const getModalIcon = () => {

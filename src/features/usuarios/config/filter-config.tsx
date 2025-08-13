@@ -1,5 +1,4 @@
 // src/features/usuarios/config/filter-config.ts
-import { Search, Filter, UserCheck } from 'lucide-react';
 import { FilterConfig } from '@/types/base';
 
 export const usuariosFilterConfig: FilterConfig[] = [
@@ -7,14 +6,12 @@ export const usuariosFilterConfig: FilterConfig[] = [
     key: 'search',
     label: 'Buscar',
     type: 'text',
-    placeholder: 'Pesquisar por nome, email ou telefone...',
-    icon: Search
+    placeholder: 'Pesquisar por nome, email ou telefone...'
   },
   {
     key: 'status',
     label: 'Status',
     type: 'select',
-    icon: Filter,
     options: [
       { value: 'all', label: 'Todos os status' },
       { value: 'Ativo', label: 'Ativo' },
@@ -25,7 +22,6 @@ export const usuariosFilterConfig: FilterConfig[] = [
     key: 'tipo',
     label: 'Tipo',
     type: 'select',
-    icon: UserCheck,
     options: [
       { value: 'all', label: 'Todos os tipos' },
       { value: 'Proprietário', label: 'Proprietário' },
