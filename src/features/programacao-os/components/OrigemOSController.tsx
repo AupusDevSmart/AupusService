@@ -5,15 +5,12 @@ import {
   Layers, 
   Search, 
   FileText, 
-  Calendar, 
-  MapPin,
-  Wrench,
+  Calendar,
   CheckCircle,
-  Tag,
   Clock,
-  User,
   Building,
-  Loader2
+  Loader2,
+  Wrench
 } from 'lucide-react';
 import { useOrigemDados } from '../hooks/useOrigemDados';
 import { formatarPrioridade, formatarStatus, formatarCategoria } from '../utils/origemUtils';
@@ -29,9 +26,9 @@ interface OrigemOSControllerProps {
 export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({ 
   value, 
   onChange, 
-  disabled = false,
-  entity,
-  mode
+  disabled = false
+  // entity,
+  // mode
 }) => {
   const [tipoOrigem, setTipoOrigem] = React.useState(value?.tipo || 'ANOMALIA');
   const [itemSelecionado, setItemSelecionado] = React.useState(value?.item || null);

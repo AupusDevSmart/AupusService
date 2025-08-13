@@ -3,7 +3,7 @@ import { OrdemServico } from '../types';
 
 export const mockOrdensServico: OrdemServico[] = [
   {
-    id: '1',
+    id: 1,
     criadoEm: '2025-01-20T08:00:00Z',
     numeroOS: 'OS-2025-001',
     descricao: 'Manutenção preventiva do sistema de controle principal',
@@ -22,7 +22,7 @@ export const mockOrdensServico: OrdemServico[] = [
     dataProgramada: '2025-02-15T08:00:00Z',
     horaProgramada: '08:00',
     responsavel: 'João Silva',
-    viatura: 'VTR-001',
+    viatura: 1,
     time: 'Equipe Elétrica',
     orcamentoPrevisto: 2500.00,
     observacoes: 'Verificar todos os componentes conforme checklist',
@@ -101,7 +101,7 @@ export const mockOrdensServico: OrdemServico[] = [
     ]
   },
   {
-    id: '2',
+    id: 2,
     criadoEm: '2025-01-18T14:25:00Z',
     numeroOS: 'OS-2025-002',
     descricao: 'Correção de vazamento identificado na inspeção',
@@ -184,7 +184,7 @@ export const mockOrdensServico: OrdemServico[] = [
     ]
   },
   {
-    id: '3',
+    id: 3,
     criadoEm: '2025-01-15T10:30:00Z',
     numeroOS: 'OS-2025-003',
     descricao: 'Inspeção termográfica dos painéis elétricos',
@@ -204,7 +204,7 @@ export const mockOrdensServico: OrdemServico[] = [
     horaProgramada: '08:00',
     dataInicioExecucao: '2025-01-25T08:15:00Z',
     responsavel: 'José Eletricista',
-    viatura: 'VTR-003',
+    viatura: 3,
     time: 'Equipe Preditiva',
     orcamentoPrevisto: 800.00,
     observacoes: 'Inspeção conforme programa de manutenção preditiva',
@@ -260,7 +260,7 @@ export const mockOrdensServico: OrdemServico[] = [
     ]
   },
   {
-    id: '4',
+    id: 4,
     criadoEm: '2025-01-12T16:45:00Z',
     numeroOS: 'OS-2025-004',
     descricao: 'Calibração do sensor de pressão do transformador',
@@ -282,7 +282,7 @@ export const mockOrdensServico: OrdemServico[] = [
     dataFimExecucao: '2025-01-18T11:30:00Z',
     tempoRealExecucao: 3.5,
     responsavel: 'Ana Instrumentista',
-    viatura: 'VTR-002',
+    viatura: 2,
     orcamentoPrevisto: 1200.00,
     custoReal: 1150.00,
     observacoes: 'Calibração conforme norma ISO 9001',
@@ -350,7 +350,7 @@ export const mockOrdensServico: OrdemServico[] = [
     ]
   },
   {
-    id: '5',
+    id: 5,
     criadoEm: '2025-01-22T09:20:00Z',
     numeroOS: 'OS-2025-005',
     descricao: 'Substituição de filtros do sistema de ar condicionado',
@@ -408,7 +408,7 @@ export const mockOrdensServico: OrdemServico[] = [
     ]
   },
   {
-    id: '6',
+    id: 6,
     criadoEm: '2025-01-10T15:40:00Z',
     numeroOS: 'OS-2025-006',
     descricao: 'Reparo urgente no motor da bomba centrífuga',

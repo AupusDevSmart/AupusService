@@ -179,11 +179,11 @@ export const IniciarExecucaoModal: React.FC<IniciarExecucaoModalProps> = ({
                       Responsável: {os.responsavel}
                     </span>
                   </div>
-                  {os.viatura && typeof os.viatura === 'object' && (
+                  {os.viatura && (
                     <div className="flex items-center gap-2">
                       <Truck className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                       <span className="text-blue-600 dark:text-blue-400">
-                        {os.viatura.veiculo?.placa}
+                        Viatura {String(os.viatura)}
                       </span>
                     </div>
                   )}

@@ -1,7 +1,7 @@
 // src/features/programacao-os/hooks/useProgramacaoOS.ts
 import { useState, useCallback } from 'react';
 import { OrdemServico, OrdemServicoFormData, ProgramacaoOSFormData } from '../types';
-import { ExecucaoOS } from '@/features/execucao-os/types';
+// import { ExecucaoOS } from '@/features/execucao-os/types';
 import { mockOrdensServico } from '../data/mock-data';
 
 interface IniciarExecucaoData {
@@ -69,13 +69,13 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
       await simulateDelay(1500);
       
       const novaOS: OrdemServico = {
-        id: generateId(),
+        id: Date.now(),
         numeroOS: generateNumeroOS(),
         ...dados,
         status: 'PENDENTE',
-        materiais: dados.materiais || [],
-        ferramentas: dados.ferramentas || [],
-        tecnicos: dados.tecnicos || [],
+        materiais: (dados.materiais || []).map((m: any) => ({ ...m, id: m.id || String(Date.now()) })),
+        ferramentas: (dados.ferramentas || []).map((f: any) => ({ ...f, id: f.id || String(Date.now()) })),
+        tecnicos: (dados.tecnicos || []).map((t: any) => ({ ...t, id: t.id || String(Date.now()) })),
         criadoEm: new Date().toISOString(),
         criadoPor: 'Usuário Atual',
         historico: [{
@@ -104,7 +104,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
       console.log('✏️ Editando OS:', id, dados);
       await simulateDelay(1200);
       
-      const index = mockOrdensServico.findIndex(os => os.id === id);
+      const index = mockOrdensServico.findIndex(os => os.id === parseInt(String(id)));
       if (index === -1) {
         throw new Error('OS não encontrada');
       }
@@ -124,9 +124,9 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
         ]
       };
       
-      mockOrdensServico[index] = osAtualizada;
+      mockOrdensServico[index] = osAtualizada as any;
       console.log('✅ OS editada com sucesso');
-      return osAtualizada;
+      return osAtualizada as any;
     } catch (error) {
       console.error('❌ Erro ao editar OS:', error);
       throw error;
@@ -142,7 +142,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
       console.log('🔍 Buscando OS:', id);
       await simulateDelay(500);
       
-      const os = mockOrdensServico.find(os => os.id === id);
+      const os = mockOrdensServico.find(os => os.id === parseInt(String(id)));
       console.log(os ? '✅ OS encontrada' : '❌ OS não encontrada');
       return os || null;
     } catch (error) {
@@ -160,7 +160,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
       console.log('🗑️ Excluindo OS:', id);
       await simulateDelay(1000);
       
-      const index = mockOrdensServico.findIndex(os => os.id === id);
+      const index = mockOrdensServico.findIndex(os => os.id === parseInt(String(id)));
       if (index === -1) {
         console.log('❌ OS não encontrada para exclusão');
         return false;
@@ -184,7 +184,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
       console.log('🔧 Planejando OS:', osId, dados);
       await simulateDelay(1500);
       
-      const index = mockOrdensServico.findIndex(os => os.id === osId);
+      const index = mockOrdensServico.findIndex(os => os.id === parseInt(String(osId)));
       if (index === -1) {
         throw new Error('OS não encontrada');
       }
@@ -206,7 +206,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
         ]
       };
       
-      mockOrdensServico[index] = osAtualizada;
+      mockOrdensServico[index] = osAtualizada as any;
       console.log('✅ OS planejada com sucesso');
       
       return { success: true };
@@ -225,17 +225,17 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
       console.log('📅 Programando OS:', osId, dados);
       await simulateDelay(1800);
       
-      const index = mockOrdensServico.findIndex(os => os.id === osId);
+      const index = mockOrdensServico.findIndex(os => os.id === parseInt(String(osId)));
       if (index === -1) {
         throw new Error('OS não encontrada');
       }
       
       // Simular criação de reserva de viatura se especificada
       let reservaInfo = '';
-      if (dados.viatura && typeof dados.viatura === 'object') {
+      if (dados.viatura) {
         console.log('🚗 Criando reserva de viatura...');
         await simulateDelay(500);
-        reservaInfo = ` • Viatura ${dados.viatura.veiculo?.placa || 'reservada'}`;
+        reservaInfo = ` • Viatura VTR-${String(dados.viatura).padStart(3, '0')}`;
       }
       
       const osAtualizada = {
@@ -256,7 +256,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
         ]
       };
       
-      mockOrdensServico[index] = osAtualizada;
+      mockOrdensServico[index] = osAtualizada as any;
       console.log('✅ OS programada com sucesso');
       
       return { success: true };
@@ -275,7 +275,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
       console.log('🚀 Iniciando execução da OS:', osId, dados);
       await simulateDelay(2000);
       
-      const index = mockOrdensServico.findIndex(os => os.id === osId);
+      const index = mockOrdensServico.findIndex(os => os.id === parseInt(String(osId)));
       if (index === -1) {
         throw new Error('OS não encontrada');
       }
@@ -301,7 +301,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
         ]
       };
       
-      mockOrdensServico[index] = osAtualizada;
+      mockOrdensServico[index] = osAtualizada as any;
       
       // Aqui seria criado o registro na tabela de execuções
       const execucaoId = `exec_${Date.now()}`;
@@ -330,7 +330,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
       console.log('🏁 Finalizando OS:', osId, observacoes);
       await simulateDelay(1500);
       
-      const index = mockOrdensServico.findIndex(os => os.id === osId);
+      const index = mockOrdensServico.findIndex(os => os.id === parseInt(String(osId)));
       if (index === -1) {
         throw new Error('OS não encontrada');
       }
@@ -354,7 +354,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
         ]
       };
       
-      mockOrdensServico[index] = osAtualizada;
+      mockOrdensServico[index] = osAtualizada as any;
       console.log('✅ OS finalizada com sucesso');
       
       return { success: true };
@@ -373,7 +373,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
       console.log('❌ Cancelando OS:', osId, motivo);
       await simulateDelay(1000);
       
-      const index = mockOrdensServico.findIndex(os => os.id === osId);
+      const index = mockOrdensServico.findIndex(os => os.id === parseInt(String(osId)));
       if (index === -1) {
         throw new Error('OS não encontrada');
       }
@@ -396,7 +396,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
         ]
       };
       
-      mockOrdensServico[index] = osAtualizada;
+      mockOrdensServico[index] = osAtualizada as any;
       console.log('✅ OS cancelada com sucesso');
       
       return { success: true };
@@ -415,7 +415,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
       console.log('📦 Confirmando material:', osId, materialId);
       await simulateDelay(800);
       
-      const index = mockOrdensServico.findIndex(os => os.id === osId);
+      const index = mockOrdensServico.findIndex(os => os.id === parseInt(String(osId)));
       if (index === -1) {
         throw new Error('OS não encontrada');
       }
@@ -429,7 +429,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
         atualizadoEm: new Date().toISOString()
       };
       
-      mockOrdensServico[index] = osAtualizada;
+      mockOrdensServico[index] = osAtualizada as any;
       console.log('✅ Material confirmado');
       
       return { success: true };
@@ -447,7 +447,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
       console.log('🔧 Confirmando ferramenta:', osId, ferramentaId);
       await simulateDelay(800);
       
-      const index = mockOrdensServico.findIndex(os => os.id === osId);
+      const index = mockOrdensServico.findIndex(os => os.id === parseInt(String(osId)));
       if (index === -1) {
         throw new Error('OS não encontrada');
       }
@@ -461,7 +461,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
         atualizadoEm: new Date().toISOString()
       };
       
-      mockOrdensServico[index] = osAtualizada;
+      mockOrdensServico[index] = osAtualizada as any;
       console.log('✅ Ferramenta confirmada');
       
       return { success: true };
@@ -479,7 +479,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
       console.log('👤 Confirmando técnico:', osId, tecnicoId);
       await simulateDelay(800);
       
-      const index = mockOrdensServico.findIndex(os => os.id === osId);
+      const index = mockOrdensServico.findIndex(os => os.id === parseInt(String(osId)));
       if (index === -1) {
         throw new Error('OS não encontrada');
       }
@@ -493,7 +493,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
         atualizadoEm: new Date().toISOString()
       };
       
-      mockOrdensServico[index] = osAtualizada;
+      mockOrdensServico[index] = osAtualizada as any;
       console.log('✅ Técnico confirmado');
       
       return { success: true };
@@ -600,7 +600,7 @@ export const useProgramacaoOS = (): UseProgramacaoOSReturn => {
       console.log('📊 Gerando relatório de recursos para:', osIds.length, 'OS');
       await simulateDelay(2500);
       
-      const ossSelecionadas = mockOrdensServico.filter(os => osIds.includes(os.id));
+      const ossSelecionadas = mockOrdensServico.filter(os => osIds.includes(String(os.id)));
       
       let relatorio = `RELATÓRIO DE RECURSOS NECESSÁRIOS
 =============================================
@@ -636,7 +636,7 @@ OBSERVAÇÕES:
       console.log('💰 Calculando custo total para:', osIds.length, 'OS');
       await simulateDelay(1500);
       
-      const ossSelecionadas = mockOrdensServico.filter(os => osIds.includes(os.id));
+      const ossSelecionadas = mockOrdensServico.filter(os => osIds.includes(String(os.id)));
       
       let custoMateriais = 0;
       let custoMaoObra = 0;

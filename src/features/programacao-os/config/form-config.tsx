@@ -1,24 +1,5 @@
 // src/features/programacao-os/config/form-config.tsx - VERSÃO ATUALIZADA
 import React from 'react';
-import { 
-  Plus,
-  Trash2,
-  Building,
-  Wrench,
-  User,
-  Calendar,
-  Clock,
-  Truck,
-  Package,
-  CheckSquare,
-  DollarSign,
-  AlertTriangle,
-  FileText,
-  Layers,
-  Search,
-  Settings,
-  Tag
-} from 'lucide-react';
 // Importe o componente atualizado
 import { OrigemOSController } from '../components/OrigemOSController';
 import { ViaturaOSController } from '../components/ViaturaOSController';
@@ -76,66 +57,7 @@ const SimpleInput = ({
 );
 
 // ✅ COMPONENTE MELHORADO: Select básico com dark mode
-const SimpleSelect = ({ 
-  value, 
-  onChange, 
-  options = [], 
-  disabled, 
-  className = '',
-  placeholder = 'Selecione...',
-  ...props 
-}: any) => (
-  <select
-    value={value || ''}
-    onChange={(e) => onChange(e.target.value)}
-    disabled={disabled}
-    className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
-      bg-white dark:bg-gray-800 
-      text-gray-900 dark:text-gray-100 
-      focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 
-      focus:border-blue-500 dark:focus:border-blue-400
-      disabled:bg-gray-100 dark:disabled:bg-gray-700 
-      disabled:text-gray-500 dark:disabled:text-gray-400
-      ${className}`}
-    {...props}
-  >
-    <option value="" className="text-gray-500 dark:text-gray-400">{placeholder}</option>
-    {options.map((option: any) => (
-      <option key={option.value} value={option.value} className="text-gray-900 dark:text-gray-100">
-        {option.label}
-      </option>
-    ))}
-  </select>
-);
 
-// ✅ COMPONENTE MELHORADO: Textarea básico com dark mode
-const SimpleTextarea = ({ 
-  value, 
-  onChange, 
-  placeholder, 
-  disabled, 
-  rows = 3,
-  className = '',
-  ...props 
-}: any) => (
-  <textarea
-    value={value || ''}
-    onChange={(e) => onChange(e.target.value)}
-    placeholder={placeholder}
-    disabled={disabled}
-    rows={rows}
-    className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
-      bg-white dark:bg-gray-800 
-      text-gray-900 dark:text-gray-100 
-      placeholder-gray-500 dark:placeholder-gray-400
-      focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 
-      focus:border-blue-500 dark:focus:border-blue-400
-      disabled:bg-gray-100 dark:disabled:bg-gray-700 
-      disabled:text-gray-500 dark:disabled:text-gray-400
-      resize-vertical ${className}`}
-    {...props}
-  />
-);
 
 // ✅ COMPONENTE: Controle de data e hora para programação com Dark Mode
 const DataHoraProgramacaoController = ({ value, onChange, disabled }: FormFieldProps) => {

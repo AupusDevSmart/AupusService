@@ -1,21 +1,18 @@
 // src/features/programacao-os/config/table-config.tsx
-import React from 'react';
 import { 
   FileText, 
   Clock, 
   Calendar, 
   User,
   MapPin,
-  Wrench,
   Timer,
   Truck,
   CheckCircle,
   XCircle,
   AlertTriangle
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { TableColumn } from '@/types/base';
-import { OrdemServico, StatusOS, TipoOS, PrioridadeOS } from '../types';
+import { OrdemServico, StatusOS, PrioridadeOS } from '../types';
 
 // Função para formatar o status (cores suaves)
 const formatarStatus = (status: StatusOS) => {
@@ -187,11 +184,8 @@ export const programacaoOSTableColumns: TableColumn<OrdemServico>[] = [
         {os.viatura && (
           <div className="flex items-center gap-2">
             <Truck className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-            <span className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-24" title={os.viatura}>
-              {typeof os.viatura === 'object' && os.viatura.veiculo ? 
-                os.viatura.veiculo.placa : 
-                os.viatura
-              }
+            <span className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-24" title={String(os.viatura)}>
+              VTR-{String(os.viatura || '000').padStart(3, '0')}
             </span>
           </div>
         )}

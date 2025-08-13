@@ -151,8 +151,8 @@ export const ViaturaOSController: React.FC<FormFieldProps> = ({
   value, 
   onChange, 
   disabled, 
-  entity, 
-  mode 
+  entity 
+  // mode 
 }) => {
   const [veiculos] = useState<Veiculo[]>(mockVeiculos);
   const [reservas] = useState<ReservaVeiculo[]>(mockReservas);

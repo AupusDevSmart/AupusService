@@ -7,7 +7,7 @@ import { BaseTable } from '@/components/common/base-table/BaseTable';
 import { BaseFilters } from '@/components/common/base-filters/BaseFilters';
 import { BaseModal } from '@/components/common/base-modal/BaseModal';
 import { Button } from '@/components/ui/button';
-import { Plus, FileText, Calendar, Play, CheckCircle, XCircle, Download, Settings, Clock, User, AlertTriangle } from 'lucide-react';
+import { Plus, FileText, Calendar, Play, CheckCircle, XCircle, Download, Settings, Clock, AlertTriangle } from 'lucide-react';
 import { useGenericTable } from '@/hooks/useGenericTable';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { OrdemServico, ProgramacaoOSFilters } from '../types';
@@ -83,7 +83,7 @@ export function ProgramacaoOSPage() {
 
   const {
     planejarOS,
-    programarOS,
+    // programarOS,
     iniciarExecucao,
     finalizarOS,
     cancelarOS,
@@ -231,7 +231,7 @@ export function ProgramacaoOSPage() {
   // Ações personalizadas para OS
   const handlePlanejar = async (os: OrdemServico) => {
     console.log('Planejando OS:', os.id);
-    await planejarOS(os.id, {});
+    await planejarOS(String(os.id), {});
   };
 
   const handleProgramar = (os: OrdemServico) => {
@@ -250,7 +250,7 @@ export function ProgramacaoOSPage() {
     if (!osSelecionada) return;
     
     try {
-      const resultado = await iniciarExecucao(osSelecionada.id, dados);
+      const resultado = await iniciarExecucao(String(osSelecionada.id), dados);
       
       if (resultado.success) {
         // Fechar modal
@@ -275,12 +275,12 @@ export function ProgramacaoOSPage() {
 
   const handleFinalizar = async (os: OrdemServico) => {
     console.log('Finalizando OS:', os.id);
-    await finalizarOS(os.id, 'OS finalizada com sucesso');
+    await finalizarOS(String(os.id), 'OS finalizada com sucesso');
   };
 
   const handleCancelar = async (os: OrdemServico) => {
     console.log('Cancelando OS:', os.id);
-    await cancelarOS(os.id, 'Cancelada pelo usuário');
+    await cancelarOS(String(os.id), 'Cancelada pelo usuário');
   };
 
   const handleExportar = async () => {
@@ -505,7 +505,7 @@ export function ProgramacaoOSPage() {
           entity={getModalEntity()}
           title={getModalTitle()}
           icon={getModalIcon()}
-          formFields={programacaoOSFormFields}
+          formFields={programacaoOSFormFields as any}
           onClose={closeModal}
           onSubmit={handleSubmit}
           width="w-[1000px]"

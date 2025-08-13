@@ -51,7 +51,7 @@ export const useOrigemDados = () => {
           plantaId: anomalia.plantaId || 0
         }));
         
-      setAnomaliasDisponiveis(anomaliasFiltradas);
+      setAnomaliasDisponiveis(anomaliasFiltradas as any);
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,7 @@ export const useOrigemDados = () => {
           tarefasTemplate: plano.tarefasTemplate || []
         }));
         
-      setPlanosDisponiveis(planosFiltrados);
+      setPlanosDisponiveis(planosFiltrados as any);
     } finally {
       setLoading(false);
     }
