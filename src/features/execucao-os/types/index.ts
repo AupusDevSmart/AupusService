@@ -1,6 +1,6 @@
 // src/features/execucao-os/types/index.ts
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
-import { OrdemServico, StatusOS, MaterialOS, FerramentaOS, TecnicoOS } from '@/features/programacao-os/types';
+import { OrdemServico } from '@/features/programacao-os/types';
 
 // Status específicos para execução
 export type StatusExecucaoOS = 'PROGRAMADA' | 'EM_EXECUCAO' | 'PAUSADA' | 'FINALIZADA' | 'CANCELADA';
@@ -144,7 +144,7 @@ export interface FinalizarExecucaoData {
 // Estado do modal
 export interface ExecucaoModalState {
   isOpen: boolean;
-  mode: ModalMode | 'iniciar' | 'finalizar' | 'pausar' | 'anexos';
+  mode: ModalMode | 'iniciar' | 'pausar';
   execucaoOS: ExecucaoOS | null;
 }
 

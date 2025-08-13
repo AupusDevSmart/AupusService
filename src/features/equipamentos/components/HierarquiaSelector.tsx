@@ -1,6 +1,5 @@
 // src/features/equipamentos/components/HierarquiaSelector.tsx - CORRIGIDO
 import React, { useMemo } from 'react';
-import { FormFieldProps } from '@/types/base';
 import { 
   Select, 
   SelectContent, 

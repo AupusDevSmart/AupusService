@@ -1,5 +1,5 @@
 // src/features/execucao-os/components/ExecucaoOSPage.tsx
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/components/common/base-table/BaseTable';
@@ -24,12 +24,35 @@ import {
 } from 'lucide-react';
 import { useGenericTable } from '@/hooks/useGenericTable';
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { ExecucaoOS, ExecucaoOSFilters } from '../types';
+import { ExecucaoOS, ExecucaoOSFilters, ChecklistAtividade, MaterialConsumido, FerramentaUtilizada, StatusExecucaoOS } from '../types';
 import { execucaoOSTableColumns } from '../config/table-config';
 import { execucaoOSFilterConfig } from '../config/filter-config';
 import { execucaoOSFormFields } from '../config/form-config';
 import { mockExecucoesOS } from '../data/mock-data';
 import { useExecucaoOS } from '../hooks/useExecucaoOS';
+
+interface ExecucaoOSFormData {
+  id?: string;
+  numeroOS?: string;
+  descricaoOS?: string;
+  localAtivo?: string;
+  statusExecucao?: StatusExecucaoOS;
+  dataInicioReal?: string;
+  horaInicioReal?: string;
+  dataFimReal?: string;
+  horaFimReal?: string;
+  responsavelExecucao?: string;
+  equipePresente?: string;
+  checklistAtividades?: ChecklistAtividade[];
+  materiaisConsumidos?: MaterialConsumido[];
+  ferramentasUtilizadas?: FerramentaUtilizada[];
+  resultadoServico?: string;
+  problemasEncontrados?: string;
+  recomendacoes?: string;
+  proximaManutencao?: string;
+  avaliacaoQualidade?: number;
+  observacoesQualidade?: string;
+}
 
 const initialFilters: ExecucaoOSFilters = {
   search: '',
@@ -45,8 +68,6 @@ const initialFilters: ExecucaoOSFilters = {
 };
 
 export function ExecucaoOSPage() {
-  const location = useLocation();
-  const navigate = useNavigate();
   
   const {
     paginatedData: execucoes,
@@ -78,8 +99,10 @@ export function ExecucaoOSPage() {
           case 'ontem':
             return itemDate.toDateString() === ontem.toDateString();
           case 'esta_semana':
-            const inicioSemana = new Date(hoje.setDate(hoje.getDate() - hoje.getDay()));
-            const fimSemana = new Date(hoje.setDate(hoje.getDate() + 6));
+            const tempHojeInicio = new Date(hoje);
+            const inicioSemana = new Date(tempHojeInicio.setDate(tempHojeInicio.getDate() - tempHojeInicio.getDay()));
+            const tempHojeFim = new Date(hoje);
+            const fimSemana = new Date(tempHojeFim.setDate(tempHojeFim.getDate() + (6 - tempHojeFim.getDay() + hoje.getDay())));
             return itemDate >= inicioSemana && itemDate <= fimSemana;
           default:
             return true;
@@ -93,7 +116,6 @@ export function ExecucaoOSPage() {
     retomarExecucao,
     finalizarExecucao,
     cancelarExecucao,
-    obterExecucao,
     editarExecucao,
     gerarRelatorioExecucao,
     exportarDadosExecucao,
@@ -160,43 +182,47 @@ export function ExecucaoOSPage() {
     closeModal();
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: ExecucaoOSFormData) => {
     if (!modalState.entity) return;
     
     try {
       console.log('💾 Salvando dados da execução:', data);
       
-      // Mapear campos do formulário para a estrutura da execução
-      const dadosExecucao = {
-        statusExecucao: data.statusExecucao,
-        dataInicioReal: data.dataInicioReal,
-        horaInicioReal: data.horaInicioReal,
-        dataFimReal: data.dataFimReal,
-        horaFimReal: data.horaFimReal,
-        responsavelExecucao: data.responsavelExecucao,
-        equipePresente: data.equipePresente ? data.equipePresente.split(',').map((nome: string) => nome.trim()) : [],
-        checklistAtividades: data.checklistAtividades || [],
-        materiaisConsumidos: data.materiaisConsumidos || [],
-        resultadoServico: data.resultadoServico,
-        problemasEncontrados: data.problemasEncontrados,
-        recomendacoes: data.recomendacoes,
-        proximaManutencao: data.proximaManutencao,
-        avaliacaoQualidade: data.avaliacaoQualidade,
-        observacoesQualidade: data.observacoesQualidade
-      };
-      
       if (modalState.mode === 'finalizar') {
+        // Para finalização, garantir que os campos obrigatórios estão preenchidos
         await finalizarExecucao(String(modalState.entity.id), {
+          resultadoServico: data.resultadoServico || '', // Garantir que não seja undefined
+          problemasEncontrados: data.problemasEncontrados || '',
+          recomendacoes: data.recomendacoes || '',
+          proximaManutencao: data.proximaManutencao || '',
+          materiaisConsumidos: data.materiaisConsumidos || [],
+          ferramentasUtilizadas: data.ferramentasUtilizadas || [],
+          avaliacaoQualidade: data.avaliacaoQualidade || 0,
+          observacoesQualidade: data.observacoesQualidade || ''
+        });
+      } else {
+        // Mapear campos do formulário para a estrutura da execução
+        // Garantir que statusExecucao seja do tipo correto
+        const statusExecucao = data.statusExecucao as StatusExecucaoOS | undefined;
+        
+        const dadosExecucao = {
+          statusExecucao,
+          dataInicioReal: data.dataInicioReal,
+          horaInicioReal: data.horaInicioReal,
+          dataFimReal: data.dataFimReal,
+          horaFimReal: data.horaFimReal,
+          responsavelExecucao: data.responsavelExecucao,
+          equipePresente: data.equipePresente ? data.equipePresente.split(',').map((nome: string) => nome.trim()) : [],
+          checklistAtividades: data.checklistAtividades || [],
+          materiaisConsumidos: data.materiaisConsumidos || [],
           resultadoServico: data.resultadoServico,
           problemasEncontrados: data.problemasEncontrados,
           recomendacoes: data.recomendacoes,
           proximaManutencao: data.proximaManutencao,
-          materiaisConsumidos: data.materiaisConsumidos || [],
-          ferramentasUtilizadas: data.ferramentasUtilizadas || [],
-          avaliacaoQualidade: data.avaliacaoQualidade || 0,
+          avaliacaoQualidade: data.avaliacaoQualidade,
           observacoesQualidade: data.observacoesQualidade
-        });
-      } else {
+        };
+        
         await editarExecucao(String(modalState.entity.id), dadosExecucao);
       }
       
@@ -271,7 +297,7 @@ export function ExecucaoOSPage() {
   const handleIniciar = async (execucao: ExecucaoOS) => {
     console.log('Iniciando execução:', execucao.id);
     try {
-      await retomarExecucao(execucao.id);
+      await retomarExecucao(String(execucao.id));
       setLoading(true);
       await new Promise(resolve => setTimeout(resolve, 1000));
       setLoading(false);
@@ -284,7 +310,7 @@ export function ExecucaoOSPage() {
     console.log('Pausando execução:', execucao.id);
     try {
       const motivo = prompt('Motivo da pausa (opcional):');
-      await pausarExecucao(execucao.id, motivo || undefined);
+      await pausarExecucao(String(execucao.id), motivo || undefined);
       setLoading(true);
       await new Promise(resolve => setTimeout(resolve, 1000));
       setLoading(false);
@@ -295,7 +321,7 @@ export function ExecucaoOSPage() {
 
   const handleFinalizar = async (execucao: ExecucaoOS) => {
     console.log('Finalizando execução:', execucao.id);
-    openModal('finalizar' as any, execucao);
+    openModal('finalizar', execucao);
   };
 
   const handleCancelar = async (execucao: ExecucaoOS) => {
@@ -315,7 +341,7 @@ export function ExecucaoOSPage() {
 
   const handleAnexos = (execucao: ExecucaoOS) => {
     console.log('Gerenciar anexos:', execucao.id);
-    openModal('anexos' as any, execucao);
+    openModal('anexos', execucao);
   };
 
   const handleExportar = async () => {

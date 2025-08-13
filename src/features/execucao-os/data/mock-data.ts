@@ -1,12 +1,12 @@
 // src/features/execucao-os/data/mock-data.ts
-import { ExecucaoOS, MaterialConsumido, FerramentaUtilizada, ChecklistAtividade, RegistroTempoOS, AnexoOS } from '../types';
+import { ExecucaoOS } from '../types';
 
 // Mock das execuções de OS
 export const mockExecucoesOS: ExecucaoOS[] = [
   {
-    id: 'exec_001',
+    id: 1,
     os: {
-      id: 'os_001',
+      id: 1,
       numeroOS: 'OS-2025-001',
       descricao: 'Manutenção preventiva do motor principal',
       local: 'Planta Industrial A',
@@ -25,12 +25,10 @@ export const mockExecucoesOS: ExecucaoOS[] = [
         dataFim: '2025-08-04',
         horaInicio: '08:00',
         horaFim: '17:00',
+        solicitanteId: '1',
+        tipoSolicitante: 'ordem_servico' as const,
         responsavel: 'João Silva',
-        finalidade: 'Execução de OS - Manutenção preventiva do motor principal',
-        veiculo: {
-          nome: 'Strada Adventure CD',
-          placa: 'ABC-1234'
-        }
+        finalidade: 'Execução de OS - Manutenção preventiva do motor principal'
       },
       tempoEstimado: 6,
       duracaoEstimada: 8,
@@ -147,9 +145,9 @@ export const mockExecucoesOS: ExecucaoOS[] = [
   },
   
   {
-    id: 'exec_002',
+    id: 2,
     os: {
-      id: 'os_002',
+      id: 2,
       numeroOS: 'OS-2025-002',
       descricao: 'Inspeção de segurança - Válvulas de pressão',
       local: 'Planta Industrial B',
@@ -201,9 +199,9 @@ export const mockExecucoesOS: ExecucaoOS[] = [
   },
   
   {
-    id: 'exec_003',
+    id: 3,
     os: {
-      id: 'os_003',
+      id: 3,
       numeroOS: 'OS-2025-003',
       descricao: 'Reparo corretivo - Vazamento na tubulação',
       local: 'Escritório Central',

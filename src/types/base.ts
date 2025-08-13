@@ -62,7 +62,7 @@ export interface FormFieldProps {
 export interface FormField {
   key: string;
   label: string;
-  type: 'text' | 'select' | 'textarea' | 'custom' | 'date' | 'checkbox';
+  type: 'text' | 'select' | 'textarea' | 'custom' | 'date' | 'checkbox' | 'time' | 'number' | 'rating';
   required?: boolean;
   placeholder?: string;
   options?: Array<{ value: unknown; label: string }>;

@@ -1,43 +1,11 @@
 // src/features/execucao-os/config/form-config.tsx
-import React from 'react';
 import { 
-  Play,
   CheckCircle,
-  User,
-  Users,
-  Calendar,
-  Clock,
-  FileText,
   Package,
-  Wrench,
-  Camera,
-  Star,
-  AlertTriangle
+  Star
 } from 'lucide-react';
 
-// ✅ TIPOS BÁSICOS PARA EVITAR DEPENDÊNCIAS EXTERNAS
-interface FormField {
-  key: string;
-  label: string;
-  type: 'text' | 'select' | 'textarea' | 'date' | 'time' | 'number' | 'custom' | 'checkbox' | 'rating';
-  required?: boolean;
-  placeholder?: string;
-  options?: { value: string | number; label: string }[];
-  validation?: (value: any) => string | null;
-  render?: (props: any) => React.ReactNode;
-  colSpan?: number;
-  showOnlyOnMode?: string[];
-  disabled?: boolean;
-  readonly?: boolean;
-}
-
-interface FormFieldProps {
-  value: any;
-  onChange: (value: any) => void;
-  disabled?: boolean;
-  entity?: any;
-  mode?: string;
-}
+import { FormField, FormFieldProps, ModalMode } from '@/types/base';
 
 // ✅ COMPONENTE MELHORADO: Input básico com dark mode
 const SimpleInput = ({ 
@@ -71,38 +39,6 @@ const SimpleInput = ({
   />
 );
 
-// ✅ COMPONENTE MELHORADO: Select básico com dark mode
-const SimpleSelect = ({ 
-  value, 
-  onChange, 
-  options = [], 
-  disabled, 
-  className = '',
-  placeholder = 'Selecione...',
-  ...props 
-}: any) => (
-  <select
-    value={value || ''}
-    onChange={(e) => onChange(e.target.value)}
-    disabled={disabled}
-    className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
-      bg-white dark:bg-gray-800 
-      text-gray-900 dark:text-gray-100 
-      focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 
-      focus:border-blue-500 dark:focus:border-blue-400
-      disabled:bg-gray-100 dark:disabled:bg-gray-700 
-      disabled:text-gray-500 dark:disabled:text-gray-400
-      ${className}`}
-    {...props}
-  >
-    <option value="" className="text-gray-500 dark:text-gray-400">{placeholder}</option>
-    {options.map((option: any) => (
-      <option key={option.value} value={option.value} className="text-gray-900 dark:text-gray-100">
-        {option.label}
-      </option>
-    ))}
-  </select>
-);
 
 // ✅ COMPONENTE MELHORADO: Textarea básico com dark mode
 const SimpleTextarea = ({ 
@@ -138,7 +74,7 @@ const SimpleTextarea = ({
 
 // ✅ COMPONENTE: Checklist de Atividades
 const ChecklistAtividadesController = ({ value, onChange, disabled, mode }: FormFieldProps) => {
-  const atividades = value || [];
+  const atividades = Array.isArray(value) ? value : [];
 
   const handleToggleAtividade = (index: number) => {
     if (disabled || mode === 'view') return;
@@ -232,7 +168,7 @@ const ChecklistAtividadesController = ({ value, onChange, disabled, mode }: Form
 
 // ✅ COMPONENTE: Materiais Consumidos
 const MateriaisConsumidosController = ({ value, onChange, disabled, mode }: FormFieldProps) => {
-  const materiais = value || [];
+  const materiais = Array.isArray(value) ? value : [];
 
   const handleMaterialChange = (index: number, field: string, newValue: any) => {
     if (disabled || mode === 'view') return;
@@ -281,7 +217,7 @@ const MateriaisConsumidosController = ({ value, onChange, disabled, mode }: Form
                   disabled={disabled || mode === 'view'}
                   step="0.1"
                   min="0"
-                  max={material.quantidadePlanejada * 1.5} // Permite até 50% a mais
+                  max={material.quantidadePlanejada ? material.quantidadePlanejada * 1.5 : undefined}
                 />
               </div>
             </div>
@@ -312,7 +248,7 @@ const MateriaisConsumidosController = ({ value, onChange, disabled, mode }: Form
 
 // ✅ COMPONENTE: Avaliação de Qualidade
 const AvaliacaoQualidadeController = ({ value, onChange, disabled, mode }: FormFieldProps) => {
-  const avaliacao = value || 0;
+  const avaliacao = typeof value === 'number' ? value : 0;
 
   const handleRatingChange = (rating: number) => {
     if (disabled || mode === 'view') return;
@@ -366,21 +302,18 @@ export const execucaoOSFormFields: FormField[] = [
     key: 'numeroOS',
     label: 'Número da OS',
     type: 'text',
-    readonly: true,
     showOnlyOnMode: ['view', 'edit']
   },
   {
     key: 'descricaoOS',
     label: 'Descrição da OS',
     type: 'textarea',
-    readonly: true,
     showOnlyOnMode: ['view', 'edit']
   },
   {
     key: 'localAtivo',
     label: 'Local e Ativo',
     type: 'text',
-    readonly: true,
     showOnlyOnMode: ['view', 'edit']
   },
 
@@ -396,7 +329,7 @@ export const execucaoOSFormFields: FormField[] = [
       { value: 'FINALIZADA', label: 'Finalizada' },
       { value: 'CANCELADA', label: 'Cancelada' }
     ],
-    showOnlyOnMode: ['edit']
+    showOnlyOnMode: ['edit'] as ModalMode[]
   },
 
   // Datas e Horários
@@ -416,13 +349,13 @@ export const execucaoOSFormFields: FormField[] = [
     key: 'dataFimReal',
     label: 'Data de Fim Real',
     type: 'date',
-    showOnlyOnMode: ['edit', 'finalizar']
+    showOnlyOnMode: ['edit', 'finalizar'] as ModalMode[]
   },
   {
     key: 'horaFimReal',
     label: 'Hora de Fim Real',
     type: 'time',
-    showOnlyOnMode: ['edit', 'finalizar']
+    showOnlyOnMode: ['edit', 'finalizar'] as ModalMode[]
   },
 
   // Equipe
@@ -471,7 +404,7 @@ export const execucaoOSFormFields: FormField[] = [
       />
     ),
     colSpan: 2,
-    showOnlyOnMode: ['view', 'edit', 'finalizar']
+    showOnlyOnMode: ['view', 'edit', 'finalizar'] as ModalMode[]
   },
 
   // Resultados
@@ -481,7 +414,7 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'textarea',
     required: true,
     placeholder: 'Descreva o que foi realizado e os resultados obtidos...',
-    showOnlyOnMode: ['edit', 'finalizar'],
+    showOnlyOnMode: ['edit', 'finalizar'] as ModalMode[],
     colSpan: 2
   },
   {
@@ -489,21 +422,21 @@ export const execucaoOSFormFields: FormField[] = [
     label: 'Problemas Encontrados',
     type: 'textarea',
     placeholder: 'Descreva problemas ou dificuldades encontradas durante a execução...',
-    showOnlyOnMode: ['view', 'edit', 'finalizar']
+    showOnlyOnMode: ['view', 'edit', 'finalizar'] as ModalMode[]
   },
   {
     key: 'recomendacoes',
     label: 'Recomendações',
     type: 'textarea',
     placeholder: 'Recomendações para melhorias ou próximas manutenções...',
-    showOnlyOnMode: ['view', 'edit', 'finalizar']
+    showOnlyOnMode: ['view', 'edit', 'finalizar'] as ModalMode[]
   },
   {
     key: 'proximaManutencao',
     label: 'Próxima Manutenção',
     type: 'text',
     placeholder: 'Ex: Em 6 meses, após 1000 horas...',
-    showOnlyOnMode: ['view', 'edit', 'finalizar']
+    showOnlyOnMode: ['view', 'edit', 'finalizar'] as ModalMode[]
   },
 
   // Qualidade
@@ -519,14 +452,14 @@ export const execucaoOSFormFields: FormField[] = [
         mode={mode}
       />
     ),
-    showOnlyOnMode: ['edit', 'finalizar']
+    showOnlyOnMode: ['edit', 'finalizar'] as ModalMode[]
   },
   {
     key: 'observacoesQualidade',
     label: 'Observações de Qualidade',
     type: 'textarea',
     placeholder: 'Comentários sobre a qualidade da execução...',
-    showOnlyOnMode: ['view', 'edit', 'finalizar']
+    showOnlyOnMode: ['view', 'edit', 'finalizar'] as ModalMode[]
   }
 ];
 

@@ -54,7 +54,7 @@ export const useExecucaoOS = (): UseExecucaoOSReturn => {
       console.log('🔍 Buscando execução:', id);
       await simulateDelay(500);
       
-      const execucao = mockExecucoesOS.find(exec => exec.id === id);
+      const execucao = mockExecucoesOS.find(exec => exec.id === parseInt(id));
       console.log(execucao ? '✅ Execução encontrada' : '❌ Execução não encontrada');
       return execucao || null;
     } catch (error) {
@@ -72,7 +72,7 @@ export const useExecucaoOS = (): UseExecucaoOSReturn => {
       console.log('✏️ Editando execução:', id, dados);
       await simulateDelay(1200);
       
-      const index = mockExecucoesOS.findIndex(exec => exec.id === id);
+      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
       if (index === -1) {
         throw new Error('Execução não encontrada');
       }
@@ -101,7 +101,7 @@ export const useExecucaoOS = (): UseExecucaoOSReturn => {
       console.log('⏸️ Pausando execução:', id, motivo);
       await simulateDelay(1000);
       
-      const index = mockExecucoesOS.findIndex(exec => exec.id === id);
+      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
       if (index === -1) {
         throw new Error('Execução não encontrada');
       }
@@ -131,7 +131,7 @@ export const useExecucaoOS = (): UseExecucaoOSReturn => {
       console.log('▶️ Retomando execução:', id);
       await simulateDelay(800);
       
-      const index = mockExecucoesOS.findIndex(exec => exec.id === id);
+      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
       if (index === -1) {
         throw new Error('Execução não encontrada');
       }
@@ -161,7 +161,7 @@ export const useExecucaoOS = (): UseExecucaoOSReturn => {
       console.log('🏁 Finalizando execução:', id, dados);
       await simulateDelay(2000);
       
-      const index = mockExecucoesOS.findIndex(exec => exec.id === id);
+      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
       if (index === -1) {
         throw new Error('Execução não encontrada');
       }
@@ -204,7 +204,7 @@ export const useExecucaoOS = (): UseExecucaoOSReturn => {
       console.log('❌ Cancelando execução:', id, motivo);
       await simulateDelay(1000);
       
-      const index = mockExecucoesOS.findIndex(exec => exec.id === id);
+      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
       if (index === -1) {
         throw new Error('Execução não encontrada');
       }
@@ -235,7 +235,7 @@ export const useExecucaoOS = (): UseExecucaoOSReturn => {
       console.log('📋 Atualizando checklist:', id);
       await simulateDelay(800);
       
-      const index = mockExecucoesOS.findIndex(exec => exec.id === id);
+      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
       if (index === -1) {
         throw new Error('Execução não encontrada');
       }
@@ -265,7 +265,7 @@ export const useExecucaoOS = (): UseExecucaoOSReturn => {
       console.log('➕ Adicionando atividade:', id, atividade);
       await simulateDelay(600);
       
-      const index = mockExecucoesOS.findIndex(exec => exec.id === id);
+      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
       if (index === -1) {
         throw new Error('Execução não encontrada');
       }
@@ -302,7 +302,7 @@ export const useExecucaoOS = (): UseExecucaoOSReturn => {
       console.log('📦 Atualizando materiais consumidos:', id);
       await simulateDelay(800);
       
-      const index = mockExecucoesOS.findIndex(exec => exec.id === id);
+      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
       if (index === -1) {
         throw new Error('Execução não encontrada');
       }
@@ -332,7 +332,7 @@ export const useExecucaoOS = (): UseExecucaoOSReturn => {
       console.log('🔧 Atualizando ferramentas utilizadas:', id);
       await simulateDelay(800);
       
-      const index = mockExecucoesOS.findIndex(exec => exec.id === id);
+      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
       if (index === -1) {
         throw new Error('Execução não encontrada');
       }
@@ -362,7 +362,7 @@ export const useExecucaoOS = (): UseExecucaoOSReturn => {
       console.log('⏱️ Registrando tempo:', id, tecnicoId, atividade, tempoMinutos);
       await simulateDelay(600);
       
-      const index = mockExecucoesOS.findIndex(exec => exec.id === id);
+      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
       if (index === -1) {
         throw new Error('Execução não encontrada');
       }
@@ -405,7 +405,7 @@ export const useExecucaoOS = (): UseExecucaoOSReturn => {
       console.log('📎 Adicionando anexo:', id, anexo);
       await simulateDelay(1200);
       
-      const index = mockExecucoesOS.findIndex(exec => exec.id === id);
+      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
       if (index === -1) {
         throw new Error('Execução não encontrada');
       }
@@ -446,7 +446,7 @@ export const useExecucaoOS = (): UseExecucaoOSReturn => {
       console.log('🗑️ Removendo anexo:', id, anexoId);
       await simulateDelay(800);
       
-      const index = mockExecucoesOS.findIndex(exec => exec.id === id);
+      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
       if (index === -1) {
         throw new Error('Execução não encontrada');
       }
@@ -476,7 +476,7 @@ export const useExecucaoOS = (): UseExecucaoOSReturn => {
       console.log('📊 Gerando relatório de execução:', id);
       await simulateDelay(2000);
       
-      const execucao = mockExecucoesOS.find(exec => exec.id === id);
+      const execucao = mockExecucoesOS.find(exec => exec.id === parseInt(id));
       if (!execucao) {
         throw new Error('Execução não encontrada');
       }
@@ -529,7 +529,7 @@ AVALIAÇÃO: ${execucao.avaliacaoQualidade ? `${execucao.avaliacaoQualidade}/5 e
       console.log('📄 Exportando dados de execução:', ids);
       await simulateDelay(2500);
       
-      const execucoesSelecionadas = mockExecucoesOS.filter(exec => ids.includes(exec.id));
+      const execucoesSelecionadas = mockExecucoesOS.filter(exec => ids.includes(exec.id.toString()));
       
       const header = 'OS,Descrição,Status,Responsável,Início,Fim,Duração,Avaliação\n';
       const csvContent = execucoesSelecionadas.map(exec => {

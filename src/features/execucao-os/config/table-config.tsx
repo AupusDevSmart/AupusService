@@ -1,24 +1,21 @@
 // src/features/execucao-os/config/table-config.tsx
-import React from 'react';
 import { 
   FileText, 
   Clock, 
   Calendar, 
   User,
   MapPin,
-  Wrench,
   Timer,
   Truck,
   CheckCircle,
   XCircle,
-  AlertTriangle,
   PlayCircle,
   PauseCircle,
   Users
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TableColumn } from '@/types/base';
-import { ExecucaoOS, StatusExecucaoOS } from '../types';
+import { ExecucaoOS, StatusExecucaoOS, ChecklistAtividade } from '../types';
 
 // Função para formatar o status de execução
 const formatarStatusExecucao = (status: StatusExecucaoOS) => {
@@ -63,7 +60,7 @@ const formatarTempo = (minutos?: number) => {
 };
 
 // Função para calcular progresso do checklist
-const calcularProgresso = (checklist: any[]) => {
+const calcularProgresso = (checklist: ChecklistAtividade[]) => {
   if (!checklist.length) return 0;
   const concluidas = checklist.filter(item => item.concluida).length;
   return Math.round((concluidas / checklist.length) * 100);
@@ -137,7 +134,7 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
         <div className="flex items-center gap-2">
           <Calendar className="h-3 w-3 text-blue-500 dark:text-blue-400" />
           <span className="text-sm">
-            {new Date(exec.os.dataProgramada!).toLocaleDateString('pt-BR')}
+            {exec.os.dataProgramada ? new Date(exec.os.dataProgramada).toLocaleDateString('pt-BR') : 'N/A'}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -198,7 +195,7 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
           <div className="flex items-center gap-2">
             <Truck className="h-3 w-3 text-purple-600 dark:text-purple-400" />
             <span className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-20">
-              {exec.os.viatura.veiculo?.placa}
+              Veículo {exec.os.viatura.veiculoId}
             </span>
           </div>
         )}
