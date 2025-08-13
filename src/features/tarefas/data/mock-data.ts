@@ -4,7 +4,7 @@ import { Tarefa } from '../types';
 export const mockTarefas: Tarefa[] = [
   // Tarefas geradas do Plano 1 (Motores Elétricos)
   {
-    id: 'tarefa-plano-1-1',
+    id: 1,
     criadoEm: '2025-01-10T09:30:00Z',
     planoManutencaoId: '1',
     tarefaTemplateId: 'template-1-1',
@@ -60,7 +60,7 @@ export const mockTarefas: Tarefa[] = [
     origemPlano: true
   },
   {
-    id: 'tarefa-plano-1-2',
+    id: 2,
     criadoEm: '2025-01-10T09:30:00Z',
     planoManutencaoId: '1',
     tarefaTemplateId: 'template-1-2',
@@ -91,7 +91,7 @@ export const mockTarefas: Tarefa[] = [
     origemPlano: true
   },
   {
-    id: 'tarefa-plano-1-3',
+    id: 3,
     criadoEm: '2025-01-10T09:30:00Z',
     planoManutencaoId: '1',
     tarefaTemplateId: 'template-1-1',
@@ -124,7 +124,7 @@ export const mockTarefas: Tarefa[] = [
   },
   // Tarefa do Plano 2 (Bombas)
   {
-    id: 'tarefa-plano-2-1',
+    id: 4,
     criadoEm: '2025-01-08T14:30:00Z',
     planoManutencaoId: '2',
     tarefaTemplateId: 'template-2-2',
@@ -155,7 +155,7 @@ export const mockTarefas: Tarefa[] = [
   },
   // Tarefa dessincronizada (plano foi atualizado)
   {
-    id: 'tarefa-plano-3-1',
+    id: 5,
     criadoEm: '2024-12-20T11:30:00Z',
     planoManutencaoId: '3',
     tarefaTemplateId: 'template-3-1',
@@ -186,7 +186,7 @@ export const mockTarefas: Tarefa[] = [
   },
   // Tarefas manuais (não vieram de planos)
   {
-    id: 'tarefa-manual-1',
+    id: 6,
     criadoEm: '2025-01-22T09:30:00Z',
     equipamentoId: 16,
     plantaId: 4,
@@ -232,7 +232,7 @@ export const mockTarefas: Tarefa[] = [
     origemPlano: false
   },
   {
-    id: 'tarefa-manual-2',
+    id: 7,
     criadoEm: '2025-01-25T15:45:00Z',
     equipamentoId: 17,
     plantaId: 1,
@@ -261,7 +261,7 @@ export const mockTarefas: Tarefa[] = [
   },
   // Tarefa vencida
   {
-    id: 'tarefa-vencida-1',
+    id: 8,
     criadoEm: '2025-01-01T08:00:00Z',
     planoManutencaoId: '1',
     tarefaTemplateId: 'template-1-3',
@@ -293,7 +293,7 @@ export const mockTarefas: Tarefa[] = [
   },
   // Tarefa vencendo hoje
   {
-    id: 'tarefa-hoje-1',
+    id: 9,
     criadoEm: '2025-01-15T10:00:00Z',
     planoManutencaoId: '2',
     tarefaTemplateId: 'template-2-3',

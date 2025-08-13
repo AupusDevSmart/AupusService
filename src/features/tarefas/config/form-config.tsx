@@ -8,7 +8,6 @@ import {
   Upload, 
   X, 
   Plus,
-  Building,
   Wrench,
   CheckSquare,
   Package,
@@ -21,10 +20,10 @@ import { SubTarefa, RecursoTarefa } from '../types';
 
 // ✅ COMPONENTE: Seleção hierárquica Planta → Equipamento
 const LocalizacaoController = ({ value, onChange, disabled, entity, mode }: FormFieldProps & { entity?: any; mode?: string }) => {
-  const { plantas, getEquipamentosUCByPlanta, getComponentesByEquipamento, getPlantaById, getEquipamentoById } = useEquipamentos();
+  const { plantas, getEquipamentosUCByPlanta, getEquipamentoById } = useEquipamentos();
   
-  const [plantaId, setPlantaId] = React.useState(value?.plantaId?.toString() || '');
-  const [equipamentoId, setEquipamentoId] = React.useState(value?.equipamentoId?.toString() || '');
+  const [plantaId, setPlantaId] = React.useState(((entity as any)?.plantaId || (value as any)?.plantaId)?.toString() || '');
+  const [equipamentoId, setEquipamentoId] = React.useState(((entity as any)?.equipamentoId || (value as any)?.equipamentoId)?.toString() || '');
 
   // Equipamentos UC filtrados pela planta selecionada
   const equipamentosDisponiveis = plantaId ? 
@@ -138,8 +137,8 @@ const LocalizacaoController = ({ value, onChange, disabled, entity, mode }: Form
 
 // ✅ COMPONENTE: Frequência personalizada
 const FrequenciaController = ({ value, onChange, disabled }: FormFieldProps) => {
-  const [frequencia, setFrequencia] = React.useState(value?.frequencia || 'MENSAL');
-  const [frequenciaPersonalizada, setFrequenciaPersonalizada] = React.useState(value?.frequenciaPersonalizada || 30);
+  const [frequencia, setFrequencia] = React.useState((value as any)?.frequencia || 'MENSAL');
+  const [frequenciaPersonalizada, setFrequenciaPersonalizada] = React.useState((value as any)?.frequenciaPersonalizada || 30);
 
   const handleFrequenciaChange = (newFrequencia: string) => {
     setFrequencia(newFrequencia);
@@ -204,7 +203,7 @@ const FrequenciaController = ({ value, onChange, disabled }: FormFieldProps) => 
 
 // ✅ COMPONENTE: Sub-tarefas (Checklist)
 const SubTarefasController = ({ value, onChange, disabled }: FormFieldProps) => {
-  const [subTarefas, setSubTarefas] = React.useState<Omit<SubTarefa, 'id'>[]>(value || []);
+  const [subTarefas, setSubTarefas] = React.useState<Omit<SubTarefa, 'id'>[]>(Array.isArray(value) ? value : []);
 
   const adicionarSubTarefa = () => {
     const novaSubTarefa = {
@@ -313,7 +312,7 @@ const SubTarefasController = ({ value, onChange, disabled }: FormFieldProps) => 
 
 // ✅ COMPONENTE: Recursos necessários
 const RecursosController = ({ value, onChange, disabled }: FormFieldProps) => {
-  const [recursos, setRecursos] = React.useState<Omit<RecursoTarefa, 'id'>[]>(value || []);
+  const [recursos, setRecursos] = React.useState<Omit<RecursoTarefa, 'id'>[]>(Array.isArray(value) ? value : []);
 
   const adicionarRecurso = () => {
     const novoRecurso = {
@@ -456,7 +455,7 @@ const RecursosController = ({ value, onChange, disabled }: FormFieldProps) => {
 
 // ✅ COMPONENTE: Upload de Anexos
 const AnexosUpload = ({ value, onChange, disabled }: FormFieldProps) => {
-  const [arquivos, setArquivos] = React.useState<File[]>(value || []);
+  const [arquivos, setArquivos] = React.useState<File[]>(Array.isArray(value) ? value : []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -714,7 +713,7 @@ export const tarefasFormFields: FormField[] = [
     placeholder: 'Ex: 2.5',
     validation: (value) => {
       if (!value) return null;
-      const duracao = parseFloat(value);
+      const duracao = parseFloat(String(value));
       if (duracao <= 0) {
         return 'Duração deve ser maior que zero';
       }
@@ -729,7 +728,7 @@ export const tarefasFormFields: FormField[] = [
     placeholder: 'Ex: 150',
     validation: (value) => {
       if (!value) return null;
-      const tempo = parseInt(value);
+      const tempo = parseInt(String(value));
       if (tempo <= 0) {
         return 'Tempo deve ser maior que zero';
       }

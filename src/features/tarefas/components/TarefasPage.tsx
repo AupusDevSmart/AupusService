@@ -1,6 +1,6 @@
 // src/features/tarefas/components/TarefasPage.tsx - COM PLANEJAR OS
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/components/common/base-table/BaseTable';
@@ -14,7 +14,7 @@ import {
   Calendar, 
   FileText, 
   CheckCircle, 
-  XCircle, 
+ 
   AlertTriangle, 
   Download, 
   Upload, 
@@ -24,7 +24,6 @@ import {
   Eye,
   Settings,
   ChevronLeft,
-  Wrench
 } from 'lucide-react';
 import { useGenericTable } from '@/hooks/useGenericTable';
 import { useGenericModal } from '@/hooks/useGenericModal';
@@ -52,7 +51,7 @@ const initialFilters: TarefasFilters = {
 };
 
 export function TarefasPage() {
-  const location = useLocation();
+  // const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const planoIdFiltro = searchParams.get('planoId');
@@ -164,7 +163,7 @@ export function TarefasPage() {
       edit: 'Editar Tarefa', 
       view: 'Visualizar Tarefa'
     };
-    return titles[modalState.mode];
+    return titles[modalState.mode as keyof typeof titles] || 'Tarefa';
   };
 
   const getModalIcon = () => {
@@ -209,38 +208,38 @@ export function TarefasPage() {
   // ✅ NOVA FUNCIONALIDADE: Planejar OS
   const handlePlanejarOS = (tarefa: Tarefa) => {
     console.log('🏷️ Planejando OS para tarefa:', tarefa.id);
-    planejarOSComTarefa(tarefa, navigate);
+    planejarOSComTarefa(tarefa as any, navigate);
   };
 
   // Ações personalizadas para tarefas
   const handleAtivar = async (tarefa: Tarefa) => {
     console.log('Ativando tarefa:', tarefa.id);
-    await ativarTarefa(tarefa.id);
+    await ativarTarefa(String(tarefa.id));
   };
 
   const handleDesativar = async (tarefa: Tarefa) => {
     console.log('Desativando tarefa:', tarefa.id);
-    await desativarTarefa(tarefa.id);
+    await desativarTarefa(String(tarefa.id));
   };
 
   const handleArquivar = async (tarefa: Tarefa) => {
     console.log('Arquivando tarefa:', tarefa.id);
-    await arquivarTarefa(tarefa.id);
+    await arquivarTarefa(String(tarefa.id));
   };
 
   const handleDuplicar = async (tarefa: Tarefa) => {
     console.log('Duplicando tarefa:', tarefa.id);
-    await duplicarTarefa(tarefa.id);
+    await duplicarTarefa(String(tarefa.id));
   };
 
   const handleSincronizar = async (tarefa: Tarefa) => {
     console.log('Sincronizando tarefa com plano:', tarefa.id);
-    await sincronizarComPlano(tarefa.id);
+    await sincronizarComPlano(String(tarefa.id));
   };
 
   const handleGerarOS = async (tarefa: Tarefa) => {
     console.log('Gerando OS para tarefa:', tarefa.id);
-    const resultado = await gerarOS(tarefa.id);
+    const resultado = await gerarOS(String(tarefa.id));
     console.log('OS gerada:', resultado.osId);
   };
 
@@ -568,7 +567,7 @@ export function TarefasPage() {
         <BaseModal
           isOpen={modalState.isOpen}
           mode={modalState.mode}
-          entity={getModalEntity()}
+          entity={getModalEntity() as any}
           title={getModalTitle()}
           icon={getModalIcon()}
           formFields={tarefasFormFields}

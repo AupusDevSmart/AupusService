@@ -34,7 +34,7 @@ export function useTarefas(): UseTarefasReturn {
     new Promise(resolve => setTimeout(resolve, ms));
 
   // Gerar ID único
-  const generateId = () => String(Date.now() + Math.random());
+  const generateId = () => Date.now() + Math.floor(Math.random() * 1000);
 
   // Criar tarefa manual
   const criarTarefa = useCallback(async (dados: any): Promise<Tarefa> => {
@@ -75,7 +75,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay();
       
-      const index = mockTarefas.findIndex(t => t.id === id);
+      const index = mockTarefas.findIndex(t => t.id === parseInt(String(id)));
       if (index === -1) {
         throw new Error('Tarefa não encontrada');
       }
@@ -109,7 +109,7 @@ export function useTarefas(): UseTarefasReturn {
     setLoading(true);
     try {
       await simulateDelay(300);
-      return mockTarefas.find(t => t.id === id) || null;
+      return mockTarefas.find(t => t.id === parseInt(String(id))) || null;
     } finally {
       setLoading(false);
     }
@@ -121,7 +121,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay();
       
-      const index = mockTarefas.findIndex(t => t.id === id);
+      const index = mockTarefas.findIndex(t => t.id === parseInt(String(id)));
       if (index === -1) {
         return false;
       }
@@ -139,7 +139,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay();
       
-      const index = mockTarefas.findIndex(t => t.id === tarefaId);
+      const index = mockTarefas.findIndex(t => t.id === parseInt(String(tarefaId)));
       if (index === -1) {
         throw new Error('Tarefa não encontrada');
       }
@@ -164,7 +164,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay();
       
-      const index = mockTarefas.findIndex(t => t.id === tarefaId);
+      const index = mockTarefas.findIndex(t => t.id === parseInt(String(tarefaId)));
       if (index === -1) {
         throw new Error('Tarefa não encontrada');
       }
@@ -189,7 +189,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay();
       
-      const index = mockTarefas.findIndex(t => t.id === tarefaId);
+      const index = mockTarefas.findIndex(t => t.id === parseInt(String(tarefaId)));
       if (index === -1) {
         throw new Error('Tarefa não encontrada');
       }
@@ -214,7 +214,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay();
       
-      const tarefaOriginal = mockTarefas.find(t => t.id === tarefaId);
+      const tarefaOriginal = mockTarefas.find(t => t.id === parseInt(String(tarefaId)));
       if (!tarefaOriginal) {
         throw new Error('Tarefa não encontrada');
       }
@@ -259,7 +259,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay(1500);
       
-      const index = mockTarefas.findIndex(t => t.id === tarefaId);
+      const index = mockTarefas.findIndex(t => t.id === parseInt(String(tarefaId)));
       if (index === -1) {
         throw new Error('Tarefa não encontrada');
       }
@@ -291,7 +291,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay();
       
-      const index = mockTarefas.findIndex(t => t.id === tarefaId);
+      const index = mockTarefas.findIndex(t => t.id === parseInt(String(tarefaId)));
       if (index === -1) {
         throw new Error('Tarefa não encontrada');
       }
@@ -312,7 +312,7 @@ export function useTarefas(): UseTarefasReturn {
   }, []);
 
   // Exportar tarefas
-  const exportarTarefas = useCallback(async (filtros?: any): Promise<Blob> => {
+  const exportarTarefas = useCallback(async (_filtros?: any): Promise<Blob> => {
     setLoading(true);
     try {
       await simulateDelay();
@@ -332,7 +332,7 @@ export function useTarefas(): UseTarefasReturn {
   }, []);
 
   // Importar tarefas
-  const importarTarefas = useCallback(async (arquivo: File): Promise<{ sucesso: number; erros: string[] }> => {
+  const importarTarefas = useCallback(async (_arquivo: File): Promise<{ sucesso: number; erros: string[] }> => {
     setLoading(true);
     try {
       await simulateDelay(2000);

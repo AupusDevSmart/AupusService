@@ -1,8 +1,7 @@
 // src/features/tarefas/config/table-config.tsx
-import React from 'react';
 import { 
   Wrench, 
-  Clock, 
+ 
   Calendar, 
   AlertTriangle,
   CheckCircle,
@@ -13,12 +12,8 @@ import {
   Tag,
   Timer,
   Layers,
-  Sync,
-  Copy,
-  Eye
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { TableColumn } from '@/types/base';
 import { Tarefa, StatusTarefa, TipoManutencao, CategoriaTarefa, FrequenciaTarefa } from '../types';
 
@@ -85,7 +80,7 @@ const formatarCriticidade = (criticidade: string) => {
     '4': { label: 'Alta', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300' },
     '5': { label: 'Muito Alta', color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' }
   };
-  return configs[criticidade] || { label: criticidade, color: 'bg-gray-100 text-gray-800' };
+  return configs[criticidade as keyof typeof configs] || { label: criticidade, color: 'bg-gray-100 text-gray-800' };
 };
 
 // Função para formatar duração em horas e minutos
@@ -209,7 +204,7 @@ export const tarefasTableColumns: TableColumn<Tarefa>[] = [
               {statusConfig.label}
             </Badge>
             {!tarefa.ativa && (
-              <XCircle className="h-3 w-3 text-red-500" title="Inativa" />
+              <XCircle className="h-3 w-3 text-red-500" />
             )}
           </div>
           {/* INDICADOR CLARO: Status de sincronização */}
