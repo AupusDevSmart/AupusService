@@ -1,5 +1,5 @@
 // src/features/reservas/components/ReservasPage.tsx
-import React, { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable, CustomAction } from '@/components/common/base-table/BaseTable';
@@ -7,7 +7,7 @@ import { BaseFilters } from '@/components/common/base-filters/BaseFilters';
 import { BaseModal } from '@/components/common/base-modal/BaseModal';
 import { ReservaModal } from './ReservaModal';
 import { Button } from '@/components/ui/button';
-import { Plus, Calendar, Car, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Plus, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useGenericTable } from '@/hooks/useGenericTable';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { ReservaVeiculo, ReservasFilters, ReservaFormData, Veiculo } from '../types';
@@ -18,7 +18,7 @@ import { useReservasVeiculos } from '../hooks/useReservasVeiculos';
 // Mock data para veículos - você deve substituir pela sua fonte de dados real
 const mockVeiculos: Veiculo[] = [
   {
-    id: '1',
+    id: 1,
     nome: 'Strada Adventure',
     placa: 'ABC-1234',
     marca: 'Fiat',
@@ -35,7 +35,7 @@ const mockVeiculos: Veiculo[] = [
     criadoEm: '2024-01-01T00:00:00Z'
   },
   {
-    id: '2',
+    id: 2,
     nome: 'Hilux SR',
     placa: 'DEF-5678',
     marca: 'Toyota',
@@ -52,7 +52,7 @@ const mockVeiculos: Veiculo[] = [
     criadoEm: '2024-01-01T00:00:00Z'
   },
   {
-    id: '3',
+    id: 3,
     nome: 'Van Sprinter',
     placa: 'GHI-9012',
     marca: 'Mercedes',
@@ -200,7 +200,7 @@ export function ReservasPage() {
             <div className="flex-1">
               <BaseFilters 
                 filters={filters}
-                config={reservasFilterConfig}
+                config={reservasFilterConfig as any}
                 onFilterChange={handleFilterChange}
               />
             </div>
@@ -232,7 +232,7 @@ export function ReservasPage() {
         {/* Modal principal de reservas com seletor de veículo */}
         <ReservaModal
           isOpen={modalState.isOpen}
-          mode={modalState.mode}
+          mode={modalState.mode as any}
           entity={modalState.entity}
           onClose={closeModal}
           onSubmit={handleSubmit}
@@ -245,7 +245,7 @@ export function ReservasPage() {
         <BaseModal
           isOpen={cancelModalOpen}
           mode="edit"
-          entity={{ motivoCancelamento }}
+          entity={{ id: 0, motivoCancelamento, criadoEm: new Date().toISOString() }}
           title="Cancelar Reserva"
           icon={<XCircle className="h-5 w-5 text-red-600" />}
           formFields={[
@@ -262,13 +262,11 @@ export function ReservasPage() {
             setReservaParaCancelar(null);
             setMotivoCancelamento('');
           }}
-          onSubmit={(data) => {
+          onSubmit={async (data) => {
             setMotivoCancelamento(data.motivoCancelamento);
-            confirmarCancelamento();
+            await confirmarCancelamento();
           }}
           width="w-[500px]"
-          submitLabel="Cancelar Reserva"
-          submitVariant="destructive"
         />
       </Layout.Main>
     </Layout>

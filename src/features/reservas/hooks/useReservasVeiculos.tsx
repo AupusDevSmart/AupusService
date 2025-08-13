@@ -1,5 +1,5 @@
 // src/features/reservas/hooks/useReservasVeiculos.ts
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { 
   ReservaVeiculo, 
   ReservaFormData, 
@@ -183,6 +183,11 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
     await new Promise(resolve => setTimeout(resolve, 800));
 
     try {
+      // Validar se veiculoId foi fornecido
+      if (!dados.veiculoId) {
+        throw new Error('Veículo deve ser selecionado');
+      }
+
       // Validar período
       const erroValidacao = validarPeriodoReserva(
         dados.dataInicio, dados.dataFim, 
@@ -210,6 +215,7 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
         id: Date.now(),
         criadoEm: new Date().toISOString(),
         ...dados,
+        veiculoId: dados.veiculoId, // TypeScript agora sabe que não é undefined por causa da validação acima
         status: 'ativa',
         criadoPor: 'Usuário Atual', // Em produção, viria do contexto de auth
         dataReserva: new Date().toISOString().split('T')[0]
@@ -252,6 +258,11 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
         
         if (erroValidacao) {
           throw new Error(erroValidacao);
+        }
+
+        // Verificar se veiculoId está definido
+        if (!novosDados.veiculoId) {
+          throw new Error('Veículo deve ser selecionado');
         }
 
         // Verificar disponibilidade excluindo a reserva atual

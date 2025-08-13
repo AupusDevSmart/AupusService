@@ -1,5 +1,5 @@
 // src/features/reservas/components/VeiculoSelector.tsx
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Car, Users, Fuel, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Veiculo, ReservaVeiculo, FiltrosDisponibilidade } from '../types';
 
