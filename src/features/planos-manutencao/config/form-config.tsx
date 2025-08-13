@@ -322,7 +322,6 @@ export const planosFormFields: FormField[] = [
     label: 'Plano Público',
     type: 'checkbox',
     required: false,
-    helpText: 'Outros usuários podem usar este plano'
   },
   
   // Templates de Tarefas

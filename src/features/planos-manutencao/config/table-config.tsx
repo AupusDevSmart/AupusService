@@ -1,5 +1,4 @@
 // src/features/planos-manutencao/config/table-config.tsx
-import React from 'react';
 import { 
   Layers, 
   Users, 
@@ -9,11 +8,8 @@ import {
   Settings,
   FileText,
   AlertTriangle,
-  ExternalLink,  // NOVO: Para botão associar
-  Eye           // NOVO: Para ver tarefas
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';  // NOVO: Para botões de ação
 import { TableColumn } from '@/types/base';
 import { PlanoManutencao, CATEGORIAS_PLANO_LABELS } from '../types';
 
@@ -132,7 +128,7 @@ export const planosTableColumns: TableColumn<PlanoManutencao>[] = [
         <div className="flex items-center gap-2">
           <Calendar className="h-3 w-3 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">
-            {new Date(plano.criadoEm).toLocaleDateString('pt-BR')}
+            {plano.criadoEm ? new Date(plano.criadoEm).toLocaleDateString('pt-BR') : 'N/A'}
           </span>
         </div>
         <div className="text-xs text-muted-foreground">

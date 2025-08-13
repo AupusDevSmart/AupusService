@@ -70,7 +70,6 @@ export function PlanosManutencaoPage() {
     editarPlano,
     duplicarPlano,
     excluirPlano,
-    exportarPlano,
     importarPlano,
     ativarPlanos,
     desativarPlanos
@@ -120,7 +119,7 @@ export function PlanosManutencaoPage() {
       if (modalState.mode === 'create') {
         await criarPlano(data);
       } else if (modalState.mode === 'edit' && modalState.entity) {
-        await editarPlano(modalState.entity.id, data);
+        await editarPlano(String(modalState.entity.id), data);
       }
       
       await handleSuccess();
@@ -135,7 +134,7 @@ export function PlanosManutencaoPage() {
       edit: 'Editar Plano de Manutenção', 
       view: 'Visualizar Plano de Manutenção'
     };
-    return titles[modalState.mode];
+    return titles[modalState.mode as keyof typeof titles] || 'Plano de Manutenção';
   };
 
   const getModalIcon = () => {
@@ -147,6 +146,7 @@ export function PlanosManutencaoPage() {
     
     if (modalState.mode === 'create') {
       return {
+        id: 0,
         categoria: 'MOTORES_ELETRICOS',
         versao: '1.0',
         ativo: true,
@@ -188,7 +188,7 @@ export function PlanosManutencaoPage() {
       setShowSelecionarTarefasModal(false);
       
       // Navegar para programação com dados pré-selecionados
-      planejarOSComPlano(planoParaPlanejar, tarefasSelecionadas, equipamentosSelecionados, navigate);
+      planejarOSComPlano(planoParaPlanejar as any, tarefasSelecionadas, equipamentosSelecionados, navigate);
       
       // Limpar estado
       setPlanoParaPlanejar(null);
@@ -211,7 +211,7 @@ export function PlanosManutencaoPage() {
   const handleDuplicar = async (plano: PlanoManutencao) => {
     console.log('Duplicando plano:', plano.id);
     try {
-      await duplicarPlano(plano.id);
+      await duplicarPlano(String(plano.id));
       setLoading(true);
       await new Promise(resolve => setTimeout(resolve, 1000));
       setLoading(false);
@@ -222,18 +222,18 @@ export function PlanosManutencaoPage() {
 
   const handleAtivar = async (plano: PlanoManutencao) => {
     console.log('Ativando plano:', plano.id);
-    await ativarPlanos([plano.id]);
+    await ativarPlanos([String(plano.id)]);
   };
 
   const handleDesativar = async (plano: PlanoManutencao) => {
     console.log('Desativando plano:', plano.id);
-    await desativarPlanos([plano.id]);
+    await desativarPlanos([String(plano.id)]);
   };
 
   const handleExcluir = async (plano: PlanoManutencao) => {
     console.log('Excluindo plano:', plano.id);
     try {
-      const sucesso = await excluirPlano(plano.id);
+      const sucesso = await excluirPlano(String(plano.id));
       if (sucesso) {
         setLoading(true);
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -241,7 +241,7 @@ export function PlanosManutencaoPage() {
       }
     } catch (error) {
       console.error('Erro ao excluir plano:', error);
-      alert(error.message);
+      alert(error instanceof Error ? error.message : 'Erro desconhecido');
     }
   };
 
@@ -474,7 +474,7 @@ export function PlanosManutencaoPage() {
         {/* Modal de Seleção de Tarefas */}
         <SelecionarTarefasModal
           isOpen={showSelecionarTarefasModal}
-          plano={planoParaPlanejar}
+          plano={planoParaPlanejar as any}
           onClose={() => {
             setShowSelecionarTarefasModal(false);
             setPlanoParaPlanejar(null);

@@ -1,6 +1,6 @@
 // src/features/planos-manutencao/components/AssociacaoEquipamentosPage.tsx
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -16,13 +16,10 @@ import {
   Plus,
   Trash2,
   CheckCircle,
-  AlertTriangle,
   FileText,
-  Users,
   Settings,
   ChevronLeft,
-  Copy,
-  ExternalLink
+  Copy
 } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { useEquipamentos } from '@/features/equipamentos/hooks/useEquipamentos';
@@ -84,7 +81,7 @@ export function AssociacaoEquipamentosPage() {
   });
 
   useEffect(() => {
-    const planoSelecionado = mockPlanosManutencao.find(p => p.id === associacao.planoSelecionado);
+    const planoSelecionado = mockPlanosManutencao.find(p => p.id === parseInt(String(associacao.planoSelecionado)));
     const tarefasQueSerao = planoSelecionado ? 
       associacao.equipamentos.length * planoSelecionado.tarefasTemplate.filter(t => t.ativa).length : 0;
 
@@ -150,7 +147,7 @@ export function AssociacaoEquipamentosPage() {
       return;
     }
     setMostrandoOpcaoPlano('duplicar');
-    const planoOriginal = mockPlanosManutencao.find(p => p.id === planoParaDuplicar);
+    const planoOriginal = mockPlanosManutencao.find(p => p.id === parseInt(String(planoParaDuplicar)));
     if (planoOriginal) {
       openModal('create', planoOriginal);
     }
@@ -207,7 +204,7 @@ export function AssociacaoEquipamentosPage() {
     }
   };
 
-  const planoSelecionadoDetalhes = mockPlanosManutencao.find(p => p.id === associacao.planoSelecionado);
+  const planoSelecionadoDetalhes = mockPlanosManutencao.find(p => p.id === parseInt(String(associacao.planoSelecionado)));
 
   const getModalTitle = () => {
     if (mostrandoOpcaoPlano === 'criar') {
@@ -221,6 +218,7 @@ export function AssociacaoEquipamentosPage() {
   const getModalEntity = () => {
     if (mostrandoOpcaoPlano === 'criar') {
       return {
+        id: 0,
         categoria: 'MOTORES_ELETRICOS',
         versao: '1.0',
         ativo: true,

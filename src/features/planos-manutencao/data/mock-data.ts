@@ -4,7 +4,7 @@ import { PlanoManutencao, PlanoEquipamento } from '../types';
 
 export const mockPlanosManutencao: PlanoManutencao[] = [
   {
-    id: '1',
+    id: 1,
     criadoEm: '2024-12-15T10:00:00Z',
     nome: 'Motores Elétricos Trifásicos',
     descricao: 'Plano padrão para manutenção de motores elétricos trifásicos de 1 a 50 HP',
@@ -180,7 +180,7 @@ export const mockPlanosManutencao: PlanoManutencao[] = [
     ]
   },
   {
-    id: '2',
+    id: 2,
     criadoEm: '2024-11-20T09:30:00Z',
     nome: 'Bombas Centrífugas Padrão',
     descricao: 'Manutenção preventiva para bombas centrífugas horizontais',
@@ -275,7 +275,7 @@ export const mockPlanosManutencao: PlanoManutencao[] = [
     ]
   },
   {
-    id: '3',
+    id: 3,
     criadoEm: '2024-10-05T14:15:00Z',
     nome: 'Transformadores de Potência',
     descricao: 'Manutenção para transformadores de média e alta tensão',
@@ -387,7 +387,7 @@ export const mockPlanosManutencao: PlanoManutencao[] = [
     ]
   },
   {
-    id: '4',
+    id: 4,
     criadoEm: '2025-01-02T08:00:00Z',
     nome: 'Compressores de Ar Industrial',
     descricao: 'Manutenção preventiva para compressores de parafuso e pistão',
@@ -456,7 +456,7 @@ export const mockPlanosManutencao: PlanoManutencao[] = [
 export const mockPlanosEquipamentos: PlanoEquipamento[] = [
   // Plano 1 (Motores) associado a 8 equipamentos
   {
-    id: '1',
+    id: 1,
     criadoEm: '2025-01-10T09:00:00Z',
     planoManutencaoId: '1',
     equipamentoId: 1,
@@ -466,7 +466,7 @@ export const mockPlanosEquipamentos: PlanoEquipamento[] = [
     associadoPor: 'João Silva'
   },
   {
-    id: '2',
+    id: 2,
     criadoEm: '2025-01-10T09:00:00Z',
     planoManutencaoId: '1',
     equipamentoId: 11,
@@ -476,7 +476,7 @@ export const mockPlanosEquipamentos: PlanoEquipamento[] = [
     associadoPor: 'João Silva'
   },
   {
-    id: '3',
+    id: 3,
     criadoEm: '2025-01-10T09:00:00Z',
     planoManutencaoId: '1',
     equipamentoId: 15,
@@ -486,7 +486,7 @@ export const mockPlanosEquipamentos: PlanoEquipamento[] = [
     associadoPor: 'João Silva'
   },
   {
-    id: '4',
+    id: 4,
     criadoEm: '2025-01-12T10:30:00Z',
     planoManutencaoId: '1',
     equipamentoId: 17,
@@ -499,7 +499,7 @@ export const mockPlanosEquipamentos: PlanoEquipamento[] = [
   
   // Plano 2 (Bombas) associado a 5 equipamentos
   {
-    id: '5',
+    id: 5,
     criadoEm: '2025-01-08T14:00:00Z',
     planoManutencaoId: '2',
     equipamentoId: 3,
@@ -509,7 +509,7 @@ export const mockPlanosEquipamentos: PlanoEquipamento[] = [
     associadoPor: 'Maria Santos'
   },
   {
-    id: '6',
+    id: 6,
     criadoEm: '2025-01-08T14:00:00Z',
     planoManutencaoId: '2',
     equipamentoId: 16,
@@ -521,7 +521,7 @@ export const mockPlanosEquipamentos: PlanoEquipamento[] = [
   
   // Plano 3 (Transformadores) associado a 3 equipamentos
   {
-    id: '7',
+    id: 7,
     criadoEm: '2024-12-20T11:00:00Z',
     planoManutencaoId: '3',
     equipamentoId: 2,
@@ -531,7 +531,7 @@ export const mockPlanosEquipamentos: PlanoEquipamento[] = [
     associadoPor: 'Pedro Costa'
   },
   {
-    id: '8',
+    id: 8,
     criadoEm: '2024-12-20T11:00:00Z',
     planoManutencaoId: '3',
     equipamentoId: 12,
