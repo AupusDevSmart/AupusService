@@ -9,7 +9,6 @@ export function Settings() {
         <TitleCard
           title={'Perfil'}
           description={'Gerencie seu perfil e suas informações pessoais.'}
-          hiddenSelect
         />
         <AccountForm />
       </Layout.Main>
