@@ -1,37 +1,79 @@
 // src/features/usuarios/utils/permissoes-utils.ts
-import { Permissao } from '@/types/dtos/usuarios-dto';
+import { Permissao } from '../types';
 
 // ✅ NOVO: Função para extrair todas as permissões automaticamente
 // Só precisa manter UMA lista - no tipo Permissao
 export const obterTodasPermissoes = (): Permissao[] => {
-  // ✅ SIMPLES: Lista todas as permissões em um lugar só
+  // ✅ LISTA TODAS AS PERMISSÕES REAIS DO BANCO
   return [
+    // Painel
+    'PainelGeral',
+    'PainelGeralOrganizacoes',
+    'PainelGeralCativos',
+    'PainelGeralClube',
+    // Dashboard
+    'dashboard.view',
+    // Monitoramento
+    'MonitoramentoOrganizacoes',
+    'Monitoramento',
     'MonitoramentoConsumo',
-    'GeracaoEnergia', 
-    'GestaoOportunidades',
-    'Financeiro',
+    // Sistemas
+    'NET',
+    'CRM',
     'Oportunidades',
-    'Prospeccao',
-    'ProspeccaoListagem',
-    'MonitoramentoClientes',
-    'ClubeAupus',
+    // Administração
     'Usuarios',
     'Organizacoes',
-    'AreaDoProprietario',
     'UnidadesConsumidoras',
     'Configuracoes',
-    'AreaDoAssociado',
-    'Documentos',
+    'Arquivos',
+    // Configurações
+    'configuracoes.view',
+    'configuracoes.edit',
+    // Cadastros
+    'Cadastros',
+    'CadastroOrganizacoes',
+    'CadastroUsuarios',
+    'CadastroUnidadesConsumidoras',
+    'CadastroConcessionarias',
+    // Financeiro
+    'FinanceiroAdmin',
+    'Financeiro',
+    'FinanceiroConsultor',
+    // Super Admin
+    'SuperAdmin',
+    // Energia
+    'GeracaoEnergia',
+    'Reclamacoes',
+    // Áreas
     'Associados',
+    'Documentos',
+    'Prospeccao',
+    'AreaDoAssociado',
+    'AreaDoProprietario',
     'MinhasUsinas',
-    'Dashboard',
-    'Proprietarios',
-    'Equipamentos',
-    'Plantas'
+    // Prospecção
+    'prospec.view',
+    'prospec.create',
+    'prospec.edit',
+    'prospec.delete',
+    // Controle
+    'controle.view',
+    'controle.manage',
+    // UGs
+    'ugs.view',
+    'ugs.create',
+    'ugs.edit',
+    // Relatórios
+    'relatorios.view',
+    'relatorios.export',
+    // Equipe
+    'equipe.view',
+    'equipe.create'
   ];
 };
 
-// ✅ NOVO: Função para inferir categoria automaticamente pelo nome
+// Função para inferir categoria automaticamente pelo nome
 const inferirCategoria = (permissao: string): string => {
   const permissaoLower = permissao.toLowerCase();
   

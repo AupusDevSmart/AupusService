@@ -1,4 +1,5 @@
-// src/features/usuarios/components/UsuariosPage.tsx
+
+// src/features/usuarios/components/UsuariosPage.tsx - CORRIGIDO
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
@@ -24,7 +25,7 @@ export function UsuariosPage() {
     refetch
   } = useUsuarios();
 
-  // ✅ Estado do modal de usuário
+  // Estado do modal de usuário
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     mode: 'create',
@@ -52,9 +53,9 @@ export function UsuariosPage() {
     handleCloseModal();
   };
 
-  // ✅ Handler para gerenciar plantas (só para proprietários)
+  // Handler para gerenciar plantas (só para proprietários)
   const handleGerenciarPlantas = (usuario: Usuario) => {
-    console.log(`Gerenciando plantas do proprietário ${usuario.id}: ${usuario.nome}`);
+    console.log(`Gerenciando plantas do usuário ${usuario.id}: ${usuario.nome}`);
     
     // Fechar modal se estiver aberto
     if (modalState.isOpen) {
@@ -62,7 +63,7 @@ export function UsuariosPage() {
     }
     
     // Navegar para plantas filtradas
-    navigate(`/plantas?proprietarioId=${usuario.id}&proprietarioNome=${encodeURIComponent(usuario.nome)}`);
+    navigate(`/plantas?usuarioId=${usuario.id}&usuarioNome=${encodeURIComponent(usuario.nome)}`);
   };
 
   return (
@@ -74,7 +75,7 @@ export function UsuariosPage() {
             description="Gerencie os usuários cadastrados no sistema"
           />
           
-          {/* ✅ Filtros e Botão de Cadastrar */}
+          {/* Filtros e Botão de Cadastrar */}
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="flex-1">
               <UsuariosFilters 

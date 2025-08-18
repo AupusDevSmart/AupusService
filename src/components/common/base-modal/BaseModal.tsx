@@ -68,7 +68,11 @@ export function BaseModal<T extends BaseEntity>({
   }, [isOpen, entity, mode, formFields, isViewMode, isEditMode, isCreateMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('🔵 BaseModal: handleSubmit iniciado');
     e.preventDefault();
+    
+    console.log('📊 Dados do formulário:', formData);
+    console.log('🔍 Campos obrigatórios a verificar:', formFields.filter(f => f.required));
     
     // Validar campos obrigatórios
     const newErrors: Record<string, string> = {};
@@ -78,8 +82,11 @@ export function BaseModal<T extends BaseEntity>({
           ? formData[field.key.split('.')[0]]?.[field.key.split('.')[1]]
           : formData[field.key];
         
+        console.log(`✅ Validando campo ${field.key}: ${value}`);
+        
         if (!value || String(value).trim() === '') {
           newErrors[field.key] = `${field.label} é obrigatório`;
+          console.log(`❌ Campo ${field.key} é obrigatório mas está vazio`);
         }
       }
       
@@ -92,21 +99,27 @@ export function BaseModal<T extends BaseEntity>({
         const error = field.validation(value);
         if (error) {
           newErrors[field.key] = error;
+          console.log(`❌ Erro de validação customizada em ${field.key}: ${error}`);
         }
       }
     });
 
     if (Object.keys(newErrors).length > 0) {
+      console.log('❌ Erros de validação encontrados:', newErrors);
       setErrors(newErrors);
       return;
     }
     
+    console.log('✅ Validação passou, iniciando submissão');
     setIsSubmitting(true);
     try {
+      console.log('📤 Chamando onSubmit com os dados:', formData);
       await onSubmit(formData);
+      console.log('✅ onSubmit executado com sucesso');
     } catch (error) {
-      console.error('Erro ao salvar:', error);
+      console.error('❌ Erro ao salvar no BaseModal:', error);
     } finally {
+      console.log('🔄 Finalizando submissão, setIsSubmitting(false)');
       setIsSubmitting(false);
     }
   };

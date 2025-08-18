@@ -1,12 +1,13 @@
-// src/features/usuarios/config/filter-config.ts
+// src/features/usuarios/config/filter-config.ts - ATUALIZADO
 import { FilterConfig } from '@/types/base';
+import { UsuarioStatus, UsuarioRole } from '../types';
 
 export const usuariosFilterConfig: FilterConfig[] = [
   {
     key: 'search',
     label: 'Buscar',
     type: 'text',
-    placeholder: 'Pesquisar por nome, email ou telefone...'
+    placeholder: 'Pesquisar por nome, email, telefone ou CPF/CNPJ...'
   },
   {
     key: 'status',
@@ -14,22 +15,37 @@ export const usuariosFilterConfig: FilterConfig[] = [
     type: 'select',
     options: [
       { value: 'all', label: 'Todos os status' },
-      { value: 'Ativo', label: 'Ativo' },
-      { value: 'Inativo', label: 'Inativo' }
+      { value: UsuarioStatus.ATIVO, label: 'Ativo' },
+      { value: UsuarioStatus.INATIVO, label: 'Inativo' }
     ]
   },
   {
-    key: 'tipo',
-    label: 'Tipo',
+    key: 'role',
+    label: 'Tipo de Usuário',
     type: 'select',
     options: [
       { value: 'all', label: 'Todos os tipos' },
-      { value: 'Proprietário', label: 'Proprietário' },
-      { value: 'Analista', label: 'Analista' },
-      { value: 'Adm', label: 'Administrador' },
-      { value: 'Técnico', label: 'Técnico' },
-      { value: 'Fornecedor', label: 'Fornecedor' },
-      { value: 'Técnico Externo', label: 'Técnico Externo' }
+      { value: UsuarioRole.ADMIN, label: 'Administrador' },
+      { value: UsuarioRole.GERENTE, label: 'Gerente' },
+      { value: UsuarioRole.VENDEDOR, label: 'Vendedor' },
+      { value: UsuarioRole.CONSULTOR, label: 'Consultor' }
     ]
+  },
+  {
+    key: 'cidade',
+    label: 'Cidade',
+    type: 'text',
+    placeholder: 'Filtrar por cidade'
+  },
+  {
+    key: 'estado',
+    label: 'Estado',
+    type: 'text',
+    placeholder: 'Filtrar por estado'
+  },
+  {
+    key: 'includeInactive',
+    label: 'Incluir Inativos',
+    type: 'checkbox'
   }
 ];

@@ -10,6 +10,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { FormField, FormFieldProps, ModalMode, BaseEntity } from '@/types/base';
 
@@ -35,21 +36,34 @@ export function BaseForm({
   groups
 }: BaseFormProps) {
   const handleFieldChange = (key: string, value: unknown) => {
+    let newData: Record<string, unknown>;
+    
     if (key.includes('.')) {
       const [parent, child] = key.split('.');
-      onChange({
+      newData = {
         ...data,
         [parent]: {
           ...(data[parent] as Record<string, unknown>),
           [child]: value
         }
-      });
+      };
     } else {
-      onChange({
+      newData = {
         ...data,
         [key]: value
-      });
+      };
     }
+    
+    onChange(newData);
+  };
+
+  // Função para atualizar múltiplos campos de uma vez
+  const handleMultipleFieldsChange = (updates: Record<string, unknown>) => {
+    const newData = {
+      ...data,
+      ...updates
+    };
+    onChange(newData);
   };
 
   const getValue = (key: string): unknown => {
@@ -76,6 +90,9 @@ export function BaseForm({
     return true;
   });
 
+  // Debug: verificar se campos estão sendo filtrados corretamente
+  // console.log('Campos visíveis:', visibleFields.map(f => f.key));
+
   const groupedFields = visibleFields.reduce((acc, field) => {
     const group = field.group || 'main';
     if (!acc[group]) acc[group] = [];
@@ -87,14 +104,22 @@ export function BaseForm({
     const value = getValue(field.key);
     const error = errors[field.key];
     
-    // ✅ ATUALIZADO: Incluir mode e entity no fieldProps
+    // ✅ ATUALIZADO: Incluir mode, entity, dependências e callback para múltiplos campos
     const fieldProps: FormFieldProps = {
       value,
       onChange: (newValue) => handleFieldChange(field.key, newValue),
+      onMultipleChange: handleMultipleFieldsChange, // ✅ NOVO: Callback para múltiplos campos
       disabled,
       error,
       mode, // ✅ NOVO: Passar mode
       entity, // ✅ NOVO: Passar entity
+      // Passar valores de campos dependentes para componentes customizados
+      ...(field.dependencies && {
+        ...field.dependencies.reduce((acc, dep) => {
+          acc[dep] = getValue(dep);
+          return acc;
+        }, {} as Record<string, unknown>)
+      })
     };
 
     // ✅ CORREÇÃO: Renderizar componente personalizado usando React.createElement
@@ -104,8 +129,10 @@ export function BaseForm({
 
     switch (field.type) {
       case 'text':
+      case 'email':
         return (
           <Input
+            type={field.type === 'email' ? 'email' : 'text'}
             value={value as string}
             onChange={(e) => handleFieldChange(field.key, e.target.value)}
             disabled={disabled}
@@ -144,8 +171,23 @@ export function BaseForm({
             </SelectContent>
           </Select>
         );
+
+      case 'checkbox':
+        return (
+          <Checkbox
+            checked={value as boolean}
+            onCheckedChange={(checked) => handleFieldChange(field.key, checked)}
+            disabled={disabled}
+            className={error ? 'border-red-500' : ''}
+          />
+        );
+
+      case 'custom':
+        // Para campos customizados, o componente já foi renderizado usando field.render
+        return null;
       
       default:
+        console.warn(`Tipo de campo não suportado: ${field.type}`);
         return null;
     }
   };
