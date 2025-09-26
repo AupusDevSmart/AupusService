@@ -7,8 +7,7 @@ import {
   DisponibilidadeVeiculo,
   TipoSolicitante 
 } from '../types';
-import { mockReservas } from '../data/mock-data';
-import { mockVeiculos } from '../../veiculos/data/mock-data';
+// Mock data removed - using API now
 
 interface UseReservasVeiculosReturn {
   // Estados
@@ -37,7 +36,8 @@ interface UseReservasVeiculosReturn {
 
 export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
   const [loading, setLoading] = useState(false);
-  const [reservasState, setReservasState] = useState<ReservaVeiculo[]>(mockReservas);
+  const [reservasState, setReservasState] = useState<ReservaVeiculo[]>([]);
+  const [veiculosState] = useState<any[]>([]);
 
   // Função para verificar sobreposição de períodos
   const verificarSobreposicao = useCallback((
@@ -103,7 +103,7 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
       const resultado: DisponibilidadeVeiculo[] = [];
 
       for (const veiculoId of veiculoIds) {
-        const veiculo = mockVeiculos.find(v => v.id === veiculoId);
+        const veiculo = veiculosState.find((v: any) => v.id === veiculoId);
         
         // Verificar se veículo existe e está disponível
         if (!veiculo || veiculo.status !== 'disponivel') {
@@ -165,9 +165,9 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
   const obterVeiculosDisponiveis = useCallback(async (
     filtros: FiltrosDisponibilidade
   ): Promise<number[]> => {
-    const veiculosAtivos = mockVeiculos
-      .filter(v => v.status === 'disponivel')
-      .map(v => v.id);
+    const veiculosAtivos = veiculosState
+      .filter((v: any) => v.status === 'disponivel')
+      .map((v: any) => v.id);
 
     const disponibilidades = await verificarDisponibilidade(veiculosAtivos, filtros);
     
@@ -213,7 +213,7 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
 
       // Criar nova reserva
       const novaReserva: ReservaVeiculo = {
-        id: Date.now(),
+        id: Date.now().toString(),
         criadoEm: new Date().toISOString(),
         ...dados,
         veiculoId: dados.veiculoId, // TypeScript agora sabe que não é undefined por causa da validação acima
@@ -431,7 +431,7 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
     dataInicio: string, 
     dataFim: string
   ): number => {
-    const veiculo = mockVeiculos.find(v => v.id === veiculoId);
+    const veiculo = veiculosState.find((v: any) => v.id === veiculoId);
     if (!veiculo || !veiculo.valorDiaria) return 0;
 
     const inicio = new Date(dataInicio);

@@ -1,71 +1,57 @@
 // src/features/reservas/types/index.ts
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
 
-// Status e enums
-export type StatusReserva = 'ativa' | 'finalizada' | 'cancelada' | 'vencida';
-export type TipoSolicitante = 'ordem_servico' | 'viagem' | 'manutencao' | 'manual';
-export type StatusVeiculo = 'disponivel' | 'em_uso' | 'manutencao' | 'inativo';
-export type TipoCombustivel = 'gasolina' | 'etanol' | 'diesel' | 'gnv' | 'eletrico' | 'hibrido' | 'flex';
-export type TipoVeiculo = 'carro' | 'van' | 'caminhonete' | 'caminhao' | 'onibus' | 'moto';
+// Re-export API types
+export type {
+  StatusReserva,
+  TipoSolicitante,
+  ReservaResponse,
+  CreateReservaRequest,
+  UpdateReservaRequest,
+  QueryReservasParams,
+  ReservasFilters,
+  DashboardReservasResponse
+} from '@/services/reservas.services';
 
-// Interface para veículo - corrigida para compatibilidade
-export interface Veiculo extends BaseEntity {
-  nome: string;
-  placa: string;
-  marca: string;
-  modelo: string;
-  ano: number;
-  cor?: string;
-  status: StatusVeiculo;
-  tipo?: TipoVeiculo;
-  tipoCombustivel: TipoCombustivel;
-  // Compatibilidade: aceita tanto numeroPassageiros quanto capacidadePassageiros
-  numeroPassageiros?: number;
-  capacidadePassageiros?: number;
-  capacidadeCarga?: number; // em kg, opcional
-  // Compatibilidade: aceita tanto quilometragem quanto kmAtual
-  quilometragem?: number;
-  kmAtual?: number;
-  proximaRevisao?: string; // YYYY-MM-DD
-  // Compatibilidade: aceita tanto responsavel quanto responsavelManutencao
-  responsavel?: string;
-  responsavelManutencao?: string;
-  localizacaoAtual: string;
-  valorDiaria?: number; // Adicionado para compatibilidade
-  observacoes?: string;
-  chassi?: string;
-  renavam?: string;
-  seguradora?: string;
-  vencimentoSeguro?: string; // YYYY-MM-DD
-}
+export type {
+  VeiculoResponse,
+  CreateVeiculoRequest,
+  UpdateVeiculoRequest,
+  QueryVeiculosParams,
+  VeiculosFilters,
+  DashboardVeiculosResponse,
+  StatusVeiculo,
+  TipoCombustivel,
+  TipoVeiculo
+} from '@/services/veiculos.services';
 
-// Interface para reserva completa - corrigida para compatibilidade
+// Alias for backward compatibility
+export type Veiculo = import('@/services/veiculos.services').VeiculoResponse;
+
+// Legacy types for backward compatibility (use API types for new code)
 export interface ReservaVeiculo extends BaseEntity {
   veiculoId: number;
   solicitanteId?: string;
-  tipoSolicitante: TipoSolicitante;
-  dataInicio: string; // YYYY-MM-DD
+  tipoSolicitante: import('@/services/reservas.services').TipoSolicitante;
+  dataInicio: string;
   dataFim: string;
-  horaInicio: string; // HH:mm
+  horaInicio: string;
   horaFim: string;
   responsavel: string;
   finalidade: string;
-  status: StatusReserva;
+  status: import('@/services/reservas.services').StatusReserva;
   observacoes?: string;
   motivoCancelamento?: string;
   criadoPor?: string;
   dataReserva?: string;
   dataCancelamento?: string;
-  kmInicial?: number;
-  kmFinal?: number;
-  observacoesFinalizacao?: string;
 }
 
-// Para formulários de reserva - corrigida para compatibilidade
+// Form data interfaces
 export interface ReservaFormData {
   veiculoId?: number;
   solicitanteId?: string;
-  tipoSolicitante: TipoSolicitante;
+  tipoSolicitante: import('@/services/reservas.services').TipoSolicitante;
   dataInicio: string;
   dataFim: string;
   horaInicio: string;
@@ -75,7 +61,6 @@ export interface ReservaFormData {
   observacoes?: string;
 }
 
-// Para formulários de veículo - corrigida para compatibilidade
 export interface VeiculoFormData {
   nome: string;
   placa: string;
@@ -83,19 +68,13 @@ export interface VeiculoFormData {
   modelo: string;
   ano: number;
   cor?: string;
-  status?: StatusVeiculo;
-  tipo?: TipoVeiculo;
-  tipoCombustivel: TipoCombustivel;
-  // Compatibilidade: aceita tanto numeroPassageiros quanto capacidadePassageiros
-  numeroPassageiros?: number;
+  status?: import('@/services/veiculos.services').StatusVeiculo;
+  tipo?: import('@/services/veiculos.services').TipoVeiculo;
+  tipoCombustivel: import('@/services/veiculos.services').TipoCombustivel;
   capacidadePassageiros?: number;
   capacidadeCarga?: number;
-  // Compatibilidade: aceita tanto quilometragem quanto kmAtual
-  quilometragem?: number;
   kmAtual?: number;
   proximaRevisao?: string;
-  // Compatibilidade: aceita tanto responsavel quanto responsavelManutencao
-  responsavel?: string;
   responsavelManutencao?: string;
   localizacaoAtual: string;
   valorDiaria?: number;
@@ -136,20 +115,24 @@ export interface DisponibilidadeVeiculo {
   };
 }
 
-// Filtros para as páginas
-export interface ReservasFilters extends BaseFiltersType {
+// Local filters for components - use API types for new code
+export interface LocalReservasFilters extends BaseFiltersType {
+  veiculoId: string;
   status: string;
   tipoSolicitante: string;
   responsavel: string;
-  dataInicio: string;
-  dataFim: string;
+  dataInicioFrom: string;
+  dataInicioTo: string;
+  dataFimFrom: string;
+  dataFimTo: string;
 }
 
-export interface VeiculosFilters extends BaseFiltersType {
+export interface LocalVeiculosFilters extends BaseFiltersType {
   status: string;
   tipo: string;
   tipoCombustivel: string;
   marca: string;
+  disponivel: string;
 }
 
 // Estados dos modais

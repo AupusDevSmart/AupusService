@@ -1,13 +1,20 @@
 // src/features/veiculos/config/filter-config.ts
-import { FilterConfig } from '@/types/base';
+import { type FilterConfig } from '@/types/base';
+
+// ============================================================================
+// FILTER CONFIGURATIONS
+// ============================================================================
 
 export const veiculosFilterConfig: FilterConfig[] = [
+  // Search
   {
     key: 'search',
     type: 'search',
     placeholder: 'Buscar por nome, placa, marca, modelo...',
     className: 'lg:min-w-80'
   },
+
+  // Status
   {
     key: 'status',
     type: 'select',
@@ -19,9 +26,10 @@ export const veiculosFilterConfig: FilterConfig[] = [
       { value: 'em_uso', label: 'Em Uso' },
       { value: 'manutencao', label: 'Manutenção' },
       { value: 'inativo', label: 'Inativo' }
-    ],
-    className: 'min-w-32'
+    ]
   },
+
+  // Tipo
   {
     key: 'tipo',
     type: 'select',
@@ -35,40 +43,45 @@ export const veiculosFilterConfig: FilterConfig[] = [
       { value: 'caminhao', label: 'Caminhão' },
       { value: 'onibus', label: 'Ônibus' },
       { value: 'moto', label: 'Moto' }
-    ],
-    className: 'min-w-32'
+    ]
   },
+
+  // Tipo Combustível
   {
     key: 'tipoCombustivel',
     type: 'select',
     label: 'Combustível',
-    placeholder: 'Todos',
+    placeholder: 'Todos os combustíveis',
     options: [
-      { value: 'all', label: 'Todos' },
+      { value: 'all', label: 'Todos os combustíveis' },
       { value: 'gasolina', label: 'Gasolina' },
       { value: 'etanol', label: 'Etanol' },
       { value: 'diesel', label: 'Diesel' },
       { value: 'gnv', label: 'GNV' },
       { value: 'eletrico', label: 'Elétrico' },
-      { value: 'hibrido', label: 'Híbrido' }
-    ],
-    className: 'min-w-28'
+      { value: 'hibrido', label: 'Híbrido' },
+      { value: 'flex', label: 'Flex' }
+    ]
   },
+
+  // Marca
   {
     key: 'marca',
-    type: 'select',
+    type: 'search',
     label: 'Marca',
-    placeholder: 'Todas as marcas',
+    placeholder: 'Ex: Toyota, Volkswagen'
+  },
+
+  // Disponível (filtro especial)
+  {
+    key: 'disponivel',
+    type: 'select',
+    label: 'Disponibilidade',
+    placeholder: 'Todos',
     options: [
-      { value: 'all', label: 'Todas as marcas' },
-      { value: 'Toyota', label: 'Toyota' },
-      { value: 'Mercedes-Benz', label: 'Mercedes-Benz' },
-      { value: 'Ford', label: 'Ford' },
-      { value: 'Chevrolet', label: 'Chevrolet' },
-      { value: 'Volvo', label: 'Volvo' },
-      { value: 'Honda', label: 'Honda' },
-      { value: 'Hyundai', label: 'Hyundai' }
-    ],
-    className: 'min-w-32'
+      { value: 'all', label: 'Todos' },
+      { value: 'true', label: 'Apenas Disponíveis' },
+      { value: 'false', label: 'Indisponíveis' }
+    ]
   }
 ];

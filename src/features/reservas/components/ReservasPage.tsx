@@ -1,5 +1,5 @@
 // src/features/reservas/components/ReservasPage.tsx
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable, CustomAction } from '@/components/common/base-table/BaseTable';
@@ -7,157 +7,311 @@ import { BaseFilters } from '@/components/common/base-filters/BaseFilters';
 import { BaseModal } from '@/components/common/base-modal/BaseModal';
 import { ReservaModal } from './ReservaModal';
 import { Button } from '@/components/ui/button';
-import { Plus, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { useGenericTable } from '@/hooks/useGenericTable';
+import { Plus, Calendar, CheckCircle, XCircle, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { ReservaVeiculo, ReservasFilters, ReservaFormData, Veiculo } from '../types';
+import { useReservas } from '../hooks/useReservas';
+import { useVeiculos, createReservasFilterConfig } from '../config/filter-config';
+import { toast } from '@/hooks/use-toast';
+import {
+  ReservaResponse,
+  CreateReservaRequest,
+  LocalReservasFilters
+} from '../types';
 import { reservasTableColumns } from '../config/table-config';
-import { reservasFilterConfig } from '../config/filter-config';
-import { useReservasVeiculos } from '../hooks/useReservasVeiculos';
 
-// Mock data para veículos - você deve substituir pela sua fonte de dados real
-const mockVeiculos: Veiculo[] = [
-  {
-    id: 1,
-    nome: 'Strada Adventure',
-    placa: 'ABC-1234',
-    marca: 'Fiat',
-    modelo: 'Strada Adventure CD',
-    ano: 2023,
-    status: 'disponivel',
-    tipoCombustivel: 'flex',
-    numeroPassageiros: 5,
-    capacidadeCarga: 650,
-    responsavel: 'João Silva',
-    localizacaoAtual: 'Garagem Principal',
-    quilometragem: 15000,
-    valorDiaria: 120.00,
-    criadoEm: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: 2,
-    nome: 'Hilux SR',
-    placa: 'DEF-5678',
-    marca: 'Toyota',
-    modelo: 'Hilux SR 4x4',
-    ano: 2022,
-    status: 'disponivel',
-    tipoCombustivel: 'diesel',
-    numeroPassageiros: 5,
-    capacidadeCarga: 1000,
-    responsavel: 'Maria Santos',
-    localizacaoAtual: 'Pátio Externo',
-    quilometragem: 45000,
-    valorDiaria: 180.00,
-    criadoEm: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: 3,
-    nome: 'Van Sprinter',
-    placa: 'GHI-9012',
-    marca: 'Mercedes',
-    modelo: 'Sprinter 415',
-    ano: 2021,
-    status: 'manutencao',
-    tipoCombustivel: 'diesel',
-    numeroPassageiros: 15,
-    capacidadeCarga: 800,
-    responsavel: 'Carlos Lima',
-    localizacaoAtual: 'Oficina',
-    quilometragem: 80000,
-    valorDiaria: 250.00,
-    criadoEm: '2024-01-01T00:00:00Z'
-  }
-];
-
-const initialFilters: ReservasFilters = {
+const initialFilters: LocalReservasFilters = {
   search: '',
+  veiculoId: 'all',
   status: 'all',
   tipoSolicitante: 'all',
   responsavel: '',
-  dataInicio: '',
-  dataFim: '',
+  dataInicioFrom: '',
+  dataInicioTo: '',
+  dataFimFrom: '',
+  dataFimTo: '',
   page: 1,
   limit: 10
 };
 
 export function ReservasPage() {
-  const { reservas, loading: hookLoading, criarReserva, editarReserva, cancelarReserva, finalizarReserva } = useReservasVeiculos();
-  
-  const {
-    paginatedData: reservasPaginadas,
-    pagination,
-    filters,
-    loading,
-    setLoading,
-    handleFilterChange,
-    handlePageChange
-  } = useGenericTable({
-    data: reservas,
-    initialFilters,
-    searchFields: ['responsavel', 'finalidade', 'solicitanteId']
-  });
+  // Ref para evitar loops infinitos
+  const fetchingRef = useRef(false);
+  const initialLoadRef = useRef(false);
 
-  const { modalState, openModal, closeModal } = useGenericModal<ReservaVeiculo>();
+  // Estados locais
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [filters, setFilters] = useState<LocalReservasFilters>(initialFilters);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
-  const [reservaParaCancelar, setReservaParaCancelar] = useState<ReservaVeiculo | null>(null);
+  const [reservaParaCancelar, setReservaParaCancelar] = useState<ReservaResponse | null>(null);
   const [motivoCancelamento, setMotivoCancelamento] = useState('');
 
-  const handleSuccess = async () => {
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setLoading(false);
-    closeModal();
-  };
+  // Hooks da API
+  const {
+    reservas,
+    totalReservas,
+    loading,
+    fetchReservas,
+    createReserva,
+    updateReserva,
+    updateStatus,
+    clearError,
+    error
+  } = useReservas({ autoFetch: false });
 
-  const handleSubmit = async (data: ReservaFormData) => {
+  // Hook para veículos (para filtros)
+  const { veiculos, loading: loadingVeiculos, error: veiculosError } = useVeiculos();
+
+  // Configuração dinâmica dos filtros
+  const filterConfig = useMemo(() => {
+    if (loadingVeiculos || veiculosError) {
+      return [
+        {
+          key: 'search',
+          type: 'search' as const,
+          placeholder: 'Buscar por responsável, finalidade...',
+          className: 'lg:min-w-80'
+        }
+      ];
+    }
+    return createReservasFilterConfig(veiculos);
+  }, [veiculos, loadingVeiculos, veiculosError]);
+
+  // Modal state
+  const { modalState, openModal, closeModal } = useGenericModal<ReservaResponse>();
+
+  // Função de busca otimizada
+  const fetchReservasWithFilters = useCallback(async (filtersToUse: LocalReservasFilters) => {
+    // Evitar múltiplas chamadas simultâneas
+    if (fetchingRef.current) {
+      console.log('🚫 [RESERVAS PAGE] Já está buscando, ignorando...');
+      return;
+    }
+
+    console.log('🔍 [RESERVAS PAGE] Iniciando busca com filtros:', filtersToUse);
+    fetchingRef.current = true;
+
     try {
-      console.log('Dados da reserva:', data);
-      
-      if (modalState.mode === 'create') {
-        await criarReserva(data);
-      } else if (modalState.mode === 'edit' && modalState.entity) {
-        await editarReserva(modalState.entity.id.toString(), data);
-      }
-      
-      await handleSuccess();
+      clearError();
+
+      const params = {
+        page: filtersToUse.page,
+        limit: filtersToUse.limit,
+        search: filtersToUse.search || undefined,
+        veiculoId: filtersToUse.veiculoId !== 'all' ? Number(filtersToUse.veiculoId) : undefined,
+        status: filtersToUse.status !== 'all' ? filtersToUse.status as any : undefined,
+        tipoSolicitante: filtersToUse.tipoSolicitante !== 'all' ? filtersToUse.tipoSolicitante as any : undefined,
+        responsavel: filtersToUse.responsavel || undefined,
+        dataInicioFrom: filtersToUse.dataInicioFrom || undefined,
+        dataInicioTo: filtersToUse.dataInicioTo || undefined,
+        dataFimFrom: filtersToUse.dataFimFrom || undefined,
+        dataFimTo: filtersToUse.dataFimTo || undefined,
+        orderBy: 'dataInicio' as const,
+        orderDirection: 'desc' as const
+      };
+
+      console.log('📡 [RESERVAS PAGE] Enviando params para API:', params);
+      await fetchReservas(params);
+      console.log('✅ [RESERVAS PAGE] Busca concluída com sucesso');
+
     } catch (error) {
-      console.error('Erro ao salvar reserva:', error);
-      alert(error instanceof Error ? error.message : 'Erro ao salvar reserva');
+      console.error('❌ [RESERVAS PAGE] Erro ao buscar reservas:', error);
+      toast({
+        title: "Erro ao carregar reservas",
+        description: "Não foi possível carregar as reservas. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      fetchingRef.current = false;
+    }
+  }, [fetchReservas, clearError]);
+
+  // Carregamento inicial - executar apenas uma vez
+  useEffect(() => {
+    if (!initialLoadRef.current) {
+      console.log('🚀 [RESERVAS PAGE] Carregamento inicial');
+      initialLoadRef.current = true;
+      fetchReservasWithFilters(initialFilters);
+    }
+  }, []); // Dependências vazias propositalmente
+
+  // Handler: Mudança de filtros - debounced
+  const handleFilterChange = useCallback((newFilters: Partial<LocalReservasFilters>) => {
+    console.log('🔄 [RESERVAS PAGE] Filtros alterados:', newFilters);
+
+    const updatedFilters = {
+      ...filters,
+      ...newFilters,
+      page: newFilters.page !== undefined ? newFilters.page : 1 // Reset página se não especificado
+    };
+
+    setFilters(updatedFilters);
+
+    // Pequeno delay para evitar múltiplas chamadas
+    const timeoutId = setTimeout(() => {
+      fetchReservasWithFilters(updatedFilters);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [filters, fetchReservasWithFilters]);
+
+  // Handler: Mudança de página
+  const handlePageChange = useCallback((newPage: number) => {
+    console.log('📄 [RESERVAS PAGE] Mudança de página:', newPage);
+    const updatedFilters = { ...filters, page: newPage };
+    setFilters(updatedFilters);
+    fetchReservasWithFilters(updatedFilters);
+  }, [filters, fetchReservasWithFilters]);
+
+  // Handler: Refresh manual
+  const handleRefresh = useCallback(() => {
+    console.log('🔄 [RESERVAS PAGE] Refresh manual');
+    fetchReservasWithFilters(filters);
+  }, [fetchReservasWithFilters, filters]);
+
+  // Handler: Submissão do formulário
+  const handleSubmit = async (data: CreateReservaRequest) => {
+    console.log('💾 [RESERVAS PAGE] Iniciando submissão:', data);
+    setIsSubmitting(true);
+
+    try {
+      if (modalState.mode === 'create') {
+        await createReserva(data);
+
+        toast({
+          title: "Reserva criada!",
+          description: `A reserva de ${data.responsavel} foi criada com sucesso.`,
+          variant: "default",
+        });
+
+      } else if (modalState.mode === 'edit' && modalState.entity) {
+        await updateReserva(modalState.entity.id, data);
+
+        toast({
+          title: "Reserva atualizada!",
+          description: `A reserva foi atualizada com sucesso.`,
+          variant: "default",
+        });
+      }
+
+      closeModal();
+      
+      // Atualizar lista após sucesso
+      setTimeout(() => {
+        fetchReservasWithFilters(filters);
+      }, 500);
+
+    } catch (error: any) {
+      console.error('❌ [RESERVAS PAGE] Erro ao salvar reserva:', error);
+
+      toast({
+        title: modalState.mode === 'create' ? "Erro ao criar reserva" : "Erro ao atualizar reserva",
+        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleCancelarReserva = useCallback((reserva: ReservaVeiculo) => {
+  // Handler: Cancelar reserva
+  const handleCancelarReserva = useCallback((reserva: ReservaResponse) => {
     setReservaParaCancelar(reserva);
     setMotivoCancelamento('');
     setCancelModalOpen(true);
   }, []);
 
+  // Handler: Confirmar cancelamento
   const confirmarCancelamento = async () => {
     if (!reservaParaCancelar || !motivoCancelamento.trim()) return;
 
     try {
-      await cancelarReserva(reservaParaCancelar.id.toString(), motivoCancelamento);
+      await updateStatus(reservaParaCancelar.id, 'cancelada', motivoCancelamento);
+
+      toast({
+        title: "Reserva cancelada",
+        description: "A reserva foi cancelada com sucesso.",
+        variant: "default",
+      });
+
       setCancelModalOpen(false);
       setReservaParaCancelar(null);
       setMotivoCancelamento('');
-    } catch (error) {
+
+      // Atualizar lista
+      setTimeout(() => {
+        fetchReservasWithFilters(filters);
+      }, 500);
+
+    } catch (error: any) {
       console.error('Erro ao cancelar reserva:', error);
-      alert(error instanceof Error ? error.message : 'Erro ao cancelar reserva');
+
+      toast({
+        title: "Erro ao cancelar reserva",
+        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleFinalizarReserva = async (reserva: ReservaVeiculo) => {
+  // Handler: Finalizar reserva
+  const handleFinalizarReserva = async (reserva: ReservaResponse) => {
     try {
-      await finalizarReserva(reserva.id.toString(), 'Reserva finalizada normalmente');
-    } catch (error) {
+      await updateStatus(reserva.id, 'finalizada');
+
+      toast({
+        title: "Reserva finalizada",
+        description: "A reserva foi finalizada com sucesso.",
+        variant: "default",
+      });
+
+      // Atualizar lista
+      setTimeout(() => {
+        fetchReservasWithFilters(filters);
+      }, 500);
+
+    } catch (error: any) {
       console.error('Erro ao finalizar reserva:', error);
-      alert(error instanceof Error ? error.message : 'Erro ao finalizar reserva');
+
+      toast({
+        title: "Erro ao finalizar reserva",
+        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        variant: "destructive",
+      });
     }
   };
 
-  // Ações customizadas - usando useMemo para otimização
-  const customActions: CustomAction<ReservaVeiculo>[] = useMemo(() => [
+  // Preparar entidade para o modal
+  const getModalEntity = () => {
+    const entity = modalState.entity;
+
+    if (modalState.mode === 'create') {
+      return {
+        id: '',
+        veiculoId: 0,
+        tipoSolicitante: 'manual' as const,
+        dataInicio: '',
+        dataFim: '',
+        horaInicio: '08:00',
+        horaFim: '17:00',
+        responsavel: '',
+        finalidade: '',
+        status: 'ativa' as const
+      };
+    }
+
+    return entity || {};
+  };
+
+  // Calcular paginação
+  const pagination = {
+    page: filters.page || 1,
+    limit: filters.limit || 10,
+    total: totalReservas,
+    totalPages: Math.ceil(totalReservas / (filters.limit || 10))
+  };
+
+  // Ações customizadas
+  const customActions: CustomAction<ReservaResponse>[] = useMemo(() => [
     {
       key: 'finalizar',
       label: 'Finalizar',
@@ -173,79 +327,143 @@ export function ReservasPage() {
       variant: 'destructive',
       condition: (reserva) => reserva.status === 'ativa',
       handler: (reserva) => handleCancelarReserva(reserva)
-    },
-    {
-      key: 'reativar',
-      label: 'Reativar',
-      icon: <Clock className="h-4 w-4" />,
-      variant: 'secondary',
-      condition: (reserva) => reserva.status === 'cancelada',
-      handler: (reserva) => {
-        // Aqui você poderia implementar a reativação
-        alert(`Reativando reserva ${reserva.id}`);
-      }
     }
   ], [handleFinalizarReserva, handleCancelarReserva]);
+
+  // Mostrar indicador se há filtros ativos
+  const hasActiveFilters = useMemo(() => {
+    return Object.entries(filters).some(([key, value]) =>
+      key !== 'page' && key !== 'limit' && value !== 'all' && value !== ''
+    );
+  }, [filters]);
+
+  // Debug info
+  useEffect(() => {
+    console.log('🐛 [RESERVAS PAGE] Estado atual:', {
+      loading,
+      error,
+      reservasCount: reservas.length,
+      totalReservas,
+      filters,
+      fetchingRef: fetchingRef.current
+    });
+  }, [loading, error, reservas.length, totalReservas, filters]);
 
   return (
     <Layout>
       <Layout.Main>
         <div className="flex flex-col h-full w-full">
-          <TitleCard 
-            title="Reservas de Veículos" 
-            description="Gerencie as reservas de viaturas da empresa" 
+          {/* Header */}
+          <TitleCard
+            title="Reservas de Veículos"
+            description="Gerencie as reservas de viaturas da empresa"
           />
-          
+
+          {/* Erro de carregamento */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2 text-red-800">
+                <XCircle className="h-5 w-5" />
+                <strong>Erro ao carregar reservas:</strong>
+              </div>
+              <p className="text-red-700 mt-1">{error}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                className="mt-2"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Tentar novamente
+              </Button>
+            </div>
+          )}
+
+          {/* Filtros e Ações */}
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="flex-1">
-              <BaseFilters 
+              <BaseFilters
                 filters={filters}
-                config={reservasFilterConfig as any}
+                config={filterConfig}
                 onFilterChange={handleFilterChange}
               />
             </div>
-            <Button 
-              onClick={() => openModal('create')} 
-              className="bg-primary hover:bg-primary/90 shrink-0"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Reserva
-            </Button>
+
+            <div className="flex gap-2 shrink-0">
+              <Button
+                variant="outline"
+                onClick={handleRefresh}
+                disabled={loading}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
+
+              <Button
+                onClick={() => openModal('create')}
+                className="bg-primary hover:bg-primary/90"
+                disabled={isSubmitting}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Reserva
+              </Button>
+            </div>
           </div>
 
+          {/* Indicador de filtros ativos */}
+          {hasActiveFilters && (
+            <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+              <Filter className="h-4 w-4" />
+              <span>Filtros aplicados</span>
+            </div>
+          )}
+
+          {/* Status de carregamento dos veículos */}
+          {veiculosError && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+              ⚠️ Erro ao carregar veículos para o filtro: {veiculosError}
+            </div>
+          )}
+
+          {/* Tabela */}
           <div className="flex-1 min-h-0">
             <BaseTable
-              data={reservasPaginadas}
+              data={reservas}
               columns={reservasTableColumns}
               pagination={pagination}
-              loading={loading || hookLoading}
+              loading={loading}
               onPageChange={handlePageChange}
               onView={(r) => openModal('view', r)}
               onEdit={(r) => r.status === 'ativa' ? openModal('edit', r) : null}
               customActions={customActions}
-              emptyMessage="Nenhuma reserva encontrada."
+              emptyMessage="Nenhuma reserva encontrada"
               emptyIcon={<Calendar className="h-8 w-8 text-muted-foreground/50" />}
             />
           </div>
         </div>
 
-        {/* Modal principal de reservas com seletor de veículo */}
+        {/* Modal integrado de reservas */}
+        {/* @ts-ignore - Legacy component needs refactoring */}
         <ReservaModal
-          isOpen={modalState.isOpen}
-          mode={modalState.mode as any}
-          entity={modalState.entity}
-          onClose={closeModal}
-          onSubmit={handleSubmit}
-          veiculos={mockVeiculos}
-          reservas={reservas}
-          reservaId={modalState.entity?.id?.toString()}
+          {...{
+            isOpen: modalState.isOpen,
+            mode: modalState.mode,
+            entity: getModalEntity(),
+            onClose: closeModal,
+            onSubmit: handleSubmit,
+            veiculos: veiculos,
+            reservas: reservas,
+            reservaId: modalState.entity?.id,
+            loading: isSubmitting
+          } as any}
         />
 
         {/* Modal de cancelamento */}
         <BaseModal
           isOpen={cancelModalOpen}
           mode="edit"
-          entity={{ id: 0, motivoCancelamento, criadoEm: new Date().toISOString() }}
+          entity={{ id: "0", motivoCancelamento, createdAt: new Date().toISOString() }}
           title="Cancelar Reserva"
           icon={<XCircle className="h-5 w-5 text-red-600" />}
           formFields={[
@@ -267,6 +485,11 @@ export function ReservasPage() {
             await confirmarCancelamento();
           }}
           width="w-[500px]"
+          loading={false}
+          loadingText="Cancelando reserva..."
+          closeOnBackdropClick={true}
+          closeOnEscape={true}
+          submitButtonText="Cancelar Reserva"
         />
       </Layout.Main>
     </Layout>

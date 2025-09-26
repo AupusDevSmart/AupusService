@@ -111,6 +111,25 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
       path: '/fornecedores',
       label: 'Fornecedores',
     },
+    // 📅 AGENDA
+    {
+      path: '/agenda/feriados',
+      label: 'Agenda',
+      isDropdown: true,
+      dropdownItems: [
+        { label: 'Feriados', href: '/agenda/feriados' },
+        { label: 'Configurações de Dias Úteis', href: '/agenda/configuracoes-dias-uteis' },
+      ],
+    },
+    {
+      path: '/agenda/configuracoes-dias-uteis',
+      label: 'Agenda',
+      isDropdown: true,
+      dropdownItems: [
+        { label: 'Feriados', href: '/agenda/feriados' },
+        { label: 'Configurações de Dias Úteis', href: '/agenda/configuracoes-dias-uteis' },
+      ],
+    },
     // ⚙️ CONFIGURAÇÕES
     {
       path: '/configuracoes',
@@ -241,7 +260,7 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
                     className="text-secondary-foreground"
                     onClick={(e) => {
                       e.preventDefault();
-                      handleClick(item.path);
+                      if (item.path) handleClick(item.path);
                     }}
                   >
                     {item.label}

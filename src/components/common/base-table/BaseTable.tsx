@@ -157,8 +157,8 @@ export function BaseTable<T extends BaseEntity>({
                         column.hideOnMobile ? 'hidden lg:table-cell' : ''
                       } ${column.hideOnTablet ? 'hidden xl:table-cell' : ''}`}
                     >
-                      {column.render 
-                        ? column.render(entity, { onCustomAction: handleCustomAction })
+                      {column.render
+                        ? column.render(entity)
                         : String((entity as any)[column.key] || '')
                       }
                     </TableCell>

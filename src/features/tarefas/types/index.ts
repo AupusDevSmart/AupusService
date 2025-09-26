@@ -42,8 +42,8 @@ export interface Tarefa extends BaseEntity {
   planoManutencaoId?: string;
   tarefaTemplateId?: string;
   planoEquipamentoId?: string;
-  
-  tag: string; // Código/TAG da tarefa  
+
+  tag: string; // Código/TAG da tarefa
   descricao: string;
   categoria: CategoriaTarefa;
   tipoManutencao: TipoManutencao;
@@ -53,39 +53,41 @@ export interface Tarefa extends BaseEntity {
   criticidade: '1' | '2' | '3' | '4' | '5'; // 1=Muito Baixa, 5=Muito Alta
   duracaoEstimada: number; // em horas
   tempoEstimado: number; // em minutos (mais granular)
-  
+
   // Relacionamentos
-  plantaId?: number;
-  equipamentoId?: number; // Pode ser UC ou UAR
-  
+  plantaId?: string;
+  equipamentoId?: string; // Pode ser UC ou UAR
+
   // Informações de planejamento
   planejador?: string;
   responsavel?: string;
   observacoes?: string;
-  
+
   // Status e controle
   status: StatusTarefa;
   ativa: boolean;
-  
+
   // Customização (NOVO)
   customizada: boolean;
   camposCustomizados?: string[];
-  
+
   // Sub-estruturas
   subTarefas: SubTarefa[];
   recursos: RecursoTarefa[];
   anexos: AnexoTarefa[];
-  
+
   // Campos calculados/controle
   proximaExecucao?: string; // ISO date
   ultimaExecucao?: string; // ISO date
   totalExecucoes?: number;
-  
+  dataUltimaExecucao?: string; // ISO date - Nova coluna do banco
+  numeroExecucoes: number; // Nova coluna do banco
+
   // Sincronização com plano (NOVO)
   versaoTemplate?: string;
   sincronizada: boolean;
   origemPlano: boolean; // true se veio de plano, false se criada manualmente
-  
+
   // Campos de auditoria
   criadoPor?: string;
   atualizadoEm?: string;
@@ -110,6 +112,8 @@ export interface TarefaFormData {
   observacoes?: string;
   status: StatusTarefa;
   ativa: boolean;
+  dataUltimaExecucao?: string; // ISO date string
+  numeroExecucoes: number;
   subTarefas: Omit<SubTarefa, 'id'>[];
   recursos: Omit<RecursoTarefa, 'id'>[];
   anexos?: File[];

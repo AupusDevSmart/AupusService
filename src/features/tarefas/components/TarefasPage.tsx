@@ -1,5 +1,5 @@
 // src/features/tarefas/components/TarefasPage.tsx - COM PLANEJAR OS
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -18,143 +18,307 @@ import {
   AlertTriangle, 
   Download, 
   Upload, 
-  Copy,
-  Layers,
   RefreshCw,
   Eye,
-  Settings,
   ChevronLeft,
 } from 'lucide-react';
-import { useGenericTable } from '@/hooks/useGenericTable';
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { Tarefa, TarefasFilters } from '../types';
+import { TarefaApiResponse, QueryTarefasApiParams, DashboardTarefasDto } from '@/services/tarefas.services';
+import { PlantasService } from '@/services/plantas.services';
+import { EquipamentosApiService } from '@/services/equipamentos.services';
+import { usePlanosManutencaoApi } from '@/features/planos-manutencao/hooks/usePlanosManutencaoApi';
 import { tarefasTableColumns } from '../config/table-config';
 import { tarefasFilterConfig } from '../config/filter-config';
 import { tarefasFormFields } from '../config/form-config';
-import { mockTarefas } from '../data/mock-data';
-import { useTarefas } from '../hooks/useTarefas';
-import { planejarOSComTarefa } from '@/utils/planejarOS'; // ✅ NOVA IMPORT
+import { useTarefasApi } from '../hooks/useTarefasApi';
+import { planejarOSComTarefa } from '@/utils/planejarOS';
+import { AnexosManager } from './AnexosManager';
+import { FilterConfig } from '@/types/base';
 
-const initialFilters: TarefasFilters = {
+const initialFilters: QueryTarefasApiParams = {
   search: '',
-  categoria: 'all',
-  tipoManutencao: 'all',
-  frequencia: 'all',
-  status: 'all',
-  planta: 'all',
-  equipamento: 'all',
-  criticidade: 'all',
-  origemPlano: 'all',
-  sincronizada: 'all',
   page: 1,
-  limit: 10
+  limit: 10,
+  sort_by: 'created_at',
+  sort_order: 'desc'
 };
 
 export function TarefasPage() {
-  // const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const planoIdFiltro = searchParams.get('planoId');
   
-  const {
-    paginatedData: tarefas,
-    pagination,
-    filters,
-    loading,
-    setLoading,
-    handleFilterChange,
-    handlePageChange
-  } = useGenericTable({
-    data: mockTarefas,
-    initialFilters: {
-      ...initialFilters,
-      // Se veio de um plano específico, filtrar automaticamente
-      origemPlano: planoIdFiltro ? 'true' : 'all'
-    },
-    searchFields: ['tag', 'descricao', 'categoria', 'responsavel', 'planejador']
+  // Estados locais
+  const [filters, setFilters] = useState<QueryTarefasApiParams>({
+    ...initialFilters,
+    // Se veio de um plano específico, filtrar automaticamente
+    plano_id: planoIdFiltro || undefined
   });
+  
+  const [dashboardData, setDashboardData] = useState<DashboardTarefasDto>({
+    total_tarefas: 0,
+    tarefas_ativas: 0,
+    tarefas_inativas: 0,
+    tarefas_em_revisao: 0,
+    tarefas_arquivadas: 0,
+    criticidade_muito_alta: 0,
+    criticidade_alta: 0,
+    criticidade_media: 0,
+    criticidade_baixa: 0,
+    criticidade_muito_baixa: 0,
+    distribuicao_tipos: {
+      preventiva: 0,
+      preditiva: 0,
+      corretiva: 0,
+      inspecao: 0,
+      visita_tecnica: 0
+    },
+    distribuicao_categorias: {
+      mecanica: 0,
+      eletrica: 0,
+      instrumentacao: 0,
+      lubrificacao: 0,
+      limpeza: 0,
+      inspecao: 0,
+      calibracao: 0,
+      outros: 0
+    },
+    tempo_total_estimado: 0,
+    media_tempo_por_tarefa: 0,
+    media_criticidade: 0,
+    total_sub_tarefas: 0,
+    total_recursos: 0
+  });
+
+  // Estados para filtros dinâmicos
+  const [filterConfig, setFilterConfig] = useState<FilterConfig[]>(tarefasFilterConfig);
+  
+  // Estados para o formulário
+  const [formFields, setFormFields] = useState(tarefasFormFields);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]); // Arquivos pendentes para upload
+
+  // Instância do serviço de equipamentos
+  const equipamentosService = new EquipamentosApiService();
+
+  // API hook
+  const {
+    loading,
+    tarefas,
+    totalPages,
+    currentPage,
+    total,
+    createTarefa,
+    updateTarefa,
+    deleteTarefa,
+    getTarefa,
+    fetchTarefas,
+    updateStatus,
+    getDashboard,
+    uploadAnexo
+  } = useTarefasApi();
 
   const {
     modalState,
     openModal,
-    closeModal
-  } = useGenericModal<Tarefa>();
+    closeModal: originalCloseModal
+  } = useGenericModal<TarefaApiResponse>();
 
-  const {
-    ativarTarefa,
-    desativarTarefa,
-    arquivarTarefa,
-    duplicarTarefa,
-    sincronizarComPlano,
-    gerarOS,
-    exportarTarefas,
-    importarTarefas
-  } = useTarefas();
+  // Wrapper para closeModal que limpa arquivos pendentes
+  const closeModal = () => {
+    setPendingFiles([]); // Limpar arquivos pendentes ao fechar modal
+    originalCloseModal();
+  };
 
-  // Dashboard com cores simplificadas - APENAS 8 CORES com 5 cores
-  const [stats, setStats] = useState({
-    total: 0,
-    ativas: 0,
-    vencidas: 0,
-    vencendoHoje: 0,
-    dePlanos: 0,
-    manuais: 0,
-    dessincronizadas: 0,
-    customizadas: 0
-  });
+  // Hook para planos de manutenção
+  const { fetchPlanos } = usePlanosManutencaoApi();
 
-  // Calcular estatísticas
+  // Carregar dados iniciais
   useEffect(() => {
-    const total = mockTarefas.length;
-    const ativas = mockTarefas.filter(t => t.status === 'ATIVA').length;
-    const dePlanos = mockTarefas.filter(t => t.origemPlano).length;
-    const manuais = mockTarefas.filter(t => !t.origemPlano).length;
-    const dessincronizadas = mockTarefas.filter(t => t.origemPlano && !t.sincronizada).length;
-    const customizadas = mockTarefas.filter(t => t.customizada).length;
-    
-    // Calcular tarefas vencendo hoje e vencidas
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    
-    let vencendoHoje = 0;
-    let vencidas = 0;
-    
-    mockTarefas.forEach(tarefa => {
-      if (tarefa.proximaExecucao && tarefa.ativa) {
-        const proximaExecucao = new Date(tarefa.proximaExecucao);
-        proximaExecucao.setHours(0, 0, 0, 0);
-        
-        if (proximaExecucao.getTime() === hoje.getTime()) {
-          vencendoHoje++;
-        } else if (proximaExecucao < hoje) {
-          vencidas++;
-        }
-      }
-    });
-
-    setStats({
-      total,
-      ativas,
-      vencidas,
-      vencendoHoje,
-      dePlanos,
-      manuais,
-      dessincronizadas,
-      customizadas
-    });
+    loadData();
+    loadDashboard();
+    loadFilterOptions();
   }, []);
 
+  // Recarregar quando filtros mudam
+  useEffect(() => {
+    loadData();
+  }, [filters]);
+
+  const loadData = async () => {
+    try {
+      await fetchTarefas(filters);
+    } catch (error) {
+      console.error('Erro ao carregar tarefas:', error);
+    }
+  };
+
+  const loadDashboard = async () => {
+    try {
+      const dashboard = await getDashboard();
+      setDashboardData(dashboard);
+    } catch (error) {
+      console.error('Erro ao carregar dashboard:', error);
+    }
+  };
+
+  const loadFilterOptions = async () => {
+    try {
+      console.log('🔄 Carregando opções dos filtros...');
+      
+      // Carregar plantas
+      console.log('📍 Carregando plantas...');
+      const plantasResponse = await PlantasService.getAllPlantas({ limit: 100 });
+      console.log('✅ Plantas carregadas:', plantasResponse.data.length);
+
+      // Carregar planos de manutenção
+      console.log('📋 Carregando planos de manutenção...');
+      const planosResponse = await fetchPlanos({ limit: 100 });
+      console.log('✅ Planos carregados:', planosResponse.data.length);
+
+      // Carregar todos os equipamentos
+      console.log('🔧 Carregando equipamentos...');
+      const equipamentosResponse = await equipamentosService.findAll({ limit: 100 });
+      console.log('✅ Equipamentos carregados:', equipamentosResponse.data.length);
+
+      // Atualizar configuração dos filtros com as opções carregadas
+      console.log('🔧 Atualizando configuração dos filtros...');
+      const updatedConfig = tarefasFilterConfig.map(filter => {
+        if (filter.key === 'planta_id') {
+          const plantaOptions = [
+            { value: 'all', label: 'Todas as plantas' },
+            ...plantasResponse.data.map(planta => ({
+              value: planta.id,
+              label: planta.nome
+            }))
+          ];
+          console.log('🏭 Opções de plantas:', plantaOptions.length);
+          return {
+            ...filter,
+            options: plantaOptions
+          };
+        }
+        
+        if (filter.key === 'plano_id') {
+          const planoOptions = [
+            { value: 'all', label: 'Todos os planos' },
+            ...planosResponse.data.map(plano => ({
+              value: plano.id,
+              label: plano.nome
+            }))
+          ];
+          console.log('📋 Opções de planos:', planoOptions.length);
+          return {
+            ...filter,
+            options: planoOptions
+          };
+        }
+        
+        return filter;
+      });
+
+      setFilterConfig(updatedConfig);
+      
+      // Atualizar campos do formulário com as opções carregadas
+      const updatedFormFields = tarefasFormFields.map(field => {
+        if (field.key === 'plano_manutencao_id') {
+          return {
+            ...field,
+            placeholder: 'Selecione um plano...',
+            options: [
+              ...planosResponse.data
+                .filter(plano => plano.id && plano.nome) // Filtrar itens com id e nome válidos
+                .map(plano => ({
+                  value: plano.id,
+                  label: plano.nome
+                }))
+            ]
+          };
+        }
+        
+        if (field.key === 'planta_id') {
+          return {
+            ...field,
+            placeholder: 'Selecione uma planta...',
+            options: [
+              ...plantasResponse.data
+                .filter(planta => planta.id && planta.nome) // Filtrar itens com id e nome válidos
+                .map(planta => ({
+                  value: planta.id,
+                  label: planta.nome
+                }))
+            ]
+          };
+        }
+        
+        if (field.key === 'equipamento_id') {
+          return {
+            ...field,
+            placeholder: 'Selecione um equipamento...',
+            options: [
+              ...equipamentosResponse.data
+                .filter(equipamento => equipamento.id && equipamento.nome) // Filtrar itens com id e nome válidos
+                .map(equipamento => ({
+                  value: equipamento.id,
+                  label: `${equipamento.nome} - ${equipamento.tipo_equipamento || 'N/A'}`
+                }))
+            ]
+          };
+        }
+        
+        return field;
+      });
+      
+      setFormFields(updatedFormFields);
+      console.log('✅ Filtros e formulário atualizados com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao carregar opções dos filtros:', error);
+    }
+  };
+
   const handleSuccess = async () => {
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setLoading(false);
     closeModal();
+    await loadData();
+    await loadDashboard();
   };
 
   const handleSubmit = async (data: any) => {
     console.log('Dados da tarefa para salvar:', data);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    await handleSuccess();
+
+    try {
+      let tarefaId: string;
+
+      if (modalState.mode === 'create') {
+        console.log('🆕 Criando nova tarefa...');
+        const novaTarefa = await createTarefa(data);
+        tarefaId = novaTarefa.id;
+
+        // Se há arquivos pendentes, fazer upload após criar a tarefa
+        if (pendingFiles.length > 0) {
+          console.log(`📤 Fazendo upload de ${pendingFiles.length} arquivos...`);
+
+          for (const file of pendingFiles) {
+            try {
+              console.log(`📎 Fazendo upload do arquivo: ${file.name}`);
+              await uploadAnexo(tarefaId, file, `Anexo: ${file.name}`);
+              console.log(`✅ Upload concluído: ${file.name}`);
+            } catch (uploadError) {
+              console.error(`❌ Erro no upload de ${file.name}:`, uploadError);
+              // Continuar com outros arquivos mesmo se um falhar
+            }
+          }
+
+          // Limpar arquivos pendentes após o upload
+          setPendingFiles([]);
+        }
+
+      } else if (modalState.mode === 'edit' && modalState.entity) {
+        await updateTarefa(modalState.entity.id, data);
+      }
+
+      await handleSuccess();
+    } catch (error) {
+      console.error('Erro ao salvar tarefa:', error);
+    }
   };
 
   const getModalTitle = () => {
@@ -170,107 +334,128 @@ export function TarefasPage() {
     return <Tag className="h-5 w-5 text-blue-600" />;
   };
 
-  const getModalEntity = () => {
+  const modalEntity = useMemo(() => {
     const entity = modalState.entity;
-    
+
     if (modalState.mode === 'create') {
       return {
+        plano_manutencao_id: '',
+        nome: '',
+        descricao: '',
         categoria: 'MECANICA',
-        tipoManutencao: 'PREVENTIVA',
+        tipo_manutencao: 'PREVENTIVA',
         frequencia: 'MENSAL',
-        condicaoAtivo: 'PARADO',
+        condicao_ativo: 'PARADO',
         criticidade: '3',
         status: 'ATIVA',
-        ativa: true,
-        duracaoEstimada: 1,
-        tempoEstimado: 60,
-        subTarefas: [],
-        recursos: [],
-        customizada: false,
-        sincronizada: true,
-        origemPlano: false
+        ativo: true,
+        duracao_estimada: 1,
+        tempo_estimado: 60,
+        ordem: 1,
+        data_ultima_execucao: new Date().toISOString().slice(0, 16),
+        numero_execucoes: 0,
+        sub_tarefas: [],
+        recursos: []
       };
     }
-    
+
+    if (entity) {
+      return {
+        ...entity,
+        criticidade: String(entity.criticidade),
+        status: entity.status, // ✅ SIMPLES: só passar o status direto
+        data_ultima_execucao: entity.data_ultima_execucao ?
+          new Date(entity.data_ultima_execucao).toISOString().slice(0, 16) :
+          new Date().toISOString().slice(0, 16),
+        numero_execucoes: entity.numero_execucoes || 0,
+        sub_tarefas: entity.sub_tarefas || [],
+        recursos: entity.recursos || []
+      };
+    }
+
     return entity;
-  };
+  }, [modalState.entity, modalState.mode]);
 
-  const handleView = (tarefa: Tarefa) => {
+  const handleView = async (tarefa: TarefaApiResponse) => {
     console.log('Clicou em Visualizar:', tarefa);
-    openModal('view', tarefa);
+    try {
+      // Buscar dados completos da tarefa (incluindo sub_tarefas e recursos)
+      const tarefaCompleta = await getTarefa(tarefa.id);
+      console.log('📋 Dados completos da tarefa para visualização:', tarefaCompleta);
+      openModal('view', tarefaCompleta);
+    } catch (error) {
+      console.error('Erro ao carregar dados completos da tarefa:', error);
+      // Fallback para dados básicos se houver erro
+      openModal('view', tarefa);
+    }
   };
 
-  const handleEdit = (tarefa: Tarefa) => {
+  const handleEdit = async (tarefa: TarefaApiResponse) => {
     console.log('Clicou em Editar:', tarefa);
-    openModal('edit', tarefa);
+    try {
+      // Buscar dados completos da tarefa (incluindo sub_tarefas e recursos)
+      const tarefaCompleta = await getTarefa(tarefa.id);
+      console.log('📋 Dados completos da tarefa para edição:', tarefaCompleta);
+      openModal('edit', tarefaCompleta);
+    } catch (error) {
+      console.error('Erro ao carregar dados completos da tarefa:', error);
+      // Fallback para dados básicos se houver erro
+      openModal('edit', tarefa);
+    }
+  };
+
+  const handleDelete = async (tarefa: TarefaApiResponse) => {
+    if (confirm(`Tem certeza que deseja excluir a tarefa "${tarefa.nome}"?`)) {
+      try {
+        await deleteTarefa(tarefa.id);
+        await loadData();
+        await loadDashboard();
+      } catch (error) {
+        console.error('Erro ao excluir tarefa:', error);
+      }
+    }
   };
 
   // ✅ NOVA FUNCIONALIDADE: Planejar OS
-  const handlePlanejarOS = (tarefa: Tarefa) => {
+  const handlePlanejarOS = (tarefa: TarefaApiResponse) => {
     console.log('🏷️ Planejando OS para tarefa:', tarefa.id);
     planejarOSComTarefa(tarefa as any, navigate);
   };
 
   // Ações personalizadas para tarefas
-  const handleAtivar = async (tarefa: Tarefa) => {
-    console.log('Ativando tarefa:', tarefa.id);
-    await ativarTarefa(String(tarefa.id));
-  };
-
-  const handleDesativar = async (tarefa: Tarefa) => {
-    console.log('Desativando tarefa:', tarefa.id);
-    await desativarTarefa(String(tarefa.id));
-  };
-
-  const handleArquivar = async (tarefa: Tarefa) => {
-    console.log('Arquivando tarefa:', tarefa.id);
-    await arquivarTarefa(String(tarefa.id));
-  };
-
-  const handleDuplicar = async (tarefa: Tarefa) => {
-    console.log('Duplicando tarefa:', tarefa.id);
-    await duplicarTarefa(String(tarefa.id));
-  };
-
-  const handleSincronizar = async (tarefa: Tarefa) => {
-    console.log('Sincronizando tarefa com plano:', tarefa.id);
-    await sincronizarComPlano(String(tarefa.id));
-  };
-
-  const handleGerarOS = async (tarefa: Tarefa) => {
-    console.log('Gerando OS para tarefa:', tarefa.id);
-    const resultado = await gerarOS(String(tarefa.id));
-    console.log('OS gerada:', resultado.osId);
-  };
-
-  // NOVA FUNCIONALIDADE: Ver plano de origem
-  const handleVerPlano = (tarefa: Tarefa) => {
-    if (tarefa.planoManutencaoId) {
-      navigate(`/planos-manutencao`);
+  const handleToggleStatus = async (tarefa: TarefaApiResponse) => {
+    try {
+      const newStatus = tarefa.ativo ? 'INATIVA' : 'ATIVA';
+      await updateStatus(tarefa.id, { 
+        status: newStatus,
+        ativo: !tarefa.ativo 
+      });
+      await loadData();
+      await loadDashboard();
+    } catch (error) {
+      console.error('Erro ao alterar status:', error);
     }
+  };
+
+
+  const handleFilterChange = (newFilters: Partial<QueryTarefasApiParams>) => {
+    setFilters(prev => ({ ...prev, ...newFilters, page: 1 }));
+  };
+
+  const handlePageChange = (page: number) => {
+    setFilters(prev => ({ ...prev, page }));
   };
 
   const handleExportar = async () => {
     console.log('Exportando tarefas...');
-    const blob = await exportarTarefas(filters);
-    
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `tarefas-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    // TODO: Implementar exportação via API
   };
 
   const handleImportar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       console.log('Importando tarefas...');
-      const resultado = await importarTarefas(file);
-      console.log('Resultado da importação:', resultado);
-      
+      // TODO: Implementar importação via API
       event.target.value = '';
     }
   };
@@ -306,92 +491,70 @@ export function TarefasPage() {
             description="Gerencie tarefas de manutenção preventiva, preditiva e corretiva"
           />
           
-          {/* Dashboard Simplificado - APENAS 8 CARDS com 5 cores */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
-            {/* Total - Neutro */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <Tag className="h-4 w-4 text-gray-600" />
+          {/* Dashboard Simplificado */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+            {/* Total */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <Tag className="h-5 w-5 text-gray-600" />
                 <div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.total}</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{dashboardData.total_tarefas}</p>
                   <p className="text-xs text-gray-600 dark:text-gray-400">Total</p>
                 </div>
               </div>
             </div>
             
-            {/* Ativas - Verde */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+            {/* Ativas */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-green-600" />
                 <div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.ativas}</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{dashboardData.tarefas_ativas}</p>
                   <p className="text-xs text-gray-600 dark:text-gray-400">Ativas</p>
                 </div>
               </div>
             </div>
             
-            {/* Vencidas - Vermelho */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-red-600" />
+            {/* Inativas */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
                 <div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.vencidas}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Vencidas</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{dashboardData.tarefas_inativas}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Inativas</p>
                 </div>
               </div>
             </div>
             
-            {/* Hoje - Amarelo */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-amber-600" />
+            {/* Em Revisão */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <RefreshCw className="h-5 w-5 text-amber-600" />
                 <div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.vencendoHoje}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Hoje</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{dashboardData.tarefas_em_revisao}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Em Revisão</p>
                 </div>
               </div>
             </div>
             
-            {/* De Planos - Azul */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-blue-600" />
+            {/* Arquivadas */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-gray-600" />
                 <div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.dePlanos}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">De Planos</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{dashboardData.tarefas_arquivadas}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Arquivadas</p>
                 </div>
               </div>
             </div>
             
-            {/* Manuais - Neutro */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-gray-600" />
+            {/* Críticas */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
                 <div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.manuais}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Manuais</p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Dessincronizadas - Amarelo */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <RefreshCw className="h-4 w-4 text-amber-600" />
-                <div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.dessincronizadas}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Dessinc.</p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Customizadas - Azul */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <Settings className="h-4 w-4 text-blue-600" />
-                <div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.customizadas}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Custom.</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{dashboardData.criticidade_muito_alta + dashboardData.criticidade_alta}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Críticas</p>
                 </div>
               </div>
             </div>
@@ -402,7 +565,7 @@ export function TarefasPage() {
             <div className="flex-1">
               <BaseFilters 
                 filters={filters}
-                config={tarefasFilterConfig}
+                config={filterConfig}
                 onFilterChange={handleFilterChange}
               />
             </div>
@@ -436,128 +599,72 @@ export function TarefasPage() {
             </div>
           </div>
 
-          {/* Alertas Simplificados */}
-          <div className="space-y-3 mb-6">
-            {(stats.vencidas > 0 || stats.vencendoHoje > 0) && (
-              <>
-                {stats.vencidas > 0 && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-950 dark:border-red-800">
-                    <div className="flex items-center gap-3">
-                      <AlertTriangle className="h-5 w-5 text-red-600" />
-                      <div>
-                        <h4 className="font-medium text-red-900 dark:text-red-100">
-                          Tarefas Vencidas
-                        </h4>
-                        <p className="text-sm text-red-700 dark:text-red-300">
-                          {stats.vencidas} tarefa(s) vencidas necessitam execução urgente.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {stats.vencendoHoje > 0 && (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-950 dark:border-amber-800">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="h-5 w-5 text-amber-600" />
-                      <div>
-                        <h4 className="font-medium text-amber-900 dark:text-amber-100">
-                          Tarefas Programadas para Hoje
-                        </h4>
-                        <p className="text-sm text-amber-700 dark:text-amber-300">
-                          {stats.vencendoHoje} tarefa(s) programadas para execução hoje.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-            
-            {stats.dessincronizadas > 0 && (
+          {/* Alertas */}
+          {(dashboardData.tarefas_inativas > 0) && (
+            <div className="mb-6">
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-950 dark:border-amber-800">
                 <div className="flex items-center gap-3">
-                  <RefreshCw className="h-5 w-5 text-amber-600" />
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
                   <div>
                     <h4 className="font-medium text-amber-900 dark:text-amber-100">
-                      Tarefas Dessincronizadas
+                      Tarefas Inativas
                     </h4>
                     <p className="text-sm text-amber-700 dark:text-amber-300">
-                      {stats.dessincronizadas} tarefa(s) estão dessincronizadas com seus planos de origem.
+                      {dashboardData.tarefas_inativas} tarefa(s) inativas que podem precisar de atenção.
                     </p>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Tabela */}
           <div className="flex-1 min-h-0">
             <BaseTable
               data={tarefas}
               columns={tarefasTableColumns}
-              pagination={pagination}
+              pagination={{
+                page: currentPage,
+                limit: filters.limit || 10,
+                total,
+                totalPages
+              }}
               loading={loading}
               onPageChange={handlePageChange}
               onView={handleView}
               onEdit={handleEdit}
+              onDelete={handleDelete}
               emptyMessage="Nenhuma tarefa encontrada."
               emptyIcon={<Tag className="h-8 w-8 text-muted-foreground/50" />}
               customActions={[
                 {
-                  key: 'planejar_os', // ✅ NOVA AÇÃO EM DESTAQUE
+                  key: 'planejar_os',
                   label: 'Planejar OS',
                   handler: handlePlanejarOS,
-                  condition: (item: Tarefa) => item.status === 'ATIVA',
+                  condition: (item: TarefaApiResponse) => item.status === 'ATIVA',
                   icon: <Calendar className="h-4 w-4" />,
                   variant: 'default'
                 },
+                // {
+                //   key: 'ver_plano',
+                //   label: 'Ver Plano',
+                //   handler: handleVerPlano,
+                //   condition: (item: TarefaApiResponse) => !!item.plano_manutencao_id,
+                //   icon: <Eye className="h-4 w-4" />
+                // },
                 {
-                  key: 'ver_plano',
-                  label: 'Ver Plano',
-                  handler: handleVerPlano,
-                  condition: (item: Tarefa) => !!item.planoManutencaoId,
+                  key: 'toggle_status',
+                  label: 'Ativar/Desativar',
+                  handler: handleToggleStatus,
                   icon: <Eye className="h-4 w-4" />
                 },
-                {
-                  key: 'sincronizar',
-                  label: 'Sincronizar',
-                  handler: handleSincronizar,
-                  condition: (item: Tarefa) => item.origemPlano && !item.sincronizada,
-                  icon: <RefreshCw className="h-4 w-4" />,
-                  variant: 'secondary'
-                },
-                {
-                  key: 'ativar',
-                  label: 'Ativar',
-                  handler: handleAtivar,
-                  condition: (item: Tarefa) => item.status === 'INATIVA'
-                },
-                {
-                  key: 'desativar',
-                  label: 'Desativar',
-                  handler: handleDesativar,
-                  condition: (item: Tarefa) => item.status === 'ATIVA'
-                },
-                {
-                  key: 'gerar_os',
-                  label: 'Gerar OS',
-                  handler: handleGerarOS,
-                  condition: (item: Tarefa) => item.status === 'ATIVA'
-                },
-                {
-                  key: 'duplicar',
-                  label: 'Duplicar',
-                  handler: handleDuplicar,
-                  icon: <Copy className="h-4 w-4" />
-                },
-                {
-                  key: 'arquivar',
-                  label: 'Arquivar',
-                  handler: handleArquivar,
-                  condition: (item: Tarefa) => item.status !== 'ARQUIVADA',
-                  variant: 'destructive'
-                }
+                // {
+                //   key: 'arquivar',
+                //   label: 'Arquivar',
+                //   handler: handleArquivar,
+                //   condition: (item: TarefaApiResponse) => item.status !== 'ARQUIVADA',
+                //   variant: 'destructive'
+                // }
               ]}
             />
           </div>
@@ -567,24 +674,75 @@ export function TarefasPage() {
         <BaseModal
           isOpen={modalState.isOpen}
           mode={modalState.mode}
-          entity={getModalEntity() as any}
+          entity={modalEntity as any}
           title={getModalTitle()}
           icon={getModalIcon()}
-          formFields={tarefasFormFields}
+          formFields={formFields}
           onClose={closeModal}
           onSubmit={handleSubmit}
           width="w-[900px]"
           groups={[
-            { key: 'informacoes_basicas', title: 'Informações Básicas' },
-            { key: 'localizacao', title: 'Localização' },
-            { key: 'classificacao', title: 'Classificação' },
-            { key: 'planejamento', title: 'Planejamento' },
-            { key: 'atividades', title: 'Atividades (Checklist)' },
-            { key: 'recursos', title: 'Recursos Necessários' },
-            { key: 'observacoes', title: 'Observações & Status' },
-            { key: 'anexos', title: 'Anexos' }
+            {
+              key: 'informacoes_basicas',
+              title: 'Informações Básicas',
+              fields: ['origem_plano_info', 'plano_manutencao_id', 'tag', 'nome', 'descricao']
+            },
+            ...(modalState.mode !== 'create' ? [{
+              key: 'localizacao',
+              title: 'Localização',
+              fields: ['planta_id', 'equipamento_id']
+            }] : []),
+            {
+              key: 'classificacao',
+              title: 'Classificação',
+              fields: ['categoria', 'tipo_manutencao', 'criticidade', 'condicao_ativo']
+            },
+            {
+              key: 'planejamento',
+              title: 'Planejamento',
+              fields: ['frequencia', 'frequencia_personalizada', 'duracao_estimada', 'tempo_estimado', 'ordem', 'planejador', 'responsavel', 'data_ultima_execucao', 'numero_execucoes']
+            },
+            { 
+              key: 'atividades', 
+              title: 'Sub-tarefas', 
+              fields: ['sub_tarefas'] 
+            },
+            { 
+              key: 'recursos', 
+              title: 'Recursos Necessários', 
+              fields: ['recursos'] 
+            },
+            {
+              key: 'observacoes',
+              title: 'Observações & Status',
+              fields: ['observacoes', 'status']
+            }
           ]}
-        />
+        >
+          {/* Seção de Anexos - Todos os modos */}
+          {modalState.isOpen && (
+            <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+                Anexos
+              </h3>
+              {modalState.mode === 'create' ? (
+                <AnexosManager
+                  tarefaId={null} // Para modo create, não tem ID ainda
+                  readonly={false}
+                  onFilesChange={(files) => {
+                    // Armazenar arquivos para upload após criação da tarefa
+                    setPendingFiles(files);
+                  }}
+                />
+              ) : (
+                <AnexosManager
+                  tarefaId={modalState.entity?.id || null}
+                  readonly={modalState.mode === 'view'}
+                />
+              )}
+            </div>
+          )}
+        </BaseModal>
       </Layout.Main>
     </Layout>
   );

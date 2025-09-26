@@ -1,6 +1,6 @@
 
 // src/features/usuarios/components/UsuariosPage.tsx - CORRIGIDO
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -18,12 +18,24 @@ export function UsuariosPage() {
   const {
     usuarios,
     loading,
+    error,
     pagination,
     filters,
     handleFilterChange,
     handlePageChange,
-    refetch
+    refetch,
+    testApiConnection
   } = useUsuarios();
+
+  // Debug: testar API quando componente monta
+  React.useEffect(() => {
+    console.log('🔍 [UsuariosPage] Componente montado, dados atuais:', {
+      usuarios: usuarios?.length,
+      loading,
+      error,
+      pagination
+    });
+  }, [usuarios, loading, error, pagination]);
 
   // Estado do modal de usuário
   const [modalState, setModalState] = useState<ModalState>({
@@ -75,6 +87,38 @@ export function UsuariosPage() {
             description="Gerencie os usuários cadastrados no sistema"
           />
           
+          {/* DEBUG: Mostrar status atual */}
+          {(loading || error || usuarios.length === 0) && (
+            <div className="mb-4 p-4 border rounded-lg bg-yellow-50 border-yellow-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-yellow-800">Status Debug:</h4>
+                  <p className="text-sm text-yellow-700">
+                    Loading: {loading ? '✅' : '❌'} | 
+                    Error: {error || 'Nenhum'} | 
+                    Usuários: {usuarios.length}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={testApiConnection}
+                  >
+                    Testar API
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={refetch}
+                  >
+                    Forçar Reload
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Filtros e Botão de Cadastrar */}
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="flex-1">

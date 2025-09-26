@@ -18,6 +18,8 @@ import {
 import { Usuario, ModalMode, UsuarioFormData } from '../types';
 import { usuariosFormFields } from '../config/form-config';
 import { useUsuarios } from '../hooks/useUsuarios';
+import { PermissionManager } from './PermissionManager';
+import { PermissionSummaryCard } from './PermissionSummaryCard';
 
 interface UsuarioModalProps {
   isOpen: boolean;
@@ -124,11 +126,31 @@ export function UsuarioModal({
   };
 
   const formGroups = [
-    { key: 'informacoes_basicas', title: 'Informações Básicas' },
-    { key: 'localizacao', title: 'Localização' },
-    { key: 'configuracoes', title: 'Configurações do Sistema' },
-    { key: 'permissoes', title: 'Permissões' },
-    { key: 'organizacional', title: 'Informações Organizacionais' }
+    {
+      key: 'informacoes_basicas',
+      title: 'Informações Básicas',
+      fields: ['nome', 'email', 'telefone', 'instagram', 'cpfCnpj']
+    },
+    {
+      key: 'localizacao',
+      title: 'Localização',
+      fields: ['cep', 'estadoId', 'cidadeId', 'endereco', 'bairro', 'complemento']
+    },
+    {
+      key: 'configuracoes',
+      title: 'Configurações do Sistema',
+      fields: ['roleNames', 'status']
+    },
+    {
+      key: 'permissoes',
+      title: 'Permissões',
+      fields: ['permissions']
+    },
+    {
+      key: 'organizacional',
+      title: 'Informações Organizacionais',
+      fields: ['managerId', 'concessionariaAtualId', 'organizacaoAtualId']
+    }
   ];
 
   // ✅ MAPEAR DADOS DO USUÁRIO PARA FORM DATA QUANDO NECESSÁRIO
@@ -207,6 +229,136 @@ export function UsuarioModal({
                   No primeiro acesso, o usuário será obrigatoriamente solicitado a alterar sua senha.
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ SEÇÃO DE PERMISSÕES - HABILITADA COM DADOS ATUAIS DO USUÁRIO */}
+      {(isViewMode || isEditMode) && usuario && (
+        <div className="mt-6 space-y-4">
+          <h3 className="text-base font-semibold flex items-center gap-2 border-b pb-2">
+            <Shield className="h-4 w-4" />
+            Permissões e Acesso
+          </h3>
+          
+          {/* ✅ EXIBIÇÃO SIMPLES DE PERMISSÕES BASEADA NOS DADOS ATUAIS */}
+          <div className="space-y-4">
+            {/* Role atual */}
+            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+              <div>
+                <h4 className="font-medium text-blue-900 dark:text-blue-100">Role Atual</h4>
+                <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                  <p><strong>Principal:</strong> {usuario.role_details?.name || usuario.roles?.[0] || usuario.tipo || 'Não definido'}</p>
+                  <p><strong>Exibição:</strong> {usuario.tipo || usuario.perfil || 'Não mapeado'}</p>
+                  {usuario.roles && usuario.roles.length > 1 && (
+                    <p><strong>Outros:</strong> {usuario.roles.slice(1).join(', ')}</p>
+                  )}
+                </div>
+              </div>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                {usuario.roles?.length || 0} role(s)
+              </Badge>
+            </div>
+
+            {/* Debug info */}
+            {process.env.NODE_ENV === 'development' && (
+              <details className="text-xs">
+                <summary className="cursor-pointer text-gray-500">Debug: Dados do usuário</summary>
+                <div className="mt-2 space-y-2">
+                  <div className="p-2 bg-gray-100 rounded text-xs">
+                    <strong>Frontend Data:</strong>
+                    <pre className="mt-1 overflow-auto">
+                      {JSON.stringify({
+                        role_details: usuario.role_details,
+                        roles: usuario.roles,
+                        tipo: usuario.tipo,
+                        perfil: usuario.perfil,
+                        all_permissions_count: usuario.all_permissions?.length,
+                        permissao_count: usuario.permissao?.length,
+                        all_permissions_preview: usuario.all_permissions?.slice(0, 3)
+                      }, null, 2)}
+                    </pre>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Testar busca com debug
+                      import('../hooks/useUsuarios').then(({ useUsuarios }) => {
+                        console.log('🧪 [DEBUG BUTTON] Testando busca com debug para usuário:', usuario.id);
+                        // Note: This is just for debugging, proper implementation would need access to the hook
+                      });
+                    }}
+                    className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                  >
+                    🧪 Test Debug API
+                  </button>
+                </div>
+              </details>
+            )}
+
+            {/* Permissões atuais */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm">
+                Permissões Atuais 
+                <span className="ml-2">
+                  (all_permissions: {usuario.all_permissions?.length || 0}, permissao: {usuario.permissao?.length || 0})
+                </span>
+              </h4>
+              
+              {/* Tentar exibir permissões de várias fontes */}
+              {(() => {
+                const permissions = usuario.all_permissions || usuario.permissao || [];
+                return permissions.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto border rounded-lg p-4">
+                  {permissions.map((permission, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded border dark:bg-gray-800">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-xs font-mono">{permission}</span>
+                    </div>
+                  ))}
+                </div>
+                ) : (
+                <div className="text-center p-8 border border-dashed rounded-lg">
+                  <div className="text-sm text-muted-foreground">
+                    Nenhuma permissão específica atribuída
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    As permissões podem vir do role atribuído
+                  </div>
+                </div>
+                );
+              })()}
+            </div>
+
+            {/* Edição de permissões - apenas no modo de edição */}
+            {isEditMode && (
+              <div className="border-t pt-4 mt-4">
+                <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Editar Permissões
+                </h4>
+                
+                <div className="text-sm text-muted-foreground mb-3">
+                  Use o campo "Permissões" na seção correspondente do formulário para modificar as permissões deste usuário.
+                </div>
+                
+                <div className="p-3 bg-orange-50 rounded border border-orange-200 dark:bg-orange-950 dark:border-orange-800">
+                  <div className="text-xs text-orange-700 dark:text-orange-300">
+                    <strong>Aviso:</strong> As permissões modificadas no formulário serão aplicadas quando o usuário for salvo. 
+                    Para gerenciamento avançado de permissões, implemente os endpoints de permissões no backend.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Informações adicionais */}
+            <div className="text-xs text-muted-foreground p-3 bg-yellow-50 rounded border border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertCircle className="h-3 w-3" />
+                <span className="font-medium">Nota sobre permissões:</span>
+              </div>
+              <p>As permissões listadas são as atualmente armazenadas no banco de dados. Para gerenciar permissões completo, os endpoints de permissões devem estar implementados no backend.</p>
             </div>
           </div>
         </div>

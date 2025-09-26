@@ -1,107 +1,79 @@
-// src/features/equipamentos/types/index.ts - ESTRUTURA SIMPLIFICADA
+// src/features/equipamentos/types/index.ts - TIPOS CORRIGIDOS COM STRING IDS
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
 
 // ============================================================================
-// NOVA ESTRUTURA: Proprietário → Planta → Equipamento → Componente
+// TIPOS BASE COMPATÍVEIS COM A API
 // ============================================================================
 
-// Tipos base reutilizados
 export interface ProprietarioBasico {
-  id: number;
+  id: string; // CORRIGIDO: string em vez de number
   razaoSocial: string;
   cnpjCpf: string;
   tipo: 'pessoa_fisica' | 'pessoa_juridica';
 }
 
 export interface Planta extends BaseEntity {
+  id: string; // Explícito para garantir que existe
+  criadoEm: string; // Explícito para garantir que existe
   nome: string;
   cnpj: string;
-  proprietarioId: number;
+  localizacao?: string;
+  proprietarioId: string; // CORRIGIDO: string em vez de number
   proprietario?: ProprietarioBasico;
 }
 
+export interface DadoTecnico {
+  id?: string;
+  campo: string;
+  valor: string;
+  tipo: string;
+  unidade?: string;
+}
+
 // ============================================================================
-// EQUIPAMENTO - LÓGICA UC/UAR MANTIDA
+// EQUIPAMENTO PAI - TIPO COMPATÍVEL
 // ============================================================================
-export interface Equipamento extends BaseEntity {
-  // Informações básicas
+export interface EquipamentoPai {
+  id: string; // CORRIGIDO: string em vez de number
   nome: string;
-  classificacao: 'UC' | 'UAR'; // ← OBRIGATÓRIO: UC = Equipamento, UAR = Componente
-  
-  // ✅ NOVA LÓGICA SIMPLIFICADA:
-  // - UC: Pertence diretamente a uma planta
-  // - UAR: Pertence a um UC (equipamentoPaiId)
-  plantaId?: number; // Obrigatório para UC
-  proprietarioId?: number; // Herdado da planta
-  equipamentoPaiId?: number; // Obrigatório para UAR
-  equipamentoPai?: Equipamento; // Referência ao UC pai (apenas para UAR)
-  
-  // Relacionamentos para exibição
-  proprietario?: ProprietarioBasico;
-  planta?: Planta;
-  
-  // Dados técnicos
+  classificacao: 'UC';
+  criticidade: '1' | '2' | '3' | '4' | '5';
+  criadoEm: string;
   fabricante?: string;
   modelo?: string;
-  numeroSerie?: string;
-  criticidade: '1' | '2' | '3' | '4' | '5'; // 1-5 conforme necessidade
-  tipo?: string; // Tipo do equipamento/componente
-  
-  // Estados e configurações
-  emOperacao?: 'sim' | 'nao';
-  tipoDepreciacao?: 'linear' | 'uso';
-  
-  // Datas
-  dataImobilizacao?: string;
-  dataInstalacao?: string; // Para componentes
-  
-  // Valores financeiros
-  valorImobilizado?: number;
-  valorDepreciacao?: number;
-  valorContabil?: number;
-  vidaUtil?: number; // em anos
-  
-  // Fornecedor e centro de custo
-  fornecedor?: string;
-  centroCusto?: string;
-  
-  // Manutenção
-  planoManutencao?: string;
-  
-  // Dados técnicos dinâmicos
-  dadosTecnicos?: string;
-  
-  // ✅ LOCALIZAÇÃO: Campo de texto livre para indicar a área
-  localizacao?: string; // Ex: "Produção", "Logística", "Administrativo"
-  localizacaoEspecifica?: string;
-  observacoes?: string;
-  
-  // Componentes UAR (apenas para UC)
-  componentesUAR?: Equipamento[]; // Lista de UARs que pertencem a este UC
-  totalComponentes?: number; // Contagem de UARs
-  tuc?: string;
-  mcpse?: boolean;
+  localizacao?: string;
 }
 
 // ============================================================================
-// FORMULÁRIOS E FILTROS
+// EQUIPAMENTO - COMPATÍVEL COM API
 // ============================================================================
-export interface EquipamentoFormData {
-  // Básicos
+export interface Equipamento extends BaseEntity {
+  // Herda id: string, criadoEm: string, atualizadoEm: string de BaseEntity
+  id: string; // Explícito para garantir que existe
+  criadoEm: string; // Explícito para garantir que existe
+  // Informações básicas
   nome: string;
-  classificacao: 'UC' | 'UAR'; // UC = Equipamento, UAR = Componente
-  proprietarioId?: number;
-  plantaId?: number; // Obrigatório para UC
-  equipamentoPaiId?: number; // Obrigatório para UAR
+  classificacao: 'UC' | 'UAR';
   
-  // Dados gerais
+  // Relacionamentos hierárquicos - TODOS CORRIGIDOS PARA STRING
+  plantaId?: string;
+  proprietarioId?: string;
+  equipamentoPaiId?: string;
+  
+  // Referências para exibição
+  proprietario?: ProprietarioBasico;
+  planta?: Planta;
+  equipamentoPai?: EquipamentoPai;
+  
+  // Dados técnicos básicos
   fabricante?: string;
   modelo?: string;
   numeroSerie?: string;
   criticidade: '1' | '2' | '3' | '4' | '5';
   tipo?: string;
+  tipoEquipamento?: string;
   
-  // Estados
+  // Estados operacionais
   emOperacao?: 'sim' | 'nao';
   tipoDepreciacao?: 'linear' | 'uso';
   
@@ -115,16 +87,74 @@ export interface EquipamentoFormData {
   valorContabil?: number;
   vidaUtil?: number;
   
-  // Fornecedor e centro de custo
+  // Administrativo
   fornecedor?: string;
   centroCusto?: string;
-  
-  // Manutenção
   planoManutencao?: string;
-  dadosTecnicos?: string;
   
-  // Localização (área)
+  // Localização
   localizacao?: string;
+  localizacaoEspecifica?: string;
+  observacoes?: string;
+  
+  // Campos MCPSE
+  mcpse?: boolean;
+  mcpseAtivo?: boolean;
+  tuc?: string;
+  a1?: string;
+  a2?: string;
+  a3?: string;
+  a4?: string;
+  a5?: string;
+  a6?: string;
+  
+  // Dados técnicos dinâmicos
+  dadosTecnicos?: DadoTecnico[];
+  
+  // Componentes UAR (apenas para UC)
+  componentesUAR?: Equipamento[];
+  totalComponentes?: number;
+}
+
+// ============================================================================
+// FORMULÁRIOS E FILTROS
+// ============================================================================
+export interface EquipamentoFormData {
+  nome: string;
+  classificacao: 'UC' | 'UAR';
+  proprietarioId?: string; // CORRIGIDO: string
+  plantaId?: string; // CORRIGIDO: string
+  equipamentoPaiId?: string; // CORRIGIDO: string
+  fabricante?: string;
+  modelo?: string;
+  numeroSerie?: string;
+  criticidade: '1' | '2' | '3' | '4' | '5';
+  tipo?: string;
+  tipoEquipamento?: string;
+  emOperacao?: 'sim' | 'nao';
+  tipoDepreciacao?: 'linear' | 'uso';
+  dataImobilizacao?: string;
+  dataInstalacao?: string;
+  valorImobilizado?: number;
+  valorDepreciacao?: number;
+  valorContabil?: number;
+  vidaUtil?: number;
+  fornecedor?: string;
+  centroCusto?: string;
+  planoManutencao?: string;
+  localizacao?: string;
+  localizacaoEspecifica?: string;
+  observacoes?: string;
+  mcpse?: boolean;
+  mcpseAtivo?: boolean;
+  tuc?: string;
+  a1?: string;
+  a2?: string;
+  a3?: string;
+  a4?: string;
+  a5?: string;
+  a6?: string;
+  dadosTecnicos?: DadoTecnico[];
 }
 
 export interface EquipamentosFilters extends BaseFiltersType {
@@ -132,7 +162,10 @@ export interface EquipamentosFilters extends BaseFiltersType {
   plantaId: string;
   criticidade: string;
   classificacao: string;
-  equipamentoPaiId?: string; // Para filtrar por equipamento pai
+  equipamentoPaiId?: string;
+  page?: number;
+  limit?: number;
+  search?: string;
 }
 
 export interface ModalState {
@@ -144,15 +177,74 @@ export interface ModalState {
 export interface ComponenteModalState {
   isOpen: boolean;
   mode: ModalMode;
-  equipamentoPai: Equipamento | null; // Equipamento que terá componentes
-  componentes: Equipamento[]; // Lista de componentes
+  equipamentoPai: Equipamento | null;
+  componentes: Equipamento[];
   editingComponente: Equipamento | null;
 }
 
 // ============================================================================
-// UTILITÁRIOS PARA VALIDAÇÃO
+// RESPOSTAS DA API
 // ============================================================================
-export const validateEquipamentoData = (data: EquipamentoFormData): { valid: boolean; errors: string[] } => {
+export interface EquipamentosListResponse {
+  data: Equipamento[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface PlantaEquipamentosResponse extends EquipamentosListResponse {
+  planta: {
+    id: string;
+    nome: string;
+    localizacao: string;
+  };
+}
+
+export interface EstatisticasPlanta {
+  planta: {
+    id: string;
+    nome: string;
+    localizacao: string;
+  };
+  totais: {
+    equipamentos: number;
+    equipamentosUC: number;
+    componentesUAR: number;
+  };
+  porCriticidade: Record<string, number>;
+  financeiro: {
+    valorTotalContabil: number;
+  };
+}
+
+export interface ComponentesGerenciamento {
+  equipamentoUC: {
+    id: string;
+    nome: string;
+    fabricante?: string;
+    modelo?: string;
+    planta?: {
+      id: string;
+      nome: string;
+    };
+    proprietario?: {
+      id: string;
+      nome: string;
+    };
+  };
+  componentes: Equipamento[];
+}
+
+// ============================================================================
+// VALIDAÇÕES
+// ============================================================================
+export const validateEquipamentoData = (data: EquipamentoFormData): { 
+  valid: boolean; 
+  errors: string[] 
+} => {
   const errors: string[] = [];
   
   if (!data.nome?.trim()) {
@@ -163,9 +255,16 @@ export const validateEquipamentoData = (data: EquipamentoFormData): { valid: boo
     errors.push('Criticidade é obrigatória');
   }
   
-  // Validações específicas
-  if (!data.equipamentoPaiId && !data.plantaId) {
-    errors.push('Equipamento deve pertencer a uma planta ou ser componente de outro equipamento');
+  if (!data.classificacao) {
+    errors.push('Classificação (UC/UAR) é obrigatória');
+  }
+  
+  if (data.classificacao === 'UC' && !data.plantaId) {
+    errors.push('Equipamento UC deve ter uma planta');
+  }
+  
+  if (data.classificacao === 'UAR' && !data.equipamentoPaiId) {
+    errors.push('Componente UAR deve ter um equipamento pai');
   }
   
   return {
@@ -175,7 +274,7 @@ export const validateEquipamentoData = (data: EquipamentoFormData): { valid: boo
 };
 
 // ============================================================================
-// UTILITÁRIOS PARA CONSULTAS
+// UTILITÁRIOS - ATUALIZADOS PARA STRING IDS
 // ============================================================================
 export const isUC = (equipamento: Equipamento): boolean => {
   return equipamento.classificacao === 'UC';
@@ -185,17 +284,24 @@ export const isUAR = (equipamento: Equipamento): boolean => {
   return equipamento.classificacao === 'UAR';
 };
 
-export const getUARsByUC = (equipamentos: Equipamento[], ucId: number): Equipamento[] => {
-  return equipamentos.filter(eq => eq.classificacao === 'UAR' && eq.equipamentoPaiId === ucId);
+export const getUARsByUC = (equipamentos: Equipamento[], ucId: string): Equipamento[] => {
+  return equipamentos.filter(eq => 
+    eq.classificacao === 'UAR' && eq.equipamentoPaiId === ucId
+  );
 };
 
-export const getUCsByPlanta = (equipamentos: Equipamento[], plantaId: number): Equipamento[] => {
-  return equipamentos.filter(eq => eq.classificacao === 'UC' && eq.plantaId === plantaId);
+export const getUCsByPlanta = (equipamentos: Equipamento[], plantaId: string): Equipamento[] => {
+  return equipamentos.filter(eq => 
+    eq.classificacao === 'UC' && eq.plantaId === plantaId
+  );
 };
 
-export const getEquipamentoWithComponentes = (equipamento: Equipamento, allEquipamentos: Equipamento[]): Equipamento => {
+export const getEquipamentoWithComponentes = (
+  equipamento: Equipamento, 
+  allEquipamentos: Equipamento[]
+): Equipamento => {
   if (equipamento.classificacao === 'UC') {
-    const componentesUAR = getUARsByUC(allEquipamentos, equipamento.id);
+    const componentesUAR = getUARsByUC(allEquipamentos, (equipamento as BaseEntity).id);
     return {
       ...equipamento,
       componentesUAR,
@@ -203,6 +309,40 @@ export const getEquipamentoWithComponentes = (equipamento: Equipamento, allEquip
     };
   }
   return equipamento;
+};
+
+// ============================================================================
+// CONFIGURAÇÕES DE CRITICIDADE
+// ============================================================================
+export const getCriticidadeConfig = (criticidade: string) => {
+  const configs: Record<string, { color: string; label: string; icon: string }> = {
+    '5': { 
+      color: 'bg-red-100 text-red-800 border-red-200', 
+      label: 'Muito Alta', 
+      icon: 'alert-triangle' 
+    },
+    '4': { 
+      color: 'bg-orange-100 text-orange-800 border-orange-200', 
+      label: 'Alta', 
+      icon: 'alert-triangle' 
+    },
+    '3': { 
+      color: 'bg-yellow-100 text-yellow-800 border-yellow-200', 
+      label: 'Média', 
+      icon: 'alert-circle' 
+    },
+    '2': { 
+      color: 'bg-blue-100 text-blue-800 border-blue-200', 
+      label: 'Baixa', 
+      icon: 'check-circle' 
+    },
+    '1': { 
+      color: 'bg-green-100 text-green-800 border-green-200', 
+      label: 'Muito Baixa', 
+      icon: 'check-circle' 
+    }
+  };
+  return configs[criticidade] || configs['3'];
 };
 
 // Re-exportar tipos base
@@ -213,4 +353,6 @@ export type Pagination = {
   limit: number;
   total: number;
   totalPages: number;
+  hasNextPage?: boolean;
+  hasPreviousPage?: boolean;
 };

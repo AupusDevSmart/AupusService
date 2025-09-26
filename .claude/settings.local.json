@@ -5,7 +5,18 @@
       "Bash(grep:*)",
       "Bash(rg:*)",
       "Bash(curl:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run:*)",
+      "Bash(sed:*)",
+      "Bash(git checkout:*)",
+      "Bash(find:*)",
+      "Bash(xargs sed:*)",
+      "Bash(for:*)",
+      "Bash(do sed -i 's/console\\.log/\\/\\/ console\\.log/g; s/console\\.error/\\/\\/ console\\.error/g; s/console\\.warn/\\/\\/ console\\.warn/g; s/console\\.info/\\/\\/ console\\.info/g; s/console\\.debug/\\/\\/ console\\.debug/g' \"$file\")",
+      "Bash(done)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

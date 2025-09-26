@@ -4,5 +4,7 @@
 export { useEquipamentos } from './hooks/useEquipamentos';
 export type { 
   Equipamento, 
-  Planta 
-} from './hooks/useEquipamentos';
+  Planta,
+  EquipamentosFilters,
+  ModalMode
+} from './types';

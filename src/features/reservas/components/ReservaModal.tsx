@@ -9,17 +9,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { VeiculoSelector } from './VeiculoSelector';
 import { Car, X } from 'lucide-react';
 import { ReservaVeiculo, ReservaFormData, Veiculo } from '../types';
+import { 
+  formatDateForInput, 
+  formatDateForAPI, 
+  getCurrentDate,
+  isDateInPast,
+  isEndDateAfterStartDate 
+} from '../utils/date-utils';
 
 interface ReservaModalProps {
   isOpen: boolean;
   mode: 'create' | 'edit' | 'view';
   entity?: ReservaVeiculo | null;
   onClose: () => void;
-  onSubmit: (data: ReservaFormData) => Promise<void>;
+  onSubmit: (data: any) => Promise<void>;
   veiculos: Veiculo[];
   reservas: ReservaVeiculo[];
   reservaId?: string;
 }
+
+// Função para converter data ISO para formato de input date (YYYY-MM-DD) - REMOVIDA
+// Agora usando a função do utils
+
+// Função para obter data atual no formato YYYY-MM-DD - REMOVIDA
+// Agora usando a função do utils
 
 export function ReservaModal({
   isOpen,
@@ -32,51 +45,81 @@ export function ReservaModal({
   reservaId
 }: ReservaModalProps) {
   const [formData, setFormData] = useState<Partial<ReservaFormData>>({});
-  const [veiculoSelecionado, setVeiculoSelecionado] = useState<number | undefined>();
+  const [veiculoSelecionado, setVeiculoSelecionado] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Inicializa o formulário
   useEffect(() => {
+    console.log('🔧 [RESERVA MODAL] Inicializando modal:', { mode, entity, isOpen });
+    
     if (isOpen) {
       if (mode === 'create') {
         const initialData = {
           tipoSolicitante: 'manual' as const,
-          dataInicio: new Date().toISOString().split('T')[0],
-          dataFim: new Date().toISOString().split('T')[0],
+          dataInicio: getCurrentDate(),
+          dataFim: getCurrentDate(),
           horaInicio: '08:00',
           horaFim: '18:00'
         };
+        console.log('➕ [RESERVA MODAL] Dados iniciais para criação:', initialData);
         setFormData(initialData);
         setVeiculoSelecionado(undefined);
       } else if (entity) {
-        setFormData({
+        // Processar dados existentes com formatação correta
+        const processedData = {
           tipoSolicitante: entity.tipoSolicitante,
           solicitanteId: entity.solicitanteId,
           responsavel: entity.responsavel,
           finalidade: entity.finalidade,
+          dataInicio: formatDateForInput(entity.dataInicio),
+          dataFim: formatDateForInput(entity.dataFim),
+          horaInicio: entity.horaInicio || '08:00',
+          horaFim: entity.horaFim || '18:00',
+          observacoes: entity.observacoes
+        };
+        
+        console.log('✏️ [RESERVA MODAL] Dados originais da entidade:', {
           dataInicio: entity.dataInicio,
           dataFim: entity.dataFim,
           horaInicio: entity.horaInicio,
           horaFim: entity.horaFim,
-          observacoes: entity.observacoes
+          veiculoId: entity.veiculoId,
+          veiculoIdType: typeof entity.veiculoId
         });
+        
+        console.log('🔄 [RESERVA MODAL] Dados processados:', processedData);
+        
+        setFormData(processedData);
+        // Manter o tipo original do veiculoId
         setVeiculoSelecionado(entity.veiculoId);
       }
       setErrors({});
     }
   }, [isOpen, mode, entity]);
 
-  const filtrosDisponibilidade = useMemo(() => ({
-    dataInicio: formData.dataInicio || '',
-    dataFim: formData.dataFim || '',
-    horaInicio: formData.horaInicio,
-    horaFim: formData.horaFim,
-    excluirReservaId: mode === 'edit' ? reservaId : undefined
-  }), [formData.dataInicio, formData.dataFim, formData.horaInicio, formData.horaFim, mode, reservaId]);
+  const filtrosDisponibilidade = useMemo(() => {
+    const filtros = {
+      dataInicio: formData.dataInicio || '',
+      dataFim: formData.dataFim || '',
+      horaInicio: formData.horaInicio,
+      horaFim: formData.horaFim,
+      excluirReservaId: mode === 'edit' ? reservaId : undefined
+    };
+    
+    console.log('🔍 [RESERVA MODAL] Filtros de disponibilidade:', filtros);
+    return filtros;
+  }, [formData.dataInicio, formData.dataFim, formData.horaInicio, formData.horaFim, mode, reservaId]);
 
   const handleInputChange = (key: string, value: any) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
+    console.log(`📝 [RESERVA MODAL] Campo alterado: ${key} =`, value);
+    
+    setFormData(prev => {
+      const updated = { ...prev, [key]: value };
+      console.log('📋 [RESERVA MODAL] FormData atualizado:', updated);
+      return updated;
+    });
+    
     // Limpa erro do campo quando usuário digita
     if (errors[key]) {
       setErrors(prev => ({ ...prev, [key]: '' }));
@@ -104,17 +147,16 @@ export function ReservaModal({
 
     if (!formData.dataInicio) {
       newErrors.dataInicio = 'Data de início é obrigatória';
-    } else {
-      const data = new Date(formData.dataInicio);
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-      if (data < hoje) {
-        newErrors.dataInicio = 'Data de início não pode ser no passado';
-      }
+    } else if (mode === 'create' && isDateInPast(formData.dataInicio)) {
+      newErrors.dataInicio = 'Data de início não pode ser no passado';
     }
 
     if (!formData.dataFim) {
       newErrors.dataFim = 'Data de fim é obrigatória';
+    } else if (formData.dataInicio && formData.dataFim) {
+      if (!isEndDateAfterStartDate(formData.dataInicio, formData.dataFim, formData.horaInicio, formData.horaFim)) {
+        newErrors.dataFim = 'Data de fim deve ser posterior à data de início';
+      }
     }
 
     if (!formData.horaInicio) {
@@ -123,6 +165,11 @@ export function ReservaModal({
 
     if (!formData.horaFim) {
       newErrors.horaFim = 'Hora de fim é obrigatória';
+    } else if (formData.horaInicio && formData.horaFim && formData.dataInicio === formData.dataFim) {
+      // Validar horários apenas se for o mesmo dia
+      if (formData.horaFim <= formData.horaInicio) {
+        newErrors.horaFim = 'Hora de fim deve ser posterior à hora de início';
+      }
     }
 
     if (!veiculoSelecionado) {
@@ -136,26 +183,48 @@ export function ReservaModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('💾 [RESERVA MODAL] Tentando submeter form com dados:', formData);
+    console.log('🚗 [RESERVA MODAL] Veículo selecionado:', veiculoSelecionado);
+    
     if (!validateForm()) {
+      console.log('❌ [RESERVA MODAL] Validação falhou, erros:', errors);
       return;
     }
 
     setLoading(true);
     try {
-      const dadosCompletos: ReservaFormData = {
+      // Preparar dados para envio
+      const dadosCompletos = {
         ...formData as ReservaFormData,
-        veiculoId: veiculoSelecionado!
+        veiculoId: veiculoSelecionado!, // Agora é string
+        // Configurar formato das datas baseado no que a API espera
+        dataInicio: formatDateForAPI(formData.dataInicio!, false),
+        dataFim: formatDateForAPI(formData.dataFim!, false),
       };
 
+      console.log('🚀 [RESERVA MODAL] Enviando dados completos:', dadosCompletos);
       await onSubmit(dadosCompletos);
+      console.log('✅ [RESERVA MODAL] Sucesso na submissão');
     } catch (error) {
-      console.error('Erro ao salvar:', error);
+      console.error('❌ [RESERVA MODAL] Erro ao salvar:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const isReadOnly = mode === 'view';
+
+  // Debug do estado atual
+  useEffect(() => {
+    console.log('🐛 [RESERVA MODAL] Estado atual:', {
+      isOpen,
+      mode,
+      formData,
+      veiculoSelecionado,
+      hasEntity: !!entity,
+      errors
+    });
+  }, [isOpen, mode, formData, veiculoSelecionado, entity, errors]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -168,6 +237,18 @@ export function ReservaModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Debug info - apenas em desenvolvimento */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 rounded text-xs">
+              <strong className="text-gray-900 dark:text-gray-100">Debug:</strong> 
+              <div className="text-gray-700 dark:text-gray-300 mt-1 space-y-1">
+                <div>Dados Originais: {entity?.dataInicio} | {entity?.dataFim}</div>
+                <div>Dados Formatados: {formData.dataInicio} | {formData.dataFim}</div>
+                <div>Veículo: {veiculoSelecionado}</div>
+              </div>
+            </div>
+          )}
+
           {/* Grid de campos principais */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Tipo de Solicitante */}
@@ -191,7 +272,7 @@ export function ReservaModal({
                 </SelectContent>
               </Select>
               {errors.tipoSolicitante && (
-                <p className="text-sm text-red-500">{errors.tipoSolicitante}</p>
+                <p className="text-sm text-red-500 dark:text-red-400">{errors.tipoSolicitante}</p>
               )}
             </div>
 
@@ -220,7 +301,7 @@ export function ReservaModal({
                 disabled={isReadOnly}
               />
               {errors.responsavel && (
-                <p className="text-sm text-red-500">{errors.responsavel}</p>
+                <p className="text-sm text-red-500 dark:text-red-400">{errors.responsavel}</p>
               )}
             </div>
 
@@ -237,7 +318,7 @@ export function ReservaModal({
                 disabled={isReadOnly}
               />
               {errors.finalidade && (
-                <p className="text-sm text-red-500">{errors.finalidade}</p>
+                <p className="text-sm text-red-500 dark:text-red-400">{errors.finalidade}</p>
               )}
             </div>
 
@@ -252,9 +333,10 @@ export function ReservaModal({
                 value={formData.dataInicio || ''}
                 onChange={(e) => handleInputChange('dataInicio', e.target.value)}
                 disabled={isReadOnly}
+                className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
               />
               {errors.dataInicio && (
-                <p className="text-sm text-red-500">{errors.dataInicio}</p>
+                <p className="text-sm text-red-500 dark:text-red-400">{errors.dataInicio}</p>
               )}
             </div>
 
@@ -269,9 +351,10 @@ export function ReservaModal({
                 value={formData.horaInicio || ''}
                 onChange={(e) => handleInputChange('horaInicio', e.target.value)}
                 disabled={isReadOnly}
+                className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
               />
               {errors.horaInicio && (
-                <p className="text-sm text-red-500">{errors.horaInicio}</p>
+                <p className="text-sm text-red-500 dark:text-red-400">{errors.horaInicio}</p>
               )}
             </div>
 
@@ -286,9 +369,10 @@ export function ReservaModal({
                 value={formData.dataFim || ''}
                 onChange={(e) => handleInputChange('dataFim', e.target.value)}
                 disabled={isReadOnly}
+                className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
               />
               {errors.dataFim && (
-                <p className="text-sm text-red-500">{errors.dataFim}</p>
+                <p className="text-sm text-red-500 dark:text-red-400">{errors.dataFim}</p>
               )}
             </div>
 
@@ -303,16 +387,17 @@ export function ReservaModal({
                 value={formData.horaFim || ''}
                 onChange={(e) => handleInputChange('horaFim', e.target.value)}
                 disabled={isReadOnly}
+                className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
               />
               {errors.horaFim && (
-                <p className="text-sm text-red-500">{errors.horaFim}</p>
+                <p className="text-sm text-red-500 dark:text-red-400">{errors.horaFim}</p>
               )}
             </div>
           </div>
 
           {/* Observações */}
           <div className="space-y-2">
-            <Label htmlFor="observacoes">Observações</Label>
+            <Label htmlFor="observacoes" className="text-gray-900 dark:text-gray-100">Observações</Label>
             <Textarea
               id="observacoes"
               value={formData.observacoes || ''}
@@ -320,58 +405,68 @@ export function ReservaModal({
               placeholder="Informações adicionais sobre a reserva..."
               disabled={isReadOnly}
               rows={3}
+              className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
             />
           </div>
 
-          {/* Seletor de Veículo */}
-          <div className="border-t pt-6">
-            <div className="mb-4">
-              <Label className="text-base font-medium">
-                Selecionar Veículo <span className="text-red-500">*</span>
-              </Label>
-              {(!formData.dataInicio || !formData.dataFim) && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Configure as datas acima para ver os veículos disponíveis
-                </p>
+            {/* Seletor de Veículo */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+              <div className="mb-4">
+                <Label className="text-base font-medium text-gray-900 dark:text-gray-100">
+                  Selecionar Veículo <span className="text-red-500">*</span>
+                </Label>
+                {(!formData.dataInicio || !formData.dataFim) && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Configure as datas acima para ver os veículos disponíveis
+                  </p>
+                )}
+              </div>
+              
+              <VeiculoSelector
+                veiculos={veiculos}
+                reservas={reservas}
+                filtrosDisponibilidade={filtrosDisponibilidade}
+                veiculoSelecionado={veiculoSelecionado}
+                onVeiculoChange={(veiculoId) => {
+                  console.log('🔄 [RESERVA MODAL] VeiculoSelector onChange chamado com:', veiculoId);
+                  setVeiculoSelecionado(veiculoId);
+                  
+                  // Limpar erro de validação se havia
+                  if (errors.veiculo) {
+                    setErrors(prev => ({ ...prev, veiculo: '' }));
+                  }
+                }}
+                disabled={isReadOnly}
+              />
+              
+              {errors.veiculo && (
+                <p className="text-sm text-red-500 dark:text-red-400 mt-2">{errors.veiculo}</p>
               )}
             </div>
-            
-            <VeiculoSelector
-              veiculos={veiculos}
-              reservas={reservas}
-              filtrosDisponibilidade={filtrosDisponibilidade}
-              veiculoSelecionado={veiculoSelecionado}
-              onVeiculoChange={setVeiculoSelecionado}
-              disabled={isReadOnly}
-            />
-            
-            {errors.veiculo && (
-              <p className="text-sm text-red-500 mt-2">{errors.veiculo}</p>
-            )}
-          </div>
 
-          {/* Botões */}
-          <div className="flex justify-end gap-3 pt-6 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={loading}
-            >
-              <X className="w-4 h-4 mr-2" />
-              Cancelar
-            </Button>
-            
-            {!isReadOnly && (
+            {/* Botões */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
               <Button
-                type="submit"
+                type="button"
+                variant="outline"
+                onClick={onClose}
                 disabled={loading}
-                className="bg-primary hover:bg-primary/90"
+                className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
-                {loading ? 'Salvando...' : 'Cadastrar'}
+                <X className="w-4 h-4 mr-2" />
+                {isReadOnly ? 'Fechar' : 'Cancelar'}
               </Button>
-            )}
-          </div>
+              
+              {!isReadOnly && (
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-white"
+                >
+                  {loading ? 'Salvando...' : mode === 'create' ? 'Criar Reserva' : 'Salvar Alterações'}
+                </Button>
+              )}
+            </div>
         </form>
       </DialogContent>
     </Dialog>

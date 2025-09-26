@@ -1,7 +1,7 @@
 // src/features/programacao-os/index.ts
 
 // Exportar a página principal
-export { ProgramacaoOSPage } from './components/ProgramacaoOSPage';
+export { default as ProgramacaoOSPage } from './components/ProgramacaoOSPage';
 
 // Exportar tipos
 export type { 

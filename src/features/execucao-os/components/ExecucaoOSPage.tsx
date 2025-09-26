@@ -1,4 +1,4 @@
-// src/features/execucao-os/components/ExecucaoOSPage.tsx
+// src/features/execucao-os/components/ExecucaoOSPage.tsx - ATUALIZADA COM CARDS
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -24,35 +24,12 @@ import {
 } from 'lucide-react';
 import { useGenericTable } from '@/hooks/useGenericTable';
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { ExecucaoOS, ExecucaoOSFilters, ChecklistAtividade, MaterialConsumido, FerramentaUtilizada, StatusExecucaoOS } from '../types';
+import { ExecucaoOS, ExecucaoOSFilters, StatusExecucaoOS } from '../types';
 import { execucaoOSTableColumns } from '../config/table-config';
 import { execucaoOSFilterConfig } from '../config/filter-config';
-import { execucaoOSFormFields } from '../config/form-config';
+import { execucaoOSFormFields, execucaoOSFormGroups } from '../config/form-config';
 import { mockExecucoesOS } from '../data/mock-data';
 import { useExecucaoOS } from '../hooks/useExecucaoOS';
-
-interface ExecucaoOSFormData {
-  id?: string;
-  numeroOS?: string;
-  descricaoOS?: string;
-  localAtivo?: string;
-  statusExecucao?: StatusExecucaoOS;
-  dataInicioReal?: string;
-  horaInicioReal?: string;
-  dataFimReal?: string;
-  horaFimReal?: string;
-  responsavelExecucao?: string;
-  equipePresente?: string;
-  checklistAtividades?: ChecklistAtividade[];
-  materiaisConsumidos?: MaterialConsumido[];
-  ferramentasUtilizadas?: FerramentaUtilizada[];
-  resultadoServico?: string;
-  problemasEncontrados?: string;
-  recomendacoes?: string;
-  proximaManutencao?: string;
-  avaliacaoQualidade?: number;
-  observacoesQualidade?: string;
-}
 
 const initialFilters: ExecucaoOSFilters = {
   search: '',
@@ -182,27 +159,62 @@ export function ExecucaoOSPage() {
     closeModal();
   };
 
-  const handleSubmit = async (data: ExecucaoOSFormData) => {
+  const handleSubmit = async (data: any) => {
     if (!modalState.entity) return;
     
     try {
       console.log('💾 Salvando dados da execução:', data);
       
       if (modalState.mode === 'finalizar') {
-        // Para finalização, garantir que os campos obrigatórios estão preenchidos
-        await finalizarExecucao(String(modalState.entity.id), {
-          resultadoServico: data.resultadoServico || '', // Garantir que não seja undefined
+        // Para finalização, usar dados dos cards para estruturar a resposta
+        const finalizacaoData = {
+          resultadoServico: data.resultadoServico || '',
           problemasEncontrados: data.problemasEncontrados || '',
           recomendacoes: data.recomendacoes || '',
           proximaManutencao: data.proximaManutencao || '',
-          materiaisConsumidos: data.materiaisConsumidos || [],
-          ferramentasUtilizadas: data.ferramentasUtilizadas || [],
-          avaliacaoQualidade: data.avaliacaoQualidade || 0,
-          observacoesQualidade: data.observacoesQualidade || ''
-        });
+          avaliacaoQualidade: data.avaliacaoQualidade || 5,
+          observacoesQualidade: data.observacoesQualidade || '',
+          
+          // Processar dados dos cards de materiais
+          materiaisConsumidos: data.materiaisConsumidos?.map((m: any) => ({
+            descricao: m.descricao,
+            quantidade_planejada: m.quantidade_planejada || 0,
+            quantidade_consumida: m.quantidade_consumida || 0,
+            unidade: m.unidade || 'UN',
+            custo_unitario: m.custo_unitario || 0,
+            disponivel: m.disponivel !== undefined ? m.disponivel : true,
+            confirmado: m.confirmado || false,
+            observacoes: m.observacoes || null
+          })) || [],
+          
+          // Processar dados dos cards de ferramentas
+          ferramentasUtilizadas: data.ferramentasUtilizadas?.map((f: any) => ({
+            descricao: f.descricao,
+            quantidade: f.quantidade || 1,
+            confirmada: f.confirmada || false,
+            disponivel: f.disponivel !== undefined ? f.disponivel : true,
+            utilizada: f.utilizada || false,
+            condicao_antes: f.condicao_antes || null,
+            condicao_depois: f.condicao_depois || null,
+            observacoes: f.observacoes || null
+          })) || [],
+          
+          // Processar dados dos cards de técnicos
+          tecnicosPresentes: data.tecnicos?.map((t: any) => ({
+            nome: t.nome,
+            especialidade: t.especialidade,
+            horas_estimadas: t.horas_estimadas || 8,
+            horas_trabalhadas: t.horas_trabalhadas || 0,
+            custo_hora: t.custo_hora || 0,
+            presente: t.presente || false,
+            tecnico_id: t.tecnico_id || null
+          })) || []
+        };
+
+        await finalizarExecucao(String(modalState.entity.id), finalizacaoData);
+        
       } else {
-        // Mapear campos do formulário para a estrutura da execução
-        // Garantir que statusExecucao seja do tipo correto
+        // Para edição normal, mapear campos do formulário
         const statusExecucao = data.statusExecucao as StatusExecucaoOS | undefined;
         
         const dadosExecucao = {
@@ -212,9 +224,32 @@ export function ExecucaoOSPage() {
           dataFimReal: data.dataFimReal,
           horaFimReal: data.horaFimReal,
           responsavelExecucao: data.responsavelExecucao,
-          equipePresente: data.equipePresente ? data.equipePresente.split(',').map((nome: string) => nome.trim()) : [],
-          checklistAtividades: data.checklistAtividades || [],
+          funcaoResponsavel: data.funcaoResponsavel,
+          
+          // Dados das atividades
+          atividadesRealizadas: data.atividadesRealizadas,
+          checklistConcluido: data.checklistConcluido || 0,
+          procedimentosSeguidos: data.procedimentosSeguidos,
+          
+          // Segurança
+          equipamentosSeguranca: data.equipamentosSeguranca,
+          incidentesSeguranca: data.incidentesSeguranca,
+          medidasSegurancaAdicionais: data.medidasSegurancaAdicionais,
+          
+          // Custos
+          custosAdicionais: parseFloat(data.custosAdicionais) || 0,
+          
+          // Observações
+          observacoesExecucao: data.observacoesExecucao,
+          motivoPausas: data.motivoPausas,
+          motivoCancelamento: data.motivoCancelamento,
+          
+          // Arrays de recursos (processados dos cards)
           materiaisConsumidos: data.materiaisConsumidos || [],
+          ferramentasUtilizadas: data.ferramentasUtilizadas || [],
+          tecnicos: data.tecnicos || [],
+          
+          // Resultados (se disponíveis)
           resultadoServico: data.resultadoServico,
           problemasEncontrados: data.problemasEncontrados,
           recomendacoes: data.recomendacoes,
@@ -229,7 +264,7 @@ export function ExecucaoOSPage() {
       await handleSuccess();
     } catch (error) {
       console.error('Erro ao salvar execução:', error);
-      alert('❌ Erro ao salvar. Tente novamente.');
+      alert('Erro ao salvar. Tente novamente.');
     }
   };
 
@@ -258,28 +293,52 @@ export function ExecucaoOSPage() {
     
     const execucao = modalState.entity;
     
-    // Transformar dados para o formato do formulário
+    // Transformar dados para o formato do formulário com arrays garantidos
     return {
-      id: execucao.id, // Adicionar o ID aqui
+      id: execucao.id,
       numeroOS: execucao.os.numeroOS,
       descricaoOS: execucao.os.descricao,
       localAtivo: `${execucao.os.local} - ${execucao.os.ativo}`,
+      tipoOS: execucao.os.tipo,
+      prioridadeOS: execucao.os.prioridade,
       statusExecucao: execucao.statusExecucao,
       dataInicioReal: execucao.dataInicioReal,
       horaInicioReal: execucao.horaInicioReal,
       dataFimReal: execucao.dataFimReal,
       horaFimReal: execucao.horaFimReal,
       responsavelExecucao: execucao.responsavelExecucao,
-      equipePresente: execucao.equipePresente.join(', '),
-      checklistAtividades: execucao.checklistAtividades,
-      materiaisConsumidos: execucao.materiaisConsumidos,
-      ferramentasUtilizadas: execucao.ferramentasUtilizadas,
+      funcaoResponsavel: execucao.funcaoResponsavel,
+      
+      // Arrays de recursos (garantindo que existem)
+      materiaisConsumidos: execucao.materiaisConsumidos || [],
+      ferramentasUtilizadas: execucao.ferramentasUtilizadas || [],
+      tecnicos: execucao.tecnicos || [],
+      
+      // Atividades
+      atividadesRealizadas: execucao.atividadesRealizadas,
+      checklistConcluido: execucao.checklistConcluido,
+      procedimentosSeguidos: execucao.procedimentosSeguidos,
+      
+      // Segurança
+      equipamentosSeguranca: execucao.equipamentosSeguranca,
+      incidentesSeguranca: execucao.incidentesSeguranca,
+      medidasSegurancaAdicionais: execucao.medidasSegurancaAdicionais,
+      
+      // Custos
+      custosAdicionais: execucao.custosAdicionais,
+      
+      // Resultados
       resultadoServico: execucao.resultadoServico,
       problemasEncontrados: execucao.problemasEncontrados,
       recomendacoes: execucao.recomendacoes,
       proximaManutencao: execucao.proximaManutencao,
       avaliacaoQualidade: execucao.avaliacaoQualidade,
-      observacoesQualidade: execucao.observacoesQualidade
+      observacoesQualidade: execucao.observacoesQualidade,
+      
+      // Observações
+      observacoesExecucao: execucao.observacoesExecucao,
+      motivoPausas: execucao.motivoPausas,
+      motivoCancelamento: execucao.motivoCancelamento
     };
   };
 
@@ -397,7 +456,7 @@ export function ExecucaoOSPage() {
           {/* Header */}
           <TitleCard
             title="Execução de Ordens de Serviço"
-            description="Acompanhe e gerencie a execução das ordens de serviço em campo"
+            description="Acompanhe e gerencie a execução das ordens de serviço em campo com recursos detalhados"
           />
           
           {/* Dashboard */}
@@ -597,7 +656,7 @@ export function ExecucaoOSPage() {
           </div>
         </div>
 
-        {/* Modal */}
+        {/* Modal com Cards */}
         <BaseModal
           isOpen={modalState.isOpen}
           mode={modalState.mode}
@@ -605,19 +664,15 @@ export function ExecucaoOSPage() {
           title={getModalTitle()}
           icon={getModalIcon()}
           formFields={execucaoOSFormFields}
+          groups={execucaoOSFormGroups}
           onClose={closeModal}
           onSubmit={handleSubmit}
           width="w-[1200px]"
-          groups={[
-            { key: 'informacoes_os', title: 'Informações da OS' },
-            { key: 'controle_execucao', title: 'Controle de Execução' },
-            { key: 'equipe_responsavel', title: 'Equipe e Responsável' },
-            { key: 'atividades_checklist', title: 'Atividades e Checklist' },
-            { key: 'recursos_materiais', title: 'Recursos e Materiais' },
-            { key: 'resultados_qualidade', title: 'Resultados e Qualidade' }
-          ]}
+          loading={loading || hookLoading}
         />
       </Layout.Main>
     </Layout>
   );
 }
+
+export default ExecucaoOSPage;

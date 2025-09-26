@@ -1,9 +1,16 @@
+//src/config/api.ts
 import axios from 'axios';
 import { env } from '@/config/env';
 import { useUserStore } from '@/store/useUserStore';
 import qs from 'qs';
 
 const { clearUser } = useUserStore.getState();
+
+// Função para obter token válido
+const getAuthToken = () => {
+  const token = localStorage.getItem('authToken');
+  return token && token !== 'null' && token !== 'undefined' ? token : null;
+};
 
 export const api = axios.create({
   baseURL: env.VITE_API_URL,
@@ -12,9 +19,20 @@ export const api = axios.create({
 
   headers: {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${localStorage.getItem('authToken')}`,
   },
 });
+
+// Configurar interceptor para adicionar token dinamicamente
+api.interceptors.request.use(
+  (config) => {
+    const token = getAuthToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 axios.defaults.paramsSerializer = params => {
   return qs.stringify(params, { arrayFormat: 'repeat' });

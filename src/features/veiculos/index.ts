@@ -1,9 +1,11 @@
 // src/features/veiculos/index.ts
 export * from './types';
-export * from './data/mock-data';
+// Mock data removed - using API now
 export { VeiculosPage } from './components/VeiculosPage';
 export { ViaturaSelector } from './components/ViaturaSelector';
 export { ViaturaFormField, useViaturaField } from './components/ViaturaFormField';
+export { DocumentosUpload } from './components/DocumentosUpload';
+export { useDocumentosVeiculos } from './hooks/useDocumentosVeiculos';
 
 // Exemplo de uso da integração:
 /*

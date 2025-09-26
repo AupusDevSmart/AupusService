@@ -4,7 +4,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Car, Clock, Users, Weight, Fuel, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import { ViaturaSelectorProps, ViaturaReservada } from '../../reservas/types';
 import { useReservasVeiculos } from '../../reservas/hooks/useReservasVeiculos';
-import { mockVeiculos } from '../data/mock-data';
+import { useVeiculos } from '../hooks/useVeiculos';
+// Mock data removed - using API now
 
 export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
   value,
@@ -25,6 +26,9 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
   const [veiculosDisponiveis, setVeiculosDisponiveis] = useState<number[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [carregandoDisponibilidade, setCarregandoDisponibilidade] = useState(false);
+
+  // Hook para obter veículos
+  const { veiculos: mockVeiculos } = useVeiculos();
   
   const { validarPeriodoReserva, obterVeiculosDisponiveis, calcularCustoReserva } = useReservasVeiculos();
 
@@ -79,7 +83,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
   const selecionarVeiculo = (veiculoId: number) => {
     if (disabled) return;
 
-    const veiculo = mockVeiculos.find(v => v.id === veiculoId);
+    const veiculo = mockVeiculos.find((v: any) => v.id === veiculoId);
     if (!veiculo) return;
 
     if (mode === 'simple') {
@@ -162,7 +166,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
     );
   }
 
-  const veiculosParaExibir = mockVeiculos.filter(v => 
+  const veiculosParaExibir = mockVeiculos.filter((v: any) =>
     veiculosDisponiveis.includes(v.id)
   );
 
@@ -190,7 +194,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
 
       {/* Lista de veículos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {veiculosParaExibir.map(veiculo => {
+        {veiculosParaExibir.map((veiculo: any) => {
           const isSelected = veiculoSelecionadoId === veiculo.id;
           const custo = calcularCustoReserva(veiculo.id, dataInicio, dataFim);
 
@@ -284,7 +288,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
               {typeof value === 'object' ? (
                 <div className="text-sm text-green-700 mt-1">
                   <p className="font-medium">
-                    {mockVeiculos.find(v => v.id === value.veiculoId)?.nome}
+                    {mockVeiculos.find((v: any) => v.id === value.veiculoId)?.nome}
                   </p>
                   <p>Período: {value.dataInicio} às {value.horaInicio} até {value.dataFim} às {value.horaFim}</p>
                   {value.responsavel && <p>Responsável: {value.responsavel}</p>}
@@ -295,7 +299,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
                 </div>
               ) : (
                 <p className="text-sm text-green-700 mt-1">
-                  {mockVeiculos.find(v => v.id === value)?.nome} (ID: {value})
+                  {mockVeiculos.find((v: any) => v.id === value)?.nome} (ID: {value})
                 </p>
               )}
             </div>

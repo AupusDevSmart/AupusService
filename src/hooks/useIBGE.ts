@@ -57,7 +57,7 @@ export function useIBGE(): UseIBGEReturn {
       
       setEstados(estadosOrdenados);
     } catch (error) {
-      console.error('Erro ao buscar estados:', error);
+      // console.error('Erro ao buscar estados:', error);
       setErrorEstados(error instanceof Error ? error.message : 'Erro desconhecido');
     } finally {
       setLoadingEstados(false);
@@ -86,7 +86,7 @@ export function useIBGE(): UseIBGEReturn {
       
       setCidades(cidadesOrdenadas);
     } catch (error) {
-      console.error('Erro ao buscar cidades:', error);
+      // console.error('Erro ao buscar cidades:', error);
       setErrorCidades(error instanceof Error ? error.message : 'Erro desconhecido');
     } finally {
       setLoadingCidades(false);
@@ -131,7 +131,7 @@ export function useEstados() {
       
       setEstados(estadosOrdenados);
     } catch (error) {
-      console.error('Erro ao buscar estados:', error);
+      // console.error('Erro ao buscar estados:', error);
       setError(error instanceof Error ? error.message : 'Erro desconhecido');
     } finally {
       setLoading(false);
@@ -169,7 +169,7 @@ export function useCidades(estadoId: number | null) {
       
       setCidades(cidadesOrdenadas);
     } catch (error) {
-      console.error('Erro ao buscar cidades:', error);
+      // console.error('Erro ao buscar cidades:', error);
       setError(error instanceof Error ? error.message : 'Erro desconhecido');
     } finally {
       setLoading(false);

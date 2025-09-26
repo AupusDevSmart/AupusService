@@ -1,4 +1,4 @@
-// src/features/planos-manutencao/components/PlanosManutencaoPage.tsx - COM PLANEJAR OS
+// src/features/planos-manutencao/components/PlanosManutencaoPage.tsx - CORRIGIDO
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
@@ -22,22 +22,27 @@ import {
   Eye,
   Calendar
 } from 'lucide-react';
-import { useGenericTable } from '@/hooks/useGenericTable';
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { PlanoManutencao, PlanosFilters } from '../types';
 import { planosTableColumns } from '../config/table-config';
 import { planosFilterConfig } from '../config/filter-config';
 import { planosFormFields } from '../config/form-config';
-import { mockPlanosManutencao } from '../data/mock-data';
-import { usePlanosManutencao } from '../hooks/usePlanosManutencao';
+import { usePlanosManutencaoApi } from '../hooks/usePlanosManutencaoApi';
+import { PlanoManutencaoApiResponse, CreatePlanoManutencaoApiData, UpdatePlanoManutencaoApiData } from '@/services/planos-manutencao.services';
 import { SelecionarTarefasModal } from '@/components/common/planejar-os/SelecionarTarefasModal';
 import { planejarOSComPlano } from '@/utils/planejarOS';
+import { TarefasViewSection } from './TarefasViewSection';
 
-const initialFilters: PlanosFilters = {
+interface PlanosFiltersApi {
+  search?: string;
+  status?: 'ATIVO' | 'INATIVO' | 'EM_REVISAO' | 'ARQUIVADO';
+  ativo?: boolean;
+  equipamento_id?: string;
+  page?: number;
+  limit?: number;
+}
+
+const initialFilters: PlanosFiltersApi = {
   search: '',
-  categoria: 'all',
-  ativo: 'all',
-  publico: 'all',
   page: 1,
   limit: 10
 };
@@ -45,71 +50,95 @@ const initialFilters: PlanosFilters = {
 export function PlanosManutencaoPage() {
   const navigate = useNavigate();
   
-  const {
-    paginatedData: planos,
-    pagination,
-    filters,
-    loading,
-    setLoading,
-    handleFilterChange,
-    handlePageChange
-  } = useGenericTable({
-    data: mockPlanosManutencao,
-    initialFilters,
-    searchFields: ['nome', 'descricao', 'categoria', 'criadoPor']
+  // Estados locais
+  const [filters, setFilters] = useState<PlanosFiltersApi>(initialFilters);
+  const [dashboardData, setDashboardData] = useState({
+    total_planos: 0,
+    planos_ativos: 0,
+    planos_inativos: 0,
+    planos_em_revisao: 0,
+    planos_arquivados: 0,
+    equipamentos_com_plano: 0
   });
+
+  // 🔧 NOVO: Estado para armazenar tarefas do plano selecionado
+  const [tarefasPlanoSelecionado, setTarefasPlanoSelecionado] = useState<any[]>([]);
+  const [carregandoTarefas, setCarregandoTarefas] = useState(false);
+
+  // API service
+  const {
+    loading,
+    planos,
+    totalPages,
+    currentPage,
+    total,
+    fetchPlanos,
+    createPlano,
+    updatePlano,
+    deletePlano,
+    getPlano,
+    updateStatus,
+    duplicarPlano,
+    getDashboard
+  } = usePlanosManutencaoApi();
 
   const {
     modalState,
     openModal,
     closeModal
-  } = useGenericModal<PlanoManutencao>();
-
-  const {
-    criarPlano,
-    editarPlano,
-    duplicarPlano,
-    excluirPlano,
-    importarPlano,
-    ativarPlanos,
-    desativarPlanos
-  } = usePlanosManutencao();
+  } = useGenericModal<PlanoManutencaoApiResponse>();
 
   // Estado para modal de seleção de tarefas
   const [showSelecionarTarefasModal, setShowSelecionarTarefasModal] = useState(false);
-  const [planoParaPlanejar, setPlanoParaPlanejar] = useState<PlanoManutencao | null>(null);
+  const [planoParaPlanejar, setPlanoParaPlanejar] = useState<PlanoManutencaoApiResponse | null>(null);
 
-  // Dashboard com cores simplificadas
-  const [stats, setStats] = useState({
-    total: 0,
-    ativos: 0,
-    inativos: 0,
-    totalEquipamentos: 0,
-    totalTarefasGeradas: 0
-  });
-
-  // Calcular estatísticas
+  // Carregar dados iniciais
   useEffect(() => {
-    const total = mockPlanosManutencao.length;
-    const ativos = mockPlanosManutencao.filter(p => p.ativo).length;
-    const inativos = mockPlanosManutencao.filter(p => !p.ativo).length;
-    const totalEquipamentos = mockPlanosManutencao.reduce((acc, p) => acc + (p.totalEquipamentos || 0), 0);
-    const totalTarefasGeradas = mockPlanosManutencao.reduce((acc, p) => acc + (p.totalTarefasGeradas || 0), 0);
-
-    setStats({
-      total,
-      ativos,
-      inativos,
-      totalEquipamentos,
-      totalTarefasGeradas
-    });
+    loadData();
+    loadDashboard();
   }, []);
 
+  // Recarregar quando filtros mudam
+  useEffect(() => {
+    loadData();
+  }, [filters]);
+
+  // 🔧 NOVO: Efeito para carregar tarefas quando modal abre em modo edit
+  useEffect(() => {
+    if (modalState.isOpen && modalState.mode === 'edit' && modalState.entity) {
+      const planoId = modalState.entity.id;
+      console.log('🔄 EFFECT: Modal edit aberto, carregando tarefas para:', planoId);
+      
+      // Se ainda não temos tarefas carregadas, carregar
+      if (tarefasPlanoSelecionado.length === 0 && !carregandoTarefas) {
+        carregarTarefasDoPlano(planoId);
+      }
+    }
+  }, [modalState.isOpen, modalState.mode, modalState.entity, tarefasPlanoSelecionado.length, carregandoTarefas]);
+
+  const loadData = async () => {
+    try {
+      await fetchPlanos(filters);
+    } catch (error) {
+      console.error('Erro ao carregar planos:', error);
+    }
+  };
+
+  const loadDashboard = async () => {
+    try {
+      const dashboard = await getDashboard();
+      setDashboardData(dashboard);
+    } catch (error) {
+      console.error('Erro ao carregar dashboard:', error);
+    }
+  };
+
   const handleSuccess = async () => {
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setLoading(false);
     closeModal();
+    await loadData();
+    await loadDashboard();
+    // 🔧 Limpar tarefas quando fechar modal
+    setTarefasPlanoSelecionado([]);
   };
 
   const handleSubmit = async (data: any) => {
@@ -117,14 +146,64 @@ export function PlanosManutencaoPage() {
     
     try {
       if (modalState.mode === 'create') {
-        await criarPlano(data);
+        const createData: CreatePlanoManutencaoApiData = {
+          equipamento_id: data.equipamento_id,
+          nome: data.nome,
+          descricao: data.descricao,
+          versao: data.versao || '1.0',
+          status: data.status || 'ATIVO',
+          ativo: data.ativo ?? true,
+          data_vigencia_inicio: data.data_vigencia_inicio,
+          data_vigencia_fim: data.data_vigencia_fim,
+          observacoes: data.observacoes,
+          criado_por: data.criado_por
+        };
+        await createPlano(createData);
       } else if (modalState.mode === 'edit' && modalState.entity) {
-        await editarPlano(String(modalState.entity.id), data);
+        const updateData: UpdatePlanoManutencaoApiData = {
+          nome: data.nome,
+          descricao: data.descricao,
+          versao: data.versao,
+          status: data.status,
+          ativo: data.ativo,
+          data_vigencia_inicio: data.data_vigencia_inicio,
+          data_vigencia_fim: data.data_vigencia_fim,
+          observacoes: data.observacoes
+        };
+        await updatePlano(modalState.entity.id, updateData);
       }
       
       await handleSuccess();
     } catch (error) {
       console.error('Erro ao salvar plano:', error);
+    }
+  };
+
+  // 🔧 NOVA FUNÇÃO: Carregar tarefas separadamente
+  const carregarTarefasDoPlano = async (planoId: string) => {
+    try {
+      setCarregandoTarefas(true);
+      console.log('🔍 Carregando tarefas do plano:', planoId);
+      
+      // Buscar plano completo com tarefas
+      const planoCompleto = await getPlano(planoId, true);
+      console.log('📋 Plano completo recebido:', planoCompleto);
+      console.log('📋 Tarefas no plano:', planoCompleto.tarefas);
+      
+      // Verificar se as tarefas existem e são válidas
+      if (planoCompleto.tarefas && Array.isArray(planoCompleto.tarefas)) {
+        setTarefasPlanoSelecionado(planoCompleto.tarefas);
+        console.log('✅ Tarefas carregadas com sucesso:', planoCompleto.tarefas.length);
+      } else {
+        console.log('⚠️ Nenhuma tarefa encontrada no plano ou formato inválido');
+        setTarefasPlanoSelecionado([]);
+      }
+      
+    } catch (error) {
+      console.error('💥 Erro ao carregar tarefas do plano:', error);
+      setTarefasPlanoSelecionado([]);
+    } finally {
+      setCarregandoTarefas(false);
     }
   };
 
@@ -146,36 +225,148 @@ export function PlanosManutencaoPage() {
     
     if (modalState.mode === 'create') {
       return {
-        id: 0,
-        categoria: 'MOTORES_ELETRICOS',
+        id: '',
+        equipamento_id: '',
+        nome: '',
+        descricao: '',
         versao: '1.0',
+        status: 'ATIVO',
         ativo: true,
-        publico: false,
-        tarefasTemplate: []
+        data_vigencia_inicio: '',
+        data_vigencia_fim: '',
+        observacoes: '',
+        criado_por: '',
+        // Campo para o controlador planta/equipamento
+        planta_equipamento: {
+          planta_id: '',
+          equipamento_id: ''
+        }
       };
     }
     
-    return entity;
+    // PARA VIEW/EDIT - MAPEAR OS DADOS DA API
+    if (entity) {
+      console.log('🔍 Entity da API:', entity);
+      
+      // Extrair planta e equipamento da estrutura aninhada
+      const plantaId = entity.equipamento?.planta?.id?.trim() || '';
+      const equipamentoId = entity.equipamento_id?.trim() || '';
+      
+      return {
+        ...entity,
+        // Mapear datas (tratar null)
+        data_vigencia_inicio: entity.data_vigencia_inicio ? 
+          new Date(entity.data_vigencia_inicio).toISOString().split('T')[0] : '',
+        data_vigencia_fim: entity.data_vigencia_fim ? 
+          new Date(entity.data_vigencia_fim).toISOString().split('T')[0] : '',
+        
+        // Campo para o controlador planta/equipamento
+        planta_equipamento: {
+          planta_id: plantaId,
+          equipamento_id: equipamentoId,
+          // Dados para exibição no view
+          planta_nome: entity.equipamento?.planta?.nome || '',
+          equipamento_nome: entity.equipamento?.nome || '',
+          equipamento_tipo: (entity.equipamento as any)?.tipo_equipamento || (entity.equipamento as any)?.tipo || ''
+        }
+      };
+    }
+    
+    // Fallback
+    return { 
+      id: '', 
+      equipamento_id: '',
+      nome: '',
+      descricao: '',
+      versao: '1.0',
+      status: 'ATIVO',
+      ativo: true,
+      data_vigencia_inicio: '',
+      data_vigencia_fim: '',
+      observacoes: '',
+      criado_por: '',
+      planta_equipamento: {
+        planta_id: '',
+        equipamento_id: ''
+      }
+    };
   };
 
-  const handleView = (plano: PlanoManutencao) => {
-    console.log('Clicou em Visualizar:', plano);
+  // 🔧 FUNÇÃO CORRIGIDA: handleView com carregamento separado de tarefas
+  const handleView = async (plano: PlanoManutencaoApiResponse) => {
+    console.log('👁️ Visualizando plano:', plano.id);
+    
+    // Abrir modal primeiro com dados básicos
     openModal('view', plano);
+    
+    // Carregar tarefas separadamente
+    await carregarTarefasDoPlano(plano.id);
   };
 
-  const handleEdit = (plano: PlanoManutencao) => {
-    console.log('Clicou em Editar:', plano);
+  const handleEdit = (plano: PlanoManutencaoApiResponse) => {
+    console.log('✏️ Editando plano:', plano);
     openModal('edit', plano);
+    // Limpar tarefas no modo edit
+    setTarefasPlanoSelecionado([]);
   };
 
-  // NOVA FUNCIONALIDADE: Planejar OS
-  const handlePlanejarOS = (plano: PlanoManutencao) => {
+  const handleDelete = async (plano: PlanoManutencaoApiResponse) => {
+    if (confirm(`Tem certeza que deseja excluir o plano "${plano.nome}"?`)) {
+      try {
+        await deletePlano(plano.id);
+        await loadData();
+        await loadDashboard();
+      } catch (error) {
+        console.error('Erro ao excluir plano:', error);
+      }
+    }
+  };
+
+  const handleToggleStatus = async (plano: PlanoManutencaoApiResponse) => {
+    try {
+      const newStatus = plano.ativo ? 'INATIVO' : 'ATIVO';
+      console.log('🔄 Alterando status do plano:', plano.id, 'para:', newStatus);
+      
+      await updateStatus(plano.id, { status: newStatus });
+      await loadData();
+      await loadDashboard();
+      
+      console.log('✅ Status alterado com sucesso para:', newStatus);
+    } catch (error: any) {
+      console.error('💥 Erro ao alterar status:', error);
+      alert('Erro ao alterar status do plano. Verifique o console para mais detalhes.');
+    }
+  };
+
+  const handleDuplicar = async (plano: PlanoManutencaoApiResponse) => {
+    try {
+      await duplicarPlano(plano.id, {
+        equipamento_destino_id: plano.equipamento_id,
+        novo_nome: `${plano.nome} - Cópia`,
+        criado_por: 'usuario-atual'
+      });
+      await loadData();
+      await loadDashboard();
+    } catch (error) {
+      console.error('Erro ao duplicar plano:', error);
+    }
+  };
+
+  const handleFilterChange = (newFilters: Partial<PlanosFiltersApi>) => {
+    setFilters(prev => ({ ...prev, ...newFilters, page: 1 }));
+  };
+
+  const handlePageChange = (page: number) => {
+    setFilters(prev => ({ ...prev, page }));
+  };
+
+  // FUNCIONALIDADES: Planejar OS
+  const handlePlanejarOS = (plano: PlanoManutencaoApiResponse) => {
     console.log('📋 Iniciando planejamento de OS para plano:', plano.id);
     setPlanoParaPlanejar(plano);
     setShowSelecionarTarefasModal(true);
   };
 
-  // NOVA FUNCIONALIDADE: Confirmar seleção de tarefas e navegar para OS
   const handleConfirmarSelecaoTarefas = (tarefasSelecionadas: any[], equipamentosSelecionados: number[]) => {
     if (planoParaPlanejar) {
       console.log('✅ Confirmando seleção:', {
@@ -184,80 +375,42 @@ export function PlanosManutencaoPage() {
         equipamentos: equipamentosSelecionados.length
       });
       
-      // Fechar modal
       setShowSelecionarTarefasModal(false);
-      
-      // Navegar para programação com dados pré-selecionados
       planejarOSComPlano(planoParaPlanejar as any, tarefasSelecionadas, equipamentosSelecionados, navigate);
-      
-      // Limpar estado
       setPlanoParaPlanejar(null);
     }
   };
 
-  // Navegar para associação
-  const handleAssociarEquipamentos = (plano: PlanoManutencao) => {
-    console.log('Navegando para associação do plano:', plano.id);
+  // Navegações
+  const handleAssociarEquipamentos = (plano: PlanoManutencaoApiResponse) => {
+    console.log('🔗 Navegando para associação do plano:', plano.id);
     navigate(`/planos-manutencao/associar?planoId=${plano.id}`);
   };
 
-  // Ver tarefas geradas
-  const handleVerTarefas = (plano: PlanoManutencao) => {
-    console.log('Navegando para tarefas do plano:', plano.id);
+  const handleVerTarefas = (plano: PlanoManutencaoApiResponse) => {
+    console.log('📋 Navegando para tarefas do plano:', plano.id);
     navigate(`/tarefas?planoId=${plano.id}`);
   };
 
-  // Ações personalizadas para planos
-  const handleDuplicar = async (plano: PlanoManutencao) => {
-    console.log('Duplicando plano:', plano.id);
-    try {
-      await duplicarPlano(String(plano.id));
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setLoading(false);
-    } catch (error) {
-      console.error('Erro ao duplicar plano:', error);
-    }
-  };
-
-  const handleAtivar = async (plano: PlanoManutencao) => {
-    console.log('Ativando plano:', plano.id);
-    await ativarPlanos([String(plano.id)]);
-  };
-
-  const handleDesativar = async (plano: PlanoManutencao) => {
-    console.log('Desativando plano:', plano.id);
-    await desativarPlanos([String(plano.id)]);
-  };
-
-  const handleExcluir = async (plano: PlanoManutencao) => {
-    console.log('Excluindo plano:', plano.id);
-    try {
-      const sucesso = await excluirPlano(String(plano.id));
-      if (sucesso) {
-        setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setLoading(false);
-      }
-    } catch (error) {
-      console.error('Erro ao excluir plano:', error);
-      alert(error instanceof Error ? error.message : 'Erro desconhecido');
-    }
-  };
-
   const handleExportar = async () => {
-    console.log('Exportando planos...');
+    console.log('📤 Exportando planos...');
+    // TODO: Implementar exportação via API
   };
 
   const handleImportar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      console.log('Importando planos...');
-      const resultado = await importarPlano(file);
-      console.log('Resultado da importação:', resultado);
-      
+      console.log('📥 Importando planos...');
+      // TODO: Implementar importação via API
       event.target.value = '';
     }
+  };
+
+  // 🔧 FUNÇÃO para fechar modal e limpar dados
+  const handleCloseModal = () => {
+    closeModal();
+    setTarefasPlanoSelecionado([]);
+    setCarregandoTarefas(false);
   };
 
   return (
@@ -270,59 +423,55 @@ export function PlanosManutencaoPage() {
             description="Gerencie templates de manutenção para equipamentos similares"
           />
           
-          {/* Dashboard Simplificado - APENAS 5 CARDS */}
+          {/* Dashboard Simplificado */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            {/* Total - Neutro */}
+            {/* Cards do dashboard... (mantém o código original) */}
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
               <div className="flex items-center gap-3">
                 <Layers className="h-5 w-5 text-gray-600" />
                 <div>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{dashboardData.total_planos}</p>
                   <p className="text-xs text-gray-600 dark:text-gray-400">Total</p>
                 </div>
               </div>
             </div>
             
-            {/* Ativos - Verde */}
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
               <div className="flex items-center gap-3">
                 <CheckCircle className="h-5 w-5 text-green-600" />
                 <div>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.ativos}</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{dashboardData.planos_ativos}</p>
                   <p className="text-xs text-gray-600 dark:text-gray-400">Ativos</p>
                 </div>
               </div>
             </div>
             
-            {/* Inativos - Amarelo */}
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
               <div className="flex items-center gap-3">
                 <XCircle className="h-5 w-5 text-amber-600" />
                 <div>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.inativos}</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{dashboardData.planos_inativos}</p>
                   <p className="text-xs text-gray-600 dark:text-gray-400">Inativos</p>
                 </div>
               </div>
             </div>
             
-            {/* Equipamentos - Azul */}
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
               <div className="flex items-center gap-3">
                 <Users className="h-5 w-5 text-blue-600" />
                 <div>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalEquipamentos}</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{dashboardData.equipamentos_com_plano}</p>
                   <p className="text-xs text-gray-600 dark:text-gray-400">Equipamentos</p>
                 </div>
               </div>
             </div>
             
-            {/* Tarefas - Azul */}
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
               <div className="flex items-center gap-3">
                 <FileText className="h-5 w-5 text-blue-600" />
                 <div>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalTarefasGeradas}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Tarefas</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{dashboardData.planos_em_revisao + dashboardData.planos_arquivados}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Outros</p>
                 </div>
               </div>
             </div>
@@ -367,8 +516,8 @@ export function PlanosManutencaoPage() {
             </div>
           </div>
 
-          {/* Alertas Simplificados */}
-          {stats.inativos > 0 && (
+          {/* Alertas */}
+          {dashboardData.planos_inativos > 0 && (
             <div className="mb-6">
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-950 dark:border-amber-800">
                 <div className="flex items-center gap-3">
@@ -378,7 +527,7 @@ export function PlanosManutencaoPage() {
                       Planos Inativos
                     </h4>
                     <p className="text-sm text-amber-700 dark:text-amber-300">
-                      {stats.inativos} plano(s) inativo(s) não estão gerando tarefas para equipamentos.
+                      {dashboardData.planos_inativos} plano(s) inativo(s) não estão gerando tarefas para equipamentos.
                     </p>
                   </div>
                 </div>
@@ -391,11 +540,17 @@ export function PlanosManutencaoPage() {
             <BaseTable
               data={planos}
               columns={planosTableColumns}
-              pagination={pagination}
+              pagination={{
+                page: currentPage,
+                limit: filters.limit || 10,
+                total,
+                totalPages
+              }}
               loading={loading}
               onPageChange={handlePageChange}
               onView={handleView}
               onEdit={handleEdit}
+              onDelete={handleDelete}
               emptyMessage="Nenhum plano de manutenção encontrado."
               emptyIcon={<Layers className="h-8 w-8 text-muted-foreground/50" />}
               customActions={[
@@ -403,7 +558,7 @@ export function PlanosManutencaoPage() {
                   key: 'planejar_os',
                   label: 'Planejar OS',
                   handler: handlePlanejarOS,
-                  condition: (item: PlanoManutencao) => item.ativo && (item.totalEquipamentos || 0) > 0,
+                  condition: (item: PlanoManutencaoApiResponse) => item.ativo && (item.total_tarefas || 0) > 0,
                   icon: <Calendar className="h-4 w-4" />,
                   variant: 'default'
                 },
@@ -418,7 +573,7 @@ export function PlanosManutencaoPage() {
                   key: 'ver_tarefas',
                   label: 'Ver Tarefas',
                   handler: handleVerTarefas,
-                  condition: (item: PlanoManutencao) => (item.totalTarefasGeradas || 0) > 0,
+                  condition: (item: PlanoManutencaoApiResponse) => (item.total_tarefas || 0) > 0,
                   icon: <Eye className="h-4 w-4" />
                 },
                 {
@@ -428,32 +583,17 @@ export function PlanosManutencaoPage() {
                   icon: <Copy className="h-4 w-4" />
                 },
                 {
-                  key: 'ativar',
-                  label: 'Ativar',
-                  handler: handleAtivar,
-                  condition: (item: PlanoManutencao) => !item.ativo,
-                  icon: <CheckCircle className="h-4 w-4" />
-                },
-                {
-                  key: 'desativar',
-                  label: 'Desativar',
-                  handler: handleDesativar,
-                  condition: (item: PlanoManutencao) => item.ativo,
+                  key: 'toggle_status',
+                  label: 'Ativar/Desativar',
+                  handler: handleToggleStatus,
                   icon: <XCircle className="h-4 w-4" />
-                },
-                {
-                  key: 'excluir',
-                  label: 'Excluir',
-                  handler: handleExcluir,
-                  condition: (item: PlanoManutencao) => (item.totalEquipamentos || 0) === 0,
-                  variant: 'destructive'
                 }
               ]}
             />
           </div>
         </div>
 
-        {/* Modal Principal */}
+        {/* 🔧 MODAL PRINCIPAL CORRIGIDO */}
         <BaseModal
           isOpen={modalState.isOpen}
           mode={modalState.mode}
@@ -461,15 +601,46 @@ export function PlanosManutencaoPage() {
           title={getModalTitle()}
           icon={getModalIcon()}
           formFields={planosFormFields}
-          onClose={closeModal}
+          onClose={handleCloseModal}
           onSubmit={handleSubmit}
-          width="w-[1000px]"
+          width="w-[1200px]"
           groups={[
-            { key: 'informacoes_basicas', title: 'Informações Básicas' },
-            { key: 'configuracoes', title: 'Configurações' },
-            { key: 'tarefas_template', title: 'Templates de Tarefas' }
+            {
+              key: 'informacoes_basicas',
+              title: 'Informações Básicas',
+              fields: ['planta_equipamento', 'equipamento_id', 'nome', 'descricao', 'versao']
+            },
+            {
+              key: 'configuracoes',
+              title: 'Configurações',
+              fields: ['status', 'ativo', 'data_vigencia_inicio', 'data_vigencia_fim', 'observacoes', 'criado_por']
+            }
           ]}
-        />
+        >
+          {/* 🔧 SEÇÃO DE TAREFAS CORRIGIDA - Nos modos view e edit */}
+          {(modalState.mode === 'view' || modalState.mode === 'edit') && (
+            <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+              {/* Debug info - remover em produção */}
+              <div className="mb-4 p-2 bg-blue-50 dark:bg-blue-950 rounded text-xs">
+                <div>Modo: {modalState.mode}</div>
+                <div>Carregando: {carregandoTarefas ? 'Sim' : 'Não'}</div>
+                <div>Total tarefas: {tarefasPlanoSelecionado.length}</div>
+                <div>Tarefas (sample): {JSON.stringify(tarefasPlanoSelecionado.slice(0, 1))}</div>
+              </div>
+              
+              {carregandoTarefas ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-3"></div>
+                  <span className="text-gray-600 dark:text-gray-400">Carregando tarefas...</span>
+                </div>
+              ) : (
+                <TarefasViewSection 
+                  tarefas={tarefasPlanoSelecionado}
+                />
+              )}
+            </div>
+          )}
+        </BaseModal>
 
         {/* Modal de Seleção de Tarefas */}
         <SelecionarTarefasModal

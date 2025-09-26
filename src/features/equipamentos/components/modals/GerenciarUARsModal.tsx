@@ -1,8 +1,9 @@
-// src/features/equipamentos/components/modals/GerenciarUARsModal.tsx
+// src/features/equipamentos/components/modals/GerenciarUARsModal.tsx - TOTALMENTE CORRIGIDO
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Select, 
   SelectContent, 
@@ -13,6 +14,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -27,10 +29,13 @@ import {
   Eye,
   Calendar,
   MapPin,
-  Settings
+  Settings,
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { Equipamento } from '../../types';
 import { ComponenteUARModal } from './ComponenteUARModal';
+import { useEquipamentos } from '../../hooks/useEquipamentos';
 
 // Tipos específicos para componentes UAR
 const TIPOS_COMPONENTES_UAR = [
@@ -60,11 +65,11 @@ interface GerenciarUARsModalProps {
   isOpen: boolean;
   equipamentoUC: Equipamento | null;
   onClose: () => void;
-  onSave: (uars: Equipamento[]) => void;
+  onSave: (uars: Equipamento[]) => Promise<void>;
 }
 
 interface UARFormData {
-  id?: number;
+  id?: string; // CORRIGIDO: string em vez de number
   nome: string;
   tipo: string;
   modelo: string;
@@ -82,6 +87,12 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
   onClose,
   onSave
 }) => {
+  const { 
+    loading, 
+    error,
+    fetchComponentesParaGerenciar 
+  } = useEquipamentos();
+
   const [uarsLista, setUarsLista] = useState<Equipamento[]>([]);
   const [modoFormulario, setModoFormulario] = useState<'lista' | 'novo' | 'editar'>('lista');
   const [uarEditando, setUarEditando] = useState<Equipamento | null>(null);
@@ -96,6 +107,8 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
     criticidade: '3',
     observacoes: ''
   });
+  const [loadingData, setLoadingData] = useState(false);
+  const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
   // Modal detalhado para UAR
   const [modalUARDetalhes, setModalUARDetalhes] = useState({
@@ -104,54 +117,37 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
     entity: null as Equipamento | null
   });
 
+  // Carregar componentes quando o modal abre
   useEffect(() => {
     if (equipamentoUC && isOpen) {
-      // Buscar UARs existentes do equipamento UC
-      // Em uma aplicação real, isso seria uma chamada API
-      const uarsExistentes = mockUARsByUC(equipamentoUC.id);
-      setUarsLista(uarsExistentes);
+      loadComponentes();
     }
     
-    // Reset do formulário ao abrir
+    // Reset estados
     setModoFormulario('lista');
     setUarEditando(null);
     resetFormulario();
+    setErrorLocal(null);
   }, [equipamentoUC, isOpen]);
 
-  // Mock de UARs para demonstração
-  const mockUARsByUC = (ucId: number): Equipamento[] => {
-    const mockUARs = [
-      {
-        id: 101,
-        nome: 'Sensor de Temperatura Motor',
-        classificacao: 'UAR' as const,
-        tipo: 'sensor_temperatura',
-        modelo: 'SITRANS T',
-        fabricante: 'Siemens',
-        criticidade: '4' as const,
-        dataInstalacao: '2024-01-15',
-        localizacaoEspecifica: 'Mancal lado acionamento',
-        planoManutencao: 'PM-001',
-        equipamentoPaiId: ucId,
-        criadoEm: '2024-01-15T10:30:00Z'
-      },
-      {
-        id: 102,
-        nome: 'Sensor de Vibração',
-        classificacao: 'UAR' as const,
-        tipo: 'sensor_vibracao',
-        modelo: 'CMSS 2200',
-        fabricante: 'SKF',
-        criticidade: '3' as const,
-        dataInstalacao: '2024-01-15',
-        localizacaoEspecifica: 'Base do motor',
-        planoManutencao: 'PM-002',
-        equipamentoPaiId: ucId,
-        criadoEm: '2024-01-15T11:00:00Z'
-      }
-    ];
-    
-    return mockUARs.filter(uar => uar.equipamentoPaiId === ucId);
+  const loadComponentes = async () => {
+    if (!equipamentoUC) return;
+
+    try {
+      setLoadingData(true);
+      setErrorLocal(null);
+      
+      const ucId = equipamentoUC.id; // USA ID STRING DIRETAMENTE
+      const result = await fetchComponentesParaGerenciar(ucId);
+      
+      setUarsLista(result.componentes);
+      
+    } catch (err) {
+      setErrorLocal('Erro ao carregar componentes');
+      console.error('Erro ao carregar componentes:', err);
+    } finally {
+      setLoadingData(false);
+    }
   };
 
   const resetFormulario = () => {
@@ -180,7 +176,7 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
   const handleEditarUAR = (uar: Equipamento) => {
     setUarEditando(uar);
     setNovoUARData({
-      id: uar.id,
+      id: uar.id, // ID JÁ É STRING
       nome: uar.nome,
       tipo: uar.tipo || '',
       modelo: uar.modelo || '',
@@ -202,7 +198,7 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
     });
   };
 
-  const handleRemoverUAR = (uarId: number) => {
+  const handleRemoverUAR = (uarId: string) => { // CORRIGIDO: string em vez de number
     if (confirm('Tem certeza que deseja remover este componente UAR?')) {
       setUarsLista(prev => prev.filter(uar => uar.id !== uarId));
     }
@@ -221,7 +217,7 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
 
     if (modoFormulario === 'novo') {
       const novoUAR: Equipamento = {
-        id: Date.now(), // Em produção, seria gerado pelo backend
+        id: `temp_${Date.now()}`, // GERAR ID TEMPORÁRIO COMO STRING
         nome: novoUARData.nome.trim(),
         classificacao: 'UAR',
         tipo: novoUARData.tipo,
@@ -233,13 +229,20 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
         planoManutencao: novoUARData.planoManutencao?.trim(),
         observacoes: novoUARData.observacoes?.trim(),
         equipamentoPaiId: equipamentoUC!.id,
-        equipamentoPai: equipamentoUC!,
+        equipamentoPai: {
+          id: equipamentoUC!.id,
+          nome: equipamentoUC!.nome,
+          classificacao: 'UC',
+          criticidade: equipamentoUC!.criticidade,
+          criadoEm: equipamentoUC!.criadoEm || new Date().toISOString()
+        },
         // Herdar dados do UC pai
         plantaId: equipamentoUC!.plantaId,
         proprietarioId: equipamentoUC!.proprietarioId,
         planta: equipamentoUC!.planta,
         proprietario: equipamentoUC!.proprietario,
-        criadoEm: new Date().toISOString()
+        criadoEm: new Date().toISOString(),
+        totalComponentes: 0
       };
 
       setUarsLista(prev => [...prev, novoUAR]);
@@ -254,7 +257,8 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
         dataInstalacao: novoUARData.dataInstalacao,
         localizacaoEspecifica: novoUARData.localizacaoEspecifica?.trim(),
         planoManutencao: novoUARData.planoManutencao?.trim(),
-        observacoes: novoUARData.observacoes?.trim()
+        observacoes: novoUARData.observacoes?.trim(),
+        atualizadoEm: new Date().toISOString()
       };
 
       setUarsLista(prev => prev.map(uar => 
@@ -274,9 +278,13 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
     setUarEditando(null);
   };
 
-  const handleSalvarTodos = () => {
-    onSave(uarsLista);
-    onClose();
+  const handleSalvarTodos = async () => {
+    try {
+      await onSave(uarsLista);
+      onClose();
+    } catch (err) {
+      console.error('Erro ao salvar componentes:', err);
+    }
   };
 
   const getCriticidadeConfig = (criticidade: string) => {
@@ -356,7 +364,7 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
 
         <div>
           <label className="text-sm font-medium">Criticidade</label>
-          <Select value={novoUARData.criticidade} onValueChange={(value) => handleFieldChange('criticidade', value)}>
+          <Select value={novoUARData.criticidade} onValueChange={(value) => handleFieldChange('criticidade', value as any)}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -413,7 +421,23 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
         </Button>
       </div>
 
-      {uarsLista.length === 0 ? (
+      {loadingData && (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          Carregando componentes...
+        </div>
+      )}
+
+      {errorLocal && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {errorLocal}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!loadingData && !errorLocal && uarsLista.length === 0 && (
         <div className="text-center py-12 bg-muted/30 rounded-lg border border-dashed">
           <Component className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
           <h4 className="font-medium text-muted-foreground mb-2">Nenhum componente UAR</h4>
@@ -425,7 +449,9 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
             Adicionar Primeiro UAR
           </Button>
         </div>
-      ) : (
+      )}
+
+      {!loadingData && !errorLocal && uarsLista.length > 0 && (
         <div className="grid grid-cols-1 gap-4">
           {uarsLista.map((uar) => {
             const criticidadeConfig = getCriticidadeConfig(uar.criticidade);
@@ -533,10 +559,22 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
               Gerenciar Componentes UAR
               <Component className="h-5 w-5" />
             </DialogTitle>
-            <div className="text-orange-100 text-sm">
+            <DialogDescription className="text-orange-100 text-sm">
               Equipamento: <span className="font-medium">{equipamentoUC.nome}</span>
-            </div>
+              {equipamentoUC.fabricante && ` • ${equipamentoUC.fabricante}`}
+              {equipamentoUC.modelo && ` - ${equipamentoUC.modelo}`}
+            </DialogDescription>
           </DialogHeader>
+
+          {/* Alerta de erro global */}
+          {error && (
+            <Alert variant="destructive" className="mx-6 mt-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {error}
+              </AlertDescription>
+            </Alert>
+          )}
 
           <div className="flex-1 overflow-y-auto p-6">
             {modoFormulario === 'lista' ? renderListaUARs() : renderFormularioUAR()}
@@ -551,8 +589,16 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
               <Button variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button onClick={handleSalvarTodos} className="bg-green-600 hover:bg-green-700">
-                <Save className="h-4 w-4 mr-2" />
+              <Button 
+                onClick={handleSalvarTodos} 
+                className="bg-green-600 hover:bg-green-700"
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
                 Salvar Todos ({uarsLista.length})
               </Button>
             </div>

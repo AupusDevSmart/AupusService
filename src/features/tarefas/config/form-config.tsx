@@ -4,212 +4,33 @@ import { FormField, FormFieldProps } from '@/types/base';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Upload, 
-  X, 
+import {
   Plus,
-  Wrench,
   CheckSquare,
   Package,
   Trash2,
-  Layers,
-  AlertTriangle
+  Layers
 } from 'lucide-react';
-import { useEquipamentos } from '@/features/equipamentos/hooks/useEquipamentos';
-import { SubTarefa, RecursoTarefa } from '../types';
+// import { SubTarefa, RecursoTarefa } from '../types';
 
-// ✅ COMPONENTE: Seleção hierárquica Planta → Equipamento
-const LocalizacaoController = ({ value, onChange, disabled, entity, mode }: FormFieldProps & { entity?: any; mode?: string }) => {
-  const { plantas, getEquipamentosUCByPlanta, getEquipamentoById } = useEquipamentos();
-  
-  const [plantaId, setPlantaId] = React.useState(((entity as any)?.plantaId || (value as any)?.plantaId)?.toString() || '');
-  const [equipamentoId, setEquipamentoId] = React.useState(((entity as any)?.equipamentoId || (value as any)?.equipamentoId)?.toString() || '');
 
-  // Equipamentos UC filtrados pela planta selecionada
-  const equipamentosDisponiveis = plantaId ? 
-    getEquipamentosUCByPlanta(Number(plantaId)) : [];
-
-  const handlePlantaChange = (newPlantaId: string) => {
-    setPlantaId(newPlantaId);
-    setEquipamentoId('');
-    
-    onChange({
-      plantaId: Number(newPlantaId),
-      equipamentoId: null
-    });
-  };
-
-  const handleEquipamentoChange = (newEquipamentoId: string) => {
-    setEquipamentoId(newEquipamentoId);
-    
-    onChange({
-      plantaId: Number(plantaId),
-      equipamentoId: Number(newEquipamentoId)
-    });
-  };
-
-  // Mostrar alerta se a tarefa veio de um plano (não deve alterar localização)
-  const tarefaDeAnanoPlano = entity?.origemPlano;
-
-  return (
-    <div className="space-y-4">
-      {/* Alerta para tarefas de planos */}
-      {tarefaDeAnanoPlano && mode === 'edit' && (
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-950 dark:border-amber-800">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <p className="text-sm text-amber-700 dark:text-amber-300">
-              Esta tarefa foi gerada de um plano. Alterar a localização pode dessincronizá-la.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Planta */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">
-          Planta/Local <span className="text-red-500">*</span>
-        </label>
-        <select
-          value={plantaId}
-          onChange={(e) => handlePlantaChange(e.target.value)}
-          disabled={disabled}
-          className="w-full p-2 border rounded-md bg-background text-foreground"
-          required
-        >
-          <option value="">Selecione a planta...</option>
-          {plantas.map(planta => (
-            <option key={planta.id} value={planta.id.toString()}>
-              {planta.nome}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Equipamento */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">
-          Equipamento <span className="text-red-500">*</span>
-        </label>
-        <select
-          value={equipamentoId}
-          onChange={(e) => handleEquipamentoChange(e.target.value)}
-          disabled={disabled || !plantaId}
-          className="w-full p-2 border rounded-md bg-background text-foreground"
-          required
-        >
-          <option value="">
-            {plantaId ? "Selecione o equipamento..." : "Primeiro selecione uma planta"}
-          </option>
-          {equipamentosDisponiveis.map(equipamento => (
-            <option key={equipamento.id} value={equipamento.id.toString()}>
-              {equipamento.nome} - {equipamento.tipo}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Preview do equipamento selecionado */}
-      {equipamentoId && (
-        <div className="mt-4 p-4 bg-muted/50 rounded-lg border">
-          <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-            <Wrench className="h-4 w-4" />
-            Equipamento Selecionado:
-          </h4>
-          {(() => {
-            const item = getEquipamentoById(Number(equipamentoId));
-            
-            if (!item) return null;
-            
-            return (
-              <div className="space-y-2">
-                <p className="font-medium">{item.nome}</p>
-                <p className="text-sm text-muted-foreground">{item.tipo}</p>
-                <p className="text-sm text-muted-foreground">Localização: {item.localizacao}</p>
-              </div>
-            );
-          })()}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ✅ COMPONENTE: Frequência personalizada
-const FrequenciaController = ({ value, onChange, disabled }: FormFieldProps) => {
-  const [frequencia, setFrequencia] = React.useState((value as any)?.frequencia || 'MENSAL');
-  const [frequenciaPersonalizada, setFrequenciaPersonalizada] = React.useState((value as any)?.frequenciaPersonalizada || 30);
-
-  const handleFrequenciaChange = (newFrequencia: string) => {
-    setFrequencia(newFrequencia);
-    onChange({
-      frequencia: newFrequencia,
-      frequenciaPersonalizada: newFrequencia === 'PERSONALIZADA' ? frequenciaPersonalizada : undefined
-    });
-  };
-
-  const handleFrequenciaPersonalizadaChange = (dias: number) => {
-    setFrequenciaPersonalizada(dias);
-    onChange({
-      frequencia,
-      frequenciaPersonalizada: dias
-    });
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <select
-          value={frequencia}
-          onChange={(e) => handleFrequenciaChange(e.target.value)}
-          disabled={disabled}
-          className="w-full p-2 border rounded-md bg-background text-foreground"
-          required
-        >
-          <option value="DIARIA">Diária</option>
-          <option value="SEMANAL">Semanal</option>
-          <option value="QUINZENAL">Quinzenal</option>
-          <option value="MENSAL">Mensal</option>
-          <option value="BIMESTRAL">Bimestral</option>
-          <option value="TRIMESTRAL">Trimestral</option>
-          <option value="SEMESTRAL">Semestral</option>
-          <option value="ANUAL">Anual</option>
-          <option value="PERSONALIZADA">Personalizada</option>
-        </select>
-      </div>
-
-      {frequencia === 'PERSONALIZADA' && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Periodicidade (dias) <span className="text-red-500">*</span>
-          </label>
-          <Input
-            type="number"
-            value={frequenciaPersonalizada}
-            onChange={(e) => handleFrequenciaPersonalizadaChange(Number(e.target.value))}
-            disabled={disabled}
-            min={1}
-            max={9999}
-            placeholder="Ex: 45"
-          />
-          <p className="text-xs text-muted-foreground">
-            A tarefa será executada a cada {frequenciaPersonalizada} dias
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
 
 // ✅ COMPONENTE: Sub-tarefas (Checklist)
 const SubTarefasController = ({ value, onChange, disabled }: FormFieldProps) => {
-  const [subTarefas, setSubTarefas] = React.useState<Omit<SubTarefa, 'id'>[]>(Array.isArray(value) ? value : []);
+  const [subTarefas, setSubTarefas] = React.useState<any[]>(Array.isArray(value) ? value : []);
+
+  // Atualizar quando o value muda (importante para modos view/edit)
+  React.useEffect(() => {
+    if (Array.isArray(value)) {
+      setSubTarefas(value);
+    }
+  }, [value]);
 
   const adicionarSubTarefa = () => {
     const novaSubTarefa = {
       descricao: '',
       obrigatoria: false,
-      tempoEstimado: 0,
+      tempo_estimado: 0,
       ordem: subTarefas.length + 1
     };
     const novasSubTarefas = [...subTarefas, novaSubTarefa];
@@ -282,8 +103,8 @@ const SubTarefasController = ({ value, onChange, disabled }: FormFieldProps) => 
                     <span className="text-sm">Tempo (min):</span>
                     <Input
                       type="number"
-                      value={subTarefa.tempoEstimado || ''}
-                      onChange={(e) => atualizarSubTarefa(index, 'tempoEstimado', Number(e.target.value))}
+                      value={subTarefa.tempo_estimado || ''}
+                      onChange={(e) => atualizarSubTarefa(index, 'tempo_estimado', Number(e.target.value))}
                       disabled={disabled}
                       className="w-20"
                       min={0}
@@ -312,13 +133,20 @@ const SubTarefasController = ({ value, onChange, disabled }: FormFieldProps) => 
 
 // ✅ COMPONENTE: Recursos necessários
 const RecursosController = ({ value, onChange, disabled }: FormFieldProps) => {
-  const [recursos, setRecursos] = React.useState<Omit<RecursoTarefa, 'id'>[]>(Array.isArray(value) ? value : []);
+  const [recursos, setRecursos] = React.useState<any[]>(Array.isArray(value) ? value : []);
+
+  // Atualizar quando o value muda (importante para modos view/edit)
+  React.useEffect(() => {
+    if (Array.isArray(value)) {
+      setRecursos(value);
+    }
+  }, [value]);
 
   const adicionarRecurso = () => {
     const novoRecurso = {
       tipo: 'MATERIAL' as const,
       descricao: '',
-      quantidade: 1,
+      quantidade: '1',
       unidade: '',
       obrigatorio: false
     };
@@ -403,12 +231,12 @@ const RecursosController = ({ value, onChange, disabled }: FormFieldProps) => {
                   <div className="flex items-center gap-2">
                     <span className="text-sm">Qtd:</span>
                     <Input
-                      type="number"
+                      type="text"
                       value={recurso.quantidade || ''}
-                      onChange={(e) => atualizarRecurso(index, 'quantidade', Number(e.target.value))}
+                      onChange={(e) => atualizarRecurso(index, 'quantidade', e.target.value)}
                       disabled={disabled}
                       className="w-20 text-sm"
-                      min={0}
+                      placeholder="Ex: 25"
                     />
                   </div>
                   
@@ -453,97 +281,6 @@ const RecursosController = ({ value, onChange, disabled }: FormFieldProps) => {
   );
 };
 
-// ✅ COMPONENTE: Upload de Anexos
-const AnexosUpload = ({ value, onChange, disabled }: FormFieldProps) => {
-  const [arquivos, setArquivos] = React.useState<File[]>(Array.isArray(value) ? value : []);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    const novosArquivos = [...arquivos, ...files];
-    setArquivos(novosArquivos);
-    onChange(novosArquivos);
-  };
-
-  const removerArquivo = (index: number) => {
-    const novosArquivos = arquivos.filter((_, i) => i !== index);
-    setArquivos(novosArquivos);
-    onChange(novosArquivos);
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-        <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground mb-2">
-          Manuais, procedimentos, modelos de relatório
-        </p>
-        <input
-          type="file"
-          multiple
-          accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
-          onChange={handleFileChange}
-          disabled={disabled}
-          className="hidden"
-          id="anexos-upload-tarefa"
-        />
-        <label
-          htmlFor="anexos-upload-tarefa"
-          className={`inline-flex items-center gap-2 px-4 py-2 text-sm border rounded-md cursor-pointer hover:bg-muted ${
-            disabled ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-        >
-          <Upload className="h-4 w-4" />
-          Selecionar Arquivos
-        </label>
-        <p className="text-xs text-muted-foreground mt-2">
-          PDF, DOC, XLS, TXT até 10MB cada
-        </p>
-      </div>
-
-      {arquivos.length > 0 && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Arquivos Selecionados ({arquivos.length})</label>
-          <div className="space-y-2">
-            {arquivos.map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-2 border rounded"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatFileSize(file.size)}
-                    </p>
-                  </div>
-                </div>
-                {!disabled && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removerArquivo(index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 // ✅ COMPONENTE: Informações de Origem do Plano (apenas visualização)
 const OrigemPlanoInfo = ({ entity }: { entity?: any }) => {
@@ -599,17 +336,31 @@ export const tarefasFormFields: FormField[] = [
     type: 'custom',
     required: false,
     render: ({ entity }) => <OrigemPlanoInfo entity={entity} />,
-    showOnlyOnMode: ['view', 'edit'], // Só aparece quando visualizando/editando
-    condition: (entity) => !!entity?.origemPlano // Só aparece se veio de plano
+    condition: (entity) => !!entity?.plano_manutencao, // Só aparece se veio de plano
+    excludeFromSubmit: true // ✅ NOVO: Excluir este campo do envio à API
   },
 
   // Informações Básicas
   {
+    key: 'plano_manutencao_id',
+    label: 'Plano de Manutenção',
+    type: 'select',
+    required: true,
+    options: [], // Será carregado dinamicamente
+  },
+  {
     key: 'tag',
     label: 'TAG da Tarefa',
     type: 'text',
+    required: false, // Auto-gerado se não fornecido
+    placeholder: 'Ex: COM-LUB-001 (auto-gerado se vazio)',
+  },
+  {
+    key: 'nome',
+    label: 'Nome da Tarefa',
+    type: 'text',
     required: true,
-    placeholder: 'Ex: MNT-001, LUB-002, INSP-003',
+    placeholder: 'Ex: Lubrificação Completa do Compressor',
   },
   {
     key: 'descricao',
@@ -621,19 +372,18 @@ export const tarefasFormFields: FormField[] = [
 
   // Localização
   {
-    key: 'localizacao',
-    label: 'Localização',
-    type: 'custom',
-    required: true,
-    render: ({ value, onChange, disabled, entity, mode }) => (
-      <LocalizacaoController 
-        value={value} 
-        onChange={onChange} 
-        disabled={disabled}
-        entity={entity}
-        mode={mode}
-      />
-    ),
+    key: 'planta_id',
+    label: 'Planta',
+    type: 'select',
+    required: false,
+    options: [], // Será carregado dinamicamente
+  },
+  {
+    key: 'equipamento_id',
+    label: 'Equipamento',
+    type: 'select',
+    required: false,
+    options: [], // Será carregado dinamicamente
   },
 
   // Classificação
@@ -654,7 +404,7 @@ export const tarefasFormFields: FormField[] = [
     ],
   },
   {
-    key: 'tipoManutencao',
+    key: 'tipo_manutencao',
     label: 'Tipo de Manutenção',
     type: 'select',
     required: true,
@@ -680,7 +430,7 @@ export const tarefasFormFields: FormField[] = [
     ],
   },
   {
-    key: 'condicaoAtivo',
+    key: 'condicao_ativo',
     label: 'Condição do Ativo',
     type: 'select',
     required: true,
@@ -695,45 +445,54 @@ export const tarefasFormFields: FormField[] = [
   {
     key: 'frequencia',
     label: 'Frequência',
-    type: 'custom',
+    type: 'select',
     required: true,
-    render: ({ value, onChange, disabled }) => (
-      <FrequenciaController 
-        value={value} 
-        onChange={onChange} 
-        disabled={disabled}
-      />
-    ),
+    options: [
+      { value: 'DIARIA', label: 'Diária' },
+      { value: 'SEMANAL', label: 'Semanal' },
+      { value: 'QUINZENAL', label: 'Quinzenal' },
+      { value: 'MENSAL', label: 'Mensal' },
+      { value: 'BIMESTRAL', label: 'Bimestral' },
+      { value: 'TRIMESTRAL', label: 'Trimestral' },
+      { value: 'SEMESTRAL', label: 'Semestral' },
+      { value: 'ANUAL', label: 'Anual' },
+      { value: 'PERSONALIZADA', label: 'Personalizada' }
+    ],
   },
   {
-    key: 'duracaoEstimada',
+    key: 'frequencia_personalizada',
+    label: 'Frequência Personalizada (dias)',
+    type: 'number',
+    required: false,
+    placeholder: 'Ex: 45',
+    min: 1,
+    max: 9999,
+    defaultValue: 30, // ✅ NOVO: Valor padrão para evitar erro de validação
+    showOnlyWhen: {
+      field: 'frequencia',
+      value: 'PERSONALIZADA'
+    }
+  },
+  {
+    key: 'duracao_estimada',
     label: 'Duração Estimada (horas)',
-    type: 'text',
+    type: 'number',
     required: true,
-    placeholder: 'Ex: 2.5',
-    validation: (value) => {
-      if (!value) return null;
-      const duracao = parseFloat(String(value));
-      if (duracao <= 0) {
-        return 'Duração deve ser maior que zero';
-      }
-      return null;
-    },
+    placeholder: 'Ex: 3',
   },
   {
-    key: 'tempoEstimado',
+    key: 'tempo_estimado',
     label: 'Tempo Estimado (minutos)',
-    type: 'text',
+    type: 'number',
     required: true,
-    placeholder: 'Ex: 150',
-    validation: (value) => {
-      if (!value) return null;
-      const tempo = parseInt(String(value));
-      if (tempo <= 0) {
-        return 'Tempo deve ser maior que zero';
-      }
-      return null;
-    },
+    placeholder: 'Ex: 180',
+  },
+  {
+    key: 'ordem',
+    label: 'Ordem da Tarefa',
+    type: 'number',
+    required: true,
+    placeholder: 'Ex: 1',
   },
   {
     key: 'planejador',
@@ -750,9 +509,27 @@ export const tarefasFormFields: FormField[] = [
     placeholder: 'Nome do responsável pela execução',
   },
 
+  // Controle de execuções
+  {
+    key: 'data_ultima_execucao',
+    label: 'Data da Última Execução',
+    type: 'datetime-local',
+    required: true,
+    placeholder: 'Data e hora da última execução',
+  },
+  {
+    key: 'numero_execucoes',
+    label: 'Número de Execuções',
+    type: 'number',
+    required: false,
+    placeholder: 'Ex: 5',
+    min: 0,
+    defaultValue: 0,
+  },
+
   // Sub-tarefas
   {
-    key: 'subTarefas',
+    key: 'sub_tarefas',
     label: '',
     type: 'custom',
     required: false,
@@ -799,15 +576,5 @@ export const tarefasFormFields: FormField[] = [
       { value: 'EM_REVISAO', label: 'Em Revisão' },
       { value: 'ARQUIVADA', label: 'Arquivada' }
     ],
-  },
-
-  // Anexos
-  {
-    key: 'anexos',
-    label: 'Anexos',
-    type: 'custom',
-    required: false,
-    render: AnexosUpload,
-    showOnlyOnMode: ['create'] // Só aparece no modo de criação
   }
 ];

@@ -33,7 +33,7 @@ export function useGenericModal<T extends BaseEntity>(): UseGenericModalReturn<T
       isOpen: true,
       mode,
       entity,
-      preselectedData // ✅ NOVA: Incluir dados pré-selecionados se fornecidos
+      preselectedData
     });
   }, []);
 
@@ -42,7 +42,7 @@ export function useGenericModal<T extends BaseEntity>(): UseGenericModalReturn<T
       isOpen: false,
       mode: 'create',
       entity: null,
-      preselectedData: undefined // ✅ NOVA: Limpar dados pré-selecionados ao fechar
+      preselectedData: undefined
     });
   }, []);
 

@@ -126,7 +126,7 @@ export function ConcessionariaSelect({
       disabled={disabled}
     >
       <SelectTrigger className={`min-h-[44px] ${className}`}>
-        <SelectValue asChild>
+        <SelectValue>
           {renderSelectedValue()}
         </SelectValue>
       </SelectTrigger>

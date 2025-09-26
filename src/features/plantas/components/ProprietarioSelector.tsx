@@ -1,217 +1,170 @@
-// src/features/plantas/components/ProprietarioSelector.tsx
-import React, { useState, useMemo } from 'react';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Search, Building2, User } from 'lucide-react';
-
-// Mock data dos proprietários (normalmente viria da API)
-const mockProprietarios = [
-  { 
-    id: 1, 
-    razaoSocial: 'Empresa ABC Ltda', 
-    cnpjCpf: '12.345.678/0001-90',
-    tipo: 'pessoa_juridica' as const
-  },
-  { 
-    id: 2, 
-    razaoSocial: 'João Silva', 
-    cnpjCpf: '123.456.789-00',
-    tipo: 'pessoa_fisica' as const
-  },
-  { 
-    id: 3, 
-    razaoSocial: 'Maria Santos Consultoria ME', 
-    cnpjCpf: '98.765.432/0001-10',
-    tipo: 'pessoa_juridica' as const
-  },
-  { 
-    id: 4, 
-    razaoSocial: 'Tech Solutions Ltda', 
-    cnpjCpf: '11.222.333/0001-44',
-    tipo: 'pessoa_juridica' as const
-  },
-  { 
-    id: 5, 
-    razaoSocial: 'Ana Costa', 
-    cnpjCpf: '987.654.321-00',
-    tipo: 'pessoa_fisica' as const
-  },
-  { 
-    id: 6, 
-    razaoSocial: 'Indústria XYZ S.A.', 
-    cnpjCpf: '55.666.777/0001-88',
-    tipo: 'pessoa_juridica' as const
-  }
-];
+// src/features/plantas/components/ProprietarioSelector.tsx - ATUALIZADO
+import React, { useEffect, useState } from 'react';
+import { Building2, User, Loader2, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { PlantasService } from '@/services/plantas.services';
+import { ProprietarioBasico } from '../types';
 
 interface ProprietarioSelectorProps {
-  value: number | null;
-  onChange: (value: number | null) => void;
-  disabled: boolean;
+  value: string | null; // ✅ Mudado de number para string
+  onChange: (value: string | null) => void; // ✅ Mudado de number para string
+  disabled?: boolean;
 }
 
-export const ProprietarioSelector: React.FC<ProprietarioSelectorProps> = ({ 
-  value, 
-  onChange, 
-  disabled = false 
-}) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
+export function ProprietarioSelector({ value, onChange, disabled }: ProprietarioSelectorProps) {
+  const [proprietarios, setProprietarios] = useState<ProprietarioBasico[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Filtrar proprietários baseado na busca
-  const filteredProprietarios = useMemo(() => {
-    if (!searchTerm.trim()) return mockProprietarios;
+  // ✅ Carregar proprietários da API
+  useEffect(() => {
+    const fetchProprietarios = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const data = await PlantasService.getProprietarios();
+        setProprietarios(data);
+        
+      } catch (err: any) {
+        console.error('❌ [PROPRIETARIO SELECTOR] Erro ao carregar proprietários:', err);
+        setError(err.message || 'Erro ao carregar proprietários');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProprietarios();
+  }, []);
+
+  // ✅ Handler para mudança de seleção
+  const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedValue = event.target.value;
+    onChange(selectedValue === '' ? null : selectedValue); // ✅ String ou null
+  };
+
+  // ✅ Handler para recarregar proprietários
+  const handleReload = () => {
+    setProprietarios([]);
+    setLoading(true);
+    setError(null);
     
-    const term = searchTerm.toLowerCase();
-    return mockProprietarios.filter(prop => 
-      prop.razaoSocial.toLowerCase().includes(term) ||
-      prop.cnpjCpf.includes(term)
+    // Re-executar o useEffect
+    window.location.reload = window.location.reload;
+  };
+
+  // ✅ Encontrar proprietário selecionado
+  const selectedProprietario = proprietarios.find(p => p.id === value);
+
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 p-3 border border-input rounded-md bg-background">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">
+            Carregando proprietários...
+          </span>
+        </div>
+      </div>
     );
-  }, [searchTerm]);
+  }
 
-  // Encontrar proprietário selecionado
-  const selectedProprietario = mockProprietarios.find(prop => prop.id === value);
-
-  const handleValueChange = (newValue: string) => {
-    if (newValue === 'none') {
-      onChange(null);
-    } else {
-      onChange(parseInt(newValue));
-    }
-    setIsOpen(false);
-  };
-
-  const getProprietarioIcon = (tipo: 'pessoa_fisica' | 'pessoa_juridica') => {
-    return tipo === 'pessoa_juridica' 
-      ? <Building2 className="h-3 w-3" />
-      : <User className="h-3 w-3" />;
-  };
-
-  const getProprietarioBadgeColor = (tipo: 'pessoa_fisica' | 'pessoa_juridica') => {
-    return tipo === 'pessoa_juridica'
-      ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300"
-      : "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300";
-  };
+  if (error) {
+    return (
+      <div className="space-y-2">
+        <div className="p-3 border border-red-200 rounded-md bg-red-50">
+          <div className="flex items-center gap-2 text-red-700 mb-2">
+            <AlertCircle className="h-4 w-4" />
+            <span className="text-sm font-medium">Erro ao carregar</span>
+          </div>
+          <p className="text-xs text-red-600 mb-3">
+            {error}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleReload}
+            className="border-red-300 text-red-700 hover:bg-red-100"
+          >
+            Tentar Novamente
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
-      <Select
-        value={value ? String(value) : undefined}
-        onValueChange={handleValueChange}
-        disabled={disabled}
-        open={isOpen}
-        onOpenChange={setIsOpen}
+      <select
+        value={value || ''} // ✅ Usar string vazia como fallback
+        onChange={handleChange}
+        disabled={disabled || proprietarios.length === 0}
+        className="w-full px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+        required
       >
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder="Selecione um proprietário">
-            {selectedProprietario && (
-              <div className="flex items-center gap-2">
-                {getProprietarioIcon(selectedProprietario.tipo)}
-                <span className="truncate">{selectedProprietario.razaoSocial}</span>
-                <Badge 
-                  variant="outline" 
-                  className={`text-xs ${getProprietarioBadgeColor(selectedProprietario.tipo)}`}
-                >
-                  {selectedProprietario.tipo === 'pessoa_juridica' ? 'PJ' : 'PF'}
-                </Badge>
-              </div>
-            )}
-          </SelectValue>
-        </SelectTrigger>
+        <option value="">
+          {proprietarios.length === 0 
+            ? "Nenhum proprietário encontrado" 
+            : "Selecione um proprietário"
+          }
+        </option>
         
-        <SelectContent className="max-h-80">
-          {/* Campo de busca - só mostrar se não estiver desabilitado */}
-          {!disabled && (
-            <div className="sticky top-0 z-10 bg-background p-2 border-b">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar proprietário..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                  autoFocus
-                />
-              </div>
-            </div>
-          )}
+        {proprietarios.map((proprietario) => (
+          <option key={proprietario.id} value={proprietario.id}>
+            {proprietario.nome} - {proprietario.cpf_cnpj}
+          </option>
+        ))}
+      </select>
 
-          {/* Opção "Nenhum" - só mostrar se não estiver desabilitado */}
-          {!disabled && (
-            <SelectItem value="none" className="text-muted-foreground">
-              Nenhum proprietário
-            </SelectItem>
-          )}
-
-          {/* Lista de proprietários filtrados */}
-          {filteredProprietarios.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              Nenhum proprietário encontrado
-            </div>
-          ) : (
-            filteredProprietarios.map((proprietario) => (
-              <SelectItem key={proprietario.id} value={String(proprietario.id)}>
-                <div className="flex items-center gap-3 w-full">
-                  {getProprietarioIcon(proprietario.tipo)}
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">
-                      {proprietario.razaoSocial}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {proprietario.cnpjCpf}
-                    </div>
-                  </div>
-                  <Badge 
-                    variant="outline" 
-                    className={`text-xs ${getProprietarioBadgeColor(proprietario.tipo)}`}
-                  >
-                    {proprietario.tipo === 'pessoa_juridica' ? 'PJ' : 'PF'}
-                  </Badge>
-                </div>
-              </SelectItem>
-            ))
-          )}
-
-          {/* Informação de resultados */}
-          {!disabled && searchTerm.trim() && (
-            <div className="sticky bottom-0 bg-muted/50 p-2 text-xs text-muted-foreground text-center border-t">
-              {filteredProprietarios.length} proprietário(s) encontrado(s)
-            </div>
-          )}
-        </SelectContent>
-      </Select>
-
-      {/* Informações do proprietário selecionado */}
+      {/* ✅ Informações do proprietário selecionado */}
       {selectedProprietario && (
-        <div className="p-3 bg-muted/30 rounded-md border">
-          <div className="flex items-center gap-2 text-sm">
-            {getProprietarioIcon(selectedProprietario.tipo)}
-            <span className="font-medium">{selectedProprietario.razaoSocial}</span>
-            <Badge 
-              variant="outline" 
-              className={`text-xs ${getProprietarioBadgeColor(selectedProprietario.tipo)}`}
-            >
-              {selectedProprietario.tipo === 'pessoa_juridica' ? 'Pessoa Jurídica' : 'Pessoa Física'}
-            </Badge>
-            {/* ✅ NOVO: Mostrar quando está pré-selecionado */}
-            {disabled && (
-              <Badge variant="secondary" className="text-xs">
-                Pré-selecionado
-              </Badge>
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="flex items-center gap-2 mb-2">
+            {selectedProprietario.tipo === 'pessoa_fisica' ? (
+              <User className="h-4 w-4 text-blue-600" />
+            ) : (
+              <Building2 className="h-4 w-4 text-blue-600" />
             )}
+            <span className="text-sm font-medium text-blue-900">
+              {selectedProprietario.tipo === 'pessoa_fisica' ? 'Pessoa Física' : 'Pessoa Jurídica'}
+            </span>
           </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {selectedProprietario.tipo === 'pessoa_juridica' ? 'CNPJ' : 'CPF'}: {selectedProprietario.cnpjCpf}
+          
+          <div className="space-y-1 text-xs text-blue-700">
+            <div>
+              <span className="font-medium">Nome:</span> {selectedProprietario.nome}
+            </div>
+            <div>
+              <span className="font-medium">
+                {selectedProprietario.tipo === 'pessoa_fisica' ? 'CPF:' : 'CNPJ:'}
+              </span> {selectedProprietario.cpf_cnpj}
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* ✅ Informação sobre quantidade de proprietários */}
+      {proprietarios.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          {proprietarios.length} proprietário{proprietarios.length !== 1 ? 's' : ''} disponível{proprietarios.length !== 1 ? 'is' : ''}
+        </p>
+      )}
+
+      {/* ✅ Aviso se não houver proprietários */}
+      {proprietarios.length === 0 && !loading && !error && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+          <div className="flex items-center gap-2 text-amber-700">
+            <AlertCircle className="h-4 w-4" />
+            <span className="text-sm font-medium">
+              Nenhum proprietário encontrado
+            </span>
+          </div>
+          <p className="text-xs text-amber-600 mt-1">
+            Certifique-se de que existem usuários cadastrados com perfil de proprietário, admin ou gerente.
+          </p>
         </div>
       )}
     </div>
   );
-};
+}

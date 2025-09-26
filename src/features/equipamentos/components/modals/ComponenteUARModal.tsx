@@ -1,4 +1,4 @@
-// src/features/equipamentos/components/ComponenteUARModal.tsx
+// src/features/equipamentos/components/modals/ComponenteUARModal.tsx - CORRIGIDO PARA API
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,139 +15,13 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Component, Save, Wrench, X } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Component, Save, Wrench, X, AlertCircle, Loader2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Equipamento } from '../../types';
-
-// Reutilizando os mesmos campos técnicos do UC
-const CAMPOS_TECNICOS_POR_TIPO: Record<string, any[]> = {
-  'motor_inducao': [
-    { key: 'potencia', label: 'Potência', type: 'number', unit: 'kW' },
-    { key: 'tensaoNominal', label: 'Tensão Nominal', type: 'number', unit: 'V' },
-    { key: 'correnteNominal', label: 'Corrente Nominal', type: 'number', unit: 'A' },
-    { key: 'fatorServico', label: 'Fator de Serviço', type: 'number', placeholder: 'Ex: 1.15' },
-    { key: 'numeroPolos', label: 'Número de Polos', type: 'number' },
-    { key: 'grauProtecao', label: 'Grau de Proteção (IP)', type: 'select', options: ['IP20', 'IP54', 'IP55', 'IP65'] },
-    { key: 'classeIsolamento', label: 'Classe de Isolamento', type: 'select', options: ['A', 'B', 'F', 'H'] },
-    { key: 'tipoPartida', label: 'Tipo de Partida', type: 'select', options: ['Direta', 'Estrela-Triângulo', 'Soft-Starter', 'Inversor'] }
-  ],
-
-  'transformador': [
-    { key: 'potenciaNominal', label: 'Potência Nominal', type: 'number', unit: 'kVA' },
-    { key: 'tensaoPrimaria', label: 'Tensão Primária', type: 'number', unit: 'V' },
-    { key: 'tensaoSecundaria', label: 'Tensão Secundária', type: 'number', unit: 'V' },
-    { key: 'grupoLigacao', label: 'Grupo de Ligação', type: 'text', placeholder: 'Ex: Dyn11' },
-    { key: 'tipoRefrigeracao', label: 'Tipo de Refrigeração', type: 'select', options: ['ONAN', 'ONAF', 'ONAN/ONAF'] },
-    { key: 'tipoIsolamento', label: 'Tipo de Isolamento', type: 'select', options: ['Óleo Mineral', 'Silicone', 'Seco'] }
-  ],
-
-  'banco_capacitor': [
-    { key: 'potenciaReativaTotal', label: 'Potência Reativa Total', type: 'number', unit: 'kVAR' },
-    { key: 'tensaoNominal', label: 'Tensão Nominal', type: 'number', unit: 'V' },
-    { key: 'frequenciaNominal', label: 'Frequência Nominal', type: 'number', unit: 'Hz', placeholder: '60' },
-    { key: 'tipoConexao', label: 'Tipo de Conexão', type: 'select', options: ['Delta', 'Estrela'] },
-    { key: 'nivelIsolamento', label: 'Nível de Isolamento', type: 'number', unit: 'V' }
-  ],
-
-  'reator': [
-    { key: 'indutancia', label: 'Indutância', type: 'number', unit: 'mH' },
-    { key: 'correnteNominal', label: 'Corrente Nominal', type: 'number', unit: 'A' },
-    { key: 'tensaoNominal', label: 'Tensão Nominal', type: 'number', unit: 'V' },
-    { key: 'tipoEnrolamento', label: 'Tipo de Enrolamento', type: 'select', options: ['Núcleo de Ar', 'Núcleo de Ferro'] }
-  ],
-
-  'seccionadora': [
-    { key: 'correnteNominal', label: 'Corrente Nominal', type: 'number', unit: 'A' },
-    { key: 'tensaoNominal', label: 'Tensão Nominal', type: 'number', unit: 'kV' },
-    { key: 'tipoManobra', label: 'Tipo de Manobra', type: 'select', options: ['Manual', 'Motorizada'] },
-    { key: 'capacidadeInterrupcao', label: 'Capacidade de Interrupção', type: 'number', unit: 'kA' }
-  ],
-
-  'disjuntor': [
-    { key: 'correnteNominal', label: 'Corrente Nominal', type: 'number', unit: 'A' },
-    { key: 'tensaoNominal', label: 'Tensão Nominal', type: 'number', unit: 'kV' },
-    { key: 'capacidadeInterrupcao', label: 'Capacidade de Interrupção', type: 'number', unit: 'kA' },
-    { key: 'tipo', label: 'Tipo', type: 'select', options: ['Caixa Moldada', 'Aberto', 'A Vácuo', 'SF6'] },
-    { key: 'curvaDisparo', label: 'Curva de Disparo', type: 'select', options: ['B', 'C', 'D', 'K'] }
-  ],
-
-  'chave_fusivel': [
-    { key: 'correnteNominal', label: 'Corrente Nominal', type: 'number', unit: 'A' },
-    { key: 'tensaoNominal', label: 'Tensão Nominal', type: 'number', unit: 'kV' },
-    { key: 'tipoFusivel', label: 'Tipo de Fusível', type: 'select', options: ['NH', 'HH', 'Diazed'] }
-  ],
-
-  'rele_protecao': [
-    { key: 'correnteNominal', label: 'Corrente Nominal', type: 'number', unit: 'A' },
-    { key: 'tensaoNominal', label: 'Tensão Nominal', type: 'number', unit: 'V' },
-    { key: 'funcoesProtecao', label: 'Funções de Proteção', type: 'text', placeholder: 'Ex: 50, 51, 87, 27' }
-  ],
-
-  'inversor_frequencia': [
-    { key: 'potencia', label: 'Potência', type: 'number', unit: 'kW' },
-    { key: 'correnteNominal', label: 'Corrente Nominal', type: 'number', unit: 'A' },
-    { key: 'tensaoEntrada', label: 'Tensão de Entrada', type: 'number', unit: 'V' },
-    { key: 'tensaoSaida', label: 'Tensão de Saída', type: 'number', unit: 'V' },
-    { key: 'frequenciaMaxima', label: 'Frequência Máxima', type: 'number', unit: 'Hz', placeholder: '120' },
-    { key: 'grauProtecao', label: 'Grau de Proteção', type: 'select', options: ['IP20', 'IP54', 'IP55'] }
-  ],
-
-  'clp': [
-    { key: 'numeroEntradas', label: 'Número de Entradas', type: 'number' },
-    { key: 'numeroSaidas', label: 'Número de Saídas', type: 'number' },
-    { key: 'tipoComunicacao', label: 'Tipo de Comunicação', type: 'text', placeholder: 'Ex: Profibus, Ethernet/IP' }
-  ],
-
-  // Tipos específicos para componentes
-  'sensor_temperatura': [
-    { key: 'faixaTemperatura', label: 'Faixa de Temperatura', type: 'text', placeholder: 'Ex: -40°C a +120°C' },
-    { key: 'precisao', label: 'Precisão', type: 'text', placeholder: 'Ex: ±0.5°C' },
-    { key: 'sinalSaida', label: 'Sinal de Saída', type: 'select', options: ['4-20mA', '0-10V', 'PT100', 'Termopar'] }
-  ],
-
-  'sensor_vibracao': [
-    { key: 'faixaFrequencia', label: 'Faixa de Frequência', type: 'text', placeholder: 'Ex: 10Hz - 1kHz' },
-    { key: 'sensibilidade', label: 'Sensibilidade', type: 'text', placeholder: 'Ex: 100mV/g' },
-    { key: 'tipoMontagem', label: 'Tipo de Montagem', type: 'select', options: ['Magnética', 'Parafusada', 'Adesiva'] }
-  ],
-
-  'bomba_oleo': [
-    { key: 'vazao', label: 'Vazão', type: 'number', unit: 'L/min' },
-    { key: 'pressaoMaxima', label: 'Pressão Máxima', type: 'number', unit: 'bar' },
-    { key: 'tipoOleo', label: 'Tipo de Óleo', type: 'text', placeholder: 'Especificação do óleo' }
-  ],
-
-  'filtro_ar': [
-    { key: 'eficiencia', label: 'Eficiência', type: 'text', placeholder: 'Ex: 99.97%' },
-    { key: 'vazaoNominal', label: 'Vazão Nominal', type: 'number', unit: 'm³/h' },
-    { key: 'perda_carga', label: 'Perda de Carga', type: 'number', unit: 'Pa' }
-  ],
-
-  'valvula_seguranca': [
-    { key: 'pressaoAbertura', label: 'Pressão de Abertura', type: 'number', unit: 'bar' },
-    { key: 'diametroNominal', label: 'Diâmetro Nominal', type: 'text', placeholder: 'Ex: DN50' },
-    { key: 'material', label: 'Material', type: 'text', placeholder: 'Ex: Aço Inox 316' }
-  ]
-};
-
-const TIPOS_COMPONENTES = [
-  { value: 'motor_inducao', label: 'Motor de Indução' },
-  { value: 'transformador', label: 'Transformador' },
-  { value: 'banco_capacitor', label: 'Banco de Capacitor' },
-  { value: 'reator', label: 'Reator' },
-  { value: 'seccionadora', label: 'Seccionadora' },
-  { value: 'disjuntor', label: 'Disjuntor' },
-  { value: 'chave_fusivel', label: 'Chave Fusível' },
-  { value: 'rele_protecao', label: 'Relé de Proteção' },
-  { value: 'inversor_frequencia', label: 'Inversor de Frequência' },
-  { value: 'clp', label: 'CLP' },
-  // Componentes específicos
-  { value: 'sensor_temperatura', label: 'Sensor de Temperatura' },
-  { value: 'sensor_vibracao', label: 'Sensor de Vibração' },
-  { value: 'bomba_oleo', label: 'Bomba de Óleo' },
-  { value: 'filtro_ar', label: 'Filtro de Ar' },
-  { value: 'valvula_seguranca', label: 'Válvula de Segurança' }
-];
+import { useSelectionData } from '../../hooks/useSelectionData';
+import { tiposEquipamentos, getTipoEquipamento } from '../../config/tipos-equipamentos';
 
 interface ComponenteUARModalProps {
   isOpen: boolean;
@@ -166,11 +40,23 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   onClose,
   onSubmit
 }) => {
+  const {
+    tiposEquipamentos: tiposFromApi,
+    loadingTipos,
+    getCamposTecnicosPorTipo
+  } = useSelectionData();
+
   const [formData, setFormData] = useState<any>({});
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (entity && mode !== 'create') {
-      setFormData(entity);
+      console.log('📋 [MODAL UAR] Dados completos do componente:', entity);
+      
+      setFormData({
+        ...entity,
+        tipoComponente: entity.tipo_equipamento || entity.tipoEquipamento || entity.tipo || ''
+      });
     } else {
       setFormData({ 
         classificacao: 'UAR',
@@ -181,49 +67,77 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
         proprietarioId: equipamentoPai?.proprietarioId
       });
     }
+    setError(null);
   }, [entity, mode, equipamentoPai]);
 
   const handleFieldChange = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
+  // Filtrar apenas tipos apropriados para componentes UAR
+  const tiposComponentesUAR = tiposEquipamentos.filter(tipo => 
+    ['sensor_temperatura', 'sensor_vibracao', 'bomba_oleo', 'filtro_ar', 'valvula_seguranca', 
+     'rele_protecao', 'disjuntor', 'seccionadora', 'inversor_frequencia', 'clp', 'sensor_pressao',
+     'medidor_energia', 'analisador_qualidade', 'controlador_temperatura'].includes(tipo.value) ||
+    ['eletronica', 'instrumentacao', 'protecao'].includes(tipo.categoria)
+  );
+
   const renderCamposTecnicos = () => {
-    const campos = CAMPOS_TECNICOS_POR_TIPO[formData.tipoComponente];
-    if (!campos) return null;
+    if (!formData.tipoComponente) {
+      return (
+        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border text-center text-gray-500 dark:text-gray-400">
+          Selecione um tipo de componente para ver os campos técnicos
+        </div>
+      );
+    }
+
+    // Usar configuração dos tipos de equipamentos
+    const tipoEqp = getTipoEquipamento(formData.tipoComponente);
+    if (!tipoEqp || !tipoEqp.camposTecnicos.length) {
+      return (
+        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border text-center text-gray-500 dark:text-gray-400">
+          Nenhum campo técnico definido para este tipo
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-4">
         <h4 className="font-medium text-sm text-muted-foreground border-b pb-2">
-          Dados Técnicos - {TIPOS_COMPONENTES.find(t => t.value === formData.tipoComponente)?.label}
+          Dados Técnicos - {tipoEqp.label}
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {campos.map((campo: any) => (
-            <div key={campo.key}>
+          {tipoEqp.camposTecnicos.map((campo) => (
+            <div key={campo.campo}>
               <label className="text-sm font-medium">
-                {campo.label} {campo.unit && <span className="text-muted-foreground">({campo.unit})</span>}
+                {campo.campo}
+                {campo.obrigatorio && <span className="text-red-500 ml-1">*</span>}
+                {campo.unidade && <span className="text-muted-foreground"> ({campo.unidade})</span>}
               </label>
-              {campo.type === 'select' ? (
+              {isReadOnly ? (
+                <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border text-sm">
+                  {formData[campo.campo] || <span className="text-gray-400">Não informado</span>}
+                </div>
+              ) : campo.tipo === 'select' && campo.opcoes ? (
                 <Select 
-                  value={formData[campo.key] || ''} 
-                  onValueChange={(value) => handleFieldChange(campo.key, value)}
-                  disabled={mode === 'view'}
+                  value={formData[campo.campo] || ''} 
+                  onValueChange={(value) => handleFieldChange(campo.campo, value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {campo.options?.map((option: any) => (
+                    {campo.opcoes.map((option) => (
                       <SelectItem key={option} value={option}>{option}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               ) : (
                 <Input
-                  type={campo.type}
-                  placeholder={campo.placeholder || `${campo.label}${campo.unit ? ` (${campo.unit})` : ''}`}
-                  value={formData[campo.key] || ''}
-                  onChange={(e) => handleFieldChange(campo.key, e.target.value)}
-                  disabled={mode === 'view'}
+                  type={campo.tipo === 'number' ? 'number' : 'text'}
+                  placeholder={`${campo.campo}${campo.unidade ? ` (${campo.unidade})` : ''}`}
+                  value={formData[campo.campo] || ''}
+                  onChange={(e) => handleFieldChange(campo.campo, e.target.value)}
                 />
               )}
             </div>
@@ -233,12 +147,68 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     );
   };
 
+  const validateForm = (): boolean => {
+    const errors: string[] = [];
+
+    if (!formData.nome?.trim()) {
+      errors.push('Nome é obrigatório');
+    }
+
+    if (!formData.tipoComponente) {
+      errors.push('Tipo é obrigatório');
+    }
+
+    // Validar campos técnicos obrigatórios
+    if (formData.tipoComponente) {
+      const tipoEqp = getTipoEquipamento(formData.tipoComponente);
+      if (tipoEqp && tipoEqp.camposTecnicos) {
+        tipoEqp.camposTecnicos.forEach(campo => {
+          if (campo.obrigatorio && !formData[campo.campo]) {
+            errors.push(`${campo.campo} é obrigatório`);
+          }
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      setError(errors.join('; '));
+      return false;
+    }
+
+    setError(null);
+    return true;
+  };
+
   const handleSubmit = () => {
-    const dadosCompletos = {
-      ...formData,
-      classificacao: 'UAR'
+    if (!validateForm()) {
+      return;
+    }
+
+    const submitData = {
+      // Dados básicos
+      nome: formData.nome,
+      classificacao: 'UAR',
+      equipamento_pai_id: formData.equipamentoPaiId,
+      fabricante: formData.fabricante,
+      modelo: formData.modelo,
+      numero_serie: formData.numeroSerie,
+      criticidade: formData.criticidade,
+      tipo_equipamento: formData.tipoComponente,
+      data_instalacao: formData.dataInstalacao,
+      localizacao_especifica: formData.localizacaoEspecifica,
+      plano_manutencao: formData.planoManutencao,
+      fornecedor: formData.fornecedor,
+      valor_imobilizado: formData.valorImobilizado ? parseFloat(formData.valorImobilizado) : undefined,
+      valor_depreciacao: formData.valorDepreciacao ? parseFloat(formData.valorDepreciacao) : undefined,
+      valor_contabil: formData.valorContabil ? parseFloat(formData.valorContabil) : undefined,
+      observacoes: formData.observacoes,
+      // Herdar do equipamento pai
+      planta_id: formData.plantaId,
+      proprietario_id: formData.proprietarioId
     };
-    onSubmit(dadosCompletos);
+
+    console.log('📤 [MODAL UAR] Dados sendo enviados para API:', submitData);
+    onSubmit(submitData);
   };
 
   const isReadOnly = mode === 'view';
@@ -256,9 +226,19 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-6 p-1">
+          {/* Erro de validação */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {error}
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Informação do Equipamento Pai */}
           {equipamentoPai && (
-            <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg dark:bg-orange-950 dark:border-orange-800">
+            <div className="p-4 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <Wrench className="h-4 w-4 text-orange-600" />
                 <span className="text-sm font-medium text-orange-900 dark:text-orange-100">
@@ -267,7 +247,10 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
               </div>
               <div className="text-orange-700 dark:text-orange-300">
                 <div className="font-medium">{equipamentoPai.nome}</div>
-                <div className="text-xs">{equipamentoPai.fabricante} - {equipamentoPai.modelo}</div>
+                <div className="text-xs flex gap-4">
+                  {equipamentoPai.fabricante && <span>Fabricante: {equipamentoPai.fabricante}</span>}
+                  {equipamentoPai.modelo && <span>Modelo: {equipamentoPai.modelo}</span>}
+                </div>
                 <div className="text-xs">Planta: {equipamentoPai.planta?.nome}</div>
               </div>
             </div>
@@ -292,16 +275,29 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
                 </div>
                 <div>
                   <label className="text-sm font-medium">Tipo <span className="text-red-500">*</span></label>
-                  <Select value={formData.tipoComponente || ''} onValueChange={(value) => handleFieldChange('tipoComponente', value)} disabled={isReadOnly}>
+                  <Select 
+                    value={formData.tipoComponente || ''} 
+                    onValueChange={(value) => handleFieldChange('tipoComponente', value)} 
+                    disabled={isReadOnly || loadingTipos}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
+                      <SelectValue placeholder={loadingTipos ? "Carregando..." : "Selecione o tipo"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {TIPOS_COMPONENTES.map(tipo => (
-                        <SelectItem key={tipo.value} value={tipo.value}>
-                          {tipo.label}
-                        </SelectItem>
-                      ))}
+                      {loadingTipos ? (
+                        <div className="flex items-center justify-center p-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        </div>
+                      ) : (
+                        tiposComponentesUAR.map(tipo => (
+                          <SelectItem key={tipo.value} value={tipo.value}>
+                            <div>
+                              <div>{tipo.label}</div>
+                              <div className="text-xs text-muted-foreground capitalize">{tipo.categoria}</div>
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -321,6 +317,15 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
                     onChange={(e) => handleFieldChange('fabricante', e.target.value)}
                     disabled={isReadOnly}
                     placeholder="Fabricante"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Número de Série</label>
+                  <Input 
+                    value={formData.numeroSerie || ''} 
+                    onChange={(e) => handleFieldChange('numeroSerie', e.target.value)}
+                    disabled={isReadOnly}
+                    placeholder="Número de série"
                   />
                 </div>
               </div>
@@ -366,7 +371,16 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
                     value={formData.planoManutencao || ''} 
                     onChange={(e) => handleFieldChange('planoManutencao', e.target.value)}
                     disabled={isReadOnly}
-                    placeholder="Número do PM"
+                    placeholder="Código do plano de manutenção"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Fornecedor</label>
+                  <Input 
+                    value={formData.fornecedor || ''} 
+                    onChange={(e) => handleFieldChange('fornecedor', e.target.value)}
+                    disabled={isReadOnly}
+                    placeholder="Fornecedor do componente"
                   />
                 </div>
               </div>
@@ -379,6 +393,45 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
           <div>
             <h3 className="font-medium mb-4 text-primary">Dados Técnicos</h3>
             {renderCamposTecnicos()}
+          </div>
+
+          {/* ============================================================================ */}
+          {/* VALORES FINANCEIROS */}
+          {/* ============================================================================ */}
+          <div>
+            <h3 className="font-medium mb-4 text-primary">Valores Financeiros</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium">Valor Imobilizado</label>
+                <Input 
+                  type="number"
+                  value={formData.valorImobilizado || ''} 
+                  onChange={(e) => handleFieldChange('valorImobilizado', parseFloat(e.target.value) || 0)}
+                  disabled={isReadOnly}
+                  placeholder="0,00"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Valor de Depreciação</label>
+                <Input 
+                  type="number"
+                  value={formData.valorDepreciacao || ''} 
+                  onChange={(e) => handleFieldChange('valorDepreciacao', parseFloat(e.target.value) || 0)}
+                  disabled={isReadOnly}
+                  placeholder="0,00"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Valor Contábil</label>
+                <Input 
+                  type="number"
+                  value={formData.valorContabil || ''} 
+                  onChange={(e) => handleFieldChange('valorContabil', parseFloat(e.target.value) || 0)}
+                  disabled={isReadOnly}
+                  placeholder="0,00"
+                />
+              </div>
+            </div>
           </div>
 
           {/* ============================================================================ */}

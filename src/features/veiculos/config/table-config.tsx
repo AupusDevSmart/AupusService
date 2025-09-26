@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TableColumn } from '@/types/base';
-import { Veiculo, StatusVeiculo, TipoVeiculo, TipoCombustivel } from '../../reservas/types';
+import { VeiculoResponse, StatusVeiculo, TipoVeiculo, TipoCombustivel } from '@/services/veiculos.services';
 
 // Função para formatar o status
 const formatarStatus = (status: StatusVeiculo) => {
@@ -57,7 +57,7 @@ const getCombustivelColor = (combustivel: TipoCombustivel) => {
   }
 };
 
-export const veiculosTableColumns: TableColumn<Veiculo>[] = [
+export const veiculosTableColumns: TableColumn<VeiculoResponse>[] = [
   {
     key: 'dados_principais',
     label: 'Veículo',
@@ -107,7 +107,7 @@ export const veiculosTableColumns: TableColumn<Veiculo>[] = [
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <Users className="h-3 w-3" />
-            <span>{veiculo.capacidadePassageiros || veiculo.numeroPassageiros || 0}</span>
+            <span>{veiculo.capacidadePassageiros || 0}</span>
           </div>
           {veiculo.capacidadeCarga && (
             <div className="flex items-center gap-1">
@@ -118,7 +118,7 @@ export const veiculosTableColumns: TableColumn<Veiculo>[] = [
         </div>
         
         <div className="text-xs text-muted-foreground">
-          {(veiculo.kmAtual || veiculo.quilometragem || 0).toLocaleString('pt-BR')} km
+          {(veiculo.kmAtual || 0).toLocaleString('pt-BR')} km
         </div>
       </div>
     )
@@ -137,8 +137,8 @@ export const veiculosTableColumns: TableColumn<Veiculo>[] = [
         </div>
         <div className="flex items-center gap-2">
           <Wrench className="h-3 w-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground truncate max-w-40" title={veiculo.responsavelManutencao || veiculo.responsavel}>
-            {veiculo.responsavelManutencao || veiculo.responsavel || 'Não informado'}
+          <span className="text-xs text-muted-foreground truncate max-w-40" title={veiculo.responsavelManutencao}>
+            {veiculo.responsavelManutencao || 'Não informado'}
           </span>
         </div>
       </div>

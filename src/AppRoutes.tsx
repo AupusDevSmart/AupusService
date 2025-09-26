@@ -13,11 +13,12 @@ import { FerramentasPage } from './features/ferramentas/components/FerramentasPa
 import { FornecedoresPage } from './features/fornecedores/components/FornecedoresPage';
 import { AnomaliaPage } from './pages/anomalias';
 import { TarefasPage } from './features/tarefas/components/TarefasPage';
-import { ProgramacaoOSPage } from './pages/programacao-os';
+import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
-import { ExecucaoOSPage } from './features/execucao-os/components/ExecucaoOSPage';
+import { ExecucaoOSPage } from './features/execucao-os';
 import { PlanosManutencaoPage } from './features/planos-manutencao/components/PlanosManutencaoPage';
 import { AssociacaoEquipamentosPage } from './features/planos-manutencao/components/AssociacaoEquipamentosPage';
+import { FeriadosPage, ConfiguracoesDiasUteisPage } from './features/agenda';
 
 export const appRoutes = createBrowserRouter([
 //   {
@@ -157,6 +158,23 @@ export const appRoutes = createBrowserRouter([
         element: (
           <FeatureWrapper feature="Equipamentos">
             <AssociacaoEquipamentosPage />
+          </FeatureWrapper>
+        ),
+      },
+      // ✅ NOVA: Rotas para agenda
+      {
+        path: 'agenda/feriados',
+        element: (
+          <FeatureWrapper feature="Agenda">
+            <FeriadosPage />
+          </FeatureWrapper>
+        ),
+      },
+      {
+        path: 'agenda/configuracoes-dias-uteis',
+        element: (
+          <FeatureWrapper feature="Agenda">
+            <ConfiguracoesDiasUteisPage />
           </FeatureWrapper>
         ),
       },

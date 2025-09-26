@@ -376,7 +376,6 @@ export const equipamentosFormFields: FormField[] = [
     type: 'text',
     required: true,
     placeholder: 'Nome do equipamento',
-    group: 'dados_gerais_col1'
   },
   {
     key: 'classificacao',
@@ -384,35 +383,30 @@ export const equipamentosFormFields: FormField[] = [
     type: 'select',
     required: true,
     options: CLASSIFICACOES,
-    group: 'dados_gerais_col1'
   },
   {
     key: 'numeroSerie',
     label: 'Número Série',
     type: 'text',
     placeholder: 'Número de série',
-    group: 'dados_gerais_col1'
   },
   {
     key: 'emOperacao',
     label: 'Em Operação',
     type: 'select',
     options: OPCOES_SIM_NAO,
-    group: 'dados_gerais_col1'
   },
   {
     key: 'tipoDepreciacao',
     label: 'Tipo de Depreciação',
     type: 'select',
     options: TIPOS_DEPRECIACAO,
-    group: 'dados_gerais_col1'
   },
   {
     key: 'valorImobilizado',
     label: 'Valor Imobilizado',
     type: 'text',
     placeholder: '0,00',
-    group: 'dados_gerais_col1'
   },
 
   // ============================================================================
@@ -424,14 +418,12 @@ export const equipamentosFormFields: FormField[] = [
     type: 'select',
     required: true,
     options: mockPlantas.map(p => ({ value: String(p.id), label: p.nome })),
-    group: 'dados_gerais_col2'
   },
   {
     key: 'fabricante',
     label: 'Fabricante',
     type: 'text',
     placeholder: 'Nome do fabricante',
-    group: 'dados_gerais_col2'
   },
   {
     key: 'criticidade',
@@ -439,27 +431,24 @@ export const equipamentosFormFields: FormField[] = [
     type: 'select',
     required: true,
     options: CRITICIDADES,
-    group: 'dados_gerais_col2'
   },
   {
     key: 'fornecedor',
     label: 'Fornecedor',
     type: 'text',
     placeholder: 'Nome do fornecedor',
-    group: 'dados_gerais_col2'
   },
   {
     key: 'dataImobilizacao',
     label: 'Data Imobilização',
-    type: 'date',
-    group: 'dados_gerais_col2'
+    type: 'text',
+    placeholder: 'DD/MM/AAAA'
   },
   {
     key: 'valorDepreciacao',
     label: 'Valor da Depreciação',
     type: 'text',
     placeholder: '0,00',
-    group: 'dados_gerais_col2'
   },
 
   // ============================================================================
@@ -471,14 +460,12 @@ export const equipamentosFormFields: FormField[] = [
     type: 'select',
     required: true,
     options: mockProprietarios.map(p => ({ value: String(p.id), label: p.razaoSocial })),
-    group: 'dados_gerais_col3'
   },
   {
     key: 'modelo',
     label: 'Modelo',
     type: 'text',
     placeholder: 'Modelo do equipamento',
-    group: 'dados_gerais_col3'
   },
   {
     key: 'tipoEquipamento',
@@ -486,28 +473,24 @@ export const equipamentosFormFields: FormField[] = [
     type: 'select',
     required: true,
     options: TIPOS_EQUIPAMENTOS,
-    group: 'dados_gerais_col3'
   },
   {
     key: 'centroCusto',
     label: 'Centro de Custo',
     type: 'text',
     placeholder: 'Centro de custo',
-    group: 'dados_gerais_col3'
   },
   {
     key: 'vidaUtil',
     label: 'Vida Útil',
     type: 'text',
     placeholder: 'Anos',
-    group: 'dados_gerais_col3'
   },
   {
     key: 'valorContabil',
     label: 'Valor Contábil',
     type: 'text',
     placeholder: '0,00',
-    group: 'dados_gerais_col3'
   },
 
   // ============================================================================
@@ -524,7 +507,6 @@ export const equipamentosFormFields: FormField[] = [
     label: 'TUC',
     type: 'text',
     placeholder: 'Número/Código TUC',
-    group: 'tuc_documentos',
     condition: (formData) => formData?.temTUC === true
   },
   {
@@ -532,7 +514,6 @@ export const equipamentosFormFields: FormField[] = [
     label: 'A1',
     type: 'text',
     placeholder: 'Valor A1',
-    group: 'tuc_documentos',
     condition: (formData) => formData?.temTUC === true
   },
   {
@@ -540,7 +521,6 @@ export const equipamentosFormFields: FormField[] = [
     label: 'A2',
     type: 'text',
     placeholder: 'Valor A2',
-    group: 'tuc_documentos',
     condition: (formData) => formData?.temTUC === true
   },
   {
@@ -548,7 +528,6 @@ export const equipamentosFormFields: FormField[] = [
     label: 'A3',
     type: 'text',
     placeholder: 'Valor A3',
-    group: 'tuc_documentos',
     condition: (formData) => formData?.temTUC === true
   },
   {
@@ -556,7 +535,6 @@ export const equipamentosFormFields: FormField[] = [
     label: 'A4',
     type: 'text',
     placeholder: 'Valor A4',
-    group: 'tuc_documentos',
     condition: (formData) => formData?.temTUC === true
   },
   {
@@ -564,7 +542,6 @@ export const equipamentosFormFields: FormField[] = [
     label: 'A5',
     type: 'text',
     placeholder: 'Valor A5',
-    group: 'tuc_documentos',
     condition: (formData) => formData?.temTUC === true
   },
   {
@@ -572,7 +549,6 @@ export const equipamentosFormFields: FormField[] = [
     label: 'A6',
     type: 'text',
     placeholder: 'Valor A6',
-    group: 'tuc_documentos',
     condition: (formData) => formData?.temTUC === true
   },
 
@@ -584,7 +560,6 @@ export const equipamentosFormFields: FormField[] = [
     label: 'Plano de Manutenção',
     type: 'text',
     placeholder: 'Inserir',
-    group: 'manutencao'
   },
 
   // ============================================================================
@@ -601,7 +576,6 @@ export const equipamentosFormFields: FormField[] = [
         onChange={onChange}
       />
     ),
-    group: 'dados_tecnicos'
   },
 
   // ============================================================================
@@ -612,6 +586,5 @@ export const equipamentosFormFields: FormField[] = [
     label: 'Localização (Área)',
     type: 'text',
     placeholder: 'Ex: Produção, Logística, Administrativo...',
-    group: 'localizacao'
   }
 ];

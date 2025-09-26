@@ -37,7 +37,9 @@ import {
   SquareUser,
   SquareUserRound,
   CircleUserRound,
-  OctagonAlert
+  OctagonAlert,
+  CalendarDays,
+  Clock
 } from 'lucide-react';
 
 import { FileUser } from '@/components/icons/FileUser';
@@ -197,5 +199,33 @@ export const navigationLinks: Array<NavigationLink> = [
     icon: Handshake,
     label: 'Fornecedores',
     hint: 'Fornecedores',
+  },
+
+  // 📅 AGENDA
+  {
+    key: 'agenda',
+    featureKey: 'Agenda',
+    path: '#',
+    icon: CalendarDays,
+    label: 'Agenda',
+    hint: 'Agenda',
+    links: [
+      {
+        key: 'feriados',
+        featureKey: 'Agenda',
+        path: '/agenda/feriados',
+        icon: Calendar,
+        label: 'Feriados',
+        hint: 'Feriados',
+      },
+      {
+        key: 'configuracoes-dias-uteis',
+        featureKey: 'Agenda',
+        path: '/agenda/configuracoes-dias-uteis',
+        icon: Clock,
+        label: 'Configurações de Dias Úteis',
+        hint: 'Configurações de Dias Úteis',
+      }
+    ]
   },
 ];

@@ -12,7 +12,12 @@ import {
   Truck
 } from 'lucide-react';
 import { OrdemServico } from '../types';
-import { mockTecnicos } from '@/features/execucao-os/data/mock-data';
+// Mock temporário de técnicos
+const mockTecnicos = [
+  { id: '1', nome: 'João Silva', especialidade: 'Mecânica' },
+  { id: '2', nome: 'Maria Santos', especialidade: 'Elétrica' },
+  { id: '3', nome: 'Pedro Costa', especialidade: 'Instrumentação' }
+];
 
 interface IniciarExecucaoModalProps {
   isOpen: boolean;
@@ -170,7 +175,7 @@ export const IniciarExecucaoModal: React.FC<IniciarExecucaoModalProps> = ({
                   <div className="flex items-center gap-2">
                     <Clock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                     <span className="text-blue-600 dark:text-blue-400">
-                      {os.dataProgramada} às {os.horaProgramada}
+                      {os.data_programada} às {os.hora_programada}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -337,3 +342,4 @@ export const IniciarExecucaoModal: React.FC<IniciarExecucaoModalProps> = ({
     </div>
   );
 };
+

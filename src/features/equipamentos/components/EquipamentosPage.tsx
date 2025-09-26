@@ -1,19 +1,20 @@
 // src/features/equipamentos/components/EquipamentosPage.tsx - CORRIGIDO
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/components/common/base-table/BaseTable';
 import { BaseFilters } from '@/components/common/base-filters/BaseFilters';
 import { Button } from '@/components/ui/button';
-import { Wrench, ArrowLeft } from 'lucide-react';
-import { useGenericTable } from '@/hooks/useGenericTable';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Wrench, ArrowLeft, AlertCircle } from 'lucide-react';
 import { Equipamento, EquipamentosFilters } from '../types';
 import { getEquipamentosTableColumns } from '../config/table-config';
-import { equipamentosFilterConfig } from '../config/filter-config';
-import { mockEquipamentos } from '../data/mock-data';
+import { createEquipamentosFilterConfig } from '../config/filter-config';
+import { useEquipamentos } from '../hooks/useEquipamentos';
+import { useEquipamentoFilters } from '../hooks/useEquipamentoFilters';
 
-// ✅ NOVOS MODAIS SEPARADOS
+// Modais separados
 import { EquipamentoUCModal } from './modals/EquipamentoUCModal';
 import { ComponenteUARModal } from './modals/ComponenteUARModal';
 import { GerenciarUARsModal } from './modals/GerenciarUARsModal';
@@ -32,19 +33,41 @@ export function EquipamentosPage() {
   const location = useLocation();
   const navigate = useNavigate();
   
+  // Hook da API
   const {
-    paginatedData: equipamentos,
-    pagination,
-    filters,
     loading,
-    setLoading,
-    handleFilterChange,
-    handlePageChange
-  } = useGenericTable({
-    data: mockEquipamentos,
-    initialFilters,
-    searchFields: ['nome', 'modelo', 'fabricante', 'numeroSerie', 'localizacao']
-  });
+    error,
+    equipamentos,
+    totalPages,
+    currentPage,
+    total,
+    createEquipamento,
+    updateEquipamento,
+    deleteEquipamento,
+    fetchEquipamentos,
+    fetchEquipamentosByPlanta,
+    salvarComponentesUARLote,
+    getEquipamento
+  } = useEquipamentos();
+
+  // Hook dos filtros dinâmicos
+  const {
+    loadingProprietarios,
+    loadingPlantas,
+    proprietarios,
+    plantas,
+    loadPlantasByProprietario,
+    error: filtersError,
+    clearError: clearFiltersError
+  } = useEquipamentoFilters();
+
+  // Estados locais
+  const [filters, setFilters] = useState<EquipamentosFilters>(initialFilters);
+  const [plantaInfo, setPlantaInfo] = useState<{
+    id: string;
+    nome: string;
+    localizacao: string;
+  } | null>(null);
 
   // ============================================================================
   // ESTADOS DOS MODAIS SEPARADOS
@@ -62,44 +85,105 @@ export function EquipamentosPage() {
     equipamentoPai: null as Equipamento | null
   });
 
-  // ✅ NOVO: Modal para gerenciar UARs de uma UC
   const [modalGerenciarUARs, setModalGerenciarUARs] = useState({
     isOpen: false,
     equipamentoUC: null as Equipamento | null
   });
 
-  // ✅ Aplicar filtros da URL quando a página carrega
-  useEffect(() => {
+  // ============================================================================
+  // CARREGAR DADOS INICIAIS
+  // ============================================================================
+  const loadEquipamentos = useCallback(async (currentFilters: EquipamentosFilters) => {
     const urlParams = new URLSearchParams(location.search);
     const plantaId = urlParams.get('plantaId');
     const plantaNome = urlParams.get('plantaNome');
 
     if (plantaId && plantaNome) {
-      console.log(`Filtrando equipamentos da planta ${plantaId}: ${decodeURIComponent(plantaNome)}`);
-      
-      handleFilterChange({
-        plantaId: plantaId,
-        page: 1
-      });
+      // Carregar equipamentos de uma planta específica
+      const result = await fetchEquipamentosByPlanta(plantaId, currentFilters); // PLANTAID JÁ É STRING
+      setPlantaInfo(result.planta);
+    } else {
+      // Carregar todos os equipamentos
+      await fetchEquipamentos(currentFilters);
+      setPlantaInfo(null);
     }
-  }, [location.search, handleFilterChange]);
+  }, [location.search, fetchEquipamentos, fetchEquipamentosByPlanta]);
 
-  // ✅ Verificar se está filtrando por planta
-  const filteredByPlanta = filters.plantaId !== 'all';
-  const plantaNome = filteredByPlanta 
-    ? decodeURIComponent(new URLSearchParams(location.search).get('plantaNome') || '')
-    : '';
+  // Carregar dados quando filtros mudam
+  useEffect(() => {
+    loadEquipamentos(filters);
+  }, [filters, loadEquipamentos]);
+
+  // Aplicar filtros da URL quando a página carrega
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const plantaId = urlParams.get('plantaId');
+
+    if (plantaId) {
+      setFilters(prev => ({
+        ...prev,
+        plantaId: plantaId, // MANTÉM COMO STRING
+        page: 1
+      }));
+    }
+  }, [location.search]);
+
+  // ============================================================================
+  // HANDLERS DOS FILTROS E PAGINAÇÃO
+  // ============================================================================
+  const handleFilterChange = useCallback(async (newFilters: Partial<EquipamentosFilters>) => {
+    // Se o proprietário mudou, carregar plantas correspondentes
+    if (newFilters.proprietarioId !== undefined && newFilters.proprietarioId !== filters.proprietarioId) {
+      console.log('🔄 [EQUIPAMENTOS] Proprietário mudou, carregando plantas...');
+      
+      // Limpar erro anterior
+      if (filtersError) clearFiltersError();
+      
+      // Carregar plantas do proprietário selecionado
+      try {
+        await loadPlantasByProprietario(newFilters.proprietarioId);
+        
+        // Se mudou proprietário, resetar planta selecionada
+        setFilters(prev => ({
+          ...prev,
+          ...newFilters,
+          plantaId: 'all', // Reset planta quando proprietário muda
+          page: 1 // Reset página quando filtros mudam
+        }));
+      } catch (error) {
+        console.error('❌ [EQUIPAMENTOS] Erro ao carregar plantas:', error);
+        
+        // Mesmo com erro, atualizar filtros
+        setFilters(prev => ({
+          ...prev,
+          ...newFilters,
+          plantaId: 'all',
+          page: 1
+        }));
+      }
+    } else {
+      // Para outros filtros, apenas atualizar normalmente
+      setFilters(prev => ({
+        ...prev,
+        ...newFilters,
+        page: 1 // Reset página quando filtros mudam
+      }));
+    }
+  }, [filters.proprietarioId, filtersError, clearFiltersError, loadPlantasByProprietario]);
+
+  const handlePageChange = (page: number) => {
+    setFilters(prev => ({ ...prev, page }));
+  };
 
   // ============================================================================
   // HANDLERS DOS MODAIS UC
   // ============================================================================
   const openUCModal = (mode: 'create' | 'edit' | 'view', entity: Equipamento | null = null) => {
-    // Para modo create, aplica dados iniciais baseados nos filtros
     if (mode === 'create') {
       const urlParams = new URLSearchParams(location.search);
       const plantaId = urlParams.get('plantaId');
       
-      const initialData = plantaId ? { plantaId: parseInt(plantaId) } : {};
+      const initialData = plantaId ? { plantaId } : {}; // MANTÉM COMO STRING
       setModalUC({ isOpen: true, mode, entity: initialData as Equipamento });
     } else {
       setModalUC({ isOpen: true, mode, entity });
@@ -111,17 +195,20 @@ export function EquipamentosPage() {
   };
 
   const handleSubmitUC = async (data: any) => {
-    console.log('Dados do Equipamento UC:', data);
-    
-    // Simular salvamento
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setLoading(false);
-    
-    closeUCModal();
-    
-    // Aqui você faria a requisição real para salvar
-    // await api.equipamentos.createUC(data);
+    try {
+      if (modalUC.mode === 'create') {
+        await createEquipamento(data);
+        console.log('Equipamento UC criado com sucesso');
+      } else if (modalUC.mode === 'edit' && modalUC.entity) {
+        await updateEquipamento(modalUC.entity.id, data); // USA ID STRING DIRETAMENTE
+        console.log('Equipamento UC atualizado com sucesso');
+      }
+      
+      closeUCModal();
+      
+    } catch (error) {
+      console.error('Erro ao salvar equipamento UC:', error);
+    }
   };
 
   // ============================================================================
@@ -136,29 +223,31 @@ export function EquipamentosPage() {
   };
 
   const handleSubmitUAR = async (data: any) => {
-    console.log('Dados do Componente UAR:', data);
-    
-    // Simular salvamento
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setLoading(false);
-    
-    closeUARModal();
-    
-    // Aqui você faria a requisição real para salvar
-    // await api.equipamentos.createUAR(data);
+    try {
+      if (modalUAR.mode === 'create') {
+        await createEquipamento(data);
+        console.log('Componente UAR criado com sucesso');
+      } else if (modalUAR.mode === 'edit' && modalUAR.entity) {
+        await updateEquipamento(modalUAR.entity.id, data); // USA ID STRING DIRETAMENTE
+        console.log('Componente UAR atualizado com sucesso');
+      }
+      
+      closeUARModal();
+      
+    } catch (error) {
+      console.error('Erro ao salvar componente UAR:', error);
+    }
   };
 
   // ============================================================================
-  // HANDLERS PARA GESTÃO DE COMPONENTES (NOVO)
+  // HANDLERS PARA GESTÃO DE COMPONENTES
   // ============================================================================
-  const handleGerenciarComponentes = (equipamento: Equipamento) => {
+  const handleGerenciarComponentes = async (equipamento: Equipamento) => {
     if (equipamento.classificacao !== 'UC') {
       alert('Apenas equipamentos UC podem ter componentes UAR!');
       return;
     }
 
-    // Abrir modal de gerenciamento de UARs
     setModalGerenciarUARs({
       isOpen: true,
       equipamentoUC: equipamento
@@ -173,17 +262,22 @@ export function EquipamentosPage() {
   };
 
   const handleSalvarUARs = async (uars: Equipamento[]) => {
-    console.log('Salvando UARs do equipamento:', modalGerenciarUARs.equipamentoUC?.nome, uars);
-    
-    // Simular salvamento
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setLoading(false);
-    
-    // Aqui você faria a requisição real para salvar
-    // await api.equipamentos.updateUARs(modalGerenciarUARs.equipamentoUC?.id, uars);
-    
-    alert(`${uars.length} componente(s) UAR salvos com sucesso!`);
+    try {
+      if (!modalGerenciarUARs.equipamentoUC) return;
+
+      const ucId = modalGerenciarUARs.equipamentoUC.id; // USA ID STRING DIRETAMENTE
+      const result = await salvarComponentesUARLote(ucId, uars);
+      
+      console.log(result.message);
+      alert(`${result.componentes.length} componente(s) UAR salvos com sucesso!`);
+      
+      // Recarregar dados para mostrar os componentes atualizados
+      await loadEquipamentos(filters);
+      
+    } catch (error) {
+      console.error('Erro ao salvar UARs:', error);
+      alert('Erro ao salvar componentes. Tente novamente.');
+    }
   };
 
   // ============================================================================
@@ -193,7 +287,18 @@ export function EquipamentosPage() {
     if (equipamento.classificacao === 'UC') {
       openUCModal('view', equipamento);
     } else {
-      openUARModal('view', equipamento, equipamento.equipamentoPai);
+      // CORRIGIDO: converter equipamentoPai para Equipamento completo
+      const equipamentoPaiCompleto = equipamento.equipamentoPai ? {
+        ...equipamento.equipamentoPai,
+        // Preencher campos obrigatórios que podem estar faltando
+        nome: equipamento.equipamentoPai.nome,
+        classificacao: 'UC' as const,
+        criticidade: equipamento.equipamentoPai.criticidade,
+        criadoEm: equipamento.equipamentoPai.criadoEm,
+        totalComponentes: 0
+      } as Equipamento : null;
+      
+      openUARModal('view', equipamento, equipamentoPaiCompleto);
     }
   };
 
@@ -201,22 +306,44 @@ export function EquipamentosPage() {
     if (equipamento.classificacao === 'UC') {
       openUCModal('edit', equipamento);
     } else {
-      openUARModal('edit', equipamento, equipamento.equipamentoPai);
+      // CORRIGIDO: converter equipamentoPai para Equipamento completo
+      const equipamentoPaiCompleto = equipamento.equipamentoPai ? {
+        ...equipamento.equipamentoPai,
+        nome: equipamento.equipamentoPai.nome,
+        classificacao: 'UC' as const,
+        criticidade: equipamento.equipamentoPai.criticidade,
+        criadoEm: equipamento.equipamentoPai.criadoEm,
+        totalComponentes: 0
+      } as Equipamento : null;
+      
+      openUARModal('edit', equipamento, equipamentoPaiCompleto);
     }
   };
 
-  // ✅ Handler para voltar às plantas
+  const handleDelete = async (equipamento: Equipamento) => {
+    if (!confirm(`Tem certeza que deseja remover ${equipamento.nome}?`)) {
+      return;
+    }
+
+    try {
+      await deleteEquipamento(equipamento.id); // USA ID STRING DIRETAMENTE
+      console.log('Equipamento removido com sucesso');
+    } catch (error) {
+      console.error('Erro ao remover equipamento:', error);
+      alert('Erro ao remover equipamento. Verifique se não há componentes vinculados.');
+    }
+  };
+
+  // ============================================================================
+  // NAVEGAÇÃO
+  // ============================================================================
   const handleBackToPlantas = () => {
     navigate('/plantas');
   };
 
-  // ✅ Handler para limpar filtro de planta
   const handleClearPlantaFilter = () => {
     navigate('/equipamentos');
-    handleFilterChange({
-      plantaId: 'all',
-      page: 1
-    });
+    setFilters(initialFilters);
   };
 
   // ============================================================================
@@ -226,6 +353,22 @@ export function EquipamentosPage() {
     onGerenciarComponentes: handleGerenciarComponentes
   });
 
+  // Preparar dados de paginação
+  const pagination = {
+    page: currentPage,
+    limit: filters.limit || 10,
+    total,
+    totalPages,
+    hasNextPage: currentPage < totalPages,
+    hasPreviousPage: currentPage > 1
+  };
+
+  const testarErro = () => {
+  console.log('Estado de erro atual:', error);
+  // Para forçar um erro e testar se o Alert aparece, você pode:
+  createEquipamento({ nome: '' }); // Isso vai gerar erro e deve mostrar o Alert
+};
+
   // ============================================================================
   // RENDER
   // ============================================================================
@@ -233,8 +376,18 @@ export function EquipamentosPage() {
     <Layout>
       <Layout.Main>
         <div className="flex flex-col h-97 w-full mb-8">
-          {/* ✅ Header com informações do filtro de planta */}
-          {filteredByPlanta ? (
+          {/* Alerta de erro */}
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {error}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Header com informações do filtro de planta */}
+          {plantaInfo ? (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-2">
                 <Button
@@ -254,10 +407,11 @@ export function EquipamentosPage() {
                     <Wrench className="h-5 w-5 text-green-600" />
                     <div>
                       <h2 className="font-semibold text-green-900 dark:text-green-100">
-                        Equipamentos de {plantaNome}
+                        Equipamentos de {plantaInfo.nome}
                       </h2>
                       <p className="text-sm text-green-700 dark:text-green-300">
                         Visualizando {equipamentos.length} {equipamentos.length === 1 ? 'equipamento' : 'equipamentos'} desta planta
+                        {plantaInfo.localizacao && ` • ${plantaInfo.localizacao}`}
                       </p>
                     </div>
                   </div>
@@ -280,11 +434,33 @@ export function EquipamentosPage() {
           )}
           
           <div className="flex flex-col gap-4 mb-6">
-            {/* Filtros - responsivos */}
+            {/* Erro dos filtros */}
+            {filtersError && (
+              <Alert className="border-orange-200 bg-orange-50">
+                <AlertCircle className="h-4 w-4 text-orange-600" />
+                <AlertDescription className="text-orange-800">
+                  {filtersError} - Os dados podem estar desatualizados.
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto text-orange-600 underline ml-2"
+                    onClick={clearFiltersError}
+                  >
+                    Tentar novamente
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {/* Filtros - CORRIGIDO: removido prop loading */}
             <div className="w-full">
               <BaseFilters 
                 filters={filters}
-                config={equipamentosFilterConfig}
+                config={createEquipamentosFilterConfig(
+                  proprietarios,
+                  plantas,
+                  loadingProprietarios,
+                  loadingPlantas
+                )}
                 onFilterChange={handleFilterChange}
               />
             </div>
@@ -294,21 +470,12 @@ export function EquipamentosPage() {
               <Button 
                 onClick={() => openUCModal('create')}
                 className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
+                disabled={loading}
               >
                 <Wrench className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Novo Equipamento UC</span>
                 <span className="sm:hidden">Novo UC</span>
               </Button>
-              
-              {/* <Button 
-                variant="outline"
-                onClick={() => openUARModal('create')}
-                className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto"
-              >
-                <Component className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Novo Componente UAR</span>
-                <span className="sm:hidden">Novo UAR</span>
-              </Button> */}
             </div>
           </div>
 
@@ -321,9 +488,10 @@ export function EquipamentosPage() {
               onPageChange={handlePageChange}
               onView={handleView}
               onEdit={handleEdit}
+              onDelete={handleDelete}
               emptyMessage={
-                filteredByPlanta 
-                  ? `Nenhum equipamento encontrado para ${plantaNome}.`
+                plantaInfo 
+                  ? `Nenhum equipamento encontrado para ${plantaInfo.nome}.`
                   : "Nenhum equipamento encontrado."
               }
               emptyIcon={<Wrench className="h-8 w-8 text-muted-foreground/50" />}
@@ -354,7 +522,7 @@ export function EquipamentosPage() {
           onSubmit={handleSubmitUAR}
         />
 
-        {/* ✅ NOVO: Modal para Gerenciar UARs de uma UC */}
+        {/* Modal para Gerenciar UARs de uma UC */}
         <GerenciarUARsModal
           isOpen={modalGerenciarUARs.isOpen}
           equipamentoUC={modalGerenciarUARs.equipamentoUC}

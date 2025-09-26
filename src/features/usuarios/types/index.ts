@@ -1,5 +1,6 @@
-// src/features/usuarios/types/index.ts - COMPATÍVEL COM BaseEntity
+// src/features/usuarios/types/index.ts - CORRIGIDO PARA BACKEND HÍBRIDO
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
+import { concatenateAddress } from '@/utils/address.utils';
 
 // ============================================================================
 // ENUMS E TYPES DO SISTEMA
@@ -10,12 +11,12 @@ export enum UsuarioStatus {
   INATIVO = 'Inativo',
 }
 
-// ✅ ROLES ATIVOS NO SISTEMA
+// ✅ ROLES ATIVOS NO SISTEMA (baseado nas constraints do banco)
 export enum UsuarioRole {
   ADMIN = 'admin',
+  CONSULTOR = 'consultor', 
   GERENTE = 'gerente',
   VENDEDOR = 'vendedor',
-  CONSULTOR = 'consultor',
 }
 
 // ✅ PERMISSÕES REAIS DO BANCO DE DADOS
@@ -88,9 +89,9 @@ export type Permissao =
 export interface Role {
   id: string;
   name: string;
-  description: string;
-  created_at: Date;
-  updated_at: Date;
+  description?: string;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface ConcessionariaDTO {
@@ -109,14 +110,22 @@ export interface OrganizacaoDTO {
   updated_at: Date;
 }
 
-// ✅ INTERFACE COMPATÍVEL COM BaseEntity
+// ✅ ESTRUTURA DE PERMISSÃO COMO RETORNA DO BACKEND
+export interface UserPermission {
+  id: number;
+  name: string;
+  guard_name: string;
+  source: 'role' | 'direct';
+}
+
+// ✅ INTERFACE COMPATÍVEL COM BaseEntity E BACKEND HÍBRIDO
 export interface Usuario extends BaseEntity {
   // ✅ BaseEntity fields - compatíveis
-  id: string; // ✅ Agora BaseEntity aceita string
+  id: string;
   created_at: Date;
   updated_at: Date;
-  criadoEm?: Date; // Alias para compatibilidade
-  atualizadoEm?: Date; // Alias para compatibilidade
+  criadoEm?: Date;
+  atualizadoEm?: Date;
 
   // Campos específicos do usuário
   status: UsuarioStatus;
@@ -125,7 +134,7 @@ export interface Usuario extends BaseEntity {
   concessionarias?: ConcessionariaDTO[];
   concessionaria_atual_id?: string;
   concessionaria_atual?: ConcessionariaDTO;
-  organizacao_atual?: OrganizacaoDTO;
+  organizacao_atual?: string; // ID da organização
   
   // Dados pessoais
   nome: string;
@@ -136,17 +145,21 @@ export interface Usuario extends BaseEntity {
   cidade?: string;
   estado?: string;
   endereco?: string;
+  complemento?: string;
   cep?: string;
+  bairro?: string;
+  endereco_completo?: string;
   manager_id?: string;
   
-  // Permissões e roles
-  all_permissions: Permissao[];
-  roles: Role[];
+  // ✅ CORREÇÃO: Permissões e roles como retorna do backend
+  all_permissions: UserPermission[] | string[]; // Pode ser objetos completos ou strings simples
+  roles: string[]; // Array de nomes de roles (ex: ["admin"])
+  role_details?: Role; // Detalhes da role principal
   
   // ✅ CAMPOS EXTRAS PARA COMPATIBILIDADE COM FRONTEND EXISTENTE
-  tipo?: string; // Computado a partir do role principal
-  perfil?: string; // Alias para tipo
-  permissao?: Permissao[]; // Alias para all_permissions
+  tipo?: string;
+  perfil?: string;
+  permissao?: Permissao[];
   
   // ✅ CAMPOS TEMPORÁRIOS (apenas na criação/reset)
   senhaTemporaria?: string;
@@ -154,33 +167,34 @@ export interface Usuario extends BaseEntity {
   ultimoLogin?: string;
   
   // ✅ CAMPOS COMPUTADOS
-  plantas?: number; // Para proprietários
-  isActive?: boolean; // Baseado no status
+  plantas?: number;
+  isActive?: boolean;
 }
 
-// ✅ FORM DATA PARA CRIAÇÃO/EDIÇÃO (BASEADO NO CreateUsuarioDto)
+// ✅ FORM DATA PARA CRIAÇÃO/EDIÇÃO
 export interface UsuarioFormData {
-  id?: string | number; // ✅ CORREÇÃO: Adicionar id para compatibilidade com BaseEntity
+  id?: string | number;
   nome: string;
   email: string;
   telefone?: string;
   instagram?: string;
-  status?: string; // ✅ CORREÇÃO: Status como string para o select
+  status?: string;
   cpfCnpj?: string;
   cidade?: string;
   estado?: string;
   endereco?: string;
+  complemento?: string;
   bairro?: string;
   cep?: string;
   concessionariaAtualId?: string;
   organizacaoAtualId?: string;
   managerId?: string;
   permissions?: Permissao[];
-  roleNames?: string | string[]; // ✅ CORREÇÃO: Pode ser string (do select) ou array
+  roleNames?: string | string[]; // ✅ Pode ser string (do select) ou array
   
   // ✅ COMPATIBILIDADE COM FRONTEND EXISTENTE
-  tipo?: string; // Será convertido para roleNames
-  permissao?: Permissao[]; // Será convertido para permissions
+  tipo?: string;
+  permissao?: Permissao[];
 }
 
 // ✅ DTO PARA TROCA DE SENHA
@@ -207,7 +221,7 @@ export interface UsuariosFilters extends BaseFiltersType {
   permissions?: string[];
   
   // ✅ COMPATIBILIDADE COM FRONTEND EXISTENTE
-  tipo?: string | 'all'; // Será convertido para role
+  tipo?: string | 'all';
 }
 
 export interface ModalState {
@@ -236,36 +250,85 @@ export interface UsuarioResponse extends Usuario {
   primeiroAcesso?: boolean;
 }
 
-// ✅ MAPEAMENTOS PARA COMPATIBILIDADE FRONTEND ↔ API
+// ✅ MAPEAMENTOS PARA COMPATIBILIDADE FRONTEND ↔ API E DB CONSTRAINT
 export const ROLE_TO_TIPO_MAPPING = {
   'admin': 'Administrador',
+  'consultor': 'Consultor',
   'gerente': 'Gerente',
   'vendedor': 'Vendedor',
-  'consultor': 'Consultor',
+  // Roles que podem existir no Spatie mas não no constraint da coluna legacy
+  'proprietario': 'Proprietário',
+  'user': 'Vendedor',
 } as const;
 
 export const TIPO_TO_ROLE_MAPPING = {
   'Administrador': 'admin',
+  'Consultor': 'consultor',
   'Gerente': 'gerente',
   'Vendedor': 'vendedor',
-  'Consultor': 'consultor',
+  'Proprietário': 'proprietario', // Será mapeado para gerente na coluna legacy
 } as const;
 
-// ✅ UTILITÁRIOS PARA CONVERSÃO
-export const mapUsuarioToFormData = (usuario: Usuario): UsuarioFormData => {
-  // Pegar o primeiro role para o select (que espera valor único)
-  const primaryRole = usuario.roles?.[0]?.name || 'consultor';
+// ✅ MAPEAMENTO ESPECÍFICO PARA CONSTRAINT DA COLUNA ROLE (LEGACY)
+export const SPATIE_TO_DB_ROLE_MAPPING = {
+  'proprietario': 'gerente', // proprietario do Spatie → gerente no DB legacy
+  'user': 'vendedor', // user padrão → vendedor no DB legacy
+  'admin': 'admin',
+  'consultor': 'consultor',
+  'gerente': 'gerente',
+  'vendedor': 'vendedor',
+} as const;
+
+// ✅ FUNÇÃO AUXILIAR PARA EXTRAIR PERMISSÕES COMO STRINGS
+const extractPermissionNames = (permissions: UserPermission[] | string[] | undefined): string[] => {
+  if (!permissions) return [];
   
-  // Normalizar status para o formato esperado pelo select
-  let statusNormalizado: string = usuario.status;
+  return permissions.map(p => 
+    typeof p === 'string' ? p : p.name
+  );
+};
+
+// ✅ UTILITÁRIOS PARA CONVERSÃO - CORRIGIDOS
+export const mapUsuarioToFormData = (usuario: Usuario): UsuarioFormData => {
+  console.log('🔄 [mapUsuarioToFormData] Mapeando usuário para form:', {
+    id: usuario.id,
+    nome: usuario.nome,
+    role_details: usuario.role_details,
+    roles: usuario.roles,
+    tipo: usuario.tipo,
+    perfil: usuario.perfil,
+    all_permissions: usuario.all_permissions,
+    permissao: usuario.permissao,
+    all_permissions_length: usuario.all_permissions?.length,
+    permissao_length: usuario.permissao?.length
+  });
+
+  // ✅ CORREÇÃO CRÍTICA: Usar role_details primeiro, depois roles array, depois fallback
+  let primaryRoleName = 'vendedor'; // Default
+  
+  if (usuario.role_details?.name) {
+    primaryRoleName = usuario.role_details.name;
+  } else if (usuario.roles && usuario.roles.length > 0) {
+    primaryRoleName = usuario.roles[0];
+  }
+  
+  console.log('🎯 [mapUsuarioToFormData] Role detectada:', primaryRoleName);
+
+  // ✅ CORREÇÃO CRÍTICA: Converter permissões para array de strings
+  const permissionsAsStrings = extractPermissionNames(usuario.all_permissions);
+  
+  console.log('🔧 [mapUsuarioToFormData] Permissões convertidas:', permissionsAsStrings.length);
+
+  // Normalizar status
+  let statusNormalizado = usuario.status;
   if (usuario.status === UsuarioStatus.ATIVO || String(usuario.status).toLowerCase() === 'ativo') {
-    statusNormalizado = 'Ativo';
+    statusNormalizado = UsuarioStatus.ATIVO;
   } else if (usuario.status === UsuarioStatus.INATIVO || String(usuario.status).toLowerCase() === 'inativo') {
-    statusNormalizado = 'Inativo';
+    statusNormalizado = UsuarioStatus.INATIVO;
   }
   
   const formData = {
-    id: usuario.id, // ✅ CORREÇÃO: Incluir id
+    id: usuario.id,
     nome: usuario.nome,
     email: usuario.email,
     telefone: usuario.telefone,
@@ -275,22 +338,34 @@ export const mapUsuarioToFormData = (usuario: Usuario): UsuarioFormData => {
     cidade: usuario.cidade,
     estado: usuario.estado,
     endereco: usuario.endereco,
+    complemento: usuario.complemento,
+    bairro: usuario.bairro,
     cep: usuario.cep,
-    bairro: (usuario as any).bairro || '', // Bairro pode não existir no tipo Usuario ainda
     concessionariaAtualId: usuario.concessionaria_atual_id,
-    organizacaoAtualId: usuario.organizacao_atual?.id,
+    organizacaoAtualId: usuario.organizacao_atual,
     managerId: usuario.manager_id,
-    permissions: usuario.all_permissions,
-    roleNames: primaryRole, // ✅ CORREÇÃO: Valor único para o select
+    permissions: permissionsAsStrings as Permissao[], // ✅ CORREÇÃO: Array de strings
+    roleNames: primaryRoleName, // ✅ CORREÇÃO: String única para o select
     // Compatibilidade
-    tipo: usuario.roles[0] ? ROLE_TO_TIPO_MAPPING[usuario.roles[0].name as keyof typeof ROLE_TO_TIPO_MAPPING] : undefined,
-    permissao: usuario.all_permissions,
+    tipo: ROLE_TO_TIPO_MAPPING[primaryRoleName as keyof typeof ROLE_TO_TIPO_MAPPING] || primaryRoleName,
+    permissao: permissionsAsStrings as Permissao[],
   };
+  
+  console.log('✅ [mapUsuarioToFormData] FormData final:', {
+    roleNames: formData.roleNames,
+    permissions: formData.permissions?.length,
+    tipo: formData.tipo
+  });
   
   return formData;
 };
 
 export const mapFormDataToCreateDto = (formData: UsuarioFormData) => {
+  console.log('🔄 [mapFormDataToCreateDto] Mapeando form data:', {
+    roleNames: formData.roleNames,
+    permissions: formData.permissions?.length,
+    tipo: formData.tipo
+  });
   
   // ✅ CORREÇÃO: Tratar roleNames como string única (do select)
   let roleNames: string[] = [];
@@ -312,16 +387,17 @@ export const mapFormDataToCreateDto = (formData: UsuarioFormData) => {
   
   // Se ainda está vazio, usar role padrão
   if (roleNames.length === 0) {
-    roleNames = ['consultor'];
+    roleNames = ['vendedor'];
   }
   
+  console.log('🎯 [mapFormDataToCreateDto] Roles finais:', roleNames);
   
   // Criar objeto limpo sem campos undefined
   const dto: any = {
     nome: formData.nome,
     email: formData.email,
     status: formData.status || UsuarioStatus.ATIVO,
-    roleNames: roleNames,
+    roleNames: roleNames, // ✅ BACKEND AINDA ESPERA ESTE CAMPO LEGACY
   };
 
   // Adicionar campos opcionais apenas se tiverem valor
@@ -330,28 +406,60 @@ export const mapFormDataToCreateDto = (formData: UsuarioFormData) => {
   if (formData.cpfCnpj) dto.cpfCnpj = formData.cpfCnpj;
   if (formData.cidade) dto.cidade = formData.cidade;
   if (formData.estado) dto.estado = formData.estado;
-  if (formData.endereco) dto.endereco = formData.endereco;
   if (formData.bairro) dto.bairro = formData.bairro;
+  if (formData.complemento) dto.complemento = formData.complemento;
   if (formData.cep) dto.cep = formData.cep;
+  
+  // Concatenar endereço apenas se os campos estão preenchidos
+  if (formData.endereco || formData.complemento || formData.bairro) {
+    const enderecoCompleto = concatenateAddress({
+      endereco: formData.endereco,
+      complemento: formData.complemento,
+      bairro: formData.bairro,
+      cidade: formData.cidade,
+      estado: formData.estado,
+      cep: formData.cep
+    });
+    dto.endereco = enderecoCompleto;
+  }
+  
   if (formData.concessionariaAtualId) dto.concessionariaAtualId = formData.concessionariaAtualId;
   if (formData.organizacaoAtualId) dto.organizacaoAtualId = formData.organizacaoAtualId;
   if (formData.managerId) dto.managerId = formData.managerId;
   if (formData.permissions && formData.permissions.length > 0) {
-    dto.permissions = formData.permissions;
+    dto.permissions = formData.permissions; // ✅ BACKEND AINDA ESPERA ESTE CAMPO LEGACY
   } else if (formData.permissao && formData.permissao.length > 0) {
     dto.permissions = formData.permissao;
   }
 
+  console.log('✅ [mapFormDataToCreateDto] DTO final:', dto);
+  
   return dto;
 };
 
-// ✅ FUNÇÕES DE UTILIDADE
+// ✅ FUNÇÕES DE UTILIDADE - CORRIGIDAS
 export const getUserDisplayName = (usuario: Usuario): string => {
   return usuario.nome || usuario.email;
 };
 
 export const getUserPrimaryRole = (usuario: Usuario): Role | undefined => {
-  return usuario.roles?.[0];
+  // ✅ CORREÇÃO: Primeiro tentar role_details
+  if (usuario.role_details) {
+    return usuario.role_details;
+  }
+  
+  // Senão, usar primeiro role do array roles
+  if (usuario.roles && usuario.roles.length > 0) {
+    return {
+      id: '0',
+      name: usuario.roles[0],
+      description: usuario.roles[0],
+      created_at: new Date(),
+      updated_at: new Date()
+    };
+  }
+  
+  return undefined;
 };
 
 export const getUserRoleDisplay = (usuario: Usuario): string => {
@@ -362,7 +470,8 @@ export const getUserRoleDisplay = (usuario: Usuario): string => {
 };
 
 export const hasPermission = (usuario: Usuario, permission: Permissao): boolean => {
-  return usuario.all_permissions.includes(permission);
+  const permissionNames = extractPermissionNames(usuario.all_permissions);
+  return permissionNames.includes(permission);
 };
 
 export const isUsuarioAtivo = (usuario: Usuario): boolean => {

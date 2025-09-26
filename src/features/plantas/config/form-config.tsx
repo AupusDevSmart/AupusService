@@ -1,14 +1,63 @@
-// src/features/plantas/config/form-config.tsx - ATUALIZADO
+// src/features/plantas/config/form-config.tsx - ATUALIZADO COM MÁSCARA CNPJ
 import React from 'react';
 import { FormField, FormFieldProps } from '@/types/base';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CNPJInput, CNPJUtils } from '@/components/ui/cnpj-input'; // ✅ Import do novo componente
 import { Factory, Settings, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ProprietarioSelector } from '../components/ProprietarioSelector';
 import { useEstadosIBGE, useCidadesIBGE, useViaCEP, formatarCEP, validarCEP } from '@/hooks/useEstadosIBGE';
 
-// ✅ COMPONENTE COMPLETO: UF, Cidade e CEP com busca automática - SEM MUDANÇAS
+// ✅ COMPONENTE: CNPJ com máscara personalizada
+const CNPJFieldComponent = ({ value, onChange, disabled, hasError }: FormFieldProps) => {
+  const [displayValue, setDisplayValue] = React.useState(() => {
+    // Inicializar com valor formatado se existir
+    return value ? CNPJUtils.mask(value.toString()) : '';
+  });
+
+  const handleCNPJChange = (rawValue: string) => {
+    // Atualizar valor interno (sem máscara) para o formulário
+    onChange(rawValue);
+    
+    // Atualizar valor de display (com máscara)
+    setDisplayValue(CNPJUtils.mask(rawValue));
+  };
+
+  // Atualizar display value quando value prop mudar externamente
+  React.useEffect(() => {
+    if (value && value.toString() !== CNPJUtils.unmask(displayValue)) {
+      setDisplayValue(CNPJUtils.mask(value.toString()));
+    }
+  }, [value, displayValue]);
+
+  return (
+    <div className="space-y-2">
+      <CNPJInput
+        value={CNPJUtils.unmask(displayValue)}
+        onChange={handleCNPJChange}
+        disabled={disabled}
+        className={hasError ? 'border-red-500' : ''}
+      />
+      
+      {/* ✅ Dica sobre validação */}
+      {displayValue.length > 0 && !CNPJUtils.isValidCNPJ(displayValue) && (
+        <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+          💡 <strong>Dica:</strong> Verifique se o CNPJ está correto. O sistema validará automaticamente os dígitos verificadores.
+        </div>
+      )}
+      
+      {/* ✅ Confirmação de CNPJ válido */}
+      {CNPJUtils.isValidCNPJ(displayValue) && (
+        <div className="text-xs text-green-600 bg-green-50 p-2 rounded border border-green-200">
+          ✅ CNPJ válido
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ✅ COMPONENTE COMPLETO: UF, Cidade e CEP com busca automática (SEM MUDANÇAS)
 const EnderecoCompleto = ({ onChange, disabled, entity }: FormFieldProps & { entity?: any }) => {
   const [selectedUF, setSelectedUF] = React.useState<string>('');
   const [selectedCidade, setSelectedCidade] = React.useState<string>('');
@@ -49,7 +98,7 @@ const EnderecoCompleto = ({ onChange, disabled, entity }: FormFieldProps & { ent
         logradouro,
         bairro
       };
-      
+
       onChangeRef.current(enderecoAtualizado);
     }
   }, [selectedUF, selectedCidade, cep, logradouro, bairro, initialized]);
@@ -129,22 +178,9 @@ const EnderecoCompleto = ({ onChange, disabled, entity }: FormFieldProps & { ent
           </Button>
         </div>
         
-        {loadingCEP && (
-          <p className="text-xs text-blue-600 flex items-center gap-1">
-            <Settings className="h-3 w-3 animate-pulse" />
-            Buscando endereço via CEP...
-          </p>
-        )}
-        
         {errorCEP && (
           <p className="text-xs text-red-600">
             ⚠️ {errorCEP}
-          </p>
-        )}
-        
-        {validarCEP(cep) && !loadingCEP && !errorCEP && logradouro && (
-          <p className="text-xs text-green-600">
-            ✅ Endereço encontrado automaticamente
           </p>
         )}
       </div>
@@ -196,12 +232,6 @@ const EnderecoCompleto = ({ onChange, disabled, entity }: FormFieldProps & { ent
             ))}
           </select>
           
-          {loadingEstados && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Settings className="h-3 w-3 animate-pulse" />
-              Carregando estados do IBGE...
-            </p>
-          )}
         </div>
 
         <div className="space-y-2">
@@ -227,31 +257,17 @@ const EnderecoCompleto = ({ onChange, disabled, entity }: FormFieldProps & { ent
               </option>
             ))}
           </select>
-          
-          {loadingCidades && selectedUF && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Settings className="h-3 w-3 animate-pulse" />
-              Carregando cidades de {selectedUF}...
-            </p>
-          )}
-          
-          {selectedUF && cidades.length > 0 && !loadingCidades && (
-            <p className="text-xs text-green-600">
-              ✅ {cidades.length} cidades disponíveis
-            </p>
-          )}
         </div>
       </div>
     </div>
   );
 };
 
-// ✅ COMPONENTE ATUALIZADO: Gestão de Equipamentos com navegação inteligente
+// ✅ COMPONENTE ATUALIZADO: Gestão de Equipamentos com navegação inteligente (SEM MUDANÇAS)
 const GestaoEquipamentosButton = ({ entity, mode }: { entity?: any; mode?: 'create' | 'edit' | 'view' }) => {
   const navigate = useNavigate();
 
   const handleOpenEquipamentos = () => {
-    // ✅ Se é uma planta existente (view ou edit), navegar com filtro específico
     if (entity && entity.id && (mode === 'view' || mode === 'edit')) {
       const plantaId = entity.id;
       const plantaNome = encodeURIComponent(entity.nome || `Planta ${plantaId}`);
@@ -259,13 +275,11 @@ const GestaoEquipamentosButton = ({ entity, mode }: { entity?: any; mode?: 'crea
       console.log(`Navegando para equipamentos da planta ${plantaId}: ${entity.nome}`);
       navigate(`/equipamentos?plantaId=${plantaId}&plantaNome=${plantaNome}`);
     } else {
-      // ✅ Para criar nova planta ou sem ID, navegar sem filtro
       console.log('Navegando para equipamentos sem filtro específico');
       navigate('/equipamentos');
     }
   };
 
-  // ✅ Determinar se é uma planta existente
   const isPlantaExistente = entity && entity.id && (mode === 'view' || mode === 'edit');
   
   return (
@@ -303,7 +317,7 @@ const GestaoEquipamentosButton = ({ entity, mode }: { entity?: any; mode?: 'crea
           size="sm"
           className="border-green-300 text-green-700 hover:bg-green-100 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-800 shrink-0 ml-4"
           onClick={handleOpenEquipamentos}
-          disabled={mode === 'create' && !entity?.id} // ✅ Desabilitar para nova planta
+          disabled={mode === 'create' && !entity?.id}
         >
           {isPlantaExistente ? (
             <>
@@ -319,7 +333,6 @@ const GestaoEquipamentosButton = ({ entity, mode }: { entity?: any; mode?: 'crea
         </Button>
       </div>
       
-      {/* ✅ Informação adicional para modo create */}
       {mode === 'create' && (
         <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-300">
           💡 <strong>Dica:</strong> Salve a planta primeiro para poder gerenciar seus equipamentos específicos
@@ -338,18 +351,26 @@ export const plantasFormFields: FormField[] = [
     required: true,
     placeholder: 'Ex: Planta Industrial São Paulo',
   },
+  // ✅ ATUALIZADO: Campo CNPJ com máscara automática
   {
     key: 'cnpj',
     label: 'CNPJ',
-    type: 'text',
+    type: 'custom',
     required: true,
-    placeholder: '00.000.000/0000-00',
+    render: CNPJFieldComponent,
     validation: (value) => {
-      if (!value) return null;
-      const cleaned = String(value).replace(/\D/g, '');
-      if (cleaned.length !== 14) {
+      if (!value) return 'CNPJ é obrigatório';
+      
+      const cleanValue = CNPJUtils.unmask(value.toString());
+      
+      if (cleanValue.length !== 14) {
         return 'CNPJ deve ter 14 dígitos';
       }
+      
+      if (!CNPJUtils.isValidCNPJ(value.toString())) {
+        return 'CNPJ inválido. Verifique os dígitos verificadores.';
+      }
+      
       return null;
     },
   },
@@ -360,12 +381,18 @@ export const plantasFormFields: FormField[] = [
     type: 'custom',
     required: true,
     render: ({ value, onChange, disabled }) => (
-      <ProprietarioSelector 
-        value={value as number | null} 
-        onChange={onChange} 
+      <ProprietarioSelector
+        value={value as string | null}
+        onChange={onChange}
         disabled={disabled}
       />
     ),
+    validation: (value) => {
+      if (!value || value === '') {
+        return 'Proprietário é obrigatório';
+      }
+      return null;
+    },
   },
   {
     key: 'horarioFuncionamento',
@@ -391,9 +418,34 @@ export const plantasFormFields: FormField[] = [
     type: 'custom',
     required: true,
     render: EnderecoCompleto,
+    validation: (value) => {
+      if (!value || typeof value !== 'object') {
+        return 'Endereço é obrigatório';
+      }
+
+      const { logradouro, cidade, uf, cep } = value;
+
+      if (!logradouro || logradouro.trim().length < 5) {
+        return 'Logradouro deve ter pelo menos 5 caracteres';
+      }
+
+      if (!cidade || cidade.trim().length < 2) {
+        return 'Cidade é obrigatória';
+      }
+
+      if (!uf || uf.trim().length !== 2) {
+        return 'UF deve ter exatamente 2 caracteres';
+      }
+
+      if (!cep || !cep.match(/^\d{5}-\d{3}$/)) {
+        return 'CEP deve estar no formato XXXXX-XXX';
+      }
+
+      return null;
+    },
   },
 
-  // ✅ CAMPO ATUALIZADO: Gestão de Equipamentos com mode
+  // Gestão de Equipamentos
   {
     key: 'gestaoEquipamentos',
     label: 'Gestão de Equipamentos',

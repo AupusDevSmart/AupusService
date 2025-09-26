@@ -2,13 +2,13 @@
 import { NavigateFunction } from 'react-router-dom';
 
 interface Anomalia {
-  id: number;
+  id: string;
   descricao: string;
   local: string;
   ativo: string;
   prioridade: string;
-  equipamentoId?: number;
-  plantaId?: number;
+  equipamentoId?: string;
+  plantaId?: string;
 }
 
 interface TarefaTemplate {

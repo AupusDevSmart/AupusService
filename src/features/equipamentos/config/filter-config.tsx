@@ -1,26 +1,14 @@
-// src/features/equipamentos/config/filter-config.tsx - CORRIGIDO
+// src/features/equipamentos/config/filter-config.tsx - COM FILTROS DINÂMICOS
 import { FilterConfig } from '@/types/base';
+import { FilterOption } from '../hooks/useEquipamentoFilters';
 
-// Mock data para os filtros
-const mockProprietarios = [
-  { value: '1', label: 'Empresa ABC Ltda' },
-  { value: '2', label: 'João Silva' },
-  { value: '3', label: 'Maria Santos Consultoria ME' },
-  { value: '4', label: 'Tech Solutions Ltda' },
-  { value: '5', label: 'Ana Costa' },
-  { value: '6', label: 'Indústria XYZ S.A.' }
-];
-
-const mockPlantas = [
-  { value: '1', label: 'Planta Industrial São Paulo' },
-  { value: '2', label: 'Centro de Distribuição Rio' },
-  { value: '3', label: 'Unidade Administrativa BH' },
-  { value: '4', label: 'Oficina João Silva' },
-  { value: '5', label: 'Depósito Ana Costa' },
-  { value: '6', label: 'Fábrica Indústria XYZ' }
-];
-
-export const equipamentosFilterConfig: FilterConfig[] = [
+// Função para criar configuração de filtros com dados dinâmicos
+export const createEquipamentosFilterConfig = (
+  proprietarios: FilterOption[] = [{ value: 'all', label: 'Todos os Proprietários' }],
+  plantas: FilterOption[] = [{ value: 'all', label: 'Todas as Plantas' }],
+  loadingProprietarios = false,
+  loadingPlantas = false
+): FilterConfig[] => [
   {
     key: 'search',
     type: 'search',
@@ -31,23 +19,19 @@ export const equipamentosFilterConfig: FilterConfig[] = [
     key: 'proprietarioId',
     type: 'select',
     label: 'Proprietário',
-    placeholder: 'Todos os Proprietários',
-    options: [
-      { value: 'all', label: 'Todos os Proprietários' },
-      ...mockProprietarios
-    ],
-    className: 'min-w-48'
+    placeholder: loadingProprietarios ? 'Carregando proprietários...' : 'Todos os Proprietários',
+    options: proprietarios,
+    className: 'min-w-48',
+    disabled: loadingProprietarios
   },
   {
     key: 'plantaId',
     type: 'select',
     label: 'Planta',
-    placeholder: 'Todas as Plantas',
-    options: [
-      { value: 'all', label: 'Todas as Plantas' },
-      ...mockPlantas
-    ],
-    className: 'min-w-48'
+    placeholder: loadingPlantas ? 'Carregando plantas...' : 'Todas as Plantas',
+    options: plantas,
+    className: 'min-w-48',
+    disabled: loadingPlantas
   },
   {
     key: 'classificacao',

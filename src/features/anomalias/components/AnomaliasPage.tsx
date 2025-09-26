@@ -1,5 +1,5 @@
-// src/features/anomalias/components/AnomaliasPage.tsx - COM PLANEJAR OS
-import { useState, useEffect, useMemo, useCallback } from 'react';
+// src/features/anomalias/components/AnomaliasPage.tsx - VERSÃO CORRIGIDA
+import { useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -7,70 +7,37 @@ import { BaseTable, CustomAction } from '@/components/common/base-table/BaseTabl
 import { BaseFilters } from '@/components/common/base-filters/BaseFilters';
 import { BaseModal } from '@/components/common/base-modal/BaseModal';
 import { Button } from '@/components/ui/button';
-import { Plus, AlertTriangle, CheckCircle, Clock, FileText, BarChart3, Download, Upload, XCircle, Settings, Calendar } from 'lucide-react';
-import { useGenericTable } from '@/hooks/useGenericTable';
+import { Plus, AlertTriangle, Clock, BarChart3, Download, Upload, Calendar, CheckCircle, XCircle, Settings, FileText } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { Anomalia, AnomaliasFilters, AnomaliaFormData } from '../types';
+import { Anomalia, AnomaliaFormData } from '../types';
 import { anomaliasTableColumns } from '../config/table-config';
 import { anomaliasFilterConfig } from '../config/filter-config';
 import { anomaliasFormFields } from '../config/form-config';
-import { mockAnomalias } from '../data/mock-data';
-import { planejarOSComAnomalia } from '@/utils/planejarOS'; // ✅ NOVA IMPORT
-
-const initialFilters: AnomaliasFilters = {
-  search: '',
-  periodo: 'all',
-  status: 'all',
-  prioridade: 'all',
-  origem: 'all',
-  planta: 'all',
-  page: 1,
-  limit: 10
-};
+import { useAnomaliasTable } from '../hooks/useAnomaliasTable';
+import { useAnomalias } from '../hooks/useAnomalias';
+import { planejarOSComAnomalia } from '@/utils/planejarOS';
 
 export function AnomaliasPage() {
   const navigate = useNavigate();
   
   const {
-    paginatedData: anomalias,
+    anomalias,
     pagination,
     filters,
     loading,
-    setLoading,
+    error,
+    stats,
     handleFilterChange,
-    handlePageChange
-  } = useGenericTable({
-    data: mockAnomalias,
-    initialFilters,
-    searchFields: ['descricao', 'local', 'ativo', 'id', 'criadoPor'],
-    customFilters: {
-      periodo: (item: Anomalia, value: string) => {
-        if (value === 'all') return true;
-        
-        const getMonthYear = (period: string): { month: string; year: string } => {
-          const months: Record<string, string> = {
-            'Janeiro': '01', 'Fevereiro': '02', 'Março': '03', 'Abril': '04',
-            'Maio': '05', 'Junho': '06', 'Julho': '07', 'Agosto': '08',
-            'Setembro': '09', 'Outubro': '10', 'Novembro': '11', 'Dezembro': '12'
-          };
-          
-          const [month, , year] = period.split(' ');
-          return { month: months[month], year };
-        };
-        
-        const { month, year } = getMonthYear(value);
-        const anomaliaDate = new Date(item.data);
-        const anomaliaMonth = String(anomaliaDate.getMonth() + 1).padStart(2, '0');
-        const anomaliaYear = String(anomaliaDate.getFullYear());
-        
-        return anomaliaMonth === month && anomaliaYear === year;
-      },
-      planta: (item: Anomalia, value: string) => {
-        if (value === 'all') return true;
-        return item.plantaId?.toString() === value;
-      }
-    }
-  });
+    handlePageChange,
+    refetch
+  } = useAnomaliasTable();
+  
+  const {
+    criarAnomalia,
+    editarAnomalia,
+    excluirAnomalia,
+    loading: operationLoading
+  } = useAnomalias();
 
   const {
     modalState,
@@ -78,96 +45,61 @@ export function AnomaliasPage() {
     closeModal
   } = useGenericModal<Anomalia>();
 
-  // Contadores para dashboard
-  const [stats, setStats] = useState({
-    total: 0,
-    aguardando: 0,
-    emAnalise: 0,
-    osGerada: 0,
-    resolvida: 0,
-    cancelada: 0,
-    criticas: 0
-  });
-
-  // Calcular estatísticas
   useEffect(() => {
-    const filteredData = mockAnomalias.filter(anomalia => {
-      if (filters.periodo !== 'all' && filters.periodo) {
-        const getMonthYear = (period: string): { month: string; year: string } => {
-          const months: Record<string, string> = {
-            'Janeiro': '01', 'Fevereiro': '02', 'Março': '03', 'Abril': '04',
-            'Maio': '05', 'Junho': '06', 'Julho': '07', 'Agosto': '08',
-            'Setembro': '09', 'Outubro': '10', 'Novembro': '11', 'Dezembro': '12'
-          };
-          
-          const [month, , year] = period.split(' ');
-          return { month: months[month], year };
-        };
-        
-        const { month, year } = getMonthYear(filters.periodo);
-        const anomaliaDate = new Date(anomalia.data);
-        const anomaliaMonth = String(anomaliaDate.getMonth() + 1).padStart(2, '0');
-        const anomaliaYear = String(anomaliaDate.getFullYear());
-        
-        if (!(anomaliaMonth === month && anomaliaYear === year)) {
-          return false;
-        }
-      }
-      return true;
-    });
-    
-    const total = filteredData.length;
-    const aguardando = filteredData.filter(a => a.status === 'AGUARDANDO').length;
-    const emAnalise = filteredData.filter(a => a.status === 'EM_ANALISE').length;
-    const osGerada = filteredData.filter(a => a.status === 'OS_GERADA').length;
-    const resolvida = filteredData.filter(a => a.status === 'RESOLVIDA').length;
-    const cancelada = filteredData.filter(a => a.status === 'CANCELADA').length;
-    const criticas = filteredData.filter(a => a.prioridade === 'CRITICA').length;
-
-    setStats({
-      total,
-      aguardando,
-      emAnalise,
-      osGerada,
-      resolvida,
-      cancelada,
-      criticas
-    });
-  }, [filters.periodo]);
+    if (error) {
+      console.error('❌ [AnomaliasPage] Erro na API:', error);
+    }
+  }, [error]);
 
   const handleSuccess = async () => {
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setLoading(false);
+    console.log('✅ [AnomaliasPage] Operação realizada com sucesso');
+    refetch();
     closeModal();
   };
 
   const handleSubmit = async (data: AnomaliaFormData) => {
-    console.log('Dados da anomalia para salvar:', data);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    await handleSuccess();
+    console.log('🔄 [AnomaliasPage] Salvando anomalia:', data);
+    
+    try {
+      const transformedData: AnomaliaFormData = {
+        ...data,
+        ...(data.localizacao && {
+          plantaId: data.localizacao.plantaId || data.plantaId,
+          equipamentoId: data.localizacao.equipamentoId || data.equipamentoId,
+          local: data.localizacao.local || data.local,
+          ativo: data.localizacao.ativo || data.ativo,
+        })
+      };
+      
+      delete (transformedData as any).localizacao;
+      
+      console.log('🔄 [AnomaliasPage] Data transformed for API:', {
+        original: data,
+        transformed: transformedData
+      });
+      
+      if (modalState.mode === 'create') {
+        await criarAnomalia(transformedData);
+      } else if (modalState.mode === 'edit' && modalState.entity) {
+        await editarAnomalia(modalState.entity.id, transformedData);
+      }
+      
+      await handleSuccess();
+    } catch (error) {
+      console.error('❌ [AnomaliasPage] Erro ao salvar anomalia:', error);
+    }
   };
 
-  const getModalTitle = () => {
-    const titles = {
-      create: 'Nova Anomalia',
-      edit: 'Editar Anomalia', 
-      view: 'Visualizar Anomalia'
-    };
-    return titles[modalState.mode];
-  };
-
-  const getModalIcon = () => {
-    return <AlertTriangle className="h-5 w-5 text-primary" />;
-  };
-
-  const getModalEntity = () => {
+  // ✅ CORREÇÃO: Memoizar a transformação da entidade
+  const modalEntity = useMemo(() => {
     const entity = modalState.entity;
     
     if (modalState.mode === 'create') {
       return {
-        id: 0,
+        id: '',
         descricao: '',
+        plantaId: '',
+        equipamentoId: '',
         local: '',
         ativo: '',
         data: new Date().toISOString(),
@@ -175,97 +107,119 @@ export function AnomaliasPage() {
         origem: 'OPERADOR',
         status: 'AGUARDANDO',
         prioridade: 'MEDIA',
+        observacoes: '',
+        localizacao: {
+          plantaId: '',
+          equipamentoId: '',
+          local: '',
+          ativo: ''
+        },
         criadoEm: new Date().toISOString(),
         atualizadoEm: new Date().toISOString(),
       };
     }
     
+    if (entity && (modalState.mode === 'edit' || modalState.mode === 'view')) {
+      console.log('🔍 [AnomaliasPage] Original entity from DB:', entity);
+      console.log('🔍 [AnomaliasPage] Entity prioridade field:', {
+        prioridade: entity.prioridade,
+        type: typeof entity.prioridade,
+        keys: Object.keys(entity)
+      });
+      
+      const transformed = {
+        ...entity,
+        // Garantir que prioridade está correta
+        prioridade: entity.prioridade || 'MEDIA',
+        plantaId: entity.planta_id || entity.plantaId || '',
+        equipamentoId: entity.equipamento_id || entity.equipamentoId || '',
+        local: entity.local || '',
+        ativo: entity.ativo || '',
+        localizacao: {
+          plantaId: entity.planta_id || entity.plantaId || '',
+          equipamentoId: entity.equipamento_id || entity.equipamentoId || '',
+          local: entity.local || '',
+          ativo: entity.ativo || ''
+        },
+        // Anexos - garantir que estão presentes se existem
+        anexos: (entity as any).anexos || []
+      };
+      
+      console.log('🔍 [AnomaliasPage] Transformed entity:', {
+        prioridade: transformed.prioridade,
+        anexos: transformed.anexos,
+        anexosLength: transformed.anexos?.length || 0
+      });
+      
+      return transformed;
+    }
+    
     return entity;
-  };
+  }, [modalState.entity, modalState.mode]); // ✅ Dependências específicas
 
-  const handleView = (anomalia: Anomalia) => {
-    console.log('Clicou em Visualizar:', anomalia);
+  // ✅ CORREÇÃO: Memoizar títulos e ícones
+  const modalTitle = useMemo(() => {
+    const titles: Record<string, string> = {
+      create: 'Nova Anomalia',
+      edit: 'Editar Anomalia',
+      view: 'Visualizar Anomalia',
+      programar: 'Programar Anomalia'
+    };
+    return titles[modalState.mode] || 'Anomalia';
+  }, [modalState.mode]);
+
+  const modalIcon = useMemo(() => {
+    return <AlertTriangle className="h-5 w-5 text-primary" />;
+  }, []);
+
+  const handleView = useCallback((anomalia: Anomalia) => {
+    console.log('👁️ [AnomaliasPage] Clicou em Visualizar:', anomalia);
     openModal('view', anomalia);
-  };
+  }, [openModal]);
 
-  const handleEdit = (anomalia: Anomalia) => {
-    console.log('Clicou em Editar:', anomalia);
+  const handleEdit = useCallback((anomalia: Anomalia) => {
+    console.log('✏️ [AnomaliasPage] Clicou em Editar:', anomalia);
     openModal('edit', anomalia);
-  };
+  }, [openModal]);
 
-  // ✅ NOVA FUNCIONALIDADE: Planejar OS
   const handlePlanejarOS = useCallback((anomalia: Anomalia) => {
     console.log('🚨 Planejando OS para anomalia:', anomalia.id);
-    planejarOSComAnomalia(anomalia, navigate);
+    planejarOSComAnomalia(anomalia as any, navigate);
   }, [navigate]);
 
-  // Handlers para outras ações
-  const handleGerarOS = async (anomalia: Anomalia) => {
-    console.log('Gerando OS para anomalia:', anomalia.id);
-    alert(`OS gerada para anomalia ${anomalia.id}`);
-  };
+  const handleDelete = useCallback(async (anomalia: Anomalia) => {
+    console.log('🗑️ [AnomaliasPage] Excluindo anomalia:', anomalia.id);
+    
+    const confirmDelete = confirm(`Tem certeza que deseja excluir a anomalia: ${anomalia.descricao}?`);
+    if (!confirmDelete) return;
+    
+    try {
+      await excluirAnomalia(anomalia.id);
+      await handleSuccess();
+    } catch (error) {
+      console.error('❌ [AnomaliasPage] Erro ao excluir anomalia:', error);
+    }
+  }, [excluirAnomalia, handleSuccess]);
 
-  const handleResolver = async (anomalia: Anomalia) => {
-    console.log('Resolvendo anomalia:', anomalia.id);
-    alert(`Anomalia ${anomalia.id} resolvida`);
-  };
-
-  const handleCancelar = async (anomalia: Anomalia) => {
-    console.log('Cancelando anomalia:', anomalia.id);
-    alert(`Anomalia ${anomalia.id} cancelada`);
-  };
-
-  // ✅ AÇÕES ATUALIZADAS - Com Planejar OS em destaque
   const customActions: CustomAction<Anomalia>[] = useMemo(() => [
     {
       key: 'planejar_os',
       label: 'Planejar OS',
       icon: <Calendar className="h-4 w-4" />,
       variant: 'default',
-      condition: (anomalia) => anomalia.status === 'AGUARDANDO' || anomalia.status === 'EM_ANALISE',
-      handler: (anomalia) => handlePlanejarOS(anomalia)
-    },
-    {
-      key: 'gerar_os',
-      label: 'Gerar OS',
-      icon: <FileText className="h-4 w-4" />,
-      variant: 'secondary',
-      condition: (anomalia) => anomalia.status === 'AGUARDANDO' || anomalia.status === 'EM_ANALISE',
-      handler: (anomalia) => handleGerarOS(anomalia)
-    },
-    {
-      key: 'resolver',
-      label: 'Resolver',
-      icon: <CheckCircle className="h-4 w-4" />,
-      variant: 'default',
-      condition: (anomalia) => anomalia.status === 'OS_GERADA' || anomalia.status === 'EM_ANALISE',
-      handler: (anomalia) => handleResolver(anomalia)
-    },
-    {
-      key: 'cancelar',
-      label: 'Cancelar',
-      icon: <XCircle className="h-4 w-4" />,
-      variant: 'destructive',
-      condition: (anomalia) => anomalia.status !== 'RESOLVIDA' && anomalia.status !== 'CANCELADA',
-      handler: (anomalia) => handleCancelar(anomalia)
-    },
-    {
-      key: 'analisar',
-      label: 'Analisar',
-      icon: <Settings className="h-4 w-4" />,
-      variant: 'secondary',
-      condition: (anomalia) => anomalia.status === 'AGUARDANDO',
-      handler: (anomalia) => {
-        alert(`Iniciando análise da anomalia ${anomalia.id}`);
-      }
+      condition: () => true,
+      handler: handlePlanejarOS
     }
   ], [handlePlanejarOS]);
+
+  const handleCreateClick = useCallback(() => {
+    openModal('create');
+  }, [openModal]);
 
   return (
     <Layout>
       <Layout.Main>
         <div className="flex flex-col h-full w-full">
-          {/* Header */}
           <TitleCard
             title="Anomalias"
             description="Gerencie e monitore anomalias identificadas no sistema"
@@ -378,10 +332,7 @@ export function AnomaliasPage() {
                 <span className="hidden sm:inline">Importar</span>
               </Button>
               
-              <Button 
-                onClick={() => openModal('create')}
-                className="shrink-0"
-              >
+              <Button onClick={handleCreateClick} className="shrink-0">
                 <Plus className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Nova Anomalia</span>
                 <span className="sm:hidden">Nova</span>
@@ -415,10 +366,11 @@ export function AnomaliasPage() {
               data={anomalias}
               columns={anomaliasTableColumns}
               pagination={pagination}
-              loading={loading}
+              loading={loading || operationLoading}
               onPageChange={handlePageChange}
               onView={handleView}
               onEdit={handleEdit}
+              onDelete={handleDelete}
               customActions={customActions}
               emptyMessage="Nenhuma anomalia encontrada."
               emptyIcon={<AlertTriangle className="h-8 w-8 text-muted-foreground/50" />}
@@ -426,25 +378,47 @@ export function AnomaliasPage() {
           </div>
         </div>
 
-        {/* Modal */}
-        <BaseModal
-          isOpen={modalState.isOpen}
-          mode={modalState.mode}
-          entity={getModalEntity()}
-          title={getModalTitle()}
-          icon={getModalIcon()}
-          formFields={anomaliasFormFields}
-          onClose={closeModal}
-          onSubmit={handleSubmit}
-          width="w-[800px]"
-          groups={[
-            { key: 'informacoes_basicas', title: 'Informações Básicas' },
-            { key: 'localizacao', title: 'Localização' },
-            { key: 'classificacao', title: 'Classificação' },
-            { key: 'observacoes', title: 'Observações Adicionais' },
-            { key: 'anexos', title: 'Anexos' }
-          ]}
-        />
+        {/* ✅ MODAL CORRIGIDO */}
+        {modalState.isOpen && (
+          <BaseModal
+            isOpen={modalState.isOpen}
+            mode={modalState.mode}
+            entity={modalEntity as any} // ✅ Referência estável
+            title={modalTitle} // ✅ Referência estável
+            icon={modalIcon} // ✅ Referência estável
+            formFields={anomaliasFormFields}
+            onClose={closeModal}
+            onSubmit={handleSubmit}
+            width="w-[800px]"
+            groups={[
+              {
+                key: 'informacoes_basicas',
+                title: 'Informações Básicas',
+                fields: ['descricao']
+              },
+              {
+                key: 'localizacao',
+                title: 'Localização',
+                fields: ['localizacao']
+              },
+              {
+                key: 'classificacao',
+                title: 'Classificação',
+                fields: ['condicao', 'origem', 'prioridade']
+              },
+              {
+                key: 'observacoes',
+                title: 'Observações Adicionais',
+                fields: ['observacoes']
+              },
+              {
+                key: 'anexos',
+                title: 'Anexos',
+                fields: ['anexos']
+              }
+            ]}
+          />
+        )}
       </Layout.Main>
     </Layout>
   );

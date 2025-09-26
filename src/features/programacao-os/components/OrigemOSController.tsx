@@ -1,4 +1,4 @@
-// src/features/programacao-os/components/OrigemOSController.tsx
+// src/features/programacao-os/components/OrigemOSController.tsx - CORRIGIDO DARK/LIGHT MODE
 import React from 'react';
 import { 
   AlertTriangle, 
@@ -27,14 +27,12 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
   value, 
   onChange, 
   disabled = false
-  // entity,
-  // mode
 }) => {
   const [tipoOrigem, setTipoOrigem] = React.useState(value?.tipo || 'ANOMALIA');
   const [itemSelecionado, setItemSelecionado] = React.useState(value?.item || null);
   const [busca, setBusca] = React.useState('');
 
-  // ✅ USAR DADOS REAIS
+  // Usar dados reais da API
   const {
     loading,
     anomaliasDisponiveis,
@@ -61,6 +59,15 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
       plano.categoria.toLowerCase().includes(busca.toLowerCase())
     );
   }, [planosDisponiveis, busca]);
+
+  // Carregar dados quando tipo mudar
+  React.useEffect(() => {
+    if (tipoOrigem === 'ANOMALIA') {
+      carregarAnomalias();
+    } else if (tipoOrigem === 'PLANO_MANUTENCAO') {
+      carregarPlanos();
+    }
+  }, [tipoOrigem, carregarAnomalias, carregarPlanos]);
 
   // Função para alterar tipo de origem
   const handleTipoChange = (novoTipo: string) => {
@@ -118,16 +125,16 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
   // Componente para badge de prioridade
   const PrioridadeBadge = ({ prioridade }: { prioridade: string }) => {
     const config = {
-      'ALTA': { color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200', icon: AlertTriangle },
-      'MEDIA': { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200', icon: Clock },
-      'BAIXA': { color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200', icon: CheckCircle },
-      'CRITICA': { color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200', icon: AlertTriangle }
+      'ALTA': { color: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200 border-red-200 dark:border-red-800', icon: AlertTriangle },
+      'MEDIA': { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800', icon: Clock },
+      'BAIXA': { color: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200 border-green-200 dark:border-green-800', icon: CheckCircle },
+      'CRITICA': { color: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200 border-red-200 dark:border-red-800', icon: AlertTriangle }
     };
     
     const { color, icon: Icon } = config[prioridade as keyof typeof config] || config.MEDIA;
     
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${color}`}>
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${color}`}>
         <Icon className="h-3 w-3" />
         {formatarPrioridade(prioridade)}
       </span>
@@ -137,14 +144,14 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
   // Componente para status badge
   const StatusBadge = ({ status }: { status: string }) => {
     const config = {
-      'AGUARDANDO': { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200', label: 'Aguardando' },
-      'EM_ANALISE': { color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200', label: 'Em Análise' }
+      'AGUARDANDO': { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 border-blue-200 dark:border-blue-800', label: 'Aguardando' },
+      'EM_ANALISE': { color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200 border-purple-200 dark:border-purple-800', label: 'Em Análise' }
     };
     
-    const { color, label } = config[status as keyof typeof config] || { color: 'bg-gray-100 text-gray-800', label: formatarStatus(status) };
+    const { color, label } = config[status as keyof typeof config] || { color: 'bg-muted text-muted-foreground border-border', label: formatarStatus(status) };
     
     return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${color}`}>
+      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${color}`}>
         {label}
       </span>
     );
@@ -154,8 +161,8 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
     <div className="space-y-6">
       {/* Seletor de Tipo de Origem */}
       <div className="space-y-3">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Origem da Ordem de Serviço <span className="text-red-500">*</span>
+        <label className="text-sm font-medium text-foreground">
+          Origem da Ordem de Serviço <span className="text-destructive">*</span>
         </label>
         
         <div className="grid grid-cols-2 gap-3">
@@ -166,28 +173,28 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
             onClick={() => handleTipoChange('ANOMALIA')}
             className={`p-4 rounded-xl border-2 transition-all duration-200 text-left group ${
               tipoOrigem === 'ANOMALIA'
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/50 dark:border-blue-400'
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
+                ? 'border-primary bg-primary/10 dark:bg-primary/5 shadow-sm'
+                : 'border-border bg-card hover:border-primary/30 hover:bg-accent/50'
             } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           >
             <div className="flex items-start gap-3">
               <AlertTriangle className={`h-6 w-6 mt-0.5 transition-colors ${
                 tipoOrigem === 'ANOMALIA'
-                  ? 'text-blue-600 dark:text-blue-400'
-                  : 'text-gray-500 dark:text-gray-400 group-hover:text-blue-500'
+                  ? 'text-primary'
+                  : 'text-muted-foreground group-hover:text-primary'
               }`} />
               <div>
                 <h3 className={`font-semibold text-sm ${
                   tipoOrigem === 'ANOMALIA'
-                    ? 'text-blue-900 dark:text-blue-100'
-                    : 'text-gray-900 dark:text-gray-100'
+                    ? 'text-primary'
+                    : 'text-foreground'
                 }`}>
                   Anomalia Detectada
                 </h3>
                 <p className={`text-xs mt-1 ${
                   tipoOrigem === 'ANOMALIA'
-                    ? 'text-blue-700 dark:text-blue-300'
-                    : 'text-gray-600 dark:text-gray-400'
+                    ? 'text-primary/80'
+                    : 'text-muted-foreground'
                 }`}>
                   Corrigir problema identificado no sistema
                 </p>
@@ -202,28 +209,28 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
             onClick={() => handleTipoChange('PLANO_MANUTENCAO')}
             className={`p-4 rounded-xl border-2 transition-all duration-200 text-left group ${
               tipoOrigem === 'PLANO_MANUTENCAO'
-                ? 'border-green-500 bg-green-50 dark:bg-green-950/50 dark:border-green-400'
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
+                ? 'border-green-500 dark:border-green-400 bg-green-50 dark:bg-green-950/30 shadow-sm'
+                : 'border-border bg-card hover:border-green-300 dark:hover:border-green-600 hover:bg-accent/50'
             } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           >
             <div className="flex items-start gap-3">
               <Layers className={`h-6 w-6 mt-0.5 transition-colors ${
                 tipoOrigem === 'PLANO_MANUTENCAO'
                   ? 'text-green-600 dark:text-green-400'
-                  : 'text-gray-500 dark:text-gray-400 group-hover:text-green-500'
+                  : 'text-muted-foreground group-hover:text-green-500'
               }`} />
               <div>
                 <h3 className={`font-semibold text-sm ${
                   tipoOrigem === 'PLANO_MANUTENCAO'
                     ? 'text-green-900 dark:text-green-100'
-                    : 'text-gray-900 dark:text-gray-100'
+                    : 'text-foreground'
                 }`}>
                   Plano de Manutenção
                 </h3>
                 <p className={`text-xs mt-1 ${
                   tipoOrigem === 'PLANO_MANUTENCAO'
                     ? 'text-green-700 dark:text-green-300'
-                    : 'text-gray-600 dark:text-gray-400'
+                    : 'text-muted-foreground'
                 }`}>
                   Executar tarefas programadas
                 </p>
@@ -238,29 +245,28 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
         <div className="space-y-4">
           {/* Campo de Busca */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <input
               type="text"
               placeholder={tipoOrigem === 'ANOMALIA' ? 'Buscar anomalia...' : 'Buscar plano de manutenção...'}
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               disabled={disabled}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
-                bg-white dark:bg-gray-800 
-                text-gray-900 dark:text-gray-100 
-                placeholder-gray-500 dark:placeholder-gray-400
-                focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 
-                focus:border-blue-500 dark:focus:border-blue-400
-                disabled:bg-gray-100 dark:disabled:bg-gray-700"
+              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg 
+                bg-background text-foreground 
+                placeholder:text-muted-foreground
+                focus:ring-2 focus:ring-ring focus:ring-offset-2
+                focus:border-ring
+                disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
           {/* Lista de Itens */}
-          <div className="max-h-80 overflow-y-auto space-y-2 border border-gray-200 dark:border-gray-700 rounded-lg p-2 bg-gray-50 dark:bg-gray-900">
+          <div className="max-h-80 overflow-y-auto space-y-2 border border-border rounded-lg p-2 bg-muted/30">
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-                <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="ml-2 text-sm text-muted-foreground">
                   Carregando {tipoOrigem === 'ANOMALIA' ? 'anomalias' : 'planos'}...
                 </span>
               </div>
@@ -269,7 +275,7 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
                 {tipoOrigem === 'ANOMALIA' && (
                   <>
                     {anomaliasFiltradas.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      <div className="text-center py-8 text-muted-foreground">
                         <AlertTriangle className="h-12 w-12 mx-auto mb-3 opacity-50" />
                         <p className="font-medium">Nenhuma anomalia encontrada</p>
                         <p className="text-sm">
@@ -278,7 +284,7 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
                         <button 
                           type="button"
                           onClick={carregarAnomalias}
-                          className="mt-2 text-blue-600 dark:text-blue-400 text-sm hover:underline"
+                          className="mt-2 text-primary text-sm hover:underline"
                         >
                           Recarregar anomalias
                         </button>
@@ -292,13 +298,13 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
                           onClick={() => handleSelecionarAnomalia(anomalia)}
                           className={`w-full p-4 rounded-lg border text-left transition-all duration-200 ${
                             itemSelecionado?.id === anomalia.id
-                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-400'
-                              : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-300 dark:hover:border-blue-600'
+                              ? 'border-primary bg-primary/10 shadow-sm'
+                              : 'border-border bg-card hover:border-primary/30 hover:bg-accent/50'
                           } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                           <div className="space-y-2">
                             <div className="flex items-start justify-between gap-3">
-                              <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 line-clamp-2">
+                              <h4 className="font-medium text-sm text-foreground line-clamp-2">
                                 {anomalia.descricao}
                               </h4>
                               <div className="flex gap-2 shrink-0">
@@ -307,7 +313,7 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
                               </div>
                             </div>
                             
-                            <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Building className="h-3 w-3" />
                                 {anomalia.local}
@@ -331,7 +337,7 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
                 {tipoOrigem === 'PLANO_MANUTENCAO' && (
                   <>
                     {planosFiltrados.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      <div className="text-center py-8 text-muted-foreground">
                         <Layers className="h-12 w-12 mx-auto mb-3 opacity-50" />
                         <p className="font-medium">Nenhum plano encontrado</p>
                         <p className="text-sm">
@@ -354,21 +360,21 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
                           onClick={() => handleSelecionarPlano(plano)}
                           className={`w-full p-4 rounded-lg border text-left transition-all duration-200 ${
                             itemSelecionado?.id === plano.id
-                              ? 'border-green-500 bg-green-50 dark:bg-green-950/30 dark:border-green-400'
-                              : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-green-300 dark:hover:border-green-600'
+                              ? 'border-green-500 dark:border-green-400 bg-green-50 dark:bg-green-950/30 shadow-sm'
+                              : 'border-border bg-card hover:border-green-300 dark:hover:border-green-600 hover:bg-accent/50'
                           } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                           <div className="space-y-2">
                             <div className="flex items-start justify-between gap-3">
-                              <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                              <h4 className="font-medium text-sm text-foreground">
                                 {plano.nome}
                               </h4>
-                              <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-medium shrink-0">
+                              <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200 border border-green-200 dark:border-green-800 rounded-full text-xs font-medium shrink-0">
                                 {formatarCategoria(plano.categoria)}
                               </span>
                             </div>
                             
-                            <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <FileText className="h-3 w-3" />
                                 {plano.totalTarefas} tarefas
@@ -390,11 +396,11 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
 
           {/* Preview do Item Selecionado */}
           {itemSelecionado && (
-            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <h4 className="text-sm font-medium mb-3 flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <div className="p-4 bg-muted/50 rounded-lg border border-border">
+              <h4 className="text-sm font-medium mb-3 flex items-center gap-2 text-foreground">
                 {tipoOrigem === 'ANOMALIA' ? (
                   <>
-                    <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <AlertTriangle className="h-4 w-4 text-primary" />
                     Anomalia Selecionada:
                   </>
                 ) : (
@@ -407,21 +413,21 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
               
               {tipoOrigem === 'ANOMALIA' ? (
                 <div className="space-y-2">
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{itemSelecionado.descricao}</p>
+                  <p className="font-medium text-foreground">{itemSelecionado.descricao}</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                     <div className="space-y-1">
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-muted-foreground">
                         <strong>Local:</strong> {itemSelecionado.local}
                       </p>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-muted-foreground">
                         <strong>Equipamento:</strong> {itemSelecionado.ativo}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-gray-600 dark:text-gray-400">
-                        <strong>Prioridade:</strong> {itemSelecionado.prioridade}
+                      <p className="text-muted-foreground">
+                        <strong>Prioridade:</strong> {formatarPrioridade(itemSelecionado.prioridade)}
                       </p>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-muted-foreground">
                         <strong>Data:</strong> {new Date(itemSelecionado.data).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
@@ -429,21 +435,21 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{itemSelecionado.nome}</p>
+                  <p className="font-medium text-foreground">{itemSelecionado.nome}</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                     <div className="space-y-1">
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-muted-foreground">
                         <strong>Categoria:</strong> {formatarCategoria(itemSelecionado.categoria)}
                       </p>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-muted-foreground">
                         <strong>Templates:</strong> {itemSelecionado.totalTarefas} tarefas
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-muted-foreground">
                         <strong>Equipamentos:</strong> {itemSelecionado.totalEquipamentos} associados
                       </p>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-muted-foreground">
                         <strong>Status:</strong> <span className="text-green-600 dark:text-green-400">Ativo</span>
                       </p>
                     </div>

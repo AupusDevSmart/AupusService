@@ -1,6 +1,5 @@
 // src/features/planos-manutencao/config/filter-config.ts
 import { FilterConfig } from '@/types/base';
-import { CATEGORIAS_PLANO_LABELS } from '../types';
 
 export const planosFilterConfig: FilterConfig[] = [
   {
@@ -10,26 +9,36 @@ export const planosFilterConfig: FilterConfig[] = [
     className: 'lg:min-w-80'
   },
   {
-    key: 'categoria',
+    key: 'equipamento_id',
     type: 'select',
-    label: 'Categoria',
-    placeholder: 'Todas as categorias',
+    label: 'Equipamento',
+    placeholder: 'Todos os equipamentos',
     options: [
-      { value: 'all', label: 'Todas as categorias' },
-      ...Object.entries(CATEGORIAS_PLANO_LABELS).map(([value, label]) => ({
-        value,
-        label
-      }))
+      { value: 'all', label: 'Todos os equipamentos' }
     ],
     className: 'min-w-48'
   },
   {
-    key: 'ativo',
+    key: 'status',
     type: 'select',
     label: 'Status',
     placeholder: 'Todos os status',
     options: [
       { value: 'all', label: 'Todos os status' },
+      { value: 'ATIVO', label: 'Ativo' },
+      { value: 'INATIVO', label: 'Inativo' },
+      { value: 'EM_REVISAO', label: 'Em Revisão' },
+      { value: 'SUSPENSO', label: 'Suspenso' }
+    ],
+    className: 'min-w-36'
+  },
+  {
+    key: 'ativo',
+    type: 'select',
+    label: 'Ativo/Inativo',
+    placeholder: 'Todos',
+    options: [
+      { value: 'all', label: 'Todos' },
       { value: 'true', label: 'Ativos' },
       { value: 'false', label: 'Inativos' }
     ],

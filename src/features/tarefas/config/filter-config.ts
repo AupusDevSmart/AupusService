@@ -1,14 +1,7 @@
 // src/features/tarefas/config/filter-config.ts
 import { FilterConfig } from '@/types/base';
 
-// Mock data para os filtros (normalmente viria da API)
-const mockPlantas = [
-  { value: '1', label: 'Planta Industrial São Paulo' },
-  { value: '2', label: 'Planta Subestação Central' },
-  { value: '3', label: 'Estação de Bombeamento Sul' },
-  { value: '4', label: 'Oficina João Silva' }
-];
-
+// Configuração base dos filtros - as opções dinâmicas serão carregadas via API
 export const tarefasFilterConfig: FilterConfig[] = [
   {
     key: 'search',
@@ -35,7 +28,7 @@ export const tarefasFilterConfig: FilterConfig[] = [
     className: 'min-w-44'
   },
   {
-    key: 'tipoManutencao',
+    key: 'tipo_manutencao',
     type: 'select',
     label: 'Tipo',
     placeholder: 'Todos os tipos',
@@ -64,37 +57,24 @@ export const tarefasFilterConfig: FilterConfig[] = [
     className: 'min-w-36'
   },
   {
-    key: 'origemPlano',
-    type: 'select',
-    label: 'Origem',
-    placeholder: 'Todas as origens',
-    options: [
-      { value: 'all', label: 'Todas as origens' },
-      { value: 'true', label: 'De Planos' },
-      { value: 'false', label: 'Manuais' }
-    ],
-    className: 'min-w-36'
-  },
-  {
-    key: 'sincronizada',
-    type: 'select',
-    label: 'Sincronização',
-    placeholder: 'Todas',
-    options: [
-      { value: 'all', label: 'Todas' },
-      { value: 'true', label: 'Sincronizadas' },
-      { value: 'false', label: 'Dessincronizadas' }
-    ],
-    className: 'min-w-44'
-  },
-  {
-    key: 'planta',
+    key: 'planta_id',
     type: 'select',
     label: 'Planta',
     placeholder: 'Todas as plantas',
     options: [
-      { value: 'all', label: 'Todas as plantas' },
-      ...mockPlantas
+      { value: 'all', label: 'Todas as plantas' }
+      // As opções serão carregadas dinamicamente
+    ],
+    className: 'min-w-52'
+  },
+  {
+    key: 'plano_id',
+    type: 'select',
+    label: 'Plano de Manutenção',
+    placeholder: 'Todos os planos',
+    options: [
+      { value: 'all', label: 'Todos os planos' }
+      // As opções serão carregadas dinamicamente
     ],
     className: 'min-w-52'
   },

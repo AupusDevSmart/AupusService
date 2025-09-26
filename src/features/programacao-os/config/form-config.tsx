@@ -1,185 +1,101 @@
-// src/features/programacao-os/config/form-config.tsx - VERSÃO ATUALIZADA
-import React from 'react';
-// Importe o componente atualizado
-import { OrigemOSController } from '../components/OrigemOSController';
-import { ViaturaOSController } from '../components/ViaturaOSController';
+// src/features/programacao-os/config/form-config.tsx - CORRIGIDA COM MAPEAMENTO DE GRUPOS
+import type { FormField } from '@/types/base';
+import { OrigemOSSelector } from '../components/OrigemOSSelector';
+import { OrigemOSCard } from '../components/OrigemOSCard';
+import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
+import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
+import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManager';
 
-// ✅ TIPOS BÁSICOS PARA EVITAR DEPENDÊNCIAS EXTERNAS
-interface FormField {
-  key: string;
-  label: string;
-  type: 'text' | 'select' | 'textarea' | 'date' | 'time' | 'number' | 'custom';
-  required?: boolean;
-  placeholder?: string;
-  options?: { value: string | number; label: string }[];
-  validation?: (value: any) => string | null;
-  render?: (props: any) => React.ReactNode;
-  colSpan?: number;
-  showOnlyOnMode?: string[];
-  disabled?: boolean;
-}
-
-interface FormFieldProps {
-  value: any;
-  onChange: (value: any) => void;
-  disabled?: boolean;
-  entity?: any;
-  mode?: string;
-}
-
-// ✅ COMPONENTE MELHORADO: Input básico com dark mode
-const SimpleInput = ({ 
-  type = 'text', 
-  value, 
-  onChange, 
-  placeholder, 
-  disabled, 
-  className = '',
-  ...props 
-}: any) => (
-  <input
-    type={type}
-    value={value || ''}
-    onChange={(e) => onChange(e.target.value)}
-    placeholder={placeholder}
-    disabled={disabled}
-    className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
-      bg-white dark:bg-gray-800 
-      text-gray-900 dark:text-gray-100 
-      placeholder-gray-500 dark:placeholder-gray-400
-      focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 
-      focus:border-blue-500 dark:focus:border-blue-400
-      disabled:bg-gray-100 dark:disabled:bg-gray-700 
-      disabled:text-gray-500 dark:disabled:text-gray-400
-      ${className}`}
-    {...props}
-  />
-);
-
-// ✅ COMPONENTE MELHORADO: Select básico com dark mode
-
-
-// ✅ COMPONENTE: Controle de data e hora para programação com Dark Mode
-const DataHoraProgramacaoController = ({ value, onChange, disabled }: FormFieldProps) => {
-  const [dataProgramada, setDataProgramada] = React.useState(value?.dataProgramada || '');
-  const [horaProgramada, setHoraProgramada] = React.useState(value?.horaProgramada || '');
-
-  const handleDataChange = (data: string) => {
-    setDataProgramada(data);
-    const newValue = {
-      dataProgramada: data,
-      horaProgramada
-    };
-    onChange(newValue);
-    console.log('📅 Data programação alterada:', newValue);
-  };
-
-  const handleHoraChange = (hora: string) => {
-    setHoraProgramada(hora);
-    const newValue = {
-      dataProgramada,
-      horaProgramada: hora
-    };
-    onChange(newValue);
-    console.log('🕐 Hora programação alterada:', newValue);
-  };
-
-  // ✅ Sugerir data padrão (amanhã)
-  React.useEffect(() => {
-    if (!dataProgramada) {
-      const amanha = new Date();
-      amanha.setDate(amanha.getDate() + 1);
-      const dataAmanha = amanha.toISOString().split('T')[0];
-      setDataProgramada(dataAmanha);
-      onChange({
-        dataProgramada: dataAmanha,
-        horaProgramada: horaProgramada || '08:00'
-      });
-    }
-  }, []);
-
-  return (
-    <div className="grid grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Data da Programação <span className="text-red-500">*</span>
-        </label>
-        <SimpleInput
-          type="date"
-          value={dataProgramada}
-          onChange={handleDataChange}
-          disabled={disabled}
-          min={new Date().toISOString().split('T')[0]}
-          required
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Hora da Programação <span className="text-red-500">*</span>
-        </label>
-        <SimpleInput
-          type="time"
-          value={horaProgramada}
-          onChange={handleHoraChange}
-          disabled={disabled}
-          required
-        />
-      </div>
-    </div>
-  );
-};
-
-// ✅ CONFIGURAÇÃO DE CAMPOS PRINCIPAL
 export const programacaoOSFormFields: FormField[] = [
-  // Informações Básicas
+  // Informações básicas - GRUPO: identificacao
   {
     key: 'numeroOS',
     label: 'Número da OS',
     type: 'text',
-    required: false,
     placeholder: 'Gerado automaticamente',
     disabled: true,
+    group: 'identificacao'
   },
   {
     key: 'descricao',
-    label: 'Descrição da OS',
+    label: 'Descrição',
     type: 'textarea',
     required: true,
-    placeholder: 'Descreva detalhadamente o serviço a ser executado...',
+    placeholder: 'Descreva o serviço a ser executado',
+    group: 'identificacao',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
   },
+  // {
+  //   key: 'local',
+  //   label: 'Local',
+  //   type: 'text',
+  //   required: true,
+  //   placeholder: 'Local onde será executado o serviço',
+  //   group: 'identificacao',
+  //   computeDisabled: (entity: any) => {
+  //     return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+  //   }
+  // },
+  // {
+  //   key: 'ativo',
+  //   label: 'Ativo',
+  //   type: 'text',
+  //   required: true,
+  //   placeholder: 'Equipamento ou ativo relacionado',
+  //   group: 'identificacao',
+  //   computeDisabled: (entity: any) => {
+  //     return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+  //   }
+  // },
 
-  // ✅ NOVA SEÇÃO: Origem da OS
+  // Origem da OS - GRUPO: origem
   {
     key: 'origem',
-    label: 'Origem da OS',
+    label: 'Selecione a origem da Ordem de Serviço',
     type: 'custom',
+    component: OrigemOSSelector,
     required: true,
-    render: ({ value, onChange, disabled, entity, mode }) => (
-      <OrigemOSController 
-        value={value} 
-        onChange={onChange} 
-        disabled={disabled}
-        entity={entity}
-        mode={mode}
-      />
-    ),
+    defaultValue: {
+      tipo: 'MANUAL',
+      anomaliaId: undefined,
+      planoId: undefined,
+      tarefasSelecionadas: [],
+      plantaId: undefined,
+      planosSelecionados: [],
+      tarefasPorPlano: {}
+    },
+    group: 'origem',
+    showOnlyOnMode: 'create'
+  },
+  {
+    key: 'origemCard',
+    label: 'Origem da Ordem de Serviço',
+    type: 'custom',
+    group: 'origem',
+    showOnlyOnMode: ['view', 'edit'],
+    render: (props: any) => {
+      const { entity } = props;
+      return (
+        <OrigemOSCard
+          origem={entity?.origem?.tipo || entity?.origem || 'MANUAL'}
+          dadosOrigem={entity?.origem || entity?.dados_origem}
+          anomalia={entity?.anomalia}
+          tarefas={entity?.tarefas_programacao}
+          planoManutencao={entity?.plano_manutencao}
+          planosSelecionados={entity?.planos_selecionados}
+          tarefasPorPlano={entity?.tarefas_por_plano}
+        />
+      );
+    }
   },
 
-  // Classificação
-  {
-    key: 'condicoes',
-    label: 'Condições do Ativo',
-    type: 'select',
-    required: true,
-    options: [
-      { value: 'PARADO', label: 'Parado' },
-      { value: 'FUNCIONANDO', label: 'Funcionando' }
-    ],
-  },
+
+  // Classificação - GRUPO: classificacao
   {
     key: 'tipo',
-    label: 'Tipo de Manutenção',
+    label: 'Tipo de OS',
     type: 'select',
     required: true,
     options: [
@@ -189,6 +105,10 @@ export const programacaoOSFormFields: FormField[] = [
       { value: 'INSPECAO', label: 'Inspeção' },
       { value: 'VISITA_TECNICA', label: 'Visita Técnica' }
     ],
+    group: 'classificacao',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
   },
   {
     key: 'prioridade',
@@ -199,108 +119,533 @@ export const programacaoOSFormFields: FormField[] = [
       { value: 'BAIXA', label: 'Baixa' },
       { value: 'MEDIA', label: 'Média' },
       { value: 'ALTA', label: 'Alta' },
-      { value: 'CRITICA', label: 'Crítica' }
+      { value: 'URGENTE', label: 'Urgente' }
     ],
+    group: 'classificacao',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+  {
+    key: 'condicoes',
+    label: 'Condições do Ativo',
+    type: 'select',
+    required: true,
+    options: [
+      { value: 'PARADO', label: 'Parado' },
+      { value: 'FUNCIONANDO', label: 'Funcionando' }
+    ],
+    group: 'classificacao',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
   },
 
-  // Planejamento
+  // Planejamento - GRUPO: planejamento
   {
-    key: 'tempoEstimado',
+    key: 'tempo_estimado',
     label: 'Tempo Estimado (horas)',
-    type: 'text',
+    type: 'number',
     required: true,
     placeholder: 'Ex: 4.5',
-    validation: (value) => {
-      if (!value) return null;
-      const tempo = parseFloat(value);
-      if (tempo <= 0) {
-        return 'Tempo deve ser maior que zero';
-      }
-      return null;
-    },
+    group: 'planejamento',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
   },
   {
-    key: 'duracaoEstimada',
+    key: 'duracao_estimada',
     label: 'Duração Estimada (horas)',
-    type: 'text',
+    type: 'number',
     required: true,
     placeholder: 'Ex: 6',
-    validation: (value) => {
-      if (!value) return null;
-      const duracao = parseFloat(value);
-      if (duracao <= 0) {
-        return 'Duração deve ser maior que zero';
-      }
-      return null;
-    },
+    group: 'planejamento',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+  {
+    key: 'data_previsao_inicio',
+    label: 'Data e Hora Prevista Início',
+    type: 'datetime-local',
+    group: 'planejamento',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+  {
+    key: 'data_previsao_fim',
+    label: 'Data e Hora Prevista Fim',
+    type: 'datetime-local',
+    group: 'planejamento',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+  {
+    key: 'orcamento_previsto',
+    label: 'Orçamento Previsto (R$)',
+    type: 'number',
+    placeholder: 'Ex: 1500.00',
+    group: 'planejamento',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
   },
 
-  // ✅ PROGRAMAÇÃO: Data e hora
+  // ============================
+  // CAMPOS DE PROGRAMAÇÃO - COMENTADOS POR ENQUANTO
+  // ============================
+
+  // TODO: Descomentar quando for implementada a programação detalhada
+  /*
+  // Programação - GRUPO: programacao
   {
-    key: 'programacao',
-    label: 'Data e Hora da Programação',
-    type: 'custom',
-    required: true,
-    render: ({ value, onChange, disabled }) => (
-      <DataHoraProgramacaoController 
-        value={value} 
-        onChange={onChange} 
-        disabled={disabled}
-      />
-    ),
-    showOnlyOnMode: ['programar', 'create']
+    key: 'data_hora_programada',
+    label: 'Data e Hora Programada',
+    type: 'datetime-local',
+    group: 'programacao',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
   },
   {
     key: 'responsavel',
-    label: 'Responsável pela Execução',
+    label: 'Responsável',
     type: 'text',
-    required: true,
     placeholder: 'Nome do responsável',
-    showOnlyOnMode: ['programar', 'create']
+    group: 'programacao',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
   },
-  
-  // ✅ CAMPO PRINCIPAL - Viatura
   {
-    key: 'viatura',
-    label: 'Viatura',
-    type: 'custom',
-    required: false,
-    render: ({ value, onChange, disabled, entity, mode }) => (
-      <ViaturaOSController 
-        value={value} 
-        onChange={onChange} 
-        disabled={disabled}
-        entity={entity}
-        mode={mode}
-      />
-    ),
+    key: 'responsavel_id',
+    label: 'ID do Responsável',
+    type: 'text',
+    placeholder: 'ID do usuário responsável',
+    group: 'programacao',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
   },
-  
   {
-    key: 'time',
+    key: 'time_equipe',
     label: 'Time/Equipe',
     type: 'text',
-    required: false,
-    placeholder: 'Nome da equipe responsável',
-    showOnlyOnMode: ['programar']
+    placeholder: 'Ex: Equipe de Manutenção A',
+    group: 'programacao',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+  */
+
+  // Veículo - GRUPO: veiculo
+  {
+    key: 'necessita_veiculo',
+    label: 'Necessita Veículo',
+    type: 'checkbox',
+    group: 'veiculo',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+  {
+    key: 'assentos_necessarios',
+    label: 'Assentos Necessários',
+    type: 'number',
+    placeholder: 'Quantidade de assentos',
+    showOnlyWhen: {
+      field: 'necessita_veiculo',
+      value: true
+    },
+    group: 'veiculo',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+  {
+    key: 'carga_necessaria',
+    label: 'Capacidade de Carga (kg)',
+    type: 'number',
+    placeholder: 'Peso em kg',
+    showOnlyWhen: {
+      field: 'necessita_veiculo',
+      value: true
+    },
+    group: 'veiculo',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+  {
+    key: 'observacoes_veiculo',
+    label: 'Observações do Veículo',
+    type: 'textarea',
+    placeholder: 'Requisitos específicos do veículo',
+    showOnlyWhen: {
+      field: 'necessita_veiculo',
+      value: true
+    },
+    group: 'veiculo',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
   },
 
-  // Observações
+  // Recursos - Materiais - GRUPO: recursos
+  {
+    key: 'materiais',
+    label: 'Materiais Necessários',
+    type: 'custom',
+    component: MateriaisCardManager,
+    componentProps: {
+      mode: 'planejamento',
+      showCustos: true,
+      showStatus: true,
+      title: 'Materiais Planejados'
+    },
+    defaultValue: [],
+    group: 'recursos',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+
+  // Recursos - Ferramentas - GRUPO: recursos
+  {
+    key: 'ferramentas',
+    label: 'Ferramentas Necessárias',
+    type: 'custom',
+    component: FerramentasCardManager,
+    componentProps: {
+      mode: 'planejamento',
+      showStatus: true,
+      showCalibracao: true,
+      title: 'Ferramentas Planejadas'
+    },
+    defaultValue: [],
+    group: 'recursos',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+
+  // Recursos - Técnicos - GRUPO: recursos
+  {
+    key: 'tecnicos',
+    label: 'Técnicos Necessários',
+    type: 'custom',
+    component: TecnicosCardManager,
+    componentProps: {
+      mode: 'planejamento',
+      showCustos: true,
+      showStatus: true,
+      title: 'Equipe Planejada'
+    },
+    defaultValue: [],
+    group: 'recursos',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+
+  // Observações - GRUPO: observacoes
   {
     key: 'observacoes',
     label: 'Observações Gerais',
     type: 'textarea',
-    required: false,
-    placeholder: 'Observações sobre o serviço, procedimentos especiais, etc...',
+    placeholder: 'Observações adicionais',
+    group: 'observacoes',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
   },
   {
-    key: 'observacoesProgramacao',
+    key: 'observacoes_programacao',
     label: 'Observações da Programação',
     type: 'textarea',
-    required: false,
-    placeholder: 'Observações específicas sobre a programação...',
-    showOnlyOnMode: ['programar']
+    placeholder: 'Observações específicas da programação',
+    group: 'observacoes',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+  {
+    key: 'justificativa',
+    label: 'Justificativa',
+    type: 'textarea',
+    placeholder: 'Justificativa para a execução desta OS',
+    group: 'observacoes',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+
+  // ============================
+  // CAMPOS DE WORKFLOW ESPECÍFICOS
+  // ============================
+
+  // ============================
+  // CAMPOS DE VISUALIZAÇÃO POR STATUS
+  // ============================
+
+  // Campos para análise - mostrar sempre que foi analisada (tem dados OU status requer)
+  {
+    key: 'observacoes_analise',
+    label: 'Observações da Análise',
+    type: 'textarea',
+    placeholder: 'Observações da análise',
+    disabled: true,
+    group: 'workflow',
+    condition: (entity: any) => {
+      // Mostrar se tem observações OU se o status indica que passou pela análise
+      return ['EM_ANALISE', 'APROVADA', 'REJEITADA'].includes(entity?.status) &&
+             (entity?.observacoes_analise || ['APROVADA', 'REJEITADA'].includes(entity?.status));
+    }
+  },
+
+  // Campos de aprovação - mostrar sempre quando aprovada
+  {
+    key: 'observacoes_aprovacao',
+    label: 'Observações da Aprovação',
+    type: 'textarea',
+    placeholder: 'Observações da aprovação',
+    disabled: true,
+    group: 'workflow',
+    condition: (entity: any) => {
+      return entity?.status === 'APROVADA';
+    }
+  },
+  {
+    key: 'ajustes_orcamento',
+    label: 'Ajustes no Orçamento (R$)',
+    type: 'number',
+    placeholder: 'Ajustes no valor orçado',
+    disabled: true,
+    group: 'workflow',
+    condition: (entity: any) => {
+      return entity?.status === 'APROVADA';
+    }
+  },
+  {
+    key: 'data_programada_sugerida',
+    label: 'Data Sugerida para Programação',
+    type: 'date',
+    placeholder: 'Data sugerida',
+    disabled: true,
+    group: 'workflow',
+    condition: (entity: any) => {
+      return entity?.status === 'APROVADA';
+    }
+  },
+  {
+    key: 'hora_programada_sugerida',
+    label: 'Hora Sugerida para Programação',
+    type: 'time',
+    placeholder: 'Hora sugerida',
+    disabled: true,
+    group: 'workflow',
+    condition: (entity: any) => {
+      return entity?.status === 'APROVADA';
+    }
+  },
+
+  // Campos de rejeição - mostrar apenas se foi rejeitada
+  {
+    key: 'motivo_rejeicao',
+    label: 'Motivo da Rejeição',
+    type: 'textarea',
+    placeholder: 'Descreva o motivo da rejeição',
+    disabled: true,
+    group: 'workflow',
+    condition: (entity: any) => {
+      return entity?.status === 'REJEITADA' && entity?.motivo_rejeicao;
+    }
+  },
+  {
+    key: 'sugestoes_melhoria',
+    label: 'Sugestões de Melhoria',
+    type: 'textarea',
+    placeholder: 'Sugestões para melhorar a programação (opcional)',
+    disabled: true,
+    group: 'workflow',
+    condition: (entity: any) => {
+      return entity?.status === 'REJEITADA' && entity?.sugestoes_melhoria;
+    }
+  },
+
+  // Campo de cancelamento - mostrar sempre quando cancelada
+  {
+    key: 'motivo_cancelamento',
+    label: 'Motivo do Cancelamento',
+    type: 'textarea',
+    placeholder: 'Motivo do cancelamento',
+    disabled: true,
+    group: 'workflow',
+    condition: (entity: any) => {
+      return entity?.status === 'CANCELADA';
+    }
+  },
+
+
+  // Campos de auditoria - GRUPO: auditoria
+  {
+    key: 'criado_por',
+    label: 'Criado Por',
+    type: 'text',
+    disabled: true,
+    showOnlyOnMode: ['view', 'edit'],
+    group: 'auditoria'
+  },
+  {
+    key: 'data_criacao',
+    label: 'Data de Criação',
+    type: 'datetime-local',
+    disabled: true,
+    showOnlyOnMode: ['view'],
+    group: 'auditoria'
+  },
+  {
+    key: 'analisado_por',
+    label: 'Analisado Por',
+    type: 'text',
+    disabled: true,
+    showOnlyOnMode: ['view'],
+    group: 'auditoria',
+    condition: (entity: any) => entity?.data_analise
+  },
+  {
+    key: 'data_analise',
+    label: 'Data da Análise',
+    type: 'datetime-local',
+    disabled: true,
+    showOnlyOnMode: ['view'],
+    group: 'auditoria',
+    condition: (entity: any) => entity?.data_analise
+  },
+  {
+    key: 'aprovado_por',
+    label: 'Aprovado Por',
+    type: 'text',
+    disabled: true,
+    showOnlyOnMode: ['view'],
+    group: 'auditoria',
+    condition: (entity: any) => entity?.data_aprovacao
+  },
+  {
+    key: 'data_aprovacao',
+    label: 'Data da Aprovação',
+    type: 'datetime-local',
+    disabled: true,
+    showOnlyOnMode: ['view'],
+    group: 'auditoria',
+    condition: (entity: any) => entity?.data_aprovacao
+  },
+  {
+    key: 'status',
+    label: 'Status Atual',
+    type: 'select',
+    disabled: true,
+    options: [
+      { value: 'RASCUNHO', label: '📝 Rascunho' },
+      { value: 'PENDENTE', label: '⏳ Pendente' },
+      { value: 'EM_ANALISE', label: '🔍 Em Análise' },
+      { value: 'APROVADA', label: '✅ Aprovada' },
+      { value: 'REJEITADA', label: '❌ Rejeitada' },
+      { value: 'CANCELADA', label: '🚫 Cancelada' }
+    ],
+    group: 'auditoria',
+    showOnlyOnMode: ['view', 'edit']
   }
 ];
 
-export default programacaoOSFormFields;
+// Configuração dos grupos para o modal - ATUALIZADA COM WORKFLOW
+export const programacaoOSFormGroups = [
+  {
+    key: 'identificacao',
+    title: 'Identificação da OS',
+    fields: ['numeroOS', 'descricao', 'local', 'ativo']
+  },
+  {
+    key: 'origem',
+    title: 'Origem da Ordem de Serviço',
+    fields: ['origem', 'origemCard', 'planosManutencaoDetalhes']
+  },
+  {
+    key: 'classificacao',
+    title: 'Classificação',
+    fields: ['tipo', 'prioridade', 'condicoes']
+  },
+  {
+    key: 'planejamento',
+    title: 'Planejamento',
+    fields: ['tempo_estimado', 'duracao_estimada', 'data_previsao_inicio', 'data_previsao_fim', 'orcamento_previsto']
+  },
+  // TODO: Descomentar quando implementar programação detalhada
+  /*
+  {
+    key: 'programacao',
+    title: 'Programação',
+    fields: ['data_hora_programada', 'responsavel', 'responsavel_id', 'time_equipe']
+  },
+  */
+  {
+    key: 'veiculo',
+    title: 'Requisitos de Veículo',
+    fields: ['necessita_veiculo', 'assentos_necessarios', 'carga_necessaria', 'observacoes_veiculo']
+  },
+  {
+    key: 'recursos',
+    title: 'Recursos Necessários',
+    fields: ['materiais', 'ferramentas', 'tecnicos']
+  },
+  {
+    key: 'observacoes',
+    title: 'Observações e Justificativas',
+    fields: ['observacoes', 'observacoes_programacao', 'justificativa']
+  },
+  {
+    key: 'workflow',
+    title: 'Histórico de Ações',
+    fields: [
+      'observacoes_analise', 'observacoes_aprovacao', 'ajustes_orcamento',
+      'data_programada_sugerida', 'hora_programada_sugerida',
+      'motivo_rejeicao', 'sugestoes_melhoria', 'motivo_cancelamento'
+    ],
+    conditional: {
+      field: 'status',
+      value: function(entity: any) {
+        // Mostrar grupo apenas se há informações de workflow para exibir
+        if (!entity?.status || ['RASCUNHO', 'PENDENTE'].includes(entity.status)) {
+          return false;
+        }
+
+        // Verificar se há pelo menos um campo de workflow preenchido
+        const workflowFields = [
+          'observacoes_analise', 'observacoes_aprovacao', 'ajustes_orcamento',
+          'data_programada_sugerida', 'hora_programada_sugerida',
+          'motivo_rejeicao', 'sugestoes_melhoria', 'motivo_cancelamento'
+        ];
+
+        return workflowFields.some(field => entity[field]);
+      }
+    }
+  },
+  {
+    key: 'auditoria',
+    title: 'Informações de Auditoria',
+    fields: [
+      'status', 'criado_por', 'data_criacao', 'analisado_por', 'data_analise',
+      'aprovado_por', 'data_aprovacao'
+    ],
+    conditional: {
+      field: 'mode',
+      value: function(_entity: any) {
+        // Mostrar auditoria sempre que aplicável
+        return true;
+      }
+    }
+  }
+];

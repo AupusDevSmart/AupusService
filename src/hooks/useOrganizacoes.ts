@@ -58,7 +58,7 @@ export function useOrganizacoes(): UseOrganizacoesReturn {
       setOrganizacoes(mockOrganizacoes);
       
     } catch (error) {
-      console.error('Erro ao buscar organizações:', error);
+      // console.error('Erro ao buscar organizações:', error);
       setError(error instanceof Error ? error.message : 'Erro desconhecido');
     } finally {
       setLoading(false);

@@ -1,344 +1,217 @@
 // src/features/anomalias/hooks/useAnomalias.ts
 import { useState, useCallback } from 'react';
 import { Anomalia, AnomaliaFormData } from '../types';
-import { mockAnomalias } from '../data/mock-data';
+import { anomaliasService } from '@/services/anomalias.service';
 
 interface UseAnomaliasReturn {
   // Estados
   loading: boolean;
+  error: string | null;
   
   // Operações CRUD
   criarAnomalia: (dados: AnomaliaFormData) => Promise<Anomalia>;
-  editarAnomalia: (id: number, dados: Partial<AnomaliaFormData>) => Promise<Anomalia>;
-  obterAnomalia: (id: number) => Promise<Anomalia | null>;
-  excluirAnomalia: (id: number) => Promise<boolean>;
+  editarAnomalia: (id: string, dados: Partial<AnomaliaFormData>) => Promise<Anomalia>;
+  obterAnomalia: (id: string) => Promise<Anomalia | null>;
+  excluirAnomalia: (id: string) => Promise<boolean>;
   
   // Operações específicas de anomalias
-  gerarOS: (anomaliaId: number) => Promise<Anomalia>;
-  resolverAnomalia: (anomaliaId: number, observacoes?: string) => Promise<Anomalia>;
-  cancelarAnomalia: (anomaliaId: number, motivo?: string) => Promise<Anomalia>;
-  adicionarHistorico: (anomaliaId: number, acao: string, observacoes?: string) => Promise<Anomalia>;
+  gerarOS: (anomaliaId: string) => Promise<Anomalia>;
+  resolverAnomalia: (anomaliaId: string, observacoes?: string) => Promise<Anomalia>;
+  cancelarAnomalia: (anomaliaId: string, motivo?: string) => Promise<Anomalia>;
   
-  // Operações em lote
-  gerarOSLote: (anomaliaIds: number[]) => Promise<Anomalia[]>;
-  resolverLote: (anomaliaIds: number[], observacoes?: string) => Promise<Anomalia[]>;
-  cancelarLote: (anomaliaIds: number[], motivo?: string) => Promise<Anomalia[]>;
+  // Utilitários
+  clearError: () => void;
+  testConnection: () => Promise<boolean>;
 }
 
 export function useAnomalias(): UseAnomaliasReturn {
   const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Simular delay de API
-  const simulateDelay = (ms: number = 1000) => 
-    new Promise(resolve => setTimeout(resolve, ms));
-
-  // Gerar próximo ID disponível
-  const getNextId = (): number => {
-    const maxId = Math.max(...mockAnomalias.map(a => a.id), 0);
-    return maxId + 1;
-  };
-
-  // Gerar próximo ID para histórico
-  const getNextHistoricoId = (): number => {
-    const allHistoricos = mockAnomalias.flatMap(a => a.historico || []);
-    const maxId = Math.max(...allHistoricos.map(h => h.id), 0);
-    return maxId + 1;
-  };
+  // Função para limpar erros
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
   // Criar anomalia
   const criarAnomalia = useCallback(async (dados: AnomaliaFormData): Promise<Anomalia> => {
+    //console.log('🔄 [useAnomalias] Criando anomalia:', dados);
+    
     setLoading(true);
+    setError(null);
+    
     try {
-      await simulateDelay();
-      
-      const novaAnomalia: Anomalia = {
-        id: getNextId(),
-        criadoEm: new Date().toISOString(),
-        ...dados,
-        data: new Date().toISOString(),
-        status: 'AGUARDANDO',
-        criadoPor: 'Usuário Atual',
-        historico: [
-          {
-            id: getNextHistoricoId(),
-            acao: 'Anomalia criada',
-            usuario: 'Usuário Atual',
-            data: new Date().toISOString(),
-          }
-        ]
-      };
-      
-      // Adicionar ao array de dados (simulação)
-      mockAnomalias.unshift(novaAnomalia);
-      
-      return novaAnomalia;
+      const anomalia = await anomaliasService.create(dados);
+      //console.log('✅ [useAnomalias] Anomalia criada com sucesso:', anomalia);
+      return anomalia;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao criar anomalia';
+      console.error('❌ [useAnomalias] Erro ao criar anomalia:', err);
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
   }, []);
 
   // Editar anomalia
-  const editarAnomalia = useCallback(async (id: number, dados: Partial<AnomaliaFormData>): Promise<Anomalia> => {
+  const editarAnomalia = useCallback(async (id: string, dados: Partial<AnomaliaFormData>): Promise<Anomalia> => {
+    //console.log('🔄 [useAnomalias] Editando anomalia:', id, dados);
+    
     setLoading(true);
+    setError(null);
+    
     try {
-      await simulateDelay();
-      
-      const index = mockAnomalias.findIndex(a => a.id === id);
-      if (index === -1) {
-        throw new Error('Anomalia não encontrada');
-      }
-      
-      const anomaliaAtualizada = {
-        ...mockAnomalias[index],
-        ...dados,
-        atualizadoEm: new Date().toISOString(),
-        historico: [
-          ...(mockAnomalias[index].historico || []),
-          {
-            id: getNextHistoricoId(),
-            acao: 'Anomalia atualizada',
-            usuario: 'Usuário Atual',
-            data: new Date().toISOString(),
-          }
-        ]
-      };
-      
-      mockAnomalias[index] = anomaliaAtualizada;
-      return anomaliaAtualizada;
+      const anomalia = await anomaliasService.update(id, dados);
+      //console.log('✅ [useAnomalias] Anomalia atualizada com sucesso:', anomalia);
+      return anomalia;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar anomalia';
+      console.error('❌ [useAnomalias] Erro ao atualizar anomalia:', err);
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
   }, []);
 
   // Obter anomalia por ID
-  const obterAnomalia = useCallback(async (id: number): Promise<Anomalia | null> => {
+  const obterAnomalia = useCallback(async (id: string): Promise<Anomalia | null> => {
+    //console.log('🔍 [useAnomalias] Buscando anomalia:', id);
+    
     setLoading(true);
+    setError(null);
+    
     try {
-      await simulateDelay(300);
-      return mockAnomalias.find(a => a.id === id) || null;
+      const anomalia = await anomaliasService.findOne(id);
+      //console.log('✅ [useAnomalias] Anomalia encontrada:', anomalia);
+      return anomalia;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar anomalia';
+      console.error('❌ [useAnomalias] Erro ao buscar anomalia:', err);
+      setError(errorMessage);
+      return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
   // Excluir anomalia
-  const excluirAnomalia = useCallback(async (id: number): Promise<boolean> => {
+  const excluirAnomalia = useCallback(async (id: string): Promise<boolean> => {
+    //('🗑️ [useAnomalias] Removendo anomalia:', id);
+    
     setLoading(true);
+    setError(null);
+    
     try {
-      await simulateDelay();
-      
-      const index = mockAnomalias.findIndex(a => a.id === id);
-      if (index === -1) {
-        return false;
-      }
-      
-      mockAnomalias.splice(index, 1);
+      await anomaliasService.remove(id);
+      //console.log('✅ [useAnomalias] Anomalia removida com sucesso');
       return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao excluir anomalia';
+      console.error('❌ [useAnomalias] Erro ao excluir anomalia:', err);
+      setError(errorMessage);
+      return false;
     } finally {
       setLoading(false);
     }
   }, []);
 
   // Gerar OS
-  const gerarOS = useCallback(async (anomaliaId: number): Promise<Anomalia> => {
+  const gerarOS = useCallback(async (anomaliaId: string): Promise<Anomalia> => {
+    //console.log('🔧 [useAnomalias] Gerando OS para anomalia:', anomaliaId);
+    
     setLoading(true);
+    setError(null);
+    
     try {
-      await simulateDelay();
-      
-      const index = mockAnomalias.findIndex(a => a.id === anomaliaId);
-      if (index === -1) {
-        throw new Error('Anomalia não encontrada');
-      }
-      
-      const osId = `OS-2025-${String(Date.now()).slice(-3)}`;
-      const anomaliaAtualizada = {
-        ...mockAnomalias[index],
-        status: 'OS_GERADA' as const,
-        ordemServicoId: osId,
-        atualizadoEm: new Date().toISOString(),
-        historico: [
-          ...(mockAnomalias[index].historico || []),
-          {
-            id: getNextHistoricoId(),
-            acao: 'Ordem de Serviço gerada',
-            usuario: 'Usuário Atual',
-            data: new Date().toISOString(),
-            observacoes: `${osId} criada`
-          }
-        ]
-      };
-      
-      mockAnomalias[index] = anomaliaAtualizada;
-      return anomaliaAtualizada;
+      const anomalia = await anomaliasService.gerarOS(anomaliaId);
+      //console.log('✅ [useAnomalias] OS gerada com sucesso:', anomalia);
+      return anomalia;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao gerar OS';
+      console.error('❌ [useAnomalias] Erro ao gerar OS:', err);
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
   }, []);
 
   // Resolver anomalia
-  const resolverAnomalia = useCallback(async (anomaliaId: number, observacoes?: string): Promise<Anomalia> => {
+  const resolverAnomalia = useCallback(async (anomaliaId: string, observacoes?: string): Promise<Anomalia> => {
+    //console.log('✅ [useAnomalias] Resolvendo anomalia:', anomaliaId, observacoes);
+    
     setLoading(true);
+    setError(null);
+    
     try {
-      await simulateDelay();
-      
-      const index = mockAnomalias.findIndex(a => a.id === anomaliaId);
-      if (index === -1) {
-        throw new Error('Anomalia não encontrada');
-      }
-      
-      const anomaliaAtualizada = {
-        ...mockAnomalias[index],
-        status: 'RESOLVIDA' as const,
-        atualizadoEm: new Date().toISOString(),
-        historico: [
-          ...(mockAnomalias[index].historico || []),
-          {
-            id: getNextHistoricoId(),
-            acao: 'Anomalia resolvida',
-            usuario: 'Usuário Atual',
-            data: new Date().toISOString(),
-            observacoes
-          }
-        ]
-      };
-      
-      mockAnomalias[index] = anomaliaAtualizada;
-      return anomaliaAtualizada;
+      const anomalia = await anomaliasService.resolver(anomaliaId, observacoes);
+      //console.log('✅ [useAnomalias] Anomalia resolvida com sucesso:', anomalia);
+      return anomalia;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao resolver anomalia';
+      console.error('❌ [useAnomalias] Erro ao resolver anomalia:', err);
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
   }, []);
 
   // Cancelar anomalia
-  const cancelarAnomalia = useCallback(async (anomaliaId: number, motivo?: string): Promise<Anomalia> => {
+  const cancelarAnomalia = useCallback(async (anomaliaId: string, motivo?: string): Promise<Anomalia> => {
+    //console.log('❌ [useAnomalias] Cancelando anomalia:', anomaliaId, motivo);
+    
     setLoading(true);
+    setError(null);
+    
     try {
-      await simulateDelay();
-      
-      const index = mockAnomalias.findIndex(a => a.id === anomaliaId);
-      if (index === -1) {
-        throw new Error('Anomalia não encontrada');
-      }
-      
-      const anomaliaAtualizada = {
-        ...mockAnomalias[index],
-        status: 'CANCELADA' as const,
-        atualizadoEm: new Date().toISOString(),
-        historico: [
-          ...(mockAnomalias[index].historico || []),
-          {
-            id: getNextHistoricoId(),
-            acao: 'Anomalia cancelada',
-            usuario: 'Usuário Atual',
-            data: new Date().toISOString(),
-            observacoes: motivo
-          }
-        ]
-      };
-      
-      mockAnomalias[index] = anomaliaAtualizada;
-      return anomaliaAtualizada;
+      const anomalia = await anomaliasService.cancelar(anomaliaId, motivo);
+      //console.log('❌ [useAnomalias] Anomalia cancelada com sucesso:', anomalia);
+      return anomalia;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao cancelar anomalia';
+      console.error('❌ [useAnomalias] Erro ao cancelar anomalia:', err);
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Adicionar entrada no histórico
-  const adicionarHistorico = useCallback(async (anomaliaId: number, acao: string, observacoes?: string): Promise<Anomalia> => {
-    setLoading(true);
+  // Testar conexão com a API
+  const testConnection = useCallback(async (): Promise<boolean> => {
+    //console.log('🧪 [useAnomalias] Testando conexão com API...');
+    
     try {
-      await simulateDelay(300);
-      
-      const index = mockAnomalias.findIndex(a => a.id === anomaliaId);
-      if (index === -1) {
-        throw new Error('Anomalia não encontrada');
-      }
-      
-      const anomaliaAtualizada = {
-        ...mockAnomalias[index],
-        atualizadoEm: new Date().toISOString(),
-        historico: [
-          ...(mockAnomalias[index].historico || []),
-          {
-            id: getNextHistoricoId(),
-            acao,
-            usuario: 'Usuário Atual',
-            data: new Date().toISOString(),
-            observacoes
-          }
-        ]
-      };
-      
-      mockAnomalias[index] = anomaliaAtualizada;
-      return anomaliaAtualizada;
-    } finally {
-      setLoading(false);
+      const isConnected = await anomaliasService.testConnection();
+      //console.log(isConnected ? '✅ [useAnomalias] API disponível' : '❌ [useAnomalias] API indisponível');
+      return isConnected;
+    } catch (err) {
+      console.error('❌ [useAnomalias] Erro ao testar conexão:', err);
+      return false;
     }
   }, []);
-
-  // Gerar OS em lote
-  const gerarOSLote = useCallback(async (anomaliaIds: number[]): Promise<Anomalia[]> => {
-    setLoading(true);
-    try {
-      const resultados: Anomalia[] = [];
-      
-      for (const id of anomaliaIds) {
-        const anomaliaAtualizada = await gerarOS(id);
-        resultados.push(anomaliaAtualizada);
-      }
-      
-      return resultados;
-    } finally {
-      setLoading(false);
-    }
-  }, [gerarOS]);
-
-  // Resolver em lote
-  const resolverLote = useCallback(async (anomaliaIds: number[], observacoes?: string): Promise<Anomalia[]> => {
-    setLoading(true);
-    try {
-      const resultados: Anomalia[] = [];
-      
-      for (const id of anomaliaIds) {
-        const anomaliaAtualizada = await resolverAnomalia(id, observacoes || 'Resolvida em lote');
-        resultados.push(anomaliaAtualizada);
-      }
-      
-      return resultados;
-    } finally {
-      setLoading(false);
-    }
-  }, [resolverAnomalia]);
-
-  // Cancelar em lote
-  const cancelarLote = useCallback(async (anomaliaIds: number[], motivo?: string): Promise<Anomalia[]> => {
-    setLoading(true);
-    try {
-      const resultados: Anomalia[] = [];
-      
-      for (const id of anomaliaIds) {
-        const anomaliaAtualizada = await cancelarAnomalia(id, motivo || 'Cancelada em lote');
-        resultados.push(anomaliaAtualizada);
-      }
-      
-      return resultados;
-    } finally {
-      setLoading(false);
-    }
-  }, [cancelarAnomalia]);
 
   return {
+    // Estados
     loading,
+    error,
+    
+    // Operações CRUD
     criarAnomalia,
     editarAnomalia,
     obterAnomalia,
     excluirAnomalia,
+    
+    // Operações específicas
     gerarOS,
     resolverAnomalia,
     cancelarAnomalia,
-    adicionarHistorico,
-    gerarOSLote,
-    resolverLote,
-    cancelarLote,
+    
+    // Utilitários
+    clearError,
+    testConnection,
   };
 }

@@ -95,7 +95,7 @@ export const reservasFormFields: FormField[] = [
     label: 'Veículo',
     type: 'custom',
     required: true,
-    render: (props) => {
+    render: () => {
       // Este será renderizado pelo componente VeiculoSelector
       // O BaseModal vai precisar ser ajustado para suportar este campo custom
       return null;

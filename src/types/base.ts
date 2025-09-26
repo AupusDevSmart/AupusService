@@ -1,182 +1,257 @@
-// src/types/base.ts - ATUALIZADO PARA COMPATIBILIDADE
+// src/types/base.ts - TIPOS BASE CORRIGIDOS
 export interface BaseEntity {
-  id: string | number; // ✅ ACEITAR TANTO STRING QUANTO NUMBER
+  id: string;
   criadoEm?: string | Date;
   atualizadoEm?: string | Date;
-  created_at?: string | Date; // ✅ COMPATIBILIDADE COM DTO
-  updated_at?: string | Date; // ✅ COMPATIBILIDADE COM DTO
-}
-
-export type ModalMode = 'create' | 'edit' | 'view';
-
-export interface FormFieldProps {
-  value: unknown;
-  onChange: (value: unknown) => void;
-  onMultipleChange?: (updates: Record<string, unknown>) => void; // ✅ NOVO: Para atualizar múltiplos campos
-  disabled: boolean;
-  error?: string;
-  mode?: ModalMode;
-  entity?: BaseEntity | null;
-  [key: string]: unknown; // Para props adicionais como dependencies
-}
-
-export interface FormField {
-  key: string;
-  label: string;
-  type: 'text' | 'email' | 'number' | 'select' | 'checkbox' | 'textarea' | 'custom' | 'date' | 'time' | 'rating'; // ✅ ADICIONADO EMAIL
-  required?: boolean;
-  placeholder?: string;
-  options?: { value: string | number; label: string }[];
-  validation?: (value: any) => string | null;
-  group?: string;
-  disabled?: boolean;
-  defaultValue?: any;
-  render?: (props: any) => React.ReactNode;
-  dependencies?: string[]; // ✅ NOVO: Lista de campos dos quais este campo depende
-  transform?: (value: any) => any; // ✅ ADICIONADO TRANSFORM
-  parse?: (value: any) => any; // ✅ ADICIONADO PARSE
-  hint?: string;
-  rows?: number; // Para textarea
-  min?: number; // Para number
-  max?: number; // Para number
-  step?: number; // Para number
-  multiple?: boolean; // Para select
-  showOnlyOnMode?: ModalMode[]; // ✅ NOVO: Mostrar apenas nos modos especificados
-  hideOnMode?: ModalMode[]; // ✅ NOVO: Esconder nos modos especificados
-  colSpan?: number; // ✅ NOVO: Quantidade de colunas que o campo ocupa
-}
-
-export interface FilterConfig {
-  key: string;
-  label: string;
-  type: 'text' | 'select' | 'checkbox' | 'multiselect' | 'search' | 'date'; // ✅ ADICIONADO CHECKBOX E DATE
-  placeholder?: string;
-  options?: { value: string; label: string }[];
-  multiple?: boolean;
-  defaultValue?: any;
-  className?: string; // ✅ NOVO: Classes CSS para o filtro
-}
-
-export interface TableColumn<T = BaseEntity> {
-  key: keyof T | string;
-  label: string;
-  sortable?: boolean;
-  width?: string;
-  align?: 'left' | 'center' | 'right';
-  hideOnMobile?: boolean;
-  hideOnTablet?: boolean;
-  className?: string; // ✅ NOVO: Classes CSS para a coluna
-  render?: (entity: T, actions?: {
-    onCustomAction: (actionKey: string, entity: T) => void;
-  }) => React.ReactNode;
 }
 
 export interface BaseFilters {
   search?: string;
   page?: number;
   limit?: number;
-  [key: string]: any;
 }
 
-export interface Pagination {
+// ✅ ADICIONADO: Interface para resposta paginada
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+// ✅ ADICIONADO: Interface para metadados de paginação
+export interface PaginationMeta {
   page: number;
   limit: number;
   total: number;
   totalPages: number;
+  hasNextPage?: boolean;
+  hasPreviousPage?: boolean;
 }
 
-export interface CustomAction<T = BaseEntity> {
-  key: string;
-  label: string;
-  icon?: React.ReactNode;
-  handler: (entity: T) => void;
-  condition?: (entity: T) => boolean;
-  variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link';
-  size?: 'default' | 'sm' | 'lg' | 'icon';
-  disabled?: (entity: T) => boolean;
+// ✅ ADICIONADO: Interface estendida para resposta paginada com metadados extras
+export interface ExtendedPaginatedResponse<T> {
+  data: T[];
+  pagination: PaginationMeta;
+  meta?: {
+    filters?: Record<string, any>;
+    sort?: {
+      field: string;
+      direction: 'asc' | 'desc';
+    };
+    requestTime?: number;
+  };
 }
 
-// ✅ INTERFACES PARA MODAL E FORM
-export interface BaseModalProps<T extends BaseEntity> {
+// ✅ CORRIGIDO: Adicionar 'programar' aos modos válidos
+export type ModalMode = 'create' | 'edit' | 'view' | 'programar';
+
+export interface BaseModalState<T = any> {
   isOpen: boolean;
   mode: ModalMode;
   entity: T | null;
-  title: string;
-  icon?: React.ReactNode;
-  formFields: FormField[];
-  onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
-  width?: string;
-  children?: React.ReactNode;
-  groups?: { key: string; title: string }[];
 }
 
-export interface BaseTableProps<T extends BaseEntity> {
+// ✅ CORRIGIDO: Adicionar 'time' e 'component' aos tipos válidos
+export interface FormField {
+  key: string;
+  label: string;
+  type: 'text' | 'email' | 'password' | 'number' | 'textarea' | 'select' | 'custom' | 'checkbox' | 'date' | 'datetime-local' | 'time';
+  required?: boolean;
+  placeholder?: string;
+  defaultValue?: any;
+  min?: number;
+  max?: number;
+  options?: Array<{ value: string | number; label: string }>;
+  validation?: (value: any) => string | null;
+  render?: (props: FormFieldProps) => React.ReactElement;
+  component?: React.FC<any>; // ✅ ADICIONADO: Para campos customizados
+  componentProps?: Record<string, any>; // ✅ ADICIONADO: Props para componentes customizados
+  disabled?: boolean;
+  group?: string;
+  condition?: (entity?: any, formData?: any) => boolean;
+  showOnlyWhen?: {
+    field: string;
+    value: any;
+  };
+  showOnlyOnMode?: ModalMode | ModalMode[];
+  hideOnMode?: ModalMode | ModalMode[];
+  excludeFromSubmit?: boolean; // ✅ NOVO: Excluir campo do envio à API
+  dependencies?: string[]; // ✅ ADICIONADO: Para campos que dependem de outros
+  colSpan?: number; // ✅ ADICIONADO: Para layout em grid
+  helpText?: string; // ✅ ADICIONADO: Texto de ajuda
+  computeDisabled?: (entity?: any, formData?: any) => boolean; // ✅ ADICIONADO: Para campos condicionalmente desabilitados
+}
+
+export interface FormFieldProps {
+  value: any;
+  onChange: (value: any) => void;
+  onMultipleChange?: (updates: Record<string, any>) => void;
+  disabled?: boolean;
+  hasError?: boolean;
+  error?: string;
+  entity?: any;
+  mode?: ModalMode;
+}
+
+export interface FilterConfig {
+  key: string;
+  type: 'search' | 'select' | 'date' | 'custom';
+  label?: string;
+  placeholder?: string;
+  options?: Array<{ value: string; label: string }>;
+  className?: string;
+  disabled?: boolean;
+  render?: (props: FilterFieldProps) => React.ReactElement;
+}
+
+export interface FilterFieldProps {
+  value: any;
+  onChange: (value: any) => void;
+  disabled?: boolean;
+}
+
+export interface TableColumn<T = any> {
+  key: string;
+  label: string;
+  sortable?: boolean;
+  hideOnMobile?: boolean;
+  hideOnTablet?: boolean;
+  render?: (item: T) => React.ReactElement | string;
+  className?: string;
+}
+
+// ✅ ADICIONADO: Tipos para estados de loading
+export interface LoadingState {
+  isLoading: boolean;
+  error?: string;
+}
+
+export interface AsyncState<T> extends LoadingState {
+  data?: T;
+}
+
+export interface ListState<T> extends LoadingState {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+// ✅ ADICIONADO: Tipos para operações CRUD
+export interface CreateOperation<TCreate, TEntity> {
+  (data: TCreate): Promise<TEntity>;
+}
+
+export interface UpdateOperation<TUpdate, TEntity> {
+  (id: string, data: TUpdate): Promise<TEntity>;
+}
+
+export interface DeleteOperation {
+  (id: string): Promise<void>;
+}
+
+export interface FindAllOperation<TFilters, TEntity> {
+  (filters?: TFilters): Promise<PaginatedResponse<TEntity>>;
+}
+
+export interface FindOneOperation<TEntity> {
+  (id: string): Promise<TEntity>;
+}
+
+// ✅ ADICIONADO: Interface para serviços CRUD genéricos
+export interface CrudService<TEntity, TCreate, TUpdate, TFilters = BaseFilters> {
+  findAll: FindAllOperation<TFilters, TEntity>;
+  findOne: FindOneOperation<TEntity>;
+  create: CreateOperation<TCreate, TEntity>;
+  update: UpdateOperation<TUpdate, TEntity>;
+  delete: DeleteOperation;
+}
+
+// ✅ ADICIONADO: Tipos para componentes de tabela
+export interface TableProps<T> {
   data: T[];
   columns: TableColumn<T>[];
-  pagination: Pagination;
+  pagination?: PaginationMeta;
   loading?: boolean;
-  onPageChange: (page: number) => void;
-  onView?: (entity: T) => void;
-  onEdit?: (entity: T) => void;
-  onDelete?: (entity: T) => void;
-  customActions?: CustomAction<T>[];
+  onPageChange?: (page: number) => void;
+  onView?: (item: T) => void;
+  onEdit?: (item: T) => void;
+  onDelete?: (item: T) => void;
   emptyMessage?: string;
-  emptyIcon?: React.ReactNode;
-  selectable?: boolean;
-  onSelectionChange?: (selected: T[]) => void;
+  emptyIcon?: React.ReactElement;
 }
 
-export interface BaseFormProps {
-  fields: FormField[];
-  data: any;
-  errors: Record<string, string>;
-  disabled?: boolean;
-  onChange: (data: any) => void;
-  mode?: ModalMode;
-  entity?: BaseEntity | null;
-  groups?: { key: string; title: string }[];
+// ✅ ADICIONADO: Tipos para componentes de filtro
+export interface FiltersProps {
+  filters: Record<string, any>;
+  config: FilterConfig[];
+  onFilterChange: (filters: Partial<Record<string, any>>) => void;
+  loading?: boolean;
 }
 
-// ✅ TIPOS PARA RESPONSES DA API
+// ✅ ADICIONADO: Tipos para componentes de modal
+export interface ModalProps<T = any> {
+  isOpen: boolean;
+  mode: ModalMode;
+  entity?: T | null;
+  title: string;
+  icon?: React.ReactElement;
+  formFields: FormField[];
+  onClose: () => void;
+  onSubmit: (data: any) => void | Promise<void>;
+  width?: string;
+  loading?: boolean;
+  loadingText?: string;
+  closeOnBackdropClick?: boolean;
+  closeOnEscape?: boolean;
+  submitButtonText?: string;
+}
+
+// ✅ ADICIONADO: Tipos para respostas de API com erro
 export interface ApiResponse<T> {
   data: T;
+  success: boolean;
   message?: string;
-  success?: boolean;
 }
 
-export interface ApiListResponse<T> {
-  data: T[];
-  pagination: Pagination;
-  message?: string;
-  success?: boolean;
+export interface ApiError {
+  message: string;
+  code?: string;
+  status?: number;
+  errors?: Record<string, string[]>;
 }
 
-// ✅ TIPOS PARA FILTROS E ORDENAÇÃO
-export interface SortConfig {
-  field: string;
-  direction: 'asc' | 'desc';
+// ✅ ADICIONADO: Tipos para hooks personalizados
+export interface UseTableResult<T, TFilters> {
+  items: T[];
+  pagination: PaginationMeta;
+  filters: TFilters;
+  loading: boolean;
+  error?: string;
+  setFilters: (filters: Partial<TFilters>) => void;
+  handlePageChange: (page: number) => void;
+  refresh: () => Promise<void>;
 }
 
-export interface FilterState {
+export interface UseModalResult<T> {
+  modalState: BaseModalState<T>;
+  openModal: (mode: ModalMode, entity?: T) => void;
+  closeModal: () => void;
+}
+
+// ✅ ADICIONADO: Tipos para componentes de modal (legados)
+export interface ModalEntity<T = any> extends BaseEntity {
   [key: string]: any;
 }
 
-// ✅ TIPOS PARA VALIDAÇÃO
-export interface ValidationResult {
-  isValid: boolean;
-  errors: Record<string, string>;
-}
+// ✅ ADICIONADO: Alias para Pagination
+export type Pagination = PaginationMeta;
 
-// ✅ UTILITÁRIOS DE TIPO
-export type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
-};
-
-export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
-
-export type OptionalFields<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
-
-// ✅ CONSTANTES ÚTEIS
-export const DEFAULT_PAGE_SIZE = 10;
-export const DEFAULT_PAGE = 1;
+// ✅ Re-exports para compatibilidade
+export type { ModalMode as Mode };
+export type { BaseEntity as Entity };
+export type { BaseFilters as Filters };

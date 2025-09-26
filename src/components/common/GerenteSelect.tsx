@@ -128,7 +128,7 @@ export function GerenteSelect({
       disabled={disabled || loading}
     >
       <SelectTrigger className={`min-h-[44px] ${className}`}>
-        <SelectValue asChild>
+        <SelectValue>
           {loading ? (
             <span className="text-muted-foreground">Carregando gerentes...</span>
           ) : (

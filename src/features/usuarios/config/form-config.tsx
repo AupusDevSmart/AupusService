@@ -2,125 +2,97 @@
 import { FormField } from '@/types/base';
 import {  Permissao } from '../types';
 import { Checkbox } from '@/components/ui/checkbox';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { EstadoSelect } from '@/components/common/EstadoSelect';
 import { CidadeSelect } from '@/components/common/CidadeSelect';
 import { CEPInput } from '@/components/common/CEPInput';
 import { GerenteSelect } from '@/components/common/GerenteSelect';
 import { ConcessionariaSelect } from '@/components/common/ConcessionariaSelect';
 import { OrganizacaoSelect } from '@/components/common/OrganizacaoSelect';
+import { useRoles } from '@/hooks/useRoles';
+import { usePermissoes, usePermissoesGrouped } from '@/hooks/usePermissoes';
 
-// ✅ ROLES ATIVOS NO SISTEMA (BASEADO NA API ATUAL)
-const ROLES_USUARIO = [
-  { value: 'admin', label: 'Administrador', role: 'admin' },
-  { value: 'gerente', label: 'Gerente', role: 'gerente' },
-  { value: 'vendedor', label: 'Vendedor', role: 'vendedor' },
-  { value: 'consultor', label: 'Consultor', role: 'consultor' },
-];
+// ✅ COMPONENTE PARA SELEÇÃO DE ROLES DINÂMICO - USANDO DADOS DA TABELA
+const RoleSelector = ({ value, onChange, disabled }: any) => {
+  const { roles, loading, error } = useRoles();
+  
+  console.log('🔍 [RoleSelector] Debug:', { value, roles, loading, error });
+  
+  if (loading) {
+    return (
+      <Select disabled>
+        <SelectTrigger>
+          <SelectValue placeholder="Carregando tipos de usuário..." />
+        </SelectTrigger>
+      </Select>
+    );
+  }
 
-// ✅ TODAS AS PERMISSÕES REAIS DO BANCO DE DADOS
-const TODAS_PERMISSOES: { value: Permissao; label: string; categoria: string }[] = [
-  // Painel Geral
-  { value: 'PainelGeral', label: 'Painel Geral', categoria: 'Painel' },
-  { value: 'PainelGeralOrganizacoes', label: 'Painel - Organizações', categoria: 'Painel' },
-  { value: 'PainelGeralCativos', label: 'Painel - Cativos', categoria: 'Painel' },
-  { value: 'PainelGeralClube', label: 'Painel - Clube', categoria: 'Painel' },
-  
-  // Dashboard
-  { value: 'Dashboard', label: 'Dashboard', categoria: 'Dashboard' },
-  { value: 'dashboard.view', label: 'Visualizar Dashboard', categoria: 'Dashboard' },
-  
-  // Monitoramento
-  { value: 'MonitoramentoOrganizacoes', label: 'Monitoramento de Organizações', categoria: 'Monitoramento' },
-  { value: 'Monitoramento', label: 'Monitoramento Geral', categoria: 'Monitoramento' },
-  { value: 'MonitoramentoConsumo', label: 'Monitoramento de Consumo', categoria: 'Monitoramento' },
-  
-  // Sistemas Principais
-  { value: 'NET', label: 'Sistema NET', categoria: 'Sistemas' },
-  { value: 'CRM', label: 'Sistema CRM', categoria: 'Sistemas' },
-  { value: 'Oportunidades', label: 'Oportunidades', categoria: 'Sistemas' },
-  
-  // Administração
-  { value: 'Usuarios', label: 'Usuários', categoria: 'Administração' },
-  { value: 'Organizacoes', label: 'Organizações', categoria: 'Administração' },
-  { value: 'UnidadesConsumidoras', label: 'Unidades Consumidoras', categoria: 'Administração' },
-  { value: 'Configuracoes', label: 'Configurações', categoria: 'Administração' },
-  { value: 'Arquivos', label: 'Arquivos', categoria: 'Administração' },
-  
-  // Configurações Detalhadas
-  { value: 'configuracoes.view', label: 'Visualizar Configurações', categoria: 'Configurações' },
-  { value: 'configuracoes.edit', label: 'Editar Configurações', categoria: 'Configurações' },
-  
-  // Cadastros
-  { value: 'Cadastros', label: 'Cadastros Geral', categoria: 'Cadastros' },
-  { value: 'CadastroOrganizacoes', label: 'Cadastro de Organizações', categoria: 'Cadastros' },
-  { value: 'CadastroUsuarios', label: 'Cadastro de Usuários', categoria: 'Cadastros' },
-  { value: 'CadastroUnidadesConsumidoras', label: 'Cadastro de UCs', categoria: 'Cadastros' },
-  { value: 'CadastroConcessionarias', label: 'Cadastro de Concessionárias', categoria: 'Cadastros' },
-  
-  // Financeiro
-  { value: 'FinanceiroAdmin', label: 'Financeiro Admin', categoria: 'Financeiro' },
-  { value: 'Financeiro', label: 'Financeiro Geral', categoria: 'Financeiro' },
-  { value: 'FinanceiroConsultor', label: 'Financeiro Consultor', categoria: 'Financeiro' },
-  
-  // Super Admin
-  { value: 'SuperAdmin', label: 'Super Administrador', categoria: 'Super Admin' },
-  
-  // Energia e Geração
-  { value: 'GeracaoEnergia', label: 'Geração de Energia', categoria: 'Energia' },
-  { value: 'Reclamacoes', label: 'Reclamações', categoria: 'Energia' },
-  
-  // Gestão (permissões da API que faltavam)
-  { value: 'GestaoOportunidades', label: 'Gestão de Oportunidades', categoria: 'Gestão' },
-  { value: 'Proprietarios', label: 'Proprietários', categoria: 'Gestão' },
-  { value: 'Equipamentos', label: 'Equipamentos', categoria: 'Gestão' },
-  { value: 'Plantas', label: 'Plantas', categoria: 'Gestão' },
-  
-  // Áreas Específicas
-  { value: 'Associados', label: 'Associados', categoria: 'Áreas' },
-  { value: 'Documentos', label: 'Documentos', categoria: 'Áreas' },
-  { value: 'Prospeccao', label: 'Prospecção', categoria: 'Áreas' },
-  { value: 'AreaDoAssociado', label: 'Área do Associado', categoria: 'Áreas' },
-  { value: 'AreaDoProprietario', label: 'Área do Proprietário', categoria: 'Áreas' },
-  { value: 'MinhasUsinas', label: 'Minhas Usinas', categoria: 'Áreas' },
-  
-  // Prospecção Detalhada
-  { value: 'prospec.view', label: 'Visualizar Prospecções', categoria: 'Prospecção' },
-  { value: 'prospec.create', label: 'Criar Prospecções', categoria: 'Prospecção' },
-  { value: 'prospec.edit', label: 'Editar Prospecções', categoria: 'Prospecção' },
-  { value: 'prospec.delete', label: 'Excluir Prospecções', categoria: 'Prospecção' },
-  
-  // Controle
-  { value: 'controle.view', label: 'Visualizar Controle', categoria: 'Controle' },
-  { value: 'controle.manage', label: 'Gerenciar Controle', categoria: 'Controle' },
-  
-  // UGs (Unidades Geradoras)
-  { value: 'ugs.view', label: 'Visualizar UGs', categoria: 'UGs' },
-  { value: 'ugs.create', label: 'Criar UGs', categoria: 'UGs' },
-  { value: 'ugs.edit', label: 'Editar UGs', categoria: 'UGs' },
-  
-  // Relatórios
-  { value: 'relatorios.view', label: 'Visualizar Relatórios', categoria: 'Relatórios' },
-  { value: 'relatorios.export', label: 'Exportar Relatórios', categoria: 'Relatórios' },
-  
-  // Equipe
-  { value: 'equipe.view', label: 'Visualizar Equipe', categoria: 'Equipe' },
-  { value: 'equipe.create', label: 'Criar Equipe', categoria: 'Equipe' },
-];
+  if (error && roles.length === 0) {
+    return (
+      <div className="flex items-center p-3 border border-red-200 rounded-md bg-red-50">
+        <div className="text-sm text-red-600">
+          ❌ Erro ao carregar tipos de usuário: {error}
+        </div>
+      </div>
+    );
+  }
 
-// ✅ COMPONENTE PARA SELEÇÃO DE PERMISSÕES
+  // Encontrar o role atual para mostrar o label correto
+  const currentRole = roles.find(role => role.value === value);
+  console.log('🔍 [RoleSelector] Role atual encontrado:', currentRole);
+
+  return (
+    <Select
+      value={value || ''}
+      onValueChange={onChange}
+      disabled={disabled}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Selecione um tipo de usuário">
+          {currentRole ? currentRole.label : value || ''}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {roles.map(role => (
+          <SelectItem key={role.value} value={role.value}>
+            <div className="flex flex-col">
+              <span className="font-medium">{role.label}</span>
+              <span className="text-xs text-muted-foreground">Valor: {role.value}</span>
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
+
+// ✅ COMPONENTE DINÂMICO PARA SELEÇÃO DE PERMISSÕES
 const PermissoesSelector = ({ value, onChange, disabled }: any) => {
+  // ✅ USAR ENDPOINT OTIMIZADO (dados já vêm agrupados do backend)
+  const { permissoesPorCategoria, loading, error } = usePermissoesGrouped();
+  
+  // Fallback para hook normal se necessário
+  // const { permissoesPorCategoria, loading, error } = usePermissoes();
+  
   const permissoesSelecionadas = value || [];
   
-  // console.log('🔐 PermissoesSelector - valor recebido:', value);
-  // console.log('🔐 PermissoesSelector - permissões selecionadas:', permissoesSelecionadas);
+  console.log('🔍 [PermissoesSelector] Debug:', { 
+    value, 
+    permissoesSelecionadas, 
+    loading, 
+    error,
+    categorias: Object.keys(permissoesPorCategoria)
+  });
   
-  // Debug: verificar se as permissões selecionadas existem na lista
-  if (permissoesSelecionadas.length > 0) {
-    const permissoesDisponiveis = TODAS_PERMISSOES.map(p => p.value);
-    const permissoesNaoEncontradas = permissoesSelecionadas.filter((p: string) => !permissoesDisponiveis.includes(p as Permissao));
-    if (permissoesNaoEncontradas.length > 0) {
-      console.warn('⚠️ Permissões não encontradas na lista:', permissoesNaoEncontradas);
-    }
+  if (error) {
+    console.warn('Erro ao carregar permissões:', error);
   }
   
   const handlePermissaoChange = (permissao: Permissao, checked: boolean) => {
@@ -133,12 +105,30 @@ const PermissoesSelector = ({ value, onChange, disabled }: any) => {
     onChange(novasPermissoes);
   };
 
-  // Agrupar permissões por categoria
-  const permissoesPorCategoria = TODAS_PERMISSOES.reduce((acc, perm) => {
-    if (!acc[perm.categoria]) acc[perm.categoria] = [];
-    acc[perm.categoria].push(perm);
-    return acc;
-  }, {} as Record<string, typeof TODAS_PERMISSOES>);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8 border rounded-lg">
+        <div className="text-sm text-muted-foreground">
+          Carregando permissões...
+        </div>
+      </div>
+    );
+  }
+
+  if (error && Object.keys(permissoesPorCategoria).length === 0) {
+    return (
+      <div className="flex items-center justify-center p-8 border border-red-200 rounded-lg bg-red-50">
+        <div className="text-center">
+          <div className="text-sm text-red-600 mb-2">
+            ❌ Não foi possível carregar as permissões
+          </div>
+          <div className="text-xs text-red-500">
+            {error}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">   
@@ -159,6 +149,7 @@ const PermissoesSelector = ({ value, onChange, disabled }: any) => {
                 <label 
                   htmlFor={permissao.value}
                   className="text-sm cursor-pointer"
+                  title={permissao.description} // Tooltip com descrição se disponível
                 >
                   {permissao.label}
                 </label>
@@ -170,6 +161,16 @@ const PermissoesSelector = ({ value, onChange, disabled }: any) => {
       
       <div className="text-xs text-muted-foreground">
         {permissoesSelecionadas.length} permissão(ões) selecionada(s)
+        {error && (
+          <span className="text-orange-600 ml-2">
+            ⚠️ {error}
+          </span>
+        )}
+        {!error && Object.keys(permissoesPorCategoria).length > 0 && (
+          <span className="text-green-600 ml-2">
+            ✅ Usando categorização do backend
+          </span>
+        )}
       </div>
     </div>
   );
@@ -349,24 +350,30 @@ export const usuariosFormFields: FormField[] = [
     placeholder: 'Centro',
     group: 'localizacao'
   },
+  {
+    key: 'complemento',
+    label: 'Complemento',
+    type: 'text',
+    placeholder: 'Apto 101, Bloco A',
+    group: 'localizacao'
+  },
   
   // ✅ CONFIGURAÇÕES DO SISTEMA
   {
     key: 'roleNames',
     label: 'Tipo de Usuário',
-    type: 'select',
+    type: 'custom',
     required: true,
-    options: ROLES_USUARIO.map(role => ({
-      value: role.value,
-      label: role.label
-    })),
-    group: 'configuracoes'
+    render: RoleSelector,
+    group: 'configuracoes',
+    help: 'Role atual do usuário no sistema'
   },
   {
     key: 'status',
     label: 'Status',
     type: 'select',
     required: true,
+    defaultValue: 'Ativo',
     options: [
       { value: 'Ativo', label: 'Ativo' },
       { value: 'Inativo', label: 'Inativo' }

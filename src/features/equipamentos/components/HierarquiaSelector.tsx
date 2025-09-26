@@ -1,5 +1,5 @@
-// src/features/equipamentos/components/HierarquiaSelector.tsx - CORRIGIDO
-import React, { useMemo } from 'react';
+// src/features/equipamentos/components/HierarquiaSelectorAPI.tsx - CONECTADO À API
+import React, { useState, useEffect } from 'react';
 import { 
   Select, 
   SelectContent, 
@@ -8,132 +8,167 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Factory, Layers, Route, Package, Cog, Wrench } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Building2, Factory, Layers, Route, Package, Cog, Wrench, Loader2, AlertCircle } from 'lucide-react';
+import { useSelectionData } from '../hooks/useSelectionData';
 
-// ============================================================================
-// MOCK DATA - Hierarquia completa até máquinas
-// ============================================================================
-const mockProprietarios = [
-  { id: 1, razaoSocial: 'Empresa ABC Ltda', tipo: 'pessoa_juridica' as const },
-  { id: 2, razaoSocial: 'João Silva', tipo: 'pessoa_fisica' as const },
-  { id: 3, razaoSocial: 'Maria Santos Consultoria ME', tipo: 'pessoa_juridica' as const }
-];
-
-const mockPlantas = [
-  { id: 1, nome: 'Planta Industrial São Paulo', proprietarioId: 1 },
-  { id: 2, nome: 'Centro de Distribuição Rio', proprietarioId: 3 },
-  { id: 3, nome: 'Oficina João Silva', proprietarioId: 2 }
-];
-
-const mockAreas = [
-  { id: 1, nome: 'Produção', plantaId: 1 },
-  { id: 2, nome: 'Logística', plantaId: 2 },
-  { id: 3, nome: 'Administrativo', plantaId: 1 },
-  { id: 4, nome: 'Manutenção', plantaId: 3 }
-];
-
-const mockSubAreas = [
-  { id: 1, nome: 'Linha A', areaId: 1 },
-  { id: 2, nome: 'Linha B', areaId: 1 },
-  { id: 4, nome: 'Expedição', areaId: 2 },
-  { id: 5, nome: 'Recebimento', areaId: 2 }
-];
-
-const mockLinhas = [
-  // Linhas da subárea "Linha A"
-  { id: 1, nome: 'Montagem A1', subAreaId: 1, areaId: null },
-  { id: 2, nome: 'Montagem A2', subAreaId: 1, areaId: null },
-  // Linha direta da área (sem subárea)
-  { id: 3, nome: 'Linha Principal Produção', subAreaId: null, areaId: 1 },
-  // Linhas da logística
-  { id: 4, nome: 'Linha Expedição A', subAreaId: 4, areaId: null }
-];
-
-const mockConjuntos = [
-  { id: 1, nome: 'Conjunto Motor Principal', linhaId: 1 },
-  { id: 2, nome: 'Conjunto Hidráulico', linhaId: 1 },
-  { id: 3, nome: 'Conjunto Pneumático', linhaId: 2 },
-  { id: 4, nome: 'Conjunto Esteira', linhaId: 4 }
-];
-
-const mockMaquinas = [
-  // Máquinas do Conjunto 1
-  { id: 1, nome: 'Motor Elétrico 01', conjuntoId: 1 },
-  { id: 2, nome: 'Redutor de Velocidade', conjuntoId: 1 },
-  // Máquinas do Conjunto 2
-  { id: 3, nome: 'Bomba Hidráulica Principal', conjuntoId: 2 },
-  { id: 4, nome: 'Cilindro Hidráulico 01', conjuntoId: 2 },
-  // Máquinas do Conjunto 3
-  { id: 5, nome: 'Compressor de Ar', conjuntoId: 3 },
-  { id: 6, nome: 'Cilindro Pneumático 01', conjuntoId: 3 }
-];
-
-interface HierarquiaSelectorProps {
-  value: any;
-  onChange: (value: any) => void;
-  disabled?: boolean;
+interface HierarquiaValue {
+  proprietarioId: string | null;
+  plantaId: string | null;
+  areaId: string | null;
+  subAreaId: string | null;
+  linhaId: string | null;
+  conjuntoId: string | null;
+  maquinaId: string | null;
 }
 
-export const HierarquiaSelector: React.FC<HierarquiaSelectorProps> = ({ 
+interface HierarquiaSelectorAPIProps {
+  value: HierarquiaValue;
+  onChange: (value: HierarquiaValue) => void;
+  disabled?: boolean;
+  required?: boolean;
+  showMaquina?: boolean; // Para equipamentos que precisam de máquina
+}
+
+export const HierarquiaSelectorAPI: React.FC<HierarquiaSelectorAPIProps> = ({ 
   value, 
   onChange, 
-  disabled = false 
+  disabled = false,
+  required = false,
+  showMaquina = true
 }) => {
+  const {
+    proprietarios,
+    plantas,
+    loadingProprietarios,
+    loadingPlantas,
+    loadingHierarquia,
+    fetchPlantas,
+    fetchHierarquiaNivel
+  } = useSelectionData();
+
+  // Estados para diferentes níveis hierárquicos
+  const [areas, setAreas] = useState<any[]>([]);
+  const [subAreas, setSubAreas] = useState<any[]>([]);
+  const [linhas, setLinhas] = useState<any[]>([]);
+  const [conjuntos, setConjuntos] = useState<any[]>([]);
+  const [maquinas, setMaquinas] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
   // Garantir que value tem a estrutura correta
-  const currentValue = value || {
+  const currentValue: HierarquiaValue = value || {
     proprietarioId: null,
     plantaId: null,
     areaId: null,
     subAreaId: null,
     linhaId: null,
     conjuntoId: null,
-    maquinaId: null // ← OBRIGATÓRIO para equipamentos
+    maquinaId: null
   };
 
-  // Filtrar opções baseado nas seleções anteriores
-  const availablePlantas = useMemo(() => {
-    return currentValue.proprietarioId 
-      ? mockPlantas.filter(p => p.proprietarioId === currentValue.proprietarioId)
-      : [];
-  }, [currentValue.proprietarioId]);
-
-  const availableAreas = useMemo(() => {
-    return currentValue.plantaId 
-      ? mockAreas.filter(a => a.plantaId === currentValue.plantaId)
-      : [];
-  }, [currentValue.plantaId]);
-
-  const availableSubAreas = useMemo(() => {
-    return currentValue.areaId 
-      ? mockSubAreas.filter(sa => sa.areaId === currentValue.areaId)
-      : [];
-  }, [currentValue.areaId]);
-
-  const availableLinhas = useMemo(() => {
-    // Linhas podem estar diretamente na área OU na subárea
-    if (currentValue.subAreaId) {
-      return mockLinhas.filter(l => l.subAreaId === currentValue.subAreaId);
-    } else if (currentValue.areaId) {
-      return mockLinhas.filter(l => l.areaId === currentValue.areaId && !l.subAreaId);
+  // ============================================================================
+  // EFEITOS PARA CARREGAR DADOS EM CASCATA
+  // ============================================================================
+  
+  // Carregar plantas quando proprietário muda
+  useEffect(() => {
+    if (currentValue.proprietarioId) {
+      fetchPlantas(currentValue.proprietarioId);
     }
-    return [];
-  }, [currentValue.areaId, currentValue.subAreaId]);
+  }, [currentValue.proprietarioId, fetchPlantas]);
 
-  const availableConjuntos = useMemo(() => {
-    return currentValue.linhaId 
-      ? mockConjuntos.filter(c => c.linhaId === currentValue.linhaId)
-      : [];
-  }, [currentValue.linhaId]);
+  // Carregar áreas quando planta muda
+  useEffect(() => {
+    const loadAreas = async () => {
+      if (currentValue.plantaId) {
+        try {
+          const data = await fetchHierarquiaNivel('area', currentValue.plantaId);
+          setAreas(data);
+        } catch (err) {
+          setError('Erro ao carregar áreas');
+        }
+      } else {
+        setAreas([]);
+      }
+    };
+    loadAreas();
+  }, [currentValue.plantaId, fetchHierarquiaNivel]);
 
-  const availableMaquinas = useMemo(() => {
-    return currentValue.conjuntoId 
-      ? mockMaquinas.filter(m => m.conjuntoId === currentValue.conjuntoId)
-      : [];
-  }, [currentValue.conjuntoId]);
+  // Carregar subáreas quando área muda
+  useEffect(() => {
+    const loadSubAreas = async () => {
+      if (currentValue.areaId) {
+        try {
+          const data = await fetchHierarquiaNivel('subarea', currentValue.areaId);
+          setSubAreas(data);
+        } catch (err) {
+          setError('Erro ao carregar subáreas');
+        }
+      } else {
+        setSubAreas([]);
+      }
+    };
+    loadSubAreas();
+  }, [currentValue.areaId, fetchHierarquiaNivel]);
 
-  // Handlers para cada nível
+  // Carregar linhas quando área ou subárea muda
+  useEffect(() => {
+    const loadLinhas = async () => {
+      const parentId = currentValue.subAreaId || currentValue.areaId;
+      if (parentId) {
+        try {
+          const data = await fetchHierarquiaNivel('linha', parentId);
+          setLinhas(data);
+        } catch (err) {
+          setError('Erro ao carregar linhas');
+        }
+      } else {
+        setLinhas([]);
+      }
+    };
+    loadLinhas();
+  }, [currentValue.areaId, currentValue.subAreaId, fetchHierarquiaNivel]);
+
+  // Carregar conjuntos quando linha muda
+  useEffect(() => {
+    const loadConjuntos = async () => {
+      if (currentValue.linhaId) {
+        try {
+          const data = await fetchHierarquiaNivel('conjunto', currentValue.linhaId);
+          setConjuntos(data);
+        } catch (err) {
+          setError('Erro ao carregar conjuntos');
+        }
+      } else {
+        setConjuntos([]);
+      }
+    };
+    loadConjuntos();
+  }, [currentValue.linhaId, fetchHierarquiaNivel]);
+
+  // Carregar máquinas quando conjunto muda
+  useEffect(() => {
+    const loadMaquinas = async () => {
+      if (currentValue.conjuntoId && showMaquina) {
+        try {
+          const data = await fetchHierarquiaNivel('maquina', currentValue.conjuntoId);
+          setMaquinas(data);
+        } catch (err) {
+          setError('Erro ao carregar máquinas');
+        }
+      } else {
+        setMaquinas([]);
+      }
+    };
+    loadMaquinas();
+  }, [currentValue.conjuntoId, showMaquina, fetchHierarquiaNivel]);
+
+  // ============================================================================
+  // HANDLERS PARA MUDANÇAS DE SELEÇÃO
+  // ============================================================================
+
   const handleProprietarioChange = (proprietarioId: string) => {
-    const newProprietarioId = proprietarioId === 'none' ? null : parseInt(proprietarioId);
+    const newProprietarioId = proprietarioId === 'none' ? null : proprietarioId;
     onChange({
       proprietarioId: newProprietarioId,
       plantaId: null,
@@ -146,7 +181,7 @@ export const HierarquiaSelector: React.FC<HierarquiaSelectorProps> = ({
   };
 
   const handlePlantaChange = (plantaId: string) => {
-    const newPlantaId = plantaId === 'none' ? null : parseInt(plantaId);
+    const newPlantaId = plantaId === 'none' ? null : plantaId;
     onChange({
       ...currentValue,
       plantaId: newPlantaId,
@@ -159,7 +194,7 @@ export const HierarquiaSelector: React.FC<HierarquiaSelectorProps> = ({
   };
 
   const handleAreaChange = (areaId: string) => {
-    const newAreaId = areaId === 'none' ? null : parseInt(areaId);
+    const newAreaId = areaId === 'none' ? null : areaId;
     onChange({
       ...currentValue,
       areaId: newAreaId,
@@ -171,7 +206,7 @@ export const HierarquiaSelector: React.FC<HierarquiaSelectorProps> = ({
   };
 
   const handleSubAreaChange = (subAreaId: string) => {
-    const newSubAreaId = subAreaId === 'none' ? null : parseInt(subAreaId);
+    const newSubAreaId = subAreaId === 'none' ? null : subAreaId;
     onChange({
       ...currentValue,
       subAreaId: newSubAreaId,
@@ -182,7 +217,7 @@ export const HierarquiaSelector: React.FC<HierarquiaSelectorProps> = ({
   };
 
   const handleLinhaChange = (linhaId: string) => {
-    const newLinhaId = linhaId === 'none' ? null : parseInt(linhaId);
+    const newLinhaId = linhaId === 'none' ? null : linhaId;
     onChange({
       ...currentValue,
       linhaId: newLinhaId,
@@ -192,7 +227,7 @@ export const HierarquiaSelector: React.FC<HierarquiaSelectorProps> = ({
   };
 
   const handleConjuntoChange = (conjuntoId: string) => {
-    const newConjuntoId = conjuntoId === 'none' ? null : parseInt(conjuntoId);
+    const newConjuntoId = conjuntoId === 'none' ? null : conjuntoId;
     onChange({
       ...currentValue,
       conjuntoId: newConjuntoId,
@@ -200,43 +235,84 @@ export const HierarquiaSelector: React.FC<HierarquiaSelectorProps> = ({
     });
   };
 
-  // ✅ NOVO: Handler para máquinas
   const handleMaquinaChange = (maquinaId: string) => {
-    const newMaquinaId = maquinaId === 'none' ? null : parseInt(maquinaId);
+    const newMaquinaId = maquinaId === 'none' ? null : maquinaId;
     onChange({
       ...currentValue,
       maquinaId: newMaquinaId
     });
   };
 
+  // ============================================================================
+  // UTILITÁRIOS PARA OBTER NOMES
+  // ============================================================================
+
+  const getProprietarioNome = (id: string | null) => {
+    if (!id) return null;
+    const proprietario = proprietarios.find(p => p.id === id);
+    return proprietario?.nome || null;
+  };
+
+  const getPlantaNome = (id: string | null) => {
+    if (!id) return null;
+    const planta = plantas.find(p => p.id === id);
+    return planta?.nome || null;
+  };
+
+  const getItemNome = (id: string | null, lista: any[]) => {
+    if (!id) return null;
+    const item = lista.find(i => i.id === id);
+    return item?.nome || null;
+  };
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+
   return (
     <div className="space-y-4">
+      {/* Alerta de erro */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Proprietário */}
       <div className="space-y-2">
         <label className="text-sm font-medium flex items-center gap-2">
           <Building2 className="h-4 w-4" />
-          Proprietário <span className="text-red-500">*</span>
+          Proprietário {required && <span className="text-red-500">*</span>}
         </label>
         <Select
-          value={currentValue.proprietarioId ? String(currentValue.proprietarioId) : undefined}
+          value={currentValue.proprietarioId || undefined}
           onValueChange={handleProprietarioChange}
-          disabled={disabled}
+          disabled={disabled || loadingProprietarios}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Selecione um proprietário" />
+            <SelectValue placeholder={loadingProprietarios ? "Carregando..." : "Selecione um proprietário"} />
           </SelectTrigger>
           <SelectContent>
-            {mockProprietarios.map((prop) => (
-              <SelectItem key={prop.id} value={String(prop.id)}>
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-3 w-3" />
-                  <span>{prop.razaoSocial}</span>
-                  <Badge variant="outline" className="text-xs">
-                    {prop.tipo === 'pessoa_juridica' ? 'PJ' : 'PF'}
-                  </Badge>
-                </div>
-              </SelectItem>
-            ))}
+            {loadingProprietarios ? (
+              <div className="flex items-center justify-center p-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </div>
+            ) : (
+              proprietarios.map((prop) => (
+                <SelectItem key={prop.id} value={prop.id}>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-3 w-3" />
+                    <span>{prop.nome}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {prop.tipo === 'pessoa_juridica' ? 'PJ' : 'PF'}
+                    </Badge>
+                  </div>
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -246,48 +322,59 @@ export const HierarquiaSelector: React.FC<HierarquiaSelectorProps> = ({
         <div className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             <Factory className="h-4 w-4" />
-            Planta <span className="text-red-500">*</span>
+            Planta {required && <span className="text-red-500">*</span>}
           </label>
           <Select
-            value={currentValue.plantaId ? String(currentValue.plantaId) : undefined}
+            value={currentValue.plantaId || undefined}
             onValueChange={handlePlantaChange}
-            disabled={disabled}
+            disabled={disabled || loadingPlantas}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecione uma planta" />
+              <SelectValue placeholder={loadingPlantas ? "Carregando..." : "Selecione uma planta"} />
             </SelectTrigger>
             <SelectContent>
-              {availablePlantas.map((planta) => (
-                <SelectItem key={planta.id} value={String(planta.id)}>
-                  <div className="flex items-center gap-2">
-                    <Factory className="h-3 w-3" />
-                    <span>{planta.nome}</span>
-                  </div>
-                </SelectItem>
-              ))}
+              {loadingPlantas ? (
+                <div className="flex items-center justify-center p-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              ) : (
+                plantas.map((planta) => (
+                  <SelectItem key={planta.id} value={planta.id}>
+                    <div className="flex items-center gap-2">
+                      <Factory className="h-3 w-3" />
+                      <div>
+                        <div>{planta.nome}</div>
+                        {planta.localizacao && (
+                          <div className="text-xs text-muted-foreground">{planta.localizacao}</div>
+                        )}
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
       )}
 
       {/* Área */}
-      {currentValue.plantaId && (
+      {currentValue.plantaId && areas.length > 0 && (
         <div className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             <Layers className="h-4 w-4" />
-            Área <span className="text-red-500">*</span>
+            Área {required && <span className="text-red-500">*</span>}
           </label>
           <Select
-            value={currentValue.areaId ? String(currentValue.areaId) : undefined}
+            value={currentValue.areaId || undefined}
             onValueChange={handleAreaChange}
-            disabled={disabled}
+            disabled={disabled || loadingHierarquia}
           >
             <SelectTrigger>
               <SelectValue placeholder="Selecione uma área" />
             </SelectTrigger>
             <SelectContent>
-              {availableAreas.map((area) => (
-                <SelectItem key={area.id} value={String(area.id)}>
+              {areas.map((area) => (
+                <SelectItem key={area.id} value={area.id}>
                   <div className="flex items-center gap-2">
                     <Layers className="h-3 w-3" />
                     <span>{area.nome}</span>
@@ -300,24 +387,24 @@ export const HierarquiaSelector: React.FC<HierarquiaSelectorProps> = ({
       )}
 
       {/* Sub Área (opcional) */}
-      {currentValue.areaId && availableSubAreas.length > 0 && (
+      {currentValue.areaId && subAreas.length > 0 && (
         <div className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             <Layers className="h-4 w-4" />
             Sub Área (opcional)
           </label>
           <Select
-            value={currentValue.subAreaId ? String(currentValue.subAreaId) : 'none'}
+            value={currentValue.subAreaId || 'none'}
             onValueChange={handleSubAreaChange}
-            disabled={disabled}
+            disabled={disabled || loadingHierarquia}
           >
             <SelectTrigger>
               <SelectValue placeholder="Selecione uma sub área" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Área direta (sem subárea)</SelectItem>
-              {availableSubAreas.map((subArea) => (
-                <SelectItem key={subArea.id} value={String(subArea.id)}>
+              {subAreas.map((subArea) => (
+                <SelectItem key={subArea.id} value={subArea.id}>
                   <div className="flex items-center gap-2">
                     <Layers className="h-3 w-3" />
                     <span>{subArea.nome}</span>
@@ -330,23 +417,23 @@ export const HierarquiaSelector: React.FC<HierarquiaSelectorProps> = ({
       )}
 
       {/* Linha */}
-      {currentValue.areaId && availableLinhas.length > 0 && (
+      {currentValue.areaId && linhas.length > 0 && (
         <div className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             <Route className="h-4 w-4" />
-            Linha <span className="text-red-500">*</span>
+            Linha {required && <span className="text-red-500">*</span>}
           </label>
           <Select
-            value={currentValue.linhaId ? String(currentValue.linhaId) : undefined}
+            value={currentValue.linhaId || undefined}
             onValueChange={handleLinhaChange}
-            disabled={disabled}
+            disabled={disabled || loadingHierarquia}
           >
             <SelectTrigger>
               <SelectValue placeholder="Selecione uma linha" />
             </SelectTrigger>
             <SelectContent>
-              {availableLinhas.map((linha) => (
-                <SelectItem key={linha.id} value={String(linha.id)}>
+              {linhas.map((linha) => (
+                <SelectItem key={linha.id} value={linha.id}>
                   <div className="flex items-center gap-2">
                     <Route className="h-3 w-3" />
                     <span>{linha.nome}</span>
@@ -359,23 +446,23 @@ export const HierarquiaSelector: React.FC<HierarquiaSelectorProps> = ({
       )}
 
       {/* Conjunto */}
-      {currentValue.linhaId && availableConjuntos.length > 0 && (
+      {currentValue.linhaId && conjuntos.length > 0 && (
         <div className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Conjunto <span className="text-red-500">*</span>
+            Conjunto {required && <span className="text-red-500">*</span>}
           </label>
           <Select
-            value={currentValue.conjuntoId ? String(currentValue.conjuntoId) : undefined}
+            value={currentValue.conjuntoId || undefined}
             onValueChange={handleConjuntoChange}
-            disabled={disabled}
+            disabled={disabled || loadingHierarquia}
           >
             <SelectTrigger>
               <SelectValue placeholder="Selecione um conjunto" />
             </SelectTrigger>
             <SelectContent>
-              {availableConjuntos.map((conjunto) => (
-                <SelectItem key={conjunto.id} value={String(conjunto.id)}>
+              {conjuntos.map((conjunto) => (
+                <SelectItem key={conjunto.id} value={conjunto.id}>
                   <div className="flex items-center gap-2">
                     <Package className="h-3 w-3" />
                     <span>{conjunto.nome}</span>
@@ -387,24 +474,24 @@ export const HierarquiaSelector: React.FC<HierarquiaSelectorProps> = ({
         </div>
       )}
 
-      {/* ✅ NOVO: Máquina */}
-      {currentValue.conjuntoId && availableMaquinas.length > 0 && (
+      {/* Máquina (se necessário) */}
+      {showMaquina && currentValue.conjuntoId && maquinas.length > 0 && (
         <div className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             <Cog className="h-4 w-4" />
-            Máquina <span className="text-red-500">*</span>
+            Máquina {required && <span className="text-red-500">*</span>}
           </label>
           <Select
-            value={currentValue.maquinaId ? String(currentValue.maquinaId) : undefined}
+            value={currentValue.maquinaId || undefined}
             onValueChange={handleMaquinaChange}
-            disabled={disabled}
+            disabled={disabled || loadingHierarquia}
           >
             <SelectTrigger>
               <SelectValue placeholder="Selecione uma máquina" />
             </SelectTrigger>
             <SelectContent>
-              {availableMaquinas.map((maquina) => (
-                <SelectItem key={maquina.id} value={String(maquina.id)}>
+              {maquinas.map((maquina) => (
+                <SelectItem key={maquina.id} value={maquina.id}>
                   <div className="flex items-center gap-2">
                     <Cog className="h-3 w-3" />
                     <span>{maquina.nome}</span>
@@ -430,58 +517,63 @@ export const HierarquiaSelector: React.FC<HierarquiaSelectorProps> = ({
             {currentValue.proprietarioId && (
               <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
                 <Building2 className="h-3 w-3 mr-1" />
-                {mockProprietarios.find(p => p.id === currentValue.proprietarioId)?.razaoSocial}
+                {getProprietarioNome(currentValue.proprietarioId)}
               </Badge>
             )}
             {currentValue.plantaId && (
               <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
                 <Factory className="h-3 w-3 mr-1" />
-                {mockPlantas.find(p => p.id === currentValue.plantaId)?.nome}
+                {getPlantaNome(currentValue.plantaId)}
               </Badge>
             )}
             {currentValue.areaId && (
               <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">
                 <Layers className="h-3 w-3 mr-1" />
-                {mockAreas.find(a => a.id === currentValue.areaId)?.nome}
+                {getItemNome(currentValue.areaId, areas)}
               </Badge>
             )}
             {currentValue.subAreaId && (
               <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-300">
                 <Layers className="h-3 w-3 mr-1" />
-                {mockSubAreas.find(sa => sa.id === currentValue.subAreaId)?.nome}
+                {getItemNome(currentValue.subAreaId, subAreas)}
               </Badge>
             )}
             {currentValue.linhaId && (
               <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
                 <Route className="h-3 w-3 mr-1" />
-                {mockLinhas.find(l => l.id === currentValue.linhaId)?.nome}
+                {getItemNome(currentValue.linhaId, linhas)}
               </Badge>
             )}
             {currentValue.conjuntoId && (
               <Badge variant="outline" className="bg-pink-100 text-pink-800 border-pink-300">
                 <Package className="h-3 w-3 mr-1" />
-                {mockConjuntos.find(c => c.id === currentValue.conjuntoId)?.nome}
+                {getItemNome(currentValue.conjuntoId, conjuntos)}
               </Badge>
             )}
             {currentValue.maquinaId && (
               <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
                 <Cog className="h-3 w-3 mr-1" />
-                {mockMaquinas.find(m => m.id === currentValue.maquinaId)?.nome}
+                {getItemNome(currentValue.maquinaId, maquinas)}
               </Badge>
             )}
           </div>
           
-          {/* Aviso se máquina não foi selecionada */}
-          {currentValue.conjuntoId && !currentValue.maquinaId && availableMaquinas.length > 0 && (
+          {/* Validações visuais */}
+          {showMaquina && currentValue.conjuntoId && !currentValue.maquinaId && maquinas.length > 0 && (
             <div className="mt-3 p-2 bg-amber-100 border border-amber-300 rounded text-amber-800 text-xs">
               ⚠️ Selecione uma máquina para vincular o equipamento
             </div>
           )}
           
-          {/* Informação sobre equipamento */}
-          {currentValue.maquinaId && (
+          {showMaquina && currentValue.maquinaId && (
             <div className="mt-3 p-2 bg-green-100 border border-green-300 rounded text-green-800 text-xs">
               ✅ O equipamento será vinculado à máquina selecionada
+            </div>
+          )}
+
+          {!showMaquina && currentValue.conjuntoId && (
+            <div className="mt-3 p-2 bg-blue-100 border border-blue-300 rounded text-blue-800 text-xs">
+              ✅ O equipamento será vinculado ao conjunto selecionado
             </div>
           )}
         </div>

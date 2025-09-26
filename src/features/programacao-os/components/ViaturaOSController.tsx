@@ -9,8 +9,11 @@ import {
   AlertTriangle, 
   Clock,
   Car,
-  Calendar
+  Calendar,
+  Loader2
 } from 'lucide-react';
+import { VeiculosService, type VeiculoResponse } from '@/services/veiculos.services';
+import { ReservasService, type ReservaResponse } from '@/services/reservas.services';
 
 interface FormFieldProps {
   value: any;
@@ -20,35 +23,7 @@ interface FormFieldProps {
   mode?: string;
 }
 
-interface Veiculo {
-  id: number | string;
-  nome: string;
-  placa: string;
-  marca?: string;
-  modelo?: string;
-  capacidadeCarga?: number;
-  numeroPassageiros?: number;
-  capacidadePassageiros?: number;
-  tipoCombustivel: string;
-  status: string;
-  disponivel?: boolean;
-  localizacaoAtual?: string;
-  responsavel?: string;
-}
-
-interface ReservaVeiculo {
-  id: number | string;
-  veiculoId: number;
-  dataInicio: string;
-  dataFim: string;
-  horaInicio: string;
-  horaFim: string;
-  status: string;
-  responsavel?: string;
-  finalidade?: string;
-}
-
-// ✅ COMPONENTE MELHORADO: Input com dark mode
+// Input component com dark mode
 const SimpleInput = ({ 
   type = 'text', 
   value, 
@@ -77,85 +52,16 @@ const SimpleInput = ({
   />
 );
 
-// Mock de dados - substitua pela sua fonte real
-const mockVeiculos: Veiculo[] = [
-  {
-    id: 1,
-    nome: 'Strada Adventure CD',
-    placa: 'ABC-1234',
-    marca: 'Fiat',
-    modelo: 'Strada Adventure',
-    capacidadeCarga: 650,
-    numeroPassageiros: 2,
-    tipoCombustivel: 'flex',
-    status: 'disponivel',
-    localizacaoAtual: 'Garagem Principal',
-    responsavel: 'João Silva'
-  },
-  {
-    id: 2,
-    nome: 'Hilux SR 4x4',
-    placa: 'DEF-5678',
-    marca: 'Toyota',
-    modelo: 'Hilux SR',
-    capacidadeCarga: 1000,
-    numeroPassageiros: 4,
-    tipoCombustivel: 'diesel',
-    status: 'disponivel',
-    localizacaoAtual: 'Pátio Externo',
-    responsavel: 'Maria Santos'
-  },
-  {
-    id: 3,
-    nome: 'Transit Van',
-    placa: 'GHI-9012',
-    marca: 'Ford',
-    modelo: 'Transit',
-    capacidadeCarga: 1400,
-    numeroPassageiros: 3,
-    tipoCombustivel: 'diesel',
-    status: 'em_uso',
-    localizacaoAtual: 'Em Campo',
-    responsavel: 'Carlos Lima'
-  },
-  {
-    id: 4,
-    nome: 'Corolla XEi',
-    placa: 'JKL-3456',
-    marca: 'Toyota',
-    modelo: 'Corolla XEi',
-    capacidadeCarga: 470,
-    numeroPassageiros: 5,
-    tipoCombustivel: 'flex',
-    status: 'disponivel',
-    localizacaoAtual: 'Garagem Principal',
-    responsavel: 'Ana Costa'
-  }
-];
-
-const mockReservas: ReservaVeiculo[] = [
-  {
-    id: 1,
-    veiculoId: 3,
-    dataInicio: '2025-08-01',
-    dataFim: '2025-08-01',
-    horaInicio: '08:00',
-    horaFim: '17:00',
-    status: 'ativa',
-    responsavel: 'Pedro Oliveira',
-    finalidade: 'Manutenção equipamento 001'
-  }
-];
-
 export const ViaturaOSController: React.FC<FormFieldProps> = ({ 
   value, 
   onChange, 
   disabled, 
   entity 
-  // mode 
 }) => {
-  const [veiculos] = useState<Veiculo[]>(mockVeiculos);
-  const [reservas] = useState<ReservaVeiculo[]>(mockReservas);
+  // Estados principais
+  const [veiculos, setVeiculos] = useState<VeiculoResponse[]>([]);
+  const [reservas, setReservas] = useState<ReservaResponse[]>([]);
+  const [loading, setLoading] = useState(false);
   const [carregandoDisponibilidade, setCarregandoDisponibilidade] = useState(false);
   
   // Estados locais para programação
@@ -168,14 +74,16 @@ export const ViaturaOSController: React.FC<FormFieldProps> = ({
     // Extrair dados existentes
     const dataExistente = entity?.programacao?.dataProgramada || 
                          entity?.dataProgramada || 
+                         entity?.data_programada ||
                          value?.dataInicio || '';
                          
     const horaExistente = entity?.programacao?.horaProgramada || 
                          entity?.horaProgramada || 
+                         entity?.hora_programada ||
                          value?.horaInicio || '';
                          
-    const duracaoExistente = parseFloat(entity?.duracaoEstimada) || 
-                            parseFloat(entity?.tempoEstimado) || 
+    const duracaoExistente = parseFloat(entity?.duracaoEstimada || entity?.duracao_estimada) || 
+                            parseFloat(entity?.tempoEstimado || entity?.tempo_estimado) || 
                             8;
 
     if (dataExistente) setDataProgramada(dataExistente);
@@ -196,19 +104,101 @@ export const ViaturaOSController: React.FC<FormFieldProps> = ({
     }
   }, [entity, value]);
 
+  // Carregar veículos disponíveis
+  const carregarVeiculosDisponiveis = async () => {
+    if (!dataProgramada || !horaProgramada) return;
+
+    setCarregandoDisponibilidade(true);
+    try {
+      // console.log('🚗 [ViaturaController] Carregando veículos disponíveis...');
+      
+      // Calcular data/hora fim
+      const dataFim = dataProgramada; // Mesmo dia por enquanto
+
+      // Buscar veículos disponíveis
+      const veiculosDisponiveis = await VeiculosService.getVeiculosDisponiveis(
+        dataProgramada,
+        dataFim
+      );
+
+      // Buscar reservas para verificar conflitos
+      const todasReservas = await ReservasService.getAllReservas({
+        dataInicioFrom: dataProgramada,
+        dataFimTo: dataFim,
+        status: 'ativa',
+        limit: 1000
+      });
+
+      // console.log('✅ [ViaturaController] Veículos carregados:', veiculosDisponiveis.length);
+      // console.log('📋 [ViaturaController] Reservas ativas:', todasReservas.data.length);
+
+      setVeiculos(veiculosDisponiveis);
+      setReservas(todasReservas.data);
+
+    } catch (error) {
+      // console.error('❌ [ViaturaController] Erro ao carregar veículos:', error);
+      // Em caso de erro, buscar todos os veículos como fallback
+      try {
+        const todosVeiculos = await VeiculosService.getAllVeiculos({
+          status: 'disponivel',
+          limit: 100
+        });
+        setVeiculos(todosVeiculos.data);
+        setReservas([]);
+      } catch (fallbackError) {
+        // console.error('❌ [ViaturaController] Erro no fallback:', fallbackError);
+        setVeiculos([]);
+        setReservas([]);
+      }
+    } finally {
+      setCarregandoDisponibilidade(false);
+    }
+  };
+
+  // Carregar dados quando dependências mudarem
+  useEffect(() => {
+    carregarVeiculosDisponiveis();
+  }, [dataProgramada, horaProgramada, duracao]);
+
+  // Carregar veículos inicialmente
+  useEffect(() => {
+    const carregarVeiculosIniciais = async () => {
+      setLoading(true);
+      try {
+        const response = await VeiculosService.getAllVeiculos({
+          limit: 100,
+          status: 'disponivel'
+        });
+        setVeiculos(response.data);
+      } catch (error) {
+        // console.error('❌ [ViaturaController] Erro ao carregar veículos iniciais:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    carregarVeiculosIniciais();
+  }, []);
+
   // Verificar disponibilidade dos veículos
   const veiculosComDisponibilidade = useMemo(() => {
     if (!dataProgramada || !horaProgramada) {
-      return veiculos.map(v => ({ ...v, disponivel: v.status === 'disponivel', motivo: null }));
+      return veiculos.map(v => ({ 
+        ...v, 
+        disponivel: v.status === 'disponivel', 
+        motivo: v.status !== 'disponivel' ? `Status: ${v.status}` : null,
+        conflitos: []
+      }));
     }
 
     return veiculos.map(veiculo => {
-      // Veículos inativos ou em manutenção não estão disponíveis
-      if (veiculo.status === 'inativo' || veiculo.status === 'manutencao') {
+      // Veículos não disponíveis
+      if (veiculo.status !== 'disponivel') {
         return {
           ...veiculo,
           disponivel: false,
-          motivo: veiculo.status === 'inativo' ? 'Veículo inativo' : 'Em manutenção'
+          motivo: `Status: ${veiculo.status}`,
+          conflitos: []
         };
       }
 
@@ -221,19 +211,14 @@ export const ViaturaOSController: React.FC<FormFieldProps> = ({
 
       // Verifica conflitos com reservas existentes
       const conflitos = reservas.filter(reserva => {
-        if (reserva.status === 'cancelada' || reserva.status === 'finalizada') {
-          return false;
-        }
+        if (reserva.status !== 'ativa') return false;
+        if (reserva.veiculoId !== veiculo.id) return false;
 
-        if (reserva.veiculoId !== parseInt(veiculo.id.toString())) {
-          return false;
-        }
-
-        // Verifica sobreposição de datas
-        const inicioNovo = new Date(`${dataProgramada}T${horaProgramada}`);
-        const fimNovo = new Date(`${dataProgramada}T${horaFimCalculada}`);
-        const inicioExistente = new Date(`${reserva.dataInicio}T${reserva.horaInicio}`);
-        const fimExistente = new Date(`${reserva.dataFim}T${reserva.horaFim}`);
+        // Verifica sobreposição de datas/horários
+        const inicioNovo = new Date(`${dataProgramada}T${horaProgramada}:00`);
+        const fimNovo = new Date(`${dataProgramada}T${horaFimCalculada}:00`);
+        const inicioExistente = new Date(`${reserva.dataInicio}T${reserva.horaInicio}:00`);
+        const fimExistente = new Date(`${reserva.dataFim}T${reserva.horaFim}:00`);
 
         return (inicioNovo < fimExistente && fimNovo > inicioExistente);
       });
@@ -242,23 +227,12 @@ export const ViaturaOSController: React.FC<FormFieldProps> = ({
       
       return {
         ...veiculo,
-        disponivel: !temConflito && veiculo.status === 'disponivel',
+        disponivel: !temConflito,
         motivo: temConflito ? `Reservado até ${conflitos[0].dataFim} ${conflitos[0].horaFim}` : null,
         conflitos
       };
     });
   }, [veiculos, reservas, dataProgramada, horaProgramada, duracao]);
-
-  // Simular loading quando dados de programação mudam
-  useEffect(() => {
-    if (dataProgramada && horaProgramada) {
-      setCarregandoDisponibilidade(true);
-      const timer = setTimeout(() => {
-        setCarregandoDisponibilidade(false);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [dataProgramada, horaProgramada]);
 
   const veiculosDisponiveis = veiculosComDisponibilidade.filter(v => v.disponivel);
 
@@ -270,15 +244,67 @@ export const ViaturaOSController: React.FC<FormFieldProps> = ({
     return String(horaFim).padStart(2, '0') + ':' + (minuto || '00');
   }, [horaProgramada, duracao]);
 
-  // Handler para mudança de data
+  // Handlers
   const handleDataChange = (novaData: string) => {
     setDataProgramada(novaData);
   };
 
-  // Handler para mudança de hora
   const handleHoraChange = (novaHora: string) => {
     setHoraProgramada(novaHora);
   };
+
+  const handleVeiculoSelect = async (veiculo: VeiculoResponse) => {
+    if (disabled) return;
+    
+    try {
+      // Verificar conflitos uma última vez
+      const conflitos = await ReservasService.verificarConflitos(
+        veiculo.id,
+        dataProgramada,
+        dataProgramada,
+        horaProgramada,
+        horaFimCalculada || '23:59'
+      );
+
+      if (conflitos.length > 0) {
+        alert(`Conflito detectado! O veículo já está reservado para:\n${conflitos[0].finalidade}\nPor: ${conflitos[0].responsavel}`);
+        return;
+      }
+
+      // Criar objeto de reserva completo
+      const viaturaReservada = {
+        veiculoId: veiculo.id,
+        dataInicio: dataProgramada,
+        dataFim: dataProgramada,
+        horaInicio: horaProgramada,
+        horaFim: horaFimCalculada || '23:59',
+        solicitanteId: entity?.id || 'temp-id',
+        tipoSolicitante: 'ordem_servico' as const,
+        responsavel: entity?.responsavel || 'Responsável não definido',
+        finalidade: `Execução de OS - ${entity?.descricao?.substring(0, 50) || 'Manutenção'}`,
+        status: 'ativa' as const,
+        veiculo: {
+          nome: veiculo.nome,
+          placa: veiculo.placa
+        }
+      };
+      
+      onChange(viaturaReservada);
+      
+    } catch (error) {
+      // console.error('❌ [ViaturaController] Erro ao verificar conflitos:', error);
+      alert('Erro ao verificar disponibilidade. Tente novamente.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <span className="ml-2 text-gray-600 dark:text-gray-400">Carregando veículos...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -339,7 +365,7 @@ export const ViaturaOSController: React.FC<FormFieldProps> = ({
         </div>
       </div>
 
-      {/* Se não tem data/hora, mostrar aviso */}
+      {/* Condicionais baseadas no estado */}
       {(!dataProgramada || !horaProgramada) && (
         <div className="p-4 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-lg">
           <div className="flex items-center gap-2">
@@ -351,14 +377,9 @@ export const ViaturaOSController: React.FC<FormFieldProps> = ({
           <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
             Preencha a data e hora acima para ver as viaturas disponíveis
           </p>
-          <div className="text-xs text-amber-600 dark:text-amber-400 mt-2 space-y-1">
-            <div>• Data programada: {dataProgramada ? '✅' : '❌'}</div>
-            <div>• Hora programada: {horaProgramada ? '✅' : '❌'}</div>
-          </div>
         </div>
       )}
 
-      {/* Se tem dados, mostrar resumo e seletor */}
       {dataProgramada && horaProgramada && (
         <>
           {/* Resumo do período */}
@@ -381,7 +402,7 @@ export const ViaturaOSController: React.FC<FormFieldProps> = ({
           {/* Loading state */}
           {carregandoDisponibilidade && (
             <div className="border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg p-6 text-center">
-              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+              <Loader2 className="w-8 h-8 border-4 border-blue-500 rounded-full animate-spin mx-auto mb-2" />
               <p className="text-gray-600 dark:text-gray-300 font-medium">Verificando disponibilidade...</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">Consultando agenda de viaturas...</p>
             </div>
@@ -409,9 +430,8 @@ export const ViaturaOSController: React.FC<FormFieldProps> = ({
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {veiculosDisponiveis.map(veiculo => {
-                  const isSelected = (typeof value === 'object' && value?.veiculoId === veiculo.id) || 
-                                    (typeof value === 'number' && value === veiculo.id);
-                  const passageiros = veiculo.numeroPassageiros || veiculo.capacidadePassageiros || 0;
+                  const isSelected = (typeof value === 'object' && value?.veiculoId === veiculo.id);
+                  const passageiros = veiculo.capacidadePassageiros || 0;
 
                   return (
                     <div
@@ -423,26 +443,7 @@ export const ViaturaOSController: React.FC<FormFieldProps> = ({
                           ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 cursor-not-allowed'
                           : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-sm bg-white dark:bg-gray-800'
                       }`}
-                      onClick={() => {
-                        if (disabled) return;
-                        
-                        // Criar objeto de reserva completo
-                        const viaturaReservada = {
-                          veiculoId: parseInt(veiculo.id.toString()),
-                          dataInicio: dataProgramada,
-                          dataFim: dataProgramada,
-                          horaInicio: horaProgramada,
-                          horaFim: horaFimCalculada,
-                          responsavel: entity?.responsavel || '',
-                          finalidade: `Execução de OS - ${entity?.descricao?.substring(0, 50) || 'Manutenção'}`,
-                          veiculo: {
-                            nome: veiculo.nome,
-                            placa: veiculo.placa
-                          }
-                        };
-                        
-                        onChange(viaturaReservada);
-                      }}
+                      onClick={() => handleVeiculoSelect(veiculo)}
                     >
                       {/* Indicador de seleção */}
                       {isSelected && (
@@ -456,9 +457,7 @@ export const ViaturaOSController: React.FC<FormFieldProps> = ({
                         <div className="flex-1">
                           <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{veiculo.nome}</h3>
                           <p className="text-sm text-gray-600 dark:text-gray-400">{veiculo.placa}</p>
-                          {veiculo.marca && veiculo.modelo && (
-                            <p className="text-xs text-gray-500 dark:text-gray-500">{veiculo.marca} {veiculo.modelo}</p>
-                          )}
+                          <p className="text-xs text-gray-500 dark:text-gray-500">{veiculo.marca} {veiculo.modelo} {veiculo.ano}</p>
                         </div>
                         <Car className={`w-6 h-6 ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`} />
                       </div>

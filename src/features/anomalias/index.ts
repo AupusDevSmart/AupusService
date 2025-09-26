@@ -18,13 +18,11 @@ export type {
   Pagination
 } from './types';
 
-// Exportar hook customizado
+// Exportar hooks customizados
 export { useAnomalias } from './hooks/useAnomalias';
+export { useAnomaliasTable } from './hooks/useAnomaliasTable';
 
 // Exportar configurações
 export { anomaliasTableColumns } from './config/table-config';
 export { anomaliasFilterConfig } from './config/filter-config';
 export { anomaliasFormFields } from './config/form-config';
-
-// Exportar dados mock
-export { mockAnomalias } from './data/mock-data';

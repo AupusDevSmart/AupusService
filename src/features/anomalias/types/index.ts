@@ -26,6 +26,20 @@ export interface Anomalia extends BaseEntity {
   plantaId?: number;
   equipamentoId?: number; // Pode ser UC ou UAR
   
+  // Support for API field names (snake_case)
+  planta_id?: string | number;
+  equipamento_id?: string | number;
+  ordem_servico_id?: string;
+  criado_por?: string;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string;
+  
+  // Support for related objects from API
+  planta?: any;
+  equipamento?: any;
+  usuario?: any;
+  
   // Histórico da anomalia
   historico?: HistoricoAnomalia[];
 }
@@ -50,9 +64,16 @@ export interface AnomaliaFormData {
   origem: OrigemAnomalia;
   prioridade: PrioridadeAnomalia;
   observacoes?: string;
-  plantaId: number;
-  equipamentoId: number;
+  plantaId?: number | string;
+  equipamentoId?: number | string;
   anexos?: File[];
+  // Support for nested localizacao object from form
+  localizacao?: {
+    plantaId?: number | string;
+    equipamentoId?: number | string;
+    local?: string;
+    ativo?: string;
+  };
 }
 
 // Filtros para a página
@@ -79,3 +100,6 @@ export type Pagination = {
   total: number;
   totalPages: number;
 };
+
+// Anexos
+export * from './anexos';

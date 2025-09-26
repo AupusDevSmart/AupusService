@@ -96,7 +96,7 @@ export function useViaCEP(): UseViaCEPReturn {
       return data;
       
     } catch (error) {
-      console.error('Erro ao buscar CEP:', error);
+      // console.error('Erro ao buscar CEP:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao buscar CEP';
       setError(errorMessage);
       return null;
@@ -151,7 +151,7 @@ export function useBuscarCEP() {
       return data;
       
     } catch (error) {
-      console.error('Erro ao buscar CEP:', error);
+      // console.error('Erro ao buscar CEP:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       setError(errorMessage);
       return null;

@@ -34,7 +34,7 @@ export function useTarefas(): UseTarefasReturn {
     new Promise(resolve => setTimeout(resolve, ms));
 
   // Gerar ID único
-  const generateId = () => Date.now() + Math.floor(Math.random() * 1000);
+  const generateId = () => String(Date.now() + Math.floor(Math.random() * 1000));
 
   // Criar tarefa manual
   const criarTarefa = useCallback(async (dados: any): Promise<Tarefa> => {
@@ -75,7 +75,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay();
       
-      const index = mockTarefas.findIndex(t => t.id === parseInt(String(id)));
+      const index = mockTarefas.findIndex(t => t.id === String(id));
       if (index === -1) {
         throw new Error('Tarefa não encontrada');
       }
@@ -109,7 +109,7 @@ export function useTarefas(): UseTarefasReturn {
     setLoading(true);
     try {
       await simulateDelay(300);
-      return mockTarefas.find(t => t.id === parseInt(String(id))) || null;
+      return mockTarefas.find(t => t.id === String(id)) || null;
     } finally {
       setLoading(false);
     }
@@ -121,7 +121,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay();
       
-      const index = mockTarefas.findIndex(t => t.id === parseInt(String(id)));
+      const index = mockTarefas.findIndex(t => t.id === String(id));
       if (index === -1) {
         return false;
       }
@@ -139,7 +139,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay();
       
-      const index = mockTarefas.findIndex(t => t.id === parseInt(String(tarefaId)));
+      const index = mockTarefas.findIndex(t => t.id === String(tarefaId));
       if (index === -1) {
         throw new Error('Tarefa não encontrada');
       }
@@ -164,7 +164,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay();
       
-      const index = mockTarefas.findIndex(t => t.id === parseInt(String(tarefaId)));
+      const index = mockTarefas.findIndex(t => t.id === String(tarefaId));
       if (index === -1) {
         throw new Error('Tarefa não encontrada');
       }
@@ -189,7 +189,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay();
       
-      const index = mockTarefas.findIndex(t => t.id === parseInt(String(tarefaId)));
+      const index = mockTarefas.findIndex(t => t.id === String(tarefaId));
       if (index === -1) {
         throw new Error('Tarefa não encontrada');
       }
@@ -214,7 +214,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay();
       
-      const tarefaOriginal = mockTarefas.find(t => t.id === parseInt(String(tarefaId)));
+      const tarefaOriginal = mockTarefas.find(t => t.id === String(tarefaId));
       if (!tarefaOriginal) {
         throw new Error('Tarefa não encontrada');
       }
@@ -259,7 +259,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay(1500);
       
-      const index = mockTarefas.findIndex(t => t.id === parseInt(String(tarefaId)));
+      const index = mockTarefas.findIndex(t => t.id === String(tarefaId));
       if (index === -1) {
         throw new Error('Tarefa não encontrada');
       }
@@ -291,7 +291,7 @@ export function useTarefas(): UseTarefasReturn {
     try {
       await simulateDelay();
       
-      const index = mockTarefas.findIndex(t => t.id === parseInt(String(tarefaId)));
+      const index = mockTarefas.findIndex(t => t.id === String(tarefaId));
       if (index === -1) {
         throw new Error('Tarefa não encontrada');
       }

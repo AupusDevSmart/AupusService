@@ -1,58 +1,130 @@
 // src/features/reservas/config/filter-config.ts
+import { type FilterConfig } from '@/types/base';
+import { VeiculosService, type VeiculoResponse } from '@/services/veiculos.services';
+import { useState, useEffect } from 'react';
 
-export interface FilterConfig {
-  key: string;
-  label: string;
-  type: 'text' | 'select' | 'date';
-  options?: { label: string; value: string }[];
-  placeholder?: string;
+// ============================================================================
+// HOOK: useVeiculos - For filter dropdown
+// ============================================================================
+
+interface UseVeiculosReturn {
+  veiculos: VeiculoResponse[];
+  loading: boolean;
+  error: string | null;
 }
 
-export const reservasFilterConfig: FilterConfig[] = [
+export const useVeiculos = (): UseVeiculosReturn => {
+  const [veiculos, setVeiculos] = useState<VeiculoResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchVeiculos = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await VeiculosService.getAllVeiculos({
+          limit: 100, // Get more vehicles for filter
+          orderBy: 'nome',
+          orderDirection: 'asc'
+        });
+
+        setVeiculos(response.data);
+      } catch (err) {
+        console.error('Erro ao carregar veículos para filtro:', err);
+        setError(err instanceof Error ? err.message : 'Erro ao carregar veículos');
+        setVeiculos([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVeiculos();
+  }, []);
+
+  return { veiculos, loading, error };
+};
+
+// ============================================================================
+// FILTER CONFIGURATIONS
+// ============================================================================
+
+export const createReservasFilterConfig = (veiculos: VeiculoResponse[]): FilterConfig[] => [
+  // Search
   {
     key: 'search',
-    label: 'Busca',
-    type: 'text',
-    placeholder: 'Buscar por responsável, finalidade, solicitante...'
+    type: 'search',
+    placeholder: 'Buscar por responsável, finalidade...',
+    className: 'lg:min-w-80'
   },
+
+  // Veículo
+  {
+    key: 'veiculoId',
+    type: 'select',
+    label: 'Veículo',
+    placeholder: 'Todos os veículos',
+    options: [
+      { value: 'all', label: 'Todos os veículos' },
+      ...veiculos.map(veiculo => ({
+        value: String(veiculo.id),
+        label: `${veiculo.nome} (${veiculo.placa})`
+      }))
+    ]
+  },
+
+  // Status
   {
     key: 'status',
-    label: 'Status',
     type: 'select',
+    label: 'Status',
+    placeholder: 'Todos os status',
     options: [
-      { label: 'Todos os Status', value: 'all' },
-      { label: 'Ativa', value: 'ativa' },
-      { label: 'Finalizada', value: 'finalizada' },
-      { label: 'Cancelada', value: 'cancelada' },
-      { label: 'Vencida', value: 'vencida' }
+      { value: 'all', label: 'Todos os status' },
+      { value: 'ativa', label: 'Ativa' },
+      { value: 'finalizada', label: 'Finalizada' },
+      { value: 'cancelada', label: 'Cancelada' },
+      { value: 'vencida', label: 'Vencida' }
     ]
   },
+
+  // Tipo Solicitante
   {
     key: 'tipoSolicitante',
-    label: 'Tipo de Solicitante',
     type: 'select',
+    label: 'Tipo',
+    placeholder: 'Todos os tipos',
     options: [
-      { label: 'Todos os Tipos', value: 'all' },
-      { label: 'Manual', value: 'manual' },
-      { label: 'Ordem de Serviço', value: 'ordem_servico' },
-      { label: 'Viagem', value: 'viagem' },
-      { label: 'Manutenção', value: 'manutencao' }
+      { value: 'all', label: 'Todos os tipos' },
+      { value: 'ordem_servico', label: 'Ordem de Serviço' },
+      { value: 'viagem', label: 'Viagem' },
+      { value: 'manutencao', label: 'Manutenção' },
+      { value: 'manual', label: 'Manual' }
     ]
   },
+
+  // Responsável
   {
     key: 'responsavel',
+    type: 'search',
     label: 'Responsável',
-    type: 'text',
-    placeholder: 'Nome do responsável...'
+    placeholder: 'Nome do responsável'
   },
+
+  // Data Início (From)
   {
-    key: 'dataInicio',
-    label: 'Data Início',
-    type: 'date'
+    key: 'dataInicioFrom',
+    type: 'date',
+    label: 'Data Início De',
+    placeholder: 'Data início mínima'
   },
+
+  // Data Início (To)
   {
-    key: 'dataFim',
-    label: 'Data Fim',
-    type: 'date'
+    key: 'dataInicioTo',
+    type: 'date',
+    label: 'Data Início Até',
+    placeholder: 'Data início máxima'
   }
 ];
