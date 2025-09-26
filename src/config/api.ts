@@ -13,7 +13,7 @@ const getAuthToken = () => {
 };
 
 export const api = axios.create({
-  baseURL: env.VITE_API_URL,
+  baseURL: "https://aupus-service-api.aupusenergia.com.br/api/v1/",
   withCredentials: true,
   withXSRFToken: true,
 
