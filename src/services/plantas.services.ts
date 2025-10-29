@@ -1,46 +1,23 @@
-// src/services/plantas.services.ts - ALTERNATIVA COM TIPOS LOCAIS
+// src/services/plantas.services.ts
+
 import { api } from '@/config/api';
+import type { ApiResponse } from '@/types/base';
 
-// ✅ TIPO LOCAL: PaginatedResponse (se não quiser modificar base.ts)
-export interface PaginatedResponse<T> {
-  data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+// ✅ INTERFACES
+
+export interface Endereco {
+  logradouro: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  cep: string;
 }
 
-// ✅ INTERFACES DE REQUEST/RESPONSE
-export interface CreatePlantaRequest {
+export interface ProprietarioBasico {
+  id: string;
   nome: string;
-  cnpj: string;
-  proprietarioId: string;
-  horarioFuncionamento: string;
-  localizacao: string;
-  endereco: {
-    logradouro: string;
-    bairro: string;
-    cidade: string;
-    uf: string;
-    cep: string;
-  };
-}
-
-export interface UpdatePlantaRequest {
-  nome?: string;
-  cnpj?: string;
-  proprietarioId?: string;
-  horarioFuncionamento?: string;
-  localizacao?: string;
-  endereco?: {
-    logradouro?: string;
-    bairro?: string;
-    cidade?: string;
-    uf?: string;
-    cep?: string;
-  };
+  cpf_cnpj: string;
+  tipo: 'pessoa_fisica' | 'pessoa_juridica';
 }
 
 export interface PlantaResponse {
@@ -49,25 +26,11 @@ export interface PlantaResponse {
   cnpj: string;
   localizacao: string;
   horarioFuncionamento: string;
-  endereco: {
-    logradouro: string;
-    bairro: string;
-    cidade: string;
-    uf: string;
-    cep: string;
-  };
+  endereco: Endereco;
   proprietarioId: string;
   proprietario?: ProprietarioBasico;
   criadoEm: string;
   atualizadoEm: string;
-}
-
-// ✅ Interface ProprietarioBasico
-export interface ProprietarioBasico {
-  id: string;
-  nome: string;
-  cpf_cnpj: string;
-  tipo: 'pessoa_fisica' | 'pessoa_juridica';
 }
 
 export interface FindAllPlantasParams {
@@ -75,155 +38,186 @@ export interface FindAllPlantasParams {
   limit?: number;
   search?: string;
   proprietarioId?: string;
-  orderBy?: 'nome' | 'cnpj' | 'localizacao' | 'cidade' | 'criadoEm' | 'proprietario';
+  orderBy?: string;
   orderDirection?: 'asc' | 'desc';
 }
 
-// ✅ SERVICE CLASS ADAPTADO
-export class PlantasService {
-  // ✅ Endpoint das plantas (sem base URL)
-  private static readonly ENDPOINT = '/plantas';
+export interface CreatePlantaDto {
+  nome: string;
+  cnpj: string;
+  localizacao: string;
+  horario_funcionamento: string;
+  proprietario_id: string;
+  endereco: {
+    logradouro: string;
+    bairro: string;
+    cidade: string;
+    uf: string;
+    cep: string;
+  };
+}
 
-  // ✅ MÉTODO: Listar plantas com filtros e paginação
-  static async getAllPlantas(params: FindAllPlantasParams = {}): Promise<PaginatedResponse<PlantaResponse>> {
-    // console.log('🏭 [PLANTAS SERVICE] Buscando plantas com parâmetros:', params);
+export interface UpdatePlantaDto extends Partial<CreatePlantaDto> {}
 
+// ✅ SERVICE CLASS
+
+class PlantasServiceClass {
+  /**
+   * Get all plantas with pagination and filters
+   */
+  async getAllPlantas(params: FindAllPlantasParams = {}): Promise<ApiResponse<PlantaResponse>> {
     try {
-      // ✅ Usando sua instância do axios com parâmetros
-      const response = await api.get<PaginatedResponse<PlantaResponse>>(this.ENDPOINT, {
+      const queryParams = new URLSearchParams();
+
+      if (params.search) queryParams.append('search', params.search);
+      if (params.proprietarioId && params.proprietarioId !== 'all') {
+        queryParams.append('proprietarioId', params.proprietarioId);
+      }
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.orderBy) queryParams.append('orderBy', params.orderBy);
+      if (params.orderDirection) queryParams.append('orderDirection', params.orderDirection);
+
+      const response = await api.get(`/plantas?${queryParams.toString()}`);
+
+      // Normalize response - handle nested data structure from backend
+      // Backend returns: { success: true, data: { data: [...plantas], pagination: {...} } }
+      const responseData = response.data?.data || response.data;
+      const data = responseData?.data || responseData || [];
+      const pagination = responseData?.pagination || response.data?.pagination || {
+        page: params.page || 1,
+        limit: params.limit || 10,
+        total: Array.isArray(data) ? data.length : 0,
+        totalPages: Math.ceil((Array.isArray(data) ? data.length : 0) / (params.limit || 10)),
+      };
+
+      return {
+        data: Array.isArray(data) ? data : [],
+        pagination,
+      };
+    } catch (error: any) {
+      console.error('❌ [PlantasService] Error fetching plantas:', error);
+      throw new Error(error.response?.data?.message || 'Erro ao buscar plantas');
+    }
+  }
+
+  /**
+   * Get planta by ID
+   */
+  async getPlanta(id: string): Promise<PlantaResponse> {
+    try {
+      console.log(`📡 [PlantasService] GET /plantas/${id}`);
+      const response = await api.get<{ success: boolean; data: PlantaResponse; meta?: any }>(`/plantas/${id}`);
+
+      // ✅ CORRIGIDO: A API retorna { success, data, meta }, extrair apenas o "data"
+      const planta = response.data.data || response.data;
+      console.log('✅ [PlantasService] Planta fetched:', planta?.nome);
+
+      return planta;
+    } catch (error: any) {
+      console.error(`❌ [PlantasService] Error fetching planta ${id}:`, error);
+      throw new Error(error.response?.data?.message || 'Erro ao buscar planta');
+    }
+  }
+
+  /**
+   * Create new planta
+   */
+  async createPlanta(dto: CreatePlantaDto): Promise<PlantaResponse> {
+    try {
+      console.log('📡 [PlantasService] POST /plantas', dto);
+      const response = await api.post<{ success: boolean; data: PlantaResponse; meta?: any }>('/plantas', dto);
+
+      // ✅ CORRIGIDO: Extrair dados do caminho correto
+      const planta = response.data.data || response.data;
+      console.log('✅ [PlantasService] Planta created:', planta?.id);
+
+      return planta;
+    } catch (error: any) {
+      console.error('❌ [PlantasService] Error creating planta:', error);
+      throw new Error(error.response?.data?.message || 'Erro ao criar planta');
+    }
+  }
+
+  /**
+   * Update planta
+   */
+  async updatePlanta(id: string, dto: UpdatePlantaDto): Promise<PlantaResponse> {
+    try {
+      console.log(`📡 [PlantasService] PATCH /plantas/${id}`, dto);
+      const response = await api.patch<{ success: boolean; data: PlantaResponse; meta?: any }>(`/plantas/${id}`, dto);
+
+      // ✅ CORRIGIDO: Extrair dados do caminho correto
+      const planta = response.data.data || response.data;
+      console.log('✅ [PlantasService] Planta updated:', planta?.id);
+
+      return planta;
+    } catch (error: any) {
+      console.error(`❌ [PlantasService] Error updating planta ${id}:`, error);
+      throw new Error(error.response?.data?.message || 'Erro ao atualizar planta');
+    }
+  }
+
+  /**
+   * Delete planta
+   */
+  async deletePlanta(id: string): Promise<void> {
+    try {
+      console.log(`📡 [PlantasService] DELETE /plantas/${id}`);
+      await api.delete(`/plantas/${id}`);
+      console.log('✅ [PlantasService] Planta deleted:', id);
+    } catch (error: any) {
+      console.error(`❌ [PlantasService] Error deleting planta ${id}:`, error);
+      throw new Error(error.response?.data?.message || 'Erro ao excluir planta');
+    }
+  }
+
+  /**
+   * Get proprietarios (usuarios with roles: admin, gerente, or proprietário)
+   */
+  async getProprietarios(): Promise<ProprietarioBasico[]> {
+    try {
+      console.log('📡 [PlantasService] GET /usuarios (proprietarios) - buscando TODOS os usuarios');
+
+      // Buscar TODOS os usuários com roles válidas (não apenas os que têm plantas)
+      const response = await api.get('/usuarios', {
         params: {
-          page: params.page,
-          limit: params.limit,
-          search: params.search?.trim() || undefined,
-          proprietarioId: params.proprietarioId !== 'all' ? params.proprietarioId : undefined,
-          orderBy: params.orderBy,
-          orderDirection: params.orderDirection,
+          roles: ['admin', 'gerente', 'proprietario'].join(','),
+          limit: 1000 // Get all proprietarios
         }
       });
 
-      // console.log('✅ [PLANTAS SERVICE] Plantas carregadas:', {
-      //   total: response.data.pagination.total,
-      //   page: response.data.pagination.page,
-      //   count: response.data.data.length
-      // });
+      // A API retorna { success: true, data: { data: [...usuarios], pagination: {} } }
+      const usuariosData = response.data.data || response.data;
+      const usuarios = usuariosData.data || usuariosData || [];
 
-      return response.data;
+      console.log('🔍 [PlantasService] Response structure:', {
+        hasData: !!response.data,
+        hasDataData: !!response.data?.data,
+        hasDataDataData: !!response.data?.data?.data,
+        usuariosLength: Array.isArray(usuarios) ? usuarios.length : 0
+      });
 
+      // Transform to ProprietarioBasico format
+      const proprietarios: ProprietarioBasico[] = usuarios.map((user: any) => ({
+        id: user.id,
+        nome: user.nome || user.name || 'Nome não informado',
+        cpf_cnpj: user.cpf_cnpj || user.cpf || user.cnpj || 'Não informado',
+        tipo: user.tipo || (user.cpf ? 'pessoa_fisica' : 'pessoa_juridica')
+      }));
+
+      console.log('✅ [PlantasService] Proprietarios fetched from /usuarios:', proprietarios.length);
+      return proprietarios;
     } catch (error: any) {
-      // console.error('❌ [PLANTAS SERVICE] Erro ao buscar plantas:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Erro ao carregar lista de plantas');
+      console.error('❌ [PlantasService] Error fetching proprietarios:', error);
+
+      // Return empty array instead of throwing to prevent blocking the UI
+      console.warn('⚠️ [PlantasService] Returning empty proprietarios list');
+      return [];
     }
-  }
-
-  // ✅ MÉTODO: Buscar planta específica por ID
-  static async getPlanta(id: string): Promise<PlantaResponse> {
-    // console.log('🔍 [PLANTAS SERVICE] Buscando planta:', id);
-
-    try {
-      const response = await api.get<PlantaResponse>(`${this.ENDPOINT}/${id}`);
-
-      // console.log('✅ [PLANTAS SERVICE] Planta encontrada:', response.data.nome);
-      return response.data;
-
-    } catch (error: any) {
-      // console.error('❌ [PLANTAS SERVICE] Erro ao buscar planta:', error);
-      
-      if (error.response?.status === 404) {
-        throw new Error('Planta não encontrada');
-      }
-      
-      throw new Error(error.response?.data?.message || error.message || 'Erro ao carregar dados da planta');
-    }
-  }
-
-  // ✅ MÉTODO: Criar nova planta
-  static async createPlanta(data: CreatePlantaRequest): Promise<PlantaResponse> {
-    // console.log('🏭 [PLANTAS SERVICE] Criando nova planta:', data.nome);
-
-    try {
-      const response = await api.post<PlantaResponse>(this.ENDPOINT, data);
-
-      // console.log('✅ [PLANTAS SERVICE] Planta criada com sucesso:', response.data.id);
-      return response.data;
-
-    } catch (error: any) {
-      // console.error('❌ [PLANTAS SERVICE] Erro ao criar planta:', error);
-      
-      // Mapear erros específicos
-      if (error.response?.status === 409) {
-        throw new Error('CNPJ já cadastrado no sistema');
-      }
-      
-      if (error.response?.status === 404) {
-        throw new Error('Proprietário não encontrado ou inativo');
-      }
-      
-      if (error.response?.status === 400) {
-        throw new Error(error.response?.data?.message || 'Dados inválidos para criação da planta');
-      }
-      
-      throw new Error(error.response?.data?.message || error.message || 'Erro interno ao criar planta');
-    }
-  }
-
-  // ✅ MÉTODO: Atualizar planta existente
-  static async updatePlanta(id: string, data: UpdatePlantaRequest): Promise<PlantaResponse> {
-    // console.log('🔄 [PLANTAS SERVICE] Atualizando planta:', id);
-
-    try {
-      const response = await api.put<PlantaResponse>(`${this.ENDPOINT}/${id}`, data);
-
-      // console.log('✅ [PLANTAS SERVICE] Planta atualizada com sucesso:', response.data.nome);
-      return response.data;
-
-    } catch (error: any) {
-      // console.error('❌ [PLANTAS SERVICE] Erro ao atualizar planta:', error);
-      
-      // Mapear erros específicos
-      if (error.response?.status === 404) {
-        throw new Error('Planta não encontrada');
-      }
-      
-      if (error.response?.status === 409) {
-        throw new Error('CNPJ já cadastrado por outra planta');
-      }
-      
-      if (error.response?.status === 400) {
-        throw new Error(error.response?.data?.message || 'Dados inválidos para atualização da planta');
-      }
-      
-      throw new Error(error.response?.data?.message || error.message || 'Erro interno ao atualizar planta');
-    }
-  }
-
-  // ✅ MÉTODO: Buscar proprietários disponíveis
-  static async getProprietarios(): Promise<ProprietarioBasico[]> {
-    // console.log('👥 [PLANTAS SERVICE] Buscando proprietários disponíveis');
-
-    try {
-      const response = await api.get<ProprietarioBasico[]>(`${this.ENDPOINT}/proprietarios`);
-
-      // console.log('✅ [PLANTAS SERVICE] Proprietários carregados:', response.data.length);
-      return response.data;
-
-    } catch (error: any) {
-      // console.error('❌ [PLANTAS SERVICE] Erro ao buscar proprietários:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Erro ao carregar lista de proprietários');
-    }
-  }
-
-  // ✅ MÉTODO UTILITÁRIO: Validar CNPJ
-  static validateCNPJ(cnpj: string): boolean {
-    const cleanCNPJ = cnpj.replace(/\D/g, '');
-    return cleanCNPJ.length === 14;
-  }
-
-  // ✅ MÉTODO UTILITÁRIO: Formatar CNPJ
-  static formatCNPJ(cnpj: string): string {
-    const cleanCNPJ = cnpj.replace(/\D/g, '');
-    if (cleanCNPJ.length === 14) {
-      return cleanCNPJ.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-    }
-    return cnpj;
   }
 }
+
+// ✅ EXPORT SINGLETON INSTANCE
+
+export const PlantasService = new PlantasServiceClass();

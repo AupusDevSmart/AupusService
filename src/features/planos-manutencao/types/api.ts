@@ -69,6 +69,14 @@ export interface EquipamentoResumo {
   fabricante?: string;
   modelo?: string;
   criticidade?: string;
+  unidade?: {
+    id: string;
+    nome: string;
+    planta?: {
+      id: string;
+      nome: string;
+    };
+  };
   planta?: {
     id: string;
     nome: string;

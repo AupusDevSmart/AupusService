@@ -1,32 +1,32 @@
 // src/features/planos-manutencao/components/AssociacaoEquipamentosPage.tsx - USANDO API REAL
 
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { BaseModal } from '@/components/common/base-modal/BaseModal';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseModal } from '@/components/common/base-modal/BaseModal';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { 
-  ArrowRight,
-  Building,
-  Wrench,
-  Layers,
-  Plus,
-  Trash2,
-  CheckCircle,
-  FileText,
-  Settings,
-  ChevronLeft,
-  Copy,
-  AlertTriangle
-} from 'lucide-react';
+import { useEquipamentos } from '@/features/equipamentos_xxx/hooks/useEquipamentos';
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { useEquipamentos } from '@/features/equipamentos/hooks/useEquipamentos';
-import { usePlanosManutencaoApi } from '../hooks/usePlanosManutencaoApi';
-import { PlanoManutencaoApiResponse, CreatePlanoManutencaoApiData } from '@/services/planos-manutencao.services';
+import { CreatePlanoManutencaoApiData, PlanoManutencaoApiResponse } from '@/services/planos-manutencao.services';
+import {
+    AlertTriangle,
+    ArrowRight,
+    Building,
+    CheckCircle,
+    ChevronLeft,
+    Copy,
+    FileText,
+    Layers,
+    Plus,
+    Settings,
+    Trash2,
+    Wrench
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { planosFormFields } from '../config/form-config';
+import { usePlanosManutencaoApi } from '../hooks/usePlanosManutencaoApi';
 
 interface EquipamentoSelecionado {
   equipamentoId: string; // Mudado para string (CUID)

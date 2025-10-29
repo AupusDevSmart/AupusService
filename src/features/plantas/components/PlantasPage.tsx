@@ -44,8 +44,8 @@ const transformFormDataToAPI = (data: any) => {
   const transformedData = {
     nome: (data.nome || '').trim(),
     cnpj: cnpjFormatted, // Enviar formatado como a API espera
-    proprietarioId: data.proprietarioId,
-    horarioFuncionamento: (data.horarioFuncionamento || '').trim(),
+    proprietarioId: data.proprietarioId, // ✅ API espera camelCase (DTO usa camelCase)
+    horarioFuncionamento: (data.horarioFuncionamento || '').trim(), // ✅ API espera camelCase (DTO usa camelCase)
     localizacao: (data.localizacao || '').trim(),
     endereco: {
       logradouro: (endereco.logradouro || '').trim(),
@@ -128,12 +128,12 @@ export function PlantasPage() {
       const response = await PlantasService.getAllPlantas(params);
       
       setPlantas(response.data);
-      setTotalPlantas(response.pagination.total);
+      setTotalPlantas(response.pagination?.total);
 
       console.log('✅ [PLANTAS PAGE] Plantas carregadas:', {
-        total: response.pagination.total,
+        total: response.pagination?.total,
         count: response.data.length,
-        page: response.pagination.page
+        page: response.pagination?.page
       });
 
     } catch (error: any) {

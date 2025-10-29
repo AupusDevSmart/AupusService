@@ -120,6 +120,7 @@ export interface ProgramacaoOS extends BaseEntity {
 
   // Relacionamentos com origem
   planta_id?: string;
+  unidade_id?: string; // NOVO: Equipamentos agora pertencem a Unidades
   equipamento_id?: string;
   anomalia_id?: string;
   plano_manutencao_id?: string;
@@ -172,7 +173,8 @@ export interface ProgramacaoOS extends BaseEntity {
 
   // Relacionamentos expandidos (opcional)
   planta?: { id: string; nome: string };
-  equipamento?: { id: string; nome: string };
+  unidade?: { id: string; nome: string; planta?: { id: string; nome: string } }; // NOVO: Hierarquia de unidade
+  equipamento?: { id: string; nome: string; unidade?: { id: string; nome: string; planta?: { id: string; nome: string } } }; // NOVO: Incluir unidade no equipamento
   anomalia?: { id: string; descricao: string };
   plano_manutencao?: { id: string; nome: string };
 }
@@ -218,6 +220,7 @@ export interface CreateProgramacaoDto {
   prioridade: PrioridadeOS;
   origem: OrigemOS;
   planta_id?: string;
+  unidade_id?: string; // NOVO: Equipamentos agora pertencem a Unidades
   equipamento_id?: string;
   anomalia_id?: string;
   plano_manutencao_id?: string;
@@ -255,6 +258,7 @@ export interface ProgramacaoFiltersDto extends BaseFiltersType {
   prioridade?: PrioridadeOS | 'all';
   origem?: OrigemOS | 'all';
   planta_id?: string;
+  unidade_id?: string; // NOVO: Filtro por unidade
   responsavel?: string;
   data_programada?: string;
   periodo?: string;
@@ -281,6 +285,7 @@ export interface OrdemServicoFormData {
   
   // Relacionamentos
   plantaId?: string;
+  unidadeId?: string; // NOVO: Equipamentos agora pertencem a Unidades
   equipamentoId?: string;
   anomaliaId?: string;
   planoManutencaoId?: string;

@@ -236,8 +236,8 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
           criticidade: equipamentoUC!.criticidade,
           criadoEm: equipamentoUC!.criadoEm || new Date().toISOString()
         },
-        // Herdar dados do UC pai
-        plantaId: equipamentoUC!.plantaId,
+        // Herdar dados do UC pai (para referência)
+        unidade: equipamentoUC!.unidade,
         proprietarioId: equipamentoUC!.proprietarioId,
         planta: equipamentoUC!.planta,
         proprietario: equipamentoUC!.proprietario,

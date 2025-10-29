@@ -42,12 +42,19 @@ export const planosTableColumns: TableColumn<PlanoManutencaoApiResponse>[] = [
     label: 'Equipamento & Tarefas',
     render: (plano) => (
       <div className="space-y-1">
+        {/* Hierarquia: Planta → Unidade */}
         <div className="flex items-center gap-2">
           <Users className="h-3 w-3 text-muted-foreground" />
           <span className="text-sm font-medium">
-            {plano.equipamento?.planta?.nome || 'Planta não informada'}
+            {plano.equipamento?.unidade?.planta?.nome || plano.equipamento?.planta?.nome || 'Planta não informada'}
           </span>
         </div>
+        {plano.equipamento?.unidade && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span>→</span>
+            <span>{plano.equipamento.unidade.nome}</span>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <FileText className="h-3 w-3 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">

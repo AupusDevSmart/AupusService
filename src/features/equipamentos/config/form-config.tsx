@@ -1,12 +1,155 @@
 // src/features/equipamentos/config/form-config.tsx - FORMULÁRIO DINÂMICO POR TIPO
-import { FormField } from '@/types/base';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import { FormField, FormFieldProps } from '@/types/base';
+import { useState, useEffect } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
+import { PlantasService } from '@/services/plantas.services';
+import { getUnidadesByPlanta } from '@/services/unidades.services';
+
+/**
+ * Componente de Seleção Cascata: Planta → Unidade
+ */
+const PlantaUnidadeSelector = ({ value, onChange, disabled, mode }: FormFieldProps & { value: { plantaId?: string; unidadeId?: string } }) => {
+  const [plantas, setPlantas] = useState<any[]>([]);
+  const [unidades, setUnidades] = useState<any[]>([]);
+  const [loadingPlantas, setLoadingPlantas] = useState(false);
+  const [loadingUnidades, setLoadingUnidades] = useState(false);
+  const [selectedPlantaId, setSelectedPlantaId] = useState(value?.plantaId || '');
+  const [selectedUnidadeId, setSelectedUnidadeId] = useState(value?.unidadeId || '');
+
+  // Carregar plantas ao montar
+  useEffect(() => {
+    const loadPlantas = async () => {
+      try {
+        setLoadingPlantas(true);
+        const response = await PlantasService.getAllPlantas({ limit: 100 });
+        setPlantas(response.data || []);
+      } catch (error) {
+        console.error('Erro ao carregar plantas:', error);
+      } finally {
+        setLoadingPlantas(false);
+      }
+    };
+    loadPlantas();
+  }, []);
+
+  // Carregar unidades quando planta mudar
+  useEffect(() => {
+    const loadUnidades = async () => {
+      if (!selectedPlantaId) {
+        setUnidades([]);
+        return;
+      }
+
+      try {
+        setLoadingUnidades(true);
+        const response = await getUnidadesByPlanta(selectedPlantaId);
+        setUnidades(response || []);
+      } catch (error) {
+        console.error('Erro ao carregar unidades:', error);
+        setUnidades([]);
+      } finally {
+        setLoadingUnidades(false);
+      }
+    };
+    loadUnidades();
+  }, [selectedPlantaId]);
+
+  const handlePlantaChange = (plantaId: string) => {
+    setSelectedPlantaId(plantaId);
+    setSelectedUnidadeId(''); // Limpar unidade ao mudar planta
+    onChange({ plantaId, unidadeId: '' });
+  };
+
+  const handleUnidadeChange = (unidadeId: string) => {
+    setSelectedUnidadeId(unidadeId);
+    onChange({ plantaId: selectedPlantaId, unidadeId });
+  };
+
+  if (mode === 'view') {
+    const plantaSelecionada = plantas.find(p => p.id === selectedPlantaId);
+    const unidadeSelecionada = unidades.find(u => u.id === selectedUnidadeId);
+
+    return (
+      <div className="space-y-3">
+        <div>
+          <label className="text-sm font-medium">Planta</label>
+          <div className="w-full px-3 py-2 border border-border bg-muted rounded-md text-foreground">
+            {plantaSelecionada?.nome || '-'}
+          </div>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Unidade</label>
+          <div className="w-full px-3 py-2 border border-border bg-muted rounded-md text-foreground">
+            {unidadeSelecionada?.nome || '-'}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Seleção de Planta */}
+      <div>
+        <label className="text-sm font-medium">Planta *</label>
+        <Select
+          value={selectedPlantaId}
+          onValueChange={handlePlantaChange}
+          disabled={disabled || loadingPlantas}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={loadingPlantas ? 'Carregando...' : 'Selecione a planta'} />
+          </SelectTrigger>
+          <SelectContent>
+            {plantas.map((planta) => (
+              <SelectItem key={planta.id} value={planta.id}>
+                🏭 {planta.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Seleção de Unidade */}
+      <div>
+        <label className="text-sm font-medium">Unidade *</label>
+        <Select
+          value={selectedUnidadeId}
+          onValueChange={handleUnidadeChange}
+          disabled={disabled || !selectedPlantaId || loadingUnidades}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={
+              !selectedPlantaId
+                ? 'Selecione uma planta primeiro'
+                : loadingUnidades
+                  ? 'Carregando unidades...'
+                  : 'Selecione a unidade'
+            } />
+          </SelectTrigger>
+          <SelectContent>
+            {unidades.map((unidade) => (
+              <SelectItem key={unidade.id} value={unidade.id}>
+                📍 {unidade.nome} - {unidade.cidade}/{unidade.estado}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {!selectedPlantaId && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Primeiro selecione uma planta para ver as unidades disponíveis
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // Mock de plantas para seleção
 const mockPlantas = [
@@ -413,11 +556,11 @@ export const equipamentosFormFields: FormField[] = [
   // DADOS GERAIS (COLUNA 2)
   // ============================================================================
   {
-    key: 'plantaId',
-    label: 'Planta',
-    type: 'select',
+    key: 'plantaUnidade',
+    label: 'Localização',
+    type: 'custom',
     required: true,
-    options: mockPlantas.map(p => ({ value: String(p.id), label: p.nome })),
+    render: PlantaUnidadeSelector,
   },
   {
     key: 'fabricante',
@@ -569,11 +712,15 @@ export const equipamentosFormFields: FormField[] = [
     key: 'dadosTecnicosEspecificos',
     label: 'Dados Técnicos Específicos',
     type: 'custom',
-    render: ({ formData, onChange }) => (
-      <CamposEspecificosPorTipo 
-        tipoEquipamento={formData?.tipoEquipamento}
-        formData={formData}
-        onChange={onChange}
+    render: (props) => (
+      <CamposEspecificosPorTipo
+        tipoEquipamento={props.entity?.tipoEquipamento || props.value?.tipoEquipamento}
+        formData={props.entity || props.value || {}}
+        onChange={(field: string, value: any) => {
+          if (props.onMultipleChange) {
+            props.onMultipleChange({ [field]: value });
+          }
+        }}
       />
     ),
   },

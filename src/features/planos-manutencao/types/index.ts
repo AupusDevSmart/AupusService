@@ -73,12 +73,13 @@ export interface TarefaTemplate {
 export interface PlanoEquipamento extends BaseEntity {
   planoManutencaoId: string;
   equipamentoId: number;
-  plantaId: number;
-  
+  unidadeId?: number; // NOVO: Equipamentos agora pertencem a Unidades
+  plantaId: number; // Mantido para compatibilidade (acessível via unidade.planta)
+
   // Customizações
   responsavelCustomizado?: string;
   observacoesCustomizadas?: string;
-  
+
   // Controle
   ativo: boolean;
   dataAssociacao: string;
@@ -92,10 +93,11 @@ export interface TarefaAtualizada extends BaseEntity {
   planoManutencaoId?: string;
   tarefaTemplateId?: string;
   planoEquipamentoId?: string;
-  
+
   // Equipamento
   equipamentoId?: number;
-  plantaId?: number;
+  unidadeId?: number; // NOVO: Equipamentos agora pertencem a Unidades
+  plantaId?: number; // Mantido para compatibilidade
   
   // Dados da tarefa
   tag: string;
@@ -166,6 +168,8 @@ export interface PlanosFilters extends BaseFilters {
 export interface EquipamentoPlanoInfo {
   equipamentoId: number;
   equipamentoNome: string;
+  unidadeId?: number; // NOVO: Unidade do equipamento
+  unidadeNome?: string; // NOVO: Nome da unidade
   plantaId: number;
   plantaNome: string;
   planoManutencaoId?: string;

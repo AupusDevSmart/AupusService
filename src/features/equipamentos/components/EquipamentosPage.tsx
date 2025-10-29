@@ -23,6 +23,7 @@ const initialFilters: EquipamentosFilters = {
   search: '',
   proprietarioId: 'all',
   plantaId: 'all',
+  unidadeId: 'all',
   classificacao: 'all',
   criticidade: 'all',
   page: 1,
@@ -54,9 +55,12 @@ export function EquipamentosPage() {
   const {
     loadingProprietarios,
     loadingPlantas,
+    loadingUnidades,
     proprietarios,
     plantas,
+    unidades,
     loadPlantasByProprietario,
+    loadUnidadesByPlanta,
     error: filtersError,
     clearError: clearFiltersError
   } = useEquipamentoFilters();
@@ -135,29 +139,61 @@ export function EquipamentosPage() {
     // Se o proprietário mudou, carregar plantas correspondentes
     if (newFilters.proprietarioId !== undefined && newFilters.proprietarioId !== filters.proprietarioId) {
       console.log('🔄 [EQUIPAMENTOS] Proprietário mudou, carregando plantas...');
-      
+
       // Limpar erro anterior
       if (filtersError) clearFiltersError();
-      
+
       // Carregar plantas do proprietário selecionado
       try {
         await loadPlantasByProprietario(newFilters.proprietarioId);
-        
-        // Se mudou proprietário, resetar planta selecionada
+
+        // Se mudou proprietário, resetar planta e unidade selecionadas
         setFilters(prev => ({
           ...prev,
           ...newFilters,
           plantaId: 'all', // Reset planta quando proprietário muda
+          unidadeId: 'all', // Reset unidade quando proprietário muda
           page: 1 // Reset página quando filtros mudam
         }));
       } catch (error) {
         console.error('❌ [EQUIPAMENTOS] Erro ao carregar plantas:', error);
-        
+
         // Mesmo com erro, atualizar filtros
         setFilters(prev => ({
           ...prev,
           ...newFilters,
           plantaId: 'all',
+          unidadeId: 'all',
+          page: 1
+        }));
+      }
+    }
+    // Se a planta mudou, carregar unidades correspondentes
+    else if (newFilters.plantaId !== undefined && newFilters.plantaId !== filters.plantaId) {
+      console.log('🔄 [EQUIPAMENTOS] Planta mudou, carregando unidades...');
+
+      // Limpar erro anterior
+      if (filtersError) clearFiltersError();
+
+      // Carregar unidades da planta selecionada
+      try {
+        await loadUnidadesByPlanta(newFilters.plantaId);
+
+        // Se mudou planta, resetar unidade selecionada
+        setFilters(prev => ({
+          ...prev,
+          ...newFilters,
+          unidadeId: 'all', // Reset unidade quando planta muda
+          page: 1 // Reset página quando filtros mudam
+        }));
+      } catch (error) {
+        console.error('❌ [EQUIPAMENTOS] Erro ao carregar unidades:', error);
+
+        // Mesmo com erro, atualizar filtros
+        setFilters(prev => ({
+          ...prev,
+          ...newFilters,
+          unidadeId: 'all',
           page: 1
         }));
       }
@@ -169,7 +205,7 @@ export function EquipamentosPage() {
         page: 1 // Reset página quando filtros mudam
       }));
     }
-  }, [filters.proprietarioId, filtersError, clearFiltersError, loadPlantasByProprietario]);
+  }, [filters.proprietarioId, filters.plantaId, filtersError, clearFiltersError, loadPlantasByProprietario, loadUnidadesByPlanta]);
 
   const handlePageChange = (page: number) => {
     setFilters(prev => ({ ...prev, page }));
@@ -196,18 +232,28 @@ export function EquipamentosPage() {
 
   const handleSubmitUC = async (data: any) => {
     try {
+      console.log('💾 [EQUIPAMENTOS PAGE] handleSubmitUC chamado');
+      console.log('💾 [EQUIPAMENTOS PAGE] Mode:', modalUC.mode);
+      console.log('💾 [EQUIPAMENTOS PAGE] Entity:', modalUC.entity);
+      console.log('💾 [EQUIPAMENTOS PAGE] Data a ser enviado:', data);
+
       if (modalUC.mode === 'create') {
         await createEquipamento(data);
-        console.log('Equipamento UC criado com sucesso');
+        console.log('✅ [EQUIPAMENTOS PAGE] Equipamento UC criado com sucesso');
       } else if (modalUC.mode === 'edit' && modalUC.entity) {
-        await updateEquipamento(modalUC.entity.id, data); // USA ID STRING DIRETAMENTE
-        console.log('Equipamento UC atualizado com sucesso');
+        console.log('🔄 [EQUIPAMENTOS PAGE] Iniciando update com ID:', modalUC.entity.id);
+        await updateEquipamento(modalUC.entity.id, data);
+        console.log('✅ [EQUIPAMENTOS PAGE] Equipamento UC atualizado com sucesso');
       }
-      
+
+      // Recarregar dados após salvar
+      await loadEquipamentos(filters);
+
       closeUCModal();
-      
+
     } catch (error) {
-      console.error('Erro ao salvar equipamento UC:', error);
+      console.error('❌ [EQUIPAMENTOS PAGE] Erro ao salvar equipamento UC:', error);
+      alert(`Erro ao salvar equipamento: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
   };
 
@@ -453,13 +499,15 @@ export function EquipamentosPage() {
             
             {/* Filtros - CORRIGIDO: removido prop loading */}
             <div className="w-full">
-              <BaseFilters 
+              <BaseFilters
                 filters={filters}
                 config={createEquipamentosFilterConfig(
                   proprietarios,
                   plantas,
                   loadingProprietarios,
-                  loadingPlantas
+                  loadingPlantas,
+                  unidades,
+                  loadingUnidades
                 )}
                 onFilterChange={handleFilterChange}
               />

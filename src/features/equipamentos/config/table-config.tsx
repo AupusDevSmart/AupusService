@@ -46,18 +46,36 @@ export const getEquipamentosTableColumns = (actions?: TableActionsProps): TableC
   },
   
   {
-    key: 'planta_proprietario',
-    label: 'Planta / Proprietário',
+    key: 'hierarquia',
+    label: 'Hierarquia',
     render: (equipamento) => (
-      <div className="flex flex-col text-sm">
+      <div className="flex flex-col text-sm gap-0.5">
+        {/* Planta */}
         <div className="flex items-center gap-1">
           <Factory className="h-3 w-3 text-blue-500" />
-          <span className="font-medium">{equipamento.planta?.nome}</span>
+          <span className="font-medium text-xs">
+            {equipamento.unidade?.planta?.nome || equipamento.planta?.nome || '-'}
+          </span>
         </div>
+
+        {/* Unidade */}
+        {equipamento.unidade && (
+          <div className="flex items-center gap-1 text-primary">
+            <MapPin className="h-3 w-3" />
+            <span className="text-xs">
+              → {equipamento.unidade.nome}
+            </span>
+          </div>
+        )}
+
+        {/* Proprietário */}
         <div className="flex items-center gap-1 text-muted-foreground">
           <Building2 className="h-3 w-3" />
-          <span className="text-xs">{equipamento.proprietario?.razaoSocial}</span>
+          <span className="text-xs">
+            {equipamento.unidade?.planta?.proprietario?.nome || equipamento.proprietario?.razaoSocial || '-'}
+          </span>
         </div>
+
         {/* Se for UAR, mostrar o UC pai */}
         {equipamento.classificacao === 'UAR' && equipamento.equipamentoPai && (
           <div className="flex items-center gap-1 mt-1 text-orange-600">

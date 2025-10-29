@@ -7,7 +7,9 @@ export const createEquipamentosFilterConfig = (
   proprietarios: FilterOption[] = [{ value: 'all', label: 'Todos os Proprietários' }],
   plantas: FilterOption[] = [{ value: 'all', label: 'Todas as Plantas' }],
   loadingProprietarios = false,
-  loadingPlantas = false
+  loadingPlantas = false,
+  unidades: FilterOption[] = [{ value: 'all', label: 'Todas as Unidades' }],
+  loadingUnidades = false
 ): FilterConfig[] => [
   {
     key: 'search',
@@ -32,6 +34,15 @@ export const createEquipamentosFilterConfig = (
     options: plantas,
     className: 'min-w-48',
     disabled: loadingPlantas
+  },
+  {
+    key: 'unidadeId',
+    type: 'select',
+    label: 'Unidade',
+    placeholder: loadingUnidades ? 'Carregando unidades...' : 'Todas as Unidades',
+    options: unidades,
+    className: 'min-w-48',
+    disabled: loadingUnidades
   },
   {
     key: 'classificacao',

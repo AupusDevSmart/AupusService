@@ -93,6 +93,14 @@ export const navigationLinks: Array<NavigationLink> = [
         hint: 'Plantas',
       },
       {
+        key: 'unidades',
+        featureKey: 'Plantas',
+        path: '/unidades',
+        icon: Building,
+        label: 'Unidades',
+        hint: 'Unidades',
+      },
+      {
         key: 'equipamentos',
         featureKey: 'Equipamentos',
         path: '/equipamentos',

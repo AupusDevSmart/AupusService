@@ -1,24 +1,24 @@
-import { Navigate, createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
 // import { Login } from './pages/login';
-import { AppTemplate } from './pages/AppTemplate';
 import { FeatureWrapper } from './components/common/FeatureWrapper';
-import { DefaultRedirect } from './components/common/default-redirect';
-import { DashboardPage } from './pages/dashboard'; // Importando o novo componente
-import { Settings } from './pages/settings';
-import { PlantasPage } from './features/plantas/components/PlantasPage';
-import { EquipamentosPage } from './features/equipamentos/components/EquipamentosPage';
-import { UsuariosPage } from './features/usuarios/components/UsuariosPage'; // ✅ NOVA IMPORTAÇÃO
-import { VeiculosPage } from './features/veiculos/components/VeiculosPage';
+import { ConfiguracoesDiasUteisPage, FeriadosPage } from './features/agenda';
+import { EquipamentosPage } from './features/equipamentos_xxx/components/EquipamentosPage';
+import { ExecucaoOSPage } from './features/execucao-os';
 import { FerramentasPage } from './features/ferramentas/components/FerramentasPage';
 import { FornecedoresPage } from './features/fornecedores/components/FornecedoresPage';
-import { AnomaliaPage } from './pages/anomalias';
-import { TarefasPage } from './features/tarefas/components/TarefasPage';
+import { AssociacaoEquipamentosPage } from './features/planos-manutencao/components/AssociacaoEquipamentosPage';
+import { PlanosManutencaoPage } from './features/planos-manutencao/components/PlanosManutencaoPage';
+import { PlantasPage } from './features/plantas/components/PlantasPage';
 import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
-import { ExecucaoOSPage } from './features/execucao-os';
-import { PlanosManutencaoPage } from './features/planos-manutencao/components/PlanosManutencaoPage';
-import { AssociacaoEquipamentosPage } from './features/planos-manutencao/components/AssociacaoEquipamentosPage';
-import { FeriadosPage, ConfiguracoesDiasUteisPage } from './features/agenda';
+import { TarefasPage } from './features/tarefas/components/TarefasPage';
+import { UnidadesPage } from './features/unidades/components/UnidadesPage';
+import { UsuariosPage } from './features/usuarios/components/UsuariosPage'; // ✅ NOVA IMPORTAÇÃO
+import { VeiculosPage } from './features/veiculos/components/VeiculosPage';
+import { AppTemplate } from './pages/AppTemplate';
+import { AnomaliaPage } from './pages/anomalias';
+import { DashboardPage } from './pages/dashboard'; // Importando o novo componente
+import { Settings } from './pages/settings';
 
 export const appRoutes = createBrowserRouter([
 //   {
@@ -69,6 +69,15 @@ export const appRoutes = createBrowserRouter([
         element: (
           <FeatureWrapper feature="Plantas">
             <PlantasPage />
+          </FeatureWrapper>
+        ),
+      },
+      // ✅ NOVA: Rota para unidades
+      {
+        path: 'unidades',
+        element: (
+          <FeatureWrapper feature="Unidades">
+            <UnidadesPage />
           </FeatureWrapper>
         ),
       },

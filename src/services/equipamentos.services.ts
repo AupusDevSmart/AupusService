@@ -121,8 +121,8 @@ export interface EquipamentosQueryParams {
   page?: number;
   limit?: number;
   search?: string;
+  unidade_id?: string;
   planta_id?: string;
-  proprietario_id?: string;
   classificacao?: 'UC' | 'UAR';
   criticidade?: '1' | '2' | '3' | '4' | '5';
   equipamento_pai_id?: string;
@@ -222,8 +222,21 @@ export class EquipamentosApiService {
   }
 
   async findOne(id: string): Promise<EquipamentoApiResponse> {
-    const response = await api.get<EquipamentoApiResponse>(`${this.baseEndpoint}/${id}`);
-    return response.data;
+    console.log('🌐 [API SERVICE] findOne chamado para ID:', id);
+    const response = await api.get<{ success: boolean; data: EquipamentoApiResponse; meta?: any }>(`${this.baseEndpoint}/${id}`);
+    console.log('🌐 [API SERVICE] Resposta completa (response):', response);
+    console.log('🌐 [API SERVICE] response.data:', response.data);
+    console.log('🌐 [API SERVICE] response.data.data (os dados reais):', response.data.data);
+
+    // ✅ CORRIGIDO: A API retorna { success, data, meta }, precisamos retornar apenas o "data" interno
+    const equipamento = response.data.data || response.data;
+    console.log('✅ [API SERVICE] Equipamento extraído:', equipamento);
+    console.log('✅ [API SERVICE] equipamento.id:', equipamento?.id);
+    console.log('✅ [API SERVICE] equipamento.nome:', equipamento?.nome);
+    console.log('✅ [API SERVICE] equipamento.tipo_equipamento:', equipamento?.tipo_equipamento);
+    console.log('✅ [API SERVICE] equipamento.dados_tecnicos:', equipamento?.dados_tecnicos);
+
+    return equipamento;
   }
 
   async update(id: string, data: UpdateEquipamentoApiData): Promise<EquipamentoApiResponse> {
@@ -293,6 +306,18 @@ export class EquipamentosApiService {
   async getEstatisticasPlanta(plantaId: string): Promise<EstatisticasPlantaResponse> {
     const response = await api.get<EstatisticasPlantaResponse>(
       `${this.baseEndpoint}/plantas/${plantaId}/estatisticas`
+    );
+    return response.data;
+  }
+
+  // ============================================================================
+  // OPERAÇÕES POR UNIDADE
+  // ============================================================================
+
+  async findByUnidade(unidadeId: string, params?: EquipamentosQueryParams): Promise<EquipamentosListApiResponse> {
+    const response = await api.get<EquipamentosListApiResponse>(
+      `${this.baseEndpoint}/unidade/${unidadeId}/equipamentos`,
+      { params }
     );
     return response.data;
   }

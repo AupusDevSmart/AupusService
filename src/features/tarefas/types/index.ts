@@ -56,6 +56,7 @@ export interface Tarefa extends BaseEntity {
 
   // Relacionamentos
   plantaId?: string;
+  unidadeId?: string; // NOVO: Equipamentos agora pertencem a Unidades
   equipamentoId?: string; // Pode ser UC ou UAR
 
   // Informações de planejamento
@@ -106,6 +107,7 @@ export interface TarefaFormData {
   duracaoEstimada: number;
   tempoEstimado: number;
   plantaId?: number;
+  unidadeId?: number; // NOVO: Equipamentos agora pertencem a Unidades
   equipamentoId?: number;
   planejador?: string;
   responsavel?: string;

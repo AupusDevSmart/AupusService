@@ -20,8 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Component, Save, Wrench, X, AlertCircle, Loader2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Equipamento } from '../../types';
-import { useSelectionData } from '../../hooks/useSelectionData';
-import { tiposEquipamentos, getTipoEquipamento } from '../../config/tipos-equipamentos';
+import { tiposEquipamentosApi, type TipoEquipamentoModal } from '@/services/tipos-equipamentos.services';
 
 interface ComponenteUARModalProps {
   isOpen: boolean;
@@ -40,30 +39,67 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   onClose,
   onSubmit
 }) => {
-  const {
-    tiposEquipamentos: tiposFromApi,
-    loadingTipos,
-    getCamposTecnicosPorTipo
-  } = useSelectionData();
-
   const [formData, setFormData] = useState<any>({});
   const [error, setError] = useState<string | null>(null);
+
+  // Estados para tipos de equipamentos da API
+  const [tiposEquipamentos, setTiposEquipamentos] = useState<TipoEquipamentoModal[]>([]);
+  const [loadingTipos, setLoadingTipos] = useState(false);
+
+  // Helper para buscar tipo de equipamento
+  const getTipoEquipamento = (codigo: string): TipoEquipamentoModal | undefined => {
+    return tiposEquipamentos.find(t => t.value === codigo);
+  };
+
+  // Carregar tipos de equipamentos da API
+  useEffect(() => {
+    const loadTiposEquipamentos = async () => {
+      setLoadingTipos(true);
+      try {
+        const tipos = await tiposEquipamentosApi.getAll();
+        const tiposFormatados = tipos.map(tipo => ({
+          value: tipo.codigo,
+          label: tipo.nome,
+          categoria: tipo.categoria,
+          camposTecnicos: (tipo.propriedades_schema?.campos || []).map(campo => ({
+            campo: campo.nome,
+            tipo: campo.tipo === 'boolean' ? ('select' as const) : campo.tipo,
+            unidade: campo.unidade,
+            opcoes: campo.opcoes || (campo.tipo === 'boolean' ? ['Sim', 'Não'] : undefined),
+            obrigatorio: campo.obrigatorio,
+          })),
+        }));
+        setTiposEquipamentos(tiposFormatados);
+        console.log('✅ [MODAL UAR] Tipos de equipamentos carregados da API:', tiposFormatados.length);
+      } catch (err) {
+        console.error('❌ [MODAL UAR] Erro ao carregar tipos de equipamentos:', err);
+        setError('Erro ao carregar tipos de equipamentos');
+      } finally {
+        setLoadingTipos(false);
+      }
+    };
+
+    if (isOpen) {
+      loadTiposEquipamentos();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (entity && mode !== 'create') {
       console.log('📋 [MODAL UAR] Dados completos do componente:', entity);
-      
+
       setFormData({
         ...entity,
-        tipoComponente: entity.tipo_equipamento || entity.tipoEquipamento || entity.tipo || ''
+        tipoComponente: entity.tipoEquipamento || entity.tipo || ''
       });
     } else {
-      setFormData({ 
+      setFormData({
         classificacao: 'UAR',
         criticidade: '3',
         equipamentoPaiId: equipamentoPai?.id,
         // Herdar dados do equipamento pai
-        plantaId: equipamentoPai?.plantaId,
+        plantaId: equipamentoPai?.unidade?.plantaId,
+        unidadeId: equipamentoPai?.unidadeId,
         proprietarioId: equipamentoPai?.proprietarioId
       });
     }
@@ -179,10 +215,14 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     return true;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) {
       return;
     }
+
+    // Buscar o ID do tipo de equipamento pelo código
+    const tipoEqpSelecionado = formData.tipoComponente ?
+      await tiposEquipamentosApi.findByCode(formData.tipoComponente) : null;
 
     const submitData = {
       // Dados básicos
@@ -193,7 +233,8 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
       modelo: formData.modelo,
       numero_serie: formData.numeroSerie,
       criticidade: formData.criticidade,
-      tipo_equipamento: formData.tipoComponente,
+      tipo_equipamento: formData.tipoComponente,  // Código (compatibilidade)
+      tipo_equipamento_id: tipoEqpSelecionado?.id,  // ID do tipo (correto)
       data_instalacao: formData.dataInstalacao,
       localizacao_especifica: formData.localizacaoEspecifica,
       plano_manutencao: formData.planoManutencao,

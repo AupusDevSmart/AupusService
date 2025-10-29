@@ -48,7 +48,7 @@ export const mockEquipamentos: Equipamento[] = [
     criadoEm: '2024-01-15T10:30:00Z',
     nome: 'Sistema de Controle Principal',
     classificacao: 'UC', // ← UC = Equipamento
-    plantaId: '1',
+    unidadeId: '1',
     proprietarioId: '1',
     proprietario: baseProprietario,
     planta: basePlanta,
@@ -64,13 +64,13 @@ export const mockEquipamentos: Equipamento[] = [
     tipo: 'Sistema de Controle',
     totalComponentes: 2
   },
-  
+
   {
     id: '2',
     criadoEm: '2024-01-20T14:15:00Z',
     nome: 'Sistema de Lubrificação',
     classificacao: 'UC', // ← UC = Equipamento
-    plantaId: '1',
+    unidadeId: '1',
     proprietarioId: '1',
     proprietario: baseProprietario,
     planta: basePlanta,
@@ -90,7 +90,7 @@ export const mockEquipamentos: Equipamento[] = [
     criadoEm: '2024-02-10T16:45:00Z',
     nome: 'Compressor de Ar Industrial',
     classificacao: 'UC', // ← UC = Equipamento
-    plantaId: '4',
+    unidadeId: '4',
     proprietarioId: '2',
     proprietario: proprietario2,
     planta: planta2,
@@ -110,7 +110,7 @@ export const mockEquipamentos: Equipamento[] = [
     criadoEm: '2024-02-25T11:30:00Z',
     nome: 'Esteira Transportadora',
     classificacao: 'UC', // ← UC = Equipamento
-    plantaId: '1',
+    unidadeId: '1',
     proprietarioId: '1',
     proprietario: baseProprietario,
     planta: basePlanta,
@@ -135,7 +135,6 @@ export const mockEquipamentos: Equipamento[] = [
  nome: 'Sensor de Temperatura',
  classificacao: 'UAR', // ← UAR = Componente
  equipamentoPaiId: '1', // ← Pertence ao UC "Sistema de Controle Principal"
- plantaId: '1', // Herdado do UC pai
  proprietarioId: '1', // Herdado do UC pai
  proprietario: baseProprietario,
  planta: basePlanta,
@@ -162,7 +161,6 @@ export const mockEquipamentos: Equipamento[] = [
  nome: 'Sensor de Vibração',
  classificacao: 'UAR', // ← UAR = Componente
  equipamentoPaiId: '1', // ← Pertence ao UC "Sistema de Controle Principal"
- plantaId: '1', // Herdado do UC pai
  proprietarioId: '1', // Herdado do UC pai
  proprietario: baseProprietario,
  planta: basePlanta,
@@ -189,7 +187,6 @@ export const mockEquipamentos: Equipamento[] = [
  nome: 'Bomba de Óleo',
  classificacao: 'UAR', // ← UAR = Componente
  equipamentoPaiId: '2', // ← Pertence ao UC "Sistema de Lubrificação"
- plantaId: '1', // Herdado do UC pai
  proprietarioId: '1', // Herdado do UC pai
  proprietario: baseProprietario,
  planta: basePlanta,
@@ -216,7 +213,6 @@ export const mockEquipamentos: Equipamento[] = [
  nome: 'Filtro de Ar',
  classificacao: 'UAR', // ← UAR = Componente
  equipamentoPaiId: '3', // ← Pertence ao UC "Compressor de Ar Industrial"
- plantaId: '4', // Herdado do UC pai
  proprietarioId: '2', // Herdado do UC pai
  proprietario: proprietario2,
  planta: planta2,
@@ -243,7 +239,6 @@ export const mockEquipamentos: Equipamento[] = [
  nome: 'Válvula de Segurança',
  classificacao: 'UAR', // ← UAR = Componente
  equipamentoPaiId: '3', // ← Pertence ao UC "Compressor de Ar Industrial"
- plantaId: '4', // Herdado do UC pai
  proprietarioId: '2', // Herdado do UC pai
  proprietario: proprietario2,
  planta: planta2,

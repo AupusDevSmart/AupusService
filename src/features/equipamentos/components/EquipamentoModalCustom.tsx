@@ -3,12 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
 import {
   Dialog,
@@ -19,6 +19,7 @@ import {
 import { Wrench, Component, Save, X, Plus } from 'lucide-react';
 import { Equipamento } from '../types';
 import { CheckedState } from '@radix-ui/react-checkbox';
+import { ProprietarioSelector } from '@/features/plantas/components/ProprietarioSelector';
 
 // Tipos de equipamentos
 const TIPOS_EQUIPAMENTOS = [
@@ -48,13 +49,6 @@ const mockPlantas = [
   { id: 4, nome: 'Oficina João Silva' }
 ];
 
-const mockProprietarios = [
-  { id: 1, razaoSocial: 'Empresa ABC Ltda' },
-  { id: 2, razaoSocial: 'João Silva' },
-  { id: 3, razaoSocial: 'Maria Santos Consultoria ME' },
-  { id: 4, razaoSocial: 'Tech Solutions Ltda' }
-];
-
 interface EquipamentoModalCustomProps {
   isOpen: boolean;
   mode: 'create' | 'edit' | 'view';
@@ -79,7 +73,8 @@ export const EquipamentoModalCustom: React.FC<EquipamentoModalCustomProps> = ({
     if (entity && mode !== 'create') {
       setFormData({
         ...entity,
-        plantaId: entity.plantaId ? String(entity.plantaId) : '',
+        plantaId: entity.unidade?.plantaId ? String(entity.unidade.plantaId) : '',
+        unidadeId: entity.unidadeId ? String(entity.unidadeId) : '',
         proprietarioId: entity.proprietarioId ? String(entity.proprietarioId) : '',
         criticidade: entity.criticidade || '3'
       });
@@ -403,18 +398,11 @@ export const EquipamentoModalCustom: React.FC<EquipamentoModalCustomProps> = ({
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium">Proprietário</label>
-                  <Select value={formData.proprietarioId || ''} onValueChange={(value) => handleFieldChange('proprietarioId', value)} disabled={isReadOnly}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um proprietário" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {mockProprietarios.map(prop => (
-                        <SelectItem key={prop.id} value={String(prop.id)}>
-                          {prop.razaoSocial}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ProprietarioSelector
+                    value={formData.proprietarioId || null}
+                    onChange={(value) => handleFieldChange('proprietarioId', value)}
+                    disabled={isReadOnly}
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium">modelo:</label>

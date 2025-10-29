@@ -1,108 +1,103 @@
-import { useState, useEffect, useCallback } from 'react';
+// src/hooks/useRoles.ts
+
+import { useState, useEffect } from 'react';
 import { api } from '@/config/api';
 
-// Função para formatar nomes de roles (incluindo mapeamento de constraint DB)
-const formatRoleName = (name: string): string => {
-  const roleNames: Record<string, string> = {
-    'admin': 'Administrador',
-    'consultor': 'Consultor',
-    'gerente': 'Gerente',
-    'vendedor': 'Vendedor',
-    // Roles do sistema Spatie que podem existir mas serem mapeadas para roles válidas no DB
-    'proprietario': 'Proprietário',
-    'user': 'Vendedor',
-  };
-  return roleNames[name] || name.charAt(0).toUpperCase() + name.slice(1);
-};
-
-export interface RoleOption {
+export interface Role {
   value: string;
   label: string;
   description?: string;
-  isActive?: boolean;
-  permissions?: {
-    id: number;
-    name: string;
-    guard_name: string;
-  }[];
 }
 
 interface UseRolesReturn {
-  roles: RoleOption[];
+  roles: Role[];
   loading: boolean;
   error: string | null;
-  refetch: () => void;
 }
 
 export function useRoles(): UseRolesReturn {
-  const [roles, setRoles] = useState<RoleOption[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchRoles = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Chamar API real implementada no backend
-      const url = '/roles';
-      // console.log('🔍 DEBUG - Fazendo chamada para:', url);
-      
-      const response = await api.get(url); // Usando a instância configurada da API
-      
-      // console.log('🔍 DEBUG - Resposta completa da API /roles:', response.data);
-      
-      if (!response.data || !Array.isArray(response.data)) {
-        // console.error('❌ Estrutura inesperada da resposta:', response.data);
-        throw new Error('Resposta da API não contém um array de roles');
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        console.log('🔍 [useRoles] Iniciando busca de roles...');
+
+        // Try to fetch roles from the backend
+        const response = await api.get('/roles');
+
+        console.log('📨 [useRoles] Resposta raw da API:', {
+          status: response.status,
+          dataType: typeof response.data,
+          dataKeys: response.data ? Object.keys(response.data) : [],
+          hasSuccess: !!response.data.success,
+          hasData: !!response.data.data,
+          dataPreview: response.data
+        });
+
+        const data = response.data?.data || response.data || [];
+
+        console.log('🔍 [useRoles] Dados extraídos:', {
+          isArray: Array.isArray(data),
+          length: Array.isArray(data) ? data.length : 0,
+          firstItem: Array.isArray(data) ? data[0] : data
+        });
+
+        // Mapeamento de nomes técnicos para labels amigáveis
+        const labelMapping: Record<string, string> = {
+          'super_admin': 'Super Administrador',
+          'admin': 'Administrador',
+          'gerente': 'Gerente',
+          'vendedor': 'Vendedor',
+          'consultor': 'Consultor',
+          'proprietario': 'Proprietário',
+          'corretor': 'Corretor',
+          'cativo': 'Cativo',
+          'associado': 'Associado',
+        };
+
+        // Transform backend data to expected format
+        const formattedRoles = data.map((role: any) => ({
+          value: role.name || role.value || role.id,
+          label: role.label || role.display_name || labelMapping[role.name] || role.name || role.value,
+          description: role.description || `Role ${role.name}`,
+        }));
+
+        console.log('✅ [useRoles] Roles formatados:', formattedRoles);
+
+        setRoles(formattedRoles);
+      } catch (err: any) {
+        console.error('❌ [useRoles] Erro ao buscar roles:', err);
+        console.error('❌ [useRoles] Detalhes do erro:', {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status
+        });
+
+        // Fallback to default roles if API fails
+        const defaultRoles: Role[] = [
+          { value: 'admin', label: 'Administrador', description: 'Acesso total ao sistema' },
+          { value: 'gerente', label: 'Gerente', description: 'Gerenciamento de equipes e projetos' },
+          { value: 'vendedor', label: 'Vendedor', description: 'Acesso a vendas e clientes' },
+          { value: 'consultor', label: 'Consultor', description: 'Acesso de consulta' },
+        ];
+
+        setRoles(defaultRoles);
+        setError(err.response?.data?.message || 'Usando roles padrão');
+
+        console.warn('⚠️ [useRoles] Usando roles padrão como fallback');
+      } finally {
+        setLoading(false);
       }
-      
-      // console.log('🔍 DEBUG - Roles retornadas da API:', response.data.map((r: any) => r.name));
-      
-      // Usar todas as roles retornadas pela API
-      const rolesData = response.data.map((role: any) => ({
-        value: role.name,
-        label: formatRoleName(role.name),
-        description: `Role: ${role.name}`,
-        isActive: true, // Backend roles são sempre ativas
-        permissions: role.permissions || [], // ✅ Incluir permissões do backend
-      }));
-      
-      setRoles(rolesData);
-      
-    } catch (error) {
-      // console.error('Erro ao buscar roles:', error);
-      // console.log('🔍 DEBUG - Detalhes do erro:', error.message);
-      
-      setRoles([]);
-      setError('Erro ao carregar roles do servidor. Verifique a conexão.');
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    fetchRoles();
   }, []);
 
-  useEffect(() => {
-    fetchRoles();
-  }, [fetchRoles]);
-
-  return {
-    roles,
-    loading,
-    error,
-    refetch: fetchRoles,
-  };
-}
-
-// Hook simplificado para obter apenas os roles como array
-export function useRolesList() {
-  const { roles, loading, error } = useRoles();
-  
-  return {
-    rolesList: roles.map(role => ({
-      value: role.value,
-      label: role.label
-    })),
-    loading,
-    error,
-  };
+  return { roles, loading, error };
 }

@@ -85,7 +85,7 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
   // Função para selecionar anomalia
   const handleSelecionarAnomalia = (anomalia: any) => {
     setItemSelecionado(anomalia);
-    
+
     const dadosCompletos = {
       tipo: 'ANOMALIA',
       item: anomalia,
@@ -96,10 +96,11 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
         ativoOrigem: anomalia.ativo,
         equipamentoId: anomalia.equipamentoId,
         plantaId: anomalia.plantaId,
+        unidadeId: anomalia.unidadeId, // NOVO: Incluir unidadeId
         prioridadeOrigem: anomalia.prioridade
       }
     };
-    
+
     onChange(dadosCompletos);
   };
 

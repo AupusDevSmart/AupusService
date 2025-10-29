@@ -67,4 +67,5 @@ export type Permissao =
   | 'Proprietarios'
   | 'Equipamentos'
   | 'Plantas'
+  | 'Unidades'
   | 'Agenda'

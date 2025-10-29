@@ -1,25 +1,30 @@
 // src/features/tarefas/components/EquipamentoPlantaCell.tsx
 import { useEffect, useState } from 'react';
-import { Wrench, MapPin } from 'lucide-react';
+import { Wrench, MapPin, Factory } from 'lucide-react';
 import { PlantasService } from '@/services/plantas.services';
+import { getUnidadesByPlanta } from '@/services/unidades.services';
 import { equipamentosApi } from '@/services/equipamentos.services';
 
 interface EquipamentoPlantaCellProps {
   equipamentoId?: string;
   plantaId?: string;
+  unidadeId?: string; // NOVO: ID da unidade
 }
 
-export function EquipamentoPlantaCell({ equipamentoId, plantaId }: EquipamentoPlantaCellProps) {
+export function EquipamentoPlantaCell({ equipamentoId, plantaId, unidadeId }: EquipamentoPlantaCellProps) {
   const [equipamentoNome, setEquipamentoNome] = useState<string>('');
   const [plantaNome, setPlantaNome] = useState<string>('');
+  const [unidadeNome, setUnidadeNome] = useState<string>(''); // NOVO: Nome da unidade
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    console.log('🔍 EquipamentoPlantaCell - Props recebidas:', { 
-      equipamentoId, 
+    console.log('🔍 EquipamentoPlantaCell - Props recebidas:', {
+      equipamentoId,
       plantaId,
+      unidadeId,
       equipamentoIdType: typeof equipamentoId,
-      plantaIdType: typeof plantaId
+      plantaIdType: typeof plantaId,
+      unidadeIdType: typeof unidadeId
     });
 
     const loadNomes = async () => {
@@ -50,6 +55,30 @@ export function EquipamentoPlantaCell({ equipamentoId, plantaId }: EquipamentoPl
         } else {
           console.log('🏭 PlantaId inválido ou não fornecido:', plantaId);
           setPlantaNome('Sem planta');
+        }
+
+        // NOVO: Buscar nome da unidade
+        if (unidadeId && unidadeId.trim() !== '' && plantaId && plantaId.trim() !== '') {
+          console.log('🏢 Iniciando busca da unidade com ID:', unidadeId);
+          try {
+            const unidades = await getUnidadesByPlanta(plantaId);
+            const unidade = unidades?.find(u => u.id === unidadeId);
+            console.log('🏢 Resposta completa da unidade:', unidade);
+
+            if (unidade?.nome) {
+              setUnidadeNome(unidade.nome);
+              console.log('🏢 Nome da unidade definido:', unidade.nome);
+            } else {
+              console.warn('🏢 Nome da unidade não encontrado na resposta');
+              setUnidadeNome(`Unidade ${unidadeId}`);
+            }
+          } catch (error) {
+            console.error('🏢 Erro ao buscar unidade:', error);
+            setUnidadeNome(`Unidade ${unidadeId}`);
+          }
+        } else {
+          console.log('🏢 UnidadeId inválido ou não fornecido:', unidadeId);
+          setUnidadeNome('');
         }
 
         // Buscar nome do equipamento
@@ -87,7 +116,7 @@ export function EquipamentoPlantaCell({ equipamentoId, plantaId }: EquipamentoPl
     };
 
     loadNomes();
-  }, [equipamentoId, plantaId]);
+  }, [equipamentoId, plantaId, unidadeId]);
 
   if (loading) {
     return (
@@ -105,25 +134,40 @@ export function EquipamentoPlantaCell({ equipamentoId, plantaId }: EquipamentoPl
   }
 
   // Fallbacks mais informativos
-  const equipamentoDisplay = equipamentoNome || 
+  const equipamentoDisplay = equipamentoNome ||
                             (equipamentoId ? `Eq. ${equipamentoId}` : 'Sem equipamento');
-  const plantaDisplay = plantaNome || 
+  const plantaDisplay = plantaNome ||
                        (plantaId ? `Planta ${plantaId}` : 'Sem planta');
+  const unidadeDisplay = unidadeNome ||
+                        (unidadeId ? `Unidade ${unidadeId}` : '');
 
   return (
     <div className="space-y-1">
+      {/* Equipamento */}
       <div className="flex items-center gap-2">
         <Wrench className="h-3 w-3 text-muted-foreground" />
         <span className="text-sm truncate max-w-32" title={equipamentoDisplay}>
           {equipamentoDisplay}
         </span>
       </div>
+
+      {/* Hierarquia: Planta → Unidade */}
       <div className="flex items-center gap-2">
-        <MapPin className="h-3 w-3 text-muted-foreground" />
+        <Factory className="h-3 w-3 text-muted-foreground" />
         <span className="text-xs text-muted-foreground truncate max-w-32" title={plantaDisplay}>
           {plantaDisplay}
         </span>
       </div>
+
+      {/* Unidade (se disponível) */}
+      {unidadeDisplay && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <MapPin className="h-3 w-3" />
+          <span className="truncate max-w-32" title={unidadeDisplay}>
+            → {unidadeDisplay}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

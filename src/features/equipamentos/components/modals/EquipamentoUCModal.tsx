@@ -23,7 +23,12 @@ import { Wrench, Save, X, AlertCircle, Loader2, Eye, Edit2, Plus, Trash2 } from 
 import { Equipamento } from '../../types';
 import { useSelectionData } from '../../hooks/useSelectionData';
 import { useEquipamentos } from '../../hooks/useEquipamentos';
-import { tiposEquipamentos, getTipoEquipamento, type CampoTecnico } from '../../config/tipos-equipamentos';
+import { useLocationCascade } from '../../hooks/useLocationCascade';
+import { tiposEquipamentosApi, type TipoEquipamentoModal } from '@/services/tipos-equipamentos.services';
+import { getUnidadeById } from '@/services/unidades.services';
+import { PlantasService } from '@/services/plantas.services';
+import type { Unidade } from '@/features/unidades/types';
+import type { PlantaResponse, ProprietarioBasico } from '@/services/plantas.services';
 
 interface EquipamentoUCModalProps {
   isOpen: boolean;
@@ -40,62 +45,114 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   onClose,
   onSubmit
 }) => {
-  const {
-    proprietarios,
-    plantas,
-    tiposEquipamentos: tiposFromApi,
-    loadingProprietarios,
-    loadingPlantas,
-    loadingTipos,
-    fetchProprietarios,
-    fetchPlantas,
-    error: hookError,
-    clearError
-  } = useSelectionData();
-
   const { getEquipamento } = useEquipamentos();
 
   const [formData, setFormData] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [proprietarioSelecionado, setProprietarioSelecionado] = useState<string>('');
   const [dadosTecnicos, setDadosTecnicos] = useState<any[]>([]);
   const [dadosTecnicosPersonalizados, setDadosTecnicosPersonalizados] = useState<any[]>([]);
 
-  const isReadonly = mode === 'view';
+  // Estados para hierarquia completa em modo view/edit
+  const [unidadeDetalhes, setUnidadeDetalhes] = useState<Unidade | null>(null);
+  const [plantaDetalhes, setPlantaDetalhes] = useState<PlantaResponse | null>(null);
+  const [proprietarioDetalhes, setProprietarioDetalhes] = useState<ProprietarioBasico | null>(null);
+
+  // Estados para tipos de equipamentos da API
+  const [tiposEquipamentos, setTiposEquipamentos] = useState<TipoEquipamentoModal[]>([]);
+  const [loadingTipos, setLoadingTipos] = useState(false);
+
+  // Hook de seleção cascateada para modo create
+  const locationCascade = useLocationCascade();
+
+  const isReadonly = mode === 'view';  // ✅ CORRIGIDO: apenas 'view' é readonly, 'edit' permite edição
   const isCreating = mode === 'create';
+
+  // ============================================================================
+  // CARREGAR TIPOS DE EQUIPAMENTOS DA API
+  // ============================================================================
+  useEffect(() => {
+    const loadTiposEquipamentos = async () => {
+      setLoadingTipos(true);
+      try {
+        const tipos = await tiposEquipamentosApi.getAll();
+        console.log('🔍 [MODAL] Tipos brutos da API (primeiros 2):', tipos.slice(0, 2));
+        console.log('🔍 [MODAL] propriedadesSchema (camelCase) do primeiro tipo:', tipos[0]?.propriedadesSchema);
+        console.log('🔍 [MODAL] propriedades_schema (snake_case) do primeiro tipo:', tipos[0]?.propriedades_schema);
+        console.log('🔍 [MODAL] campos do primeiro tipo:', tipos[0]?.propriedadesSchema?.campos || tipos[0]?.propriedades_schema?.campos);
+
+        const tiposFormatados = tipos.map(tipo => {
+          // ✅ CORRIGIDO: backend retorna "propriedadesSchema" (camelCase), não "propriedades_schema"
+          const campos = tipo.propriedadesSchema?.campos || tipo.propriedades_schema?.campos || [];
+          console.log(`🔍 [MODAL] Tipo ${tipo.codigo} tem ${campos.length} campos:`, campos);
+
+          return {
+            value: tipo.codigo,
+            label: tipo.nome,
+            categoria: tipo.categoria,
+            camposTecnicos: campos.map(campo => ({
+              campo: campo.campo || campo.nome, // ✅ CORRIGIDO: aceita ambos campo.campo e campo.nome
+              tipo: campo.tipo === 'boolean' ? ('select' as const) : campo.tipo,
+              unidade: campo.unidade,
+              opcoes: campo.opcoes || (campo.tipo === 'boolean' ? ['Sim', 'Não'] : undefined),
+              obrigatorio: campo.obrigatorio,
+            })),
+          };
+        });
+        setTiposEquipamentos(tiposFormatados);
+        console.log('✅ [MODAL] Tipos de equipamentos carregados da API:', tiposFormatados.length);
+        console.log('🔍 [MODAL] Exemplo de tipo formatado:', tiposFormatados[0]);
+      } catch (err) {
+        console.error('❌ [MODAL] Erro ao carregar tipos de equipamentos:', err);
+        setError('Erro ao carregar tipos de equipamentos');
+      } finally {
+        setLoadingTipos(false);
+      }
+    };
+
+    if (isOpen) {
+      loadTiposEquipamentos();
+    }
+  }, [isOpen]);
+
+  // Helper para buscar tipo de equipamento
+  const getTipoEquipamento = (codigo: string): TipoEquipamentoModal | undefined => {
+    return tiposEquipamentos.find(t => t.value === codigo);
+  };
 
   // ============================================================================
   // INICIALIZAÇÃO
   // ============================================================================
   useEffect(() => {
-    if (isOpen) {
-      clearError();
+    if (isOpen && !loadingTipos && tiposEquipamentos.length > 0) {
       setError(null);
-      
-      // Carregar proprietários se necessário
-      if (proprietarios.length === 0 && !loadingProprietarios) {
-        fetchProprietarios();
-      }
-      
+
       if (entity && (mode === 'edit' || mode === 'view')) {
         initializeWithEntity(entity);
       } else if (mode === 'create') {
         initializeForCreate();
       }
     }
-  }, [isOpen, entity, mode]);
+  }, [isOpen, entity, mode, loadingTipos, tiposEquipamentos]);
 
   const initializeWithEntity = async (equipamento: Equipamento) => {
     setLoading(true);
-    
+
     try {
+      console.log('🎯 [MODAL] Entity recebida (equipamento param):', equipamento);
+      console.log('🎯 [MODAL] equipamento.id:', equipamento.id);
+      console.log('🎯 [MODAL] getEquipamento existe?', !!getEquipamento);
+
       // Para modo visualização/edição, buscar dados completos se possível
       let dadosCompletos = equipamento;
       if (getEquipamento && equipamento.id) {
+        console.log('🔄 [MODAL] Buscando dados completos do equipamento via getEquipamento...');
         dadosCompletos = await getEquipamento(equipamento.id);
+        console.log('✅ [MODAL] Dados completos retornados:', dadosCompletos);
+      } else {
+        console.log('⚠️ [MODAL] NÃO vai buscar dados completos - getEquipamento:', !!getEquipamento, 'equipamento.id:', equipamento.id);
       }
-      
+
       console.log('📋 [MODAL] Dados completos do equipamento:', dadosCompletos);
       console.log('🔧 [MODAL] Mapeamento - tipo:', dadosCompletos.tipo, 'tipoEquipamento:', dadosCompletos.tipoEquipamento);
       console.log('⚡ [MODAL] Mapeamento - mcpse:', dadosCompletos.mcpse, 'mcpseAtivo será:', dadosCompletos.mcpse || dadosCompletos.mcpseAtivo || false);
@@ -106,8 +163,9 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         modelo: dadosCompletos.modelo || '',
         numeroSerie: dadosCompletos.numeroSerie || '',
         criticidade: dadosCompletos.criticidade || '3',
-        tipoEquipamento: dadosCompletos.tipo_equipamento || dadosCompletos.tipoEquipamento || dadosCompletos.tipo || '',
-        plantaId: dadosCompletos.plantaId || '',
+        tipoEquipamento: dadosCompletos.tipoEquipamento || dadosCompletos.tipo || '',
+        plantaId: dadosCompletos.unidade?.plantaId || '',
+        unidadeId: dadosCompletos.unidadeId || dadosCompletos.unidade?.id || '',  // ✅ CORRIGIDO: pegar unidade.id se unidadeId não existir
         proprietarioId: dadosCompletos.proprietarioId || '',
         localizacao: dadosCompletos.localizacao || '',
         valorContabil: dadosCompletos.valorContabil || '',
@@ -115,9 +173,9 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         emOperacao: dadosCompletos.emOperacao || '',
         // Campos MCPSE
         mcpse: dadosCompletos.mcpse || false,
-        mcpseAtivo: dadosCompletos.mcpse || dadosCompletos.mcpseAtivo || 
+        mcpseAtivo: dadosCompletos.mcpse || dadosCompletos.mcpseAtivo ||
           // Se tem dados MCPSE preenchidos, considerar ativo
-          !!(dadosCompletos.tuc || dadosCompletos.a1 || dadosCompletos.a2 || 
+          !!(dadosCompletos.tuc || dadosCompletos.a1 || dadosCompletos.a2 ||
              dadosCompletos.a3 || dadosCompletos.a4 || dadosCompletos.a5 || dadosCompletos.a6),
         tuc: dadosCompletos.tuc || '',
         a1: dadosCompletos.a1 || '',
@@ -127,16 +185,23 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         a5: dadosCompletos.a5 || '',
         a6: dadosCompletos.a6 || ''
       });
-      
+
       // Separar dados técnicos em pré-definidos e personalizados
+      console.log('🔧 [MODAL] dadosCompletos.dadosTecnicos:', dadosCompletos.dadosTecnicos);
+      console.log('🔧 [MODAL] Tipo do equipamento:', dadosCompletos.tipoEquipamento || dadosCompletos.tipo);
+
       if (dadosCompletos.dadosTecnicos && dadosCompletos.dadosTecnicos.length > 0) {
-        const tipoEqp = getTipoEquipamento(dadosCompletos.tipo_equipamento || dadosCompletos.tipoEquipamento);
+        const tipoEqp = getTipoEquipamento(dadosCompletos.tipoEquipamento || dadosCompletos.tipo || '');
+        console.log('🔧 [MODAL] Tipo encontrado para dados técnicos:', tipoEqp);
+        console.log('🔧 [MODAL] Campos técnicos do tipo:', tipoEqp?.camposTecnicos);
+
         if (tipoEqp) {
           const camposPredefinidos = tipoEqp.camposTecnicos.map(campo => campo.campo);
-          
+
           // Inicializar campos predefinidos com valores do banco ou vazios
           const predefinidosComValores = tipoEqp.camposTecnicos.map(campo => {
             const dadoExistente = dadosCompletos.dadosTecnicos.find(d => d.campo === campo.campo);
+            console.log(`🔧 [MODAL] Campo ${campo.campo}: valor no banco =`, dadoExistente?.valor);
             return {
               campo: campo.campo,
               valor: dadoExistente?.valor || '',
@@ -145,22 +210,56 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
               obrigatorio: campo.obrigatorio || false
             };
           });
-          
+
           // Campos personalizados são apenas os que NÃO são predefinidos
-          const personalizados = dadosCompletos.dadosTecnicos.filter(dado => 
+          const personalizados = dadosCompletos.dadosTecnicos.filter(dado =>
             !camposPredefinidos.includes(dado.campo)
           );
-          
+
+          console.log('✅ [MODAL] Dados técnicos predefinidos carregados:', predefinidosComValores);
+          console.log('✅ [MODAL] Dados técnicos personalizados:', personalizados);
+
           setDadosTecnicos(predefinidosComValores);
           setDadosTecnicosPersonalizados(personalizados);
         } else {
+          console.log('⚠️ [MODAL] Tipo não encontrado, todos dados serão personalizados');
           setDadosTecnicosPersonalizados(dadosCompletos.dadosTecnicos);
         }
+      } else {
+        console.log('⚠️ [MODAL] Nenhum dado técnico no banco');
       }
-      
-      if (dadosCompletos.proprietarioId) {
-        setProprietarioSelecionado(dadosCompletos.proprietarioId);
-        await fetchPlantas(dadosCompletos.proprietarioId);
+
+      // Buscar hierarquia completa recursivamente (Unidade → Planta → Proprietário)
+      if (mode === 'view' || mode === 'edit') {
+        console.log('🔍 [MODAL] Carregando hierarquia completa...');
+
+        // 1. Buscar detalhes da Unidade
+        if (dadosCompletos.unidadeId) {
+          try {
+            const unidade = await getUnidadeById(dadosCompletos.unidadeId);
+            setUnidadeDetalhes(unidade);
+            console.log('✅ [MODAL] Unidade carregada:', unidade.nome);
+
+            // 2. Buscar detalhes da Planta (via unidade.plantaId)
+            if (unidade.plantaId) {
+              try {
+                const planta = await PlantasService.getPlanta(unidade.plantaId);
+                setPlantaDetalhes(planta);
+                console.log('✅ [MODAL] Planta carregada:', planta.nome);
+
+                // 3. Buscar detalhes do Proprietário (via planta.proprietario)
+                if (planta.proprietario) {
+                  setProprietarioDetalhes(planta.proprietario);
+                  console.log('✅ [MODAL] Proprietário carregado:', planta.proprietario.nome);
+                }
+              } catch (err) {
+                console.warn('⚠️ [MODAL] Erro ao carregar planta:', err);
+              }
+            }
+          } catch (err) {
+            console.warn('⚠️ [MODAL] Erro ao carregar unidade:', err);
+          }
+        }
       }
     } catch (error) {
       setError('Erro ao carregar dados do equipamento');
@@ -177,6 +276,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       numeroSerie: '',
       criticidade: '3',
       tipoEquipamento: '',
+      unidadeId: '',
       plantaId: '',
       proprietarioId: '',
       localizacao: '',
@@ -193,9 +293,16 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       a5: '',
       a6: ''
     });
-    setProprietarioSelecionado('');
     setDadosTecnicos([]);
     setDadosTecnicosPersonalizados([]);
+
+    // Limpar hierarquia
+    setUnidadeDetalhes(null);
+    setPlantaDetalhes(null);
+    setProprietarioDetalhes(null);
+
+    // Reset do cascade
+    locationCascade.reset();
   };
 
   // ============================================================================
@@ -208,22 +315,17 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     }));
   };
 
-  const handleProprietarioChange = async (value: string) => {
-    setProprietarioSelecionado(value);
-    handleInputChange('proprietarioId', value);
-    handleInputChange('plantaId', ''); // Reset planta
-    
-    if (value) {
-      await fetchPlantas(value);
-    }
-  };
 
   const handleTipoEquipamentoChange = (value: string) => {
+    console.log('🔄 [MODAL] Tipo selecionado:', value);
     handleInputChange('tipoEquipamento', value);
-    
+
     // Quando muda o tipo, carregar campos técnicos pré-definidos
     const tipoEqp = getTipoEquipamento(value);
-    if (tipoEqp && tipoEqp.camposTecnicos.length > 0) {
+    console.log('🔍 [MODAL] Tipo encontrado:', tipoEqp);
+    console.log('🔍 [MODAL] Campos técnicos do tipo:', tipoEqp?.camposTecnicos);
+
+    if (tipoEqp && tipoEqp.camposTecnicos && tipoEqp.camposTecnicos.length > 0) {
       const dadosIniciais = tipoEqp.camposTecnicos.map(campo => ({
         campo: campo.campo,
         valor: '',
@@ -231,14 +333,16 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         unidade: campo.unidade || '',
         obrigatorio: campo.obrigatorio || false
       }));
+      console.log('✅ [MODAL] Dados técnicos inicializados:', dadosIniciais);
       setDadosTecnicos(dadosIniciais);
-      
+
       // Remover campos predefinidos dos personalizados para evitar duplicação
       const camposPredefinidos = tipoEqp.camposTecnicos.map(c => c.campo);
-      setDadosTecnicosPersonalizados(prev => 
+      setDadosTecnicosPersonalizados(prev =>
         prev.filter(p => !camposPredefinidos.includes(p.campo))
       );
     } else {
+      console.log('⚠️ [MODAL] Nenhum campo técnico encontrado para este tipo');
       setDadosTecnicos([]);
     }
   };
@@ -281,15 +385,23 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         setError('Nome é obrigatório');
         return;
       }
-      
-      if (!formData.proprietarioId) {
-        setError('Proprietário é obrigatório');
-        return;
-      }
-      
-      if (!formData.plantaId) {
-        setError('Planta é obrigatória');
-        return;
+
+      // No modo create, validar seleção cascateada
+      if (isCreating) {
+        if (!locationCascade.selectedProprietarioId) {
+          setError('Proprietário é obrigatório');
+          return;
+        }
+
+        if (!locationCascade.selectedPlantaId) {
+          setError('Planta é obrigatória');
+          return;
+        }
+
+        if (!locationCascade.selectedUnidadeId) {
+          setError('Unidade é obrigatória');
+          return;
+        }
       }
 
       // Combinar dados técnicos sem duplicação
@@ -316,17 +428,30 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         ? new Date(formData.dataImobilizacao + 'T00:00:00.000Z').toISOString()
         : null;
 
+      // Debug: verificar estado do locationCascade
+      console.log('🔍 [MODAL] Debug locationCascade:', {
+        isCreating,
+        selectedProprietarioId: locationCascade.selectedProprietarioId,
+        selectedPlantaId: locationCascade.selectedPlantaId,
+        selectedUnidadeId: locationCascade.selectedUnidadeId,
+        formDataUnidadeId: formData.unidadeId
+      });
+
+      // Buscar o ID do tipo de equipamento pelo código
+      const tipoEqpSelecionado = formData.tipoEquipamento ?
+        await tiposEquipamentosApi.findByCode(formData.tipoEquipamento) : null;
+
       const submitData = {
         // Dados básicos
         nome: formData.nome,
         classificacao: 'UC',
-        planta_id: formData.plantaId,
-        proprietario_id: formData.proprietarioId,
+        unidade_id: isCreating ? locationCascade.selectedUnidadeId : formData.unidadeId,
         fabricante: formData.fabricante,
         modelo: formData.modelo,
         numero_serie: formData.numeroSerie,
         criticidade: formData.criticidade,
-        tipo_equipamento: formData.tipoEquipamento,
+        tipo_equipamento: formData.tipoEquipamento,  // Código (compatibilidade)
+        tipo_equipamento_id: tipoEqpSelecionado?.id,  // ID do tipo (correto)
         em_operacao: formData.emOperacao,
         data_imobilizacao: dataImobilizacaoFormatted,
         valor_contabil: formData.valorContabil ? parseFloat(formData.valorContabil) : undefined,
@@ -507,70 +632,172 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       <h3 className="text-sm font-semibold text-gray-700 border-b pb-1">
         Localização
       </h3>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Proprietário */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Proprietário <span className="text-red-500">*</span>
-          </label>
-          <Select
-            value={proprietarioSelecionado}
-            onValueChange={handleProprietarioChange}
-            disabled={isReadonly || loadingProprietarios}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={loadingProprietarios ? 'Carregando...' : 'Selecione o proprietário'} />
-            </SelectTrigger>
-            <SelectContent>
-              {proprietarios.map((prop) => (
-                <SelectItem key={prop.id} value={prop.id}>
-                  {prop.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
 
-        {/* Planta */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Planta <span className="text-red-500">*</span>
-          </label>
-          <Select
-            value={formData.plantaId || ''}
-            onValueChange={(value) => handleInputChange('plantaId', value)}
-            disabled={isReadonly || loadingPlantas || !proprietarioSelecionado}
-          >
-            <SelectTrigger>
-              <SelectValue 
-                placeholder={
-                  loadingPlantas ? 'Carregando plantas...' :
-                  !proprietarioSelecionado ? 'Primeiro selecione um proprietário' :
-                  'Selecione a planta'
-                } 
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {plantas.map((planta) => (
-                <SelectItem key={planta.id} value={planta.id}>
-                  {planta.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Hierarquia Completa - Apenas em View/Edit */}
+      {(mode === 'view' || mode === 'edit') && (proprietarioDetalhes || plantaDetalhes || unidadeDetalhes) && (
+        <div className="space-y-3 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <Badge variant="secondary" className="text-xs">
+              Hierarquia Completa
+            </Badge>
+          </div>
 
-        {/* Localização específica */}
-        <div className="space-y-2 md:col-span-2">
-          <label className="text-sm font-medium">Localização Específica</label>
-          <Input
-            value={formData.localizacao || ''}
-            onChange={(e) => handleInputChange('localizacao', e.target.value)}
-            placeholder="Ex: Sala de controle, Painel A, etc."
-            disabled={isReadonly}
-          />
+          {/* Proprietário */}
+          {proprietarioDetalhes && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                Proprietário
+              </label>
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {proprietarioDetalhes.nome}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {proprietarioDetalhes.tipo === 'pessoa_fisica' ? 'Pessoa Física' : 'Pessoa Jurídica'} • {proprietarioDetalhes.cpf_cnpj}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Planta */}
+          {plantaDetalhes && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                Planta
+              </label>
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {plantaDetalhes.nome}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {plantaDetalhes.localizacao}
+                    {plantaDetalhes.endereco && ` • ${plantaDetalhes.endereco.cidade}/${plantaDetalhes.endereco.uf}`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Unidade */}
+          {unidadeDetalhes && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                Unidade
+              </label>
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {unidadeDetalhes.nome}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {unidadeDetalhes.tipo} • Potência: {unidadeDetalhes.potencia} kW
+                    {unidadeDetalhes.cidade && ` • ${unidadeDetalhes.cidade}/${unidadeDetalhes.estado}`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* Seletores originais - Modo Create */}
+      {mode === 'create' && (
+        <div className="space-y-4">
+          {/* Proprietário */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Proprietário <span className="text-red-500">*</span>
+            </label>
+            <Select
+              value={locationCascade.selectedProprietarioId}
+              onValueChange={locationCascade.handleProprietarioChange}
+              disabled={locationCascade.loadingProprietarios}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={locationCascade.loadingProprietarios ? 'Carregando...' : 'Selecione o proprietário'} />
+              </SelectTrigger>
+              <SelectContent>
+                {locationCascade.proprietarios.map((prop) => (
+                  <SelectItem key={prop.id} value={prop.id}>
+                    {prop.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Planta */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Planta <span className="text-red-500">*</span>
+            </label>
+            <Select
+              value={locationCascade.selectedPlantaId}
+              onValueChange={locationCascade.handlePlantaChange}
+              disabled={locationCascade.loadingPlantas || !locationCascade.selectedProprietarioId}
+            >
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={
+                    locationCascade.loadingPlantas ? 'Carregando plantas...' :
+                    !locationCascade.selectedProprietarioId ? 'Primeiro selecione um proprietário' :
+                    'Selecione a planta'
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {locationCascade.plantas.map((planta) => (
+                  <SelectItem key={planta.id} value={planta.id}>
+                    {planta.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Unidade */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Unidade <span className="text-red-500">*</span>
+            </label>
+            <Select
+              value={locationCascade.selectedUnidadeId}
+              onValueChange={locationCascade.handleUnidadeChange}
+              disabled={locationCascade.loadingUnidades || !locationCascade.selectedPlantaId}
+            >
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={
+                    locationCascade.loadingUnidades ? 'Carregando unidades...' :
+                    !locationCascade.selectedPlantaId ? 'Primeiro selecione uma planta' :
+                    'Selecione a unidade'
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {locationCascade.unidades.map((unidade) => (
+                  <SelectItem key={unidade.id} value={unidade.id}>
+                    {unidade.nome} - {unidade.tipo}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
+      {/* Localização específica - Sempre visível */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Localização Específica</label>
+        <Input
+          value={formData.localizacao || ''}
+          onChange={(e) => handleInputChange('localizacao', e.target.value)}
+          placeholder="Ex: Sala de controle, Painel A, etc."
+          disabled={isReadonly}
+        />
       </div>
     </div>
   );
@@ -1001,11 +1228,11 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
           </Alert>
         )}
 
-        {hookError && (
+        {locationCascade.error && (
           <Alert className="border-orange-200 bg-orange-50">
             <AlertCircle className="h-4 w-4 text-orange-600" />
             <AlertDescription className="text-orange-800">
-              {hookError}
+              {locationCascade.error}
             </AlertDescription>
           </Alert>
         )}

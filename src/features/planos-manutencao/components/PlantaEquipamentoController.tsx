@@ -2,11 +2,13 @@
 import React from 'react';
 import { FormFieldProps } from '@/types/base';
 import { PlantasService, PlantaResponse } from '@/services/plantas.services';
+import { getUnidadesByPlanta } from '@/services/unidades.services';
 import { EquipamentosApiService, EquipamentoApiResponse } from '@/services/equipamentos.services';
 import { Loader2 } from 'lucide-react';
 
 interface PlantaEquipamentoValue {
   planta_id?: string;
+  unidade_id?: string; // NOVO: Unidade do equipamento
   equipamento_id?: string;
 }
 
@@ -17,17 +19,20 @@ interface PlantaEquipamentoControllerProps extends Partial<FormFieldProps> {
   mode?: 'create' | 'edit' | 'view';
 }
 
-export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerProps> = ({ 
-  value, 
-  onChange, 
-  disabled = false, 
+export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerProps> = ({
+  value,
+  onChange,
+  disabled = false,
   mode = 'create'
 }) => {
   const [plantas, setPlantas] = React.useState<PlantaResponse[]>([]);
+  const [unidades, setUnidades] = React.useState<any[]>([]); // NOVO: Estado para unidades
   const [equipamentos, setEquipamentos] = React.useState<EquipamentoApiResponse[]>([]);
   const [loadingPlantas, setLoadingPlantas] = React.useState(false);
+  const [loadingUnidades, setLoadingUnidades] = React.useState(false); // NOVO: Loading state
   const [loadingEquipamentos, setLoadingEquipamentos] = React.useState(false);
   const [plantaId, setPlantaId] = React.useState(value?.planta_id || '');
+  const [unidadeId, setUnidadeId] = React.useState(value?.unidade_id || ''); // NOVO: Estado para unidade
   const [equipamentoId, setEquipamentoId] = React.useState(value?.equipamento_id || '');
 
   const equipamentosService = React.useMemo(() => new EquipamentosApiService(), []);
@@ -71,30 +76,59 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
     loadPlantas();
   }, [isCreateMode, isEditMode, isViewMode, plantaId]);
 
+  // NOVO: Carregar unidades quando planta muda
+  React.useEffect(() => {
+    const loadUnidades = async () => {
+      if (!plantaId) {
+        setUnidades([]);
+        return;
+      }
+
+      setLoadingUnidades(true);
+      try {
+        console.log('Carregando unidades da planta:', plantaId);
+        const response = await getUnidadesByPlanta(plantaId);
+        setUnidades(response || []);
+        console.log('Unidades carregadas:', response?.length || 0);
+      } catch (error) {
+        console.error('Erro ao carregar unidades:', error);
+        setUnidades([]);
+      } finally {
+        setLoadingUnidades(false);
+      }
+    };
+
+    loadUnidades();
+  }, [plantaId]);
+
   // Sincronizar com valor externo
   React.useEffect(() => {
     if (value?.planta_id !== plantaId) {
       setPlantaId(value?.planta_id || '');
     }
+    if (value?.unidade_id !== unidadeId) {
+      setUnidadeId(value?.unidade_id || '');
+    }
     if (value?.equipamento_id !== equipamentoId) {
       setEquipamentoId(value?.equipamento_id || '');
     }
-  }, [value, plantaId, equipamentoId]);
+  }, [value, plantaId, unidadeId, equipamentoId]);
 
-  // Carregar equipamentos quando planta muda ou no modo edit
+  // Carregar equipamentos quando unidade muda ou no modo edit
   React.useEffect(() => {
     const loadEquipamentos = async () => {
-      if (!plantaId) {
+      if (!unidadeId) {
         setEquipamentos([]);
         return;
       }
 
       setLoadingEquipamentos(true);
       try {
-        console.log('Carregando equipamentos da planta:', plantaId);
-        const response = await equipamentosService.findAll({ 
-          planta_id: plantaId,
-          limit: 100 
+        console.log('Carregando equipamentos da unidade:', unidadeId);
+        // TODO: Atualizar para unidade_id quando backend for migrado para nova estrutura
+        const response = await equipamentosService.findAll({
+          planta_id: unidadeId, // Temporariamente usando planta_id até backend suportar unidades
+          limit: 100
         });
         
         console.log('Equipamentos carregados:', response.data.length);
@@ -149,52 +183,89 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
     };
 
     loadEquipamentos();
-  }, [plantaId, equipamentosService, isCreateMode, value?.equipamento_id, (value as any)?.equipamento_nome]);
+  }, [unidadeId, equipamentosService, isCreateMode, value?.equipamento_id, (value as any)?.equipamento_nome]);
 
   const handlePlantaChange = (newPlantaId: string) => {
     console.log('Planta selecionada:', newPlantaId);
-    
+
     setPlantaId(newPlantaId);
-    setEquipamentoId('');
-    
+    setUnidadeId(''); // Resetar unidade quando planta muda
+    setEquipamentoId(''); // Resetar equipamento quando planta muda
+
     const newValue: PlantaEquipamentoValue = {
       planta_id: newPlantaId || undefined,
+      unidade_id: undefined,
       equipamento_id: undefined
     };
-    
+
+    onChange(newValue);
+  };
+
+  const handleUnidadeChange = (newUnidadeId: string) => {
+    console.log('Unidade selecionada:', newUnidadeId);
+
+    setUnidadeId(newUnidadeId);
+    setEquipamentoId(''); // Resetar equipamento quando unidade muda
+
+    const newValue: PlantaEquipamentoValue = {
+      planta_id: plantaId || undefined,
+      unidade_id: newUnidadeId || undefined,
+      equipamento_id: undefined
+    };
+
     onChange(newValue);
   };
 
   const handleEquipamentoChange = (newEquipamentoId: string) => {
     console.log('Equipamento selecionado:', newEquipamentoId);
-    
+
     setEquipamentoId(newEquipamentoId);
-    
+
     const newValue: PlantaEquipamentoValue = {
       planta_id: plantaId || undefined,
+      unidade_id: unidadeId || undefined,
       equipamento_id: newEquipamentoId || undefined
     };
-    
+
     onChange(newValue);
   };
 
   // Função para obter nome da planta
   const getPlantaNome = (): string => {
     if (!plantaId) return '';
-    
+
     // Primeiro: tenta usar dados aninhados da API
     if ((value as any)?.planta_nome) {
       return (value as any).planta_nome;
     }
-    
+
     // Segundo: busca na lista carregada
     const planta = plantas.find(p => p.id === plantaId);
     if (planta?.nome) {
       return planta.nome;
     }
-    
+
     // Fallback: mostra o ID
     return `Planta ID: ${plantaId}`;
+  };
+
+  // Função para obter nome da unidade
+  const getUnidadeNome = (): string => {
+    if (!unidadeId) return '';
+
+    // Primeiro: tenta usar dados aninhados da API
+    if ((value as any)?.unidade_nome) {
+      return (value as any).unidade_nome;
+    }
+
+    // Segundo: busca na lista carregada
+    const unidade = unidades.find(u => u.id === unidadeId);
+    if (unidade?.nome) {
+      return unidade.nome;
+    }
+
+    // Fallback: mostra o ID
+    return `Unidade ID: ${unidadeId}`;
   };
 
   // Função para obter nome do equipamento
@@ -268,11 +339,58 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
         )}
       </div>
 
+      {/* NOVO: Seletor de Unidade */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">
+          Unidade <span className="text-red-500">*</span>
+        </label>
+
+        {isViewMode || isEditMode ? (
+          <input
+            type="text"
+            value={getUnidadeNome() || 'Unidade não especificada'}
+            disabled
+            className="w-full p-2 border rounded-md bg-muted text-foreground opacity-60 cursor-not-allowed"
+          />
+        ) : (
+          <>
+            {loadingUnidades && plantaId && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Carregando unidades...</span>
+              </div>
+            )}
+
+            <select
+              value={unidadeId}
+              onChange={(e) => handleUnidadeChange(e.target.value)}
+              disabled={disabled || !plantaId || loadingUnidades}
+              className="w-full p-2 border rounded-md bg-background text-foreground"
+              required
+            >
+              <option value="">
+                {!plantaId
+                  ? "Primeiro selecione uma planta"
+                  : loadingUnidades
+                    ? "Carregando unidades..."
+                    : "Selecione a unidade..."
+                }
+              </option>
+              {unidades.map((unidade) => (
+                <option key={unidade.id} value={unidade.id}>
+                  {unidade.nome}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+      </div>
+
       <div className="space-y-2">
         <label className="text-sm font-medium">
           Equipamento <span className="text-red-500">*</span>
         </label>
-        
+
         {isViewMode || isEditMode ? (
           <input
             type="text"
@@ -282,24 +400,24 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
           />
         ) : (
           <>
-            {loadingEquipamentos && plantaId && (
+            {loadingEquipamentos && unidadeId && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span>Carregando equipamentos...</span>
               </div>
             )}
-            
+
             <select
               value={equipamentoId}
               onChange={(e) => handleEquipamentoChange(e.target.value)}
-              disabled={disabled || !plantaId || loadingEquipamentos}
+              disabled={disabled || !unidadeId || loadingEquipamentos}
               className="w-full p-2 border rounded-md bg-background text-foreground"
               required
             >
               <option value="">
-                {!plantaId 
-                  ? "Primeiro selecione uma planta" 
-                  : loadingEquipamentos 
+                {!unidadeId
+                  ? "Primeiro selecione uma unidade"
+                  : loadingEquipamentos
                     ? "Carregando equipamentos..."
                     : "Selecione o equipamento..."
                 }
@@ -316,8 +434,8 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
 
       {process.env.NODE_ENV === 'development' && (
         <div className="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded">
-          <div>Debug: Planta={plantaId}, Equipamento={equipamentoId}</div>
-          <div>Plantas: {plantas.length}, Equipamentos: {equipamentos.length}</div>
+          <div>Debug: Planta={plantaId}, Unidade={unidadeId}, Equipamento={equipamentoId}</div>
+          <div>Plantas: {plantas.length}, Unidades: {unidades.length}, Equipamentos: {equipamentos.length}</div>
         </div>
       )}
     </div>

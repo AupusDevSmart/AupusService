@@ -53,111 +53,52 @@ export interface CampoTecnico {
 export class SelectionDataService {
   
   // ============================================================================
-  // PROPRIETÁRIOS - APENAS AQUELES COM PLANTAS
+  // PROPRIETÁRIOS - TODOS OS USUÁRIOS COM ROLES VÁLIDAS
   // ============================================================================
   async getProprietarios(): Promise<ProprietarioSelection[]> {
     try {
-      // console.log('🔍 [SELECTION] Buscando proprietários com plantas...');
-      
-      // Carregar plantas com paginação se necessário
-      let todasPlantas: any[] = [];
-      let page = 1;
-      let hasMore = true;
-      
-      while (hasMore) {
-        const plantasPage = await PlantasService.getAllPlantas({ 
-          limit: 100,
-          page: page
-        });
-        
-        if (!plantasPage.data || plantasPage.data.length === 0) {
-          hasMore = false;
-        } else {
-          todasPlantas = [...todasPlantas, ...plantasPage.data];
-          hasMore = plantasPage.pagination.page < plantasPage.pagination.totalPages;
-          page++;
+      // console.log('🔍 [SELECTION] Buscando todos os proprietários...');
+
+      // Buscar TODOS os usuários com roles válidas
+      const response = await api.get('/usuarios', {
+        params: {
+          roles: 'admin,gerente,proprietario',
+          limit: 1000  // Buscar todos
         }
-      }
-      
-      if (todasPlantas.length === 0) {
-        // console.warn('⚠️ [SELECTION] Nenhuma planta encontrada.');
+      });
+
+      const usuariosData = response.data.data || response.data;
+      const usuarios = usuariosData.data || usuariosData || [];
+
+      if (usuarios.length === 0) {
+        // console.warn('⚠️ [SELECTION] Nenhum usuário encontrado.');
         return [];
       }
 
-      // Agrupar plantas por proprietário
-      const plantasPorProprietario = todasPlantas.reduce((acc, planta) => {
-        const propId = planta.proprietarioId;
-        if (!acc[propId]) {
-          acc[propId] = [];
-        }
-        acc[propId].push(planta);
-        return acc;
-      }, {} as Record<string, any[]>);
-
-      // console.log('📊 [SELECTION] Proprietários com plantas:', Object.keys(plantasPorProprietario).length);
-
-      // Buscar dados completos dos proprietários que têm plantas
-      const proprietariosIds = Object.keys(plantasPorProprietario);
-      const proprietarios: ProprietarioSelection[] = [];
-
-      for (const proprietarioId of proprietariosIds) {
-        try {
-          // Se o proprietário está nos dados da planta, usar esses dados
-          const primeiraPlanta = plantasPorProprietario[proprietarioId][0];
-          if (primeiraPlanta.proprietario) {
-            const prop = primeiraPlanta.proprietario;
-            proprietarios.push({
-              id: prop.id,
-              nome: prop.nome,
-              cpf_cnpj: prop.cpf_cnpj || '',
-              tipo: prop.tipo,
-              email: '', 
-              telefone: '',
-              cidade: '',
-              estado: '',
-              totalPlantas: plantasPorProprietario[proprietarioId].length,
-              label: `${prop.nome} ${prop.cpf_cnpj ? `(${UsuariosService.formatCpfCnpj(prop.cpf_cnpj)})` : ''} - ${plantasPorProprietario[proprietarioId].length} planta${plantasPorProprietario[proprietarioId].length !== 1 ? 's' : ''}`
-            });
-          } else {
-            // Fallback: buscar dados do usuário diretamente
-            try {
-              const usuario = await UsuariosService.getUsuario(proprietarioId);
-              proprietarios.push({
-                id: usuario.id,
-                nome: usuario.nome,
-                cpf_cnpj: usuario.cpf_cnpj || '',
-                tipo: this.detectTipoPessoa(usuario.cpf_cnpj),
-                email: usuario.email,
-                telefone: usuario.telefone,
-                cidade: usuario.cidade,
-                estado: usuario.estado,
-                totalPlantas: plantasPorProprietario[proprietarioId].length,
-                label: `${usuario.nome} ${usuario.cpf_cnpj ? `(${UsuariosService.formatCpfCnpj(usuario.cpf_cnpj)})` : ''} - ${plantasPorProprietario[proprietarioId].length} planta${plantasPorProprietario[proprietarioId].length !== 1 ? 's' : ''}`
-              });
-            } catch (err) {
-              // console.warn(`⚠️ [SELECTION] Não foi possível carregar dados do proprietário ${proprietarioId}:`, err);
-            }
-          }
-        } catch (error) {
-          // console.warn(`⚠️ [SELECTION] Erro ao processar proprietário ${proprietarioId}:`, error);
-        }
-      }
-
-      if (proprietarios.length === 0) {
-        // console.warn('⚠️ [SELECTION] Nenhum proprietário válido encontrado.');
-        return [];
-      }
+      // Mapear usuários para formato de proprietários
+      const proprietarios: ProprietarioSelection[] = usuarios.map((usuario: any) => ({
+        id: usuario.id,
+        nome: usuario.nome,
+        cpf_cnpj: usuario.cpf_cnpj || '',
+        tipo: this.detectTipoPessoa(usuario.cpf_cnpj),
+        email: usuario.email,
+        telefone: usuario.telefone,
+        cidade: usuario.cidade,
+        estado: usuario.estado,
+        totalPlantas: 0, // Não precisamos contar plantas aqui
+        label: `${usuario.nome}${usuario.cpf_cnpj ? ` (${UsuariosService.formatCpfCnpj(usuario.cpf_cnpj)})` : ''}`
+      }));
 
       // Ordenar por nome
       proprietarios.sort((a, b) => a.nome.localeCompare(b.nome));
 
-      // console.log('✅ [SELECTION] Proprietários com plantas carregados:', proprietarios.length);
-      
+      // console.log('✅ [SELECTION] Proprietários carregados:', proprietarios.length);
+
       return proprietarios;
 
     } catch (error) {
-      // console.error('❌ [SELECTION] Erro ao carregar proprietários com plantas:', error);
-      throw error; // Re-throw o erro ao invés de usar mock
+      // console.error('❌ [SELECTION] Erro ao carregar proprietários:', error);
+      throw error;
     }
   }
 

@@ -117,6 +117,7 @@ export const tarefasTableColumns: TableColumn<TarefaApiResponse>[] = [
       <EquipamentoPlantaCell
         equipamentoId={tarefa.equipamento_id}
         plantaId={tarefa.planta_id}
+        unidadeId={tarefa.unidade_id}
       />
     )
   },

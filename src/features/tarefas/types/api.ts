@@ -45,6 +45,7 @@ export interface CreateTarefaData {
   criado_por?: string;                // Opcional: ID do usuário criador
   equipamento_id?: string;            // Opcional: ID do equipamento
   planta_id?: string;                 // Opcional: ID da planta
+  unidade_id?: string;                // Opcional: ID da unidade (NOVO)
   data_ultima_execucao: Date;         // Obrigatório: Data da última execução
   numero_execucoes?: number;          // Opcional: Número de execuções (padrão: 0)
   sub_tarefas?: CreateSubTarefaData[]; // Opcional: Array de sub-tarefas
@@ -115,6 +116,7 @@ export interface TarefaResponse {
   tempo_estimado: number;
   ordem: number;
   planta_id?: string;
+  unidade_id?: string;                // NOVO: ID da unidade
   equipamento_id?: string;
   planejador?: string;
   responsavel?: string;
@@ -165,6 +167,14 @@ export interface EquipamentoResumo {
   fabricante?: string;
   modelo?: string;
   tipo?: string;
+  unidade?: {
+    id: string;
+    nome: string;
+    planta?: {
+      id: string;
+      nome: string;
+    };
+  };
 }
 
 export interface UsuarioResumo {
@@ -221,6 +231,7 @@ export interface QueryTarefasParams {
   plano_id?: string;                // Filtrar por ID do plano de manutenção
   equipamento_id?: string;          // Filtrar por ID do equipamento
   planta_id?: string;               // Filtrar por ID da planta
+  unidade_id?: string;              // Filtrar por ID da unidade (NOVO)
   status?: StatusTarefa;            // Filtrar por status da tarefa
   ativo?: boolean;                  // Filtrar por status ativo
   categoria?: CategoriaTarefa;      // Filtrar por categoria da tarefa

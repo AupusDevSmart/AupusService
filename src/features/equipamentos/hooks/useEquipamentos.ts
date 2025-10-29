@@ -37,11 +37,12 @@ export const transformApiToFrontend = (apiEquipamento: EquipamentoApiResponse): 
     id: apiEquipamento.id,
     criadoEm: apiEquipamento.created_at?.toString() || new Date().toISOString(),
     atualizadoEm: apiEquipamento.updated_at?.toString() || new Date().toISOString(),
-    
+
     // Dados básicos
     nome: apiEquipamento.nome || '',
     classificacao: apiEquipamento.classificacao || 'UC',
-    plantaId: apiEquipamento.planta_id,
+    // TODO: Atualizar para unidade_id quando backend for migrado para nova estrutura
+    unidadeId: apiEquipamento.planta_id, // Temporariamente usando planta_id até backend suportar unidades
     proprietarioId: apiEquipamento.proprietario_id,
     equipamentoPaiId: apiEquipamento.equipamento_pai_id,
     
@@ -87,13 +88,28 @@ export const transformApiToFrontend = (apiEquipamento: EquipamentoApiResponse): 
     a6: apiEquipamento.a6,
     
     // Relacionamentos
+    unidade: apiEquipamento.unidade ? {
+      id: apiEquipamento.unidade.id,
+      nome: apiEquipamento.unidade.nome || 'Unidade não informada',
+      planta: apiEquipamento.unidade.planta ? {
+        id: apiEquipamento.unidade.planta.id,
+        nome: apiEquipamento.unidade.planta.nome || 'Planta não informada',
+        proprietario: apiEquipamento.unidade.planta.proprietario ? {
+          id: apiEquipamento.unidade.planta.proprietario.id,
+          nome: apiEquipamento.unidade.planta.proprietario.nome || 'Proprietário não informado',
+          cpf_cnpj: apiEquipamento.unidade.planta.proprietario.cpf_cnpj || '',
+          tipo: apiEquipamento.unidade.planta.proprietario.tipo || 'pessoa_juridica'
+        } : undefined
+      } : undefined
+    } : undefined,
+
     proprietario: apiEquipamento.proprietario ? {
       id: apiEquipamento.proprietario.id,
       razaoSocial: apiEquipamento.proprietario.nome || 'Nome não informado',
       cnpjCpf: apiEquipamento.proprietario.cpf_cnpj || '',
       tipo: getTipoPessoa(apiEquipamento.proprietario.cpf_cnpj)
     } : undefined,
-    
+
     planta: apiEquipamento.planta ? {
       id: apiEquipamento.planta.id,
       nome: apiEquipamento.planta.nome || 'Planta não informada',
@@ -138,20 +154,23 @@ export const transformApiToFrontend = (apiEquipamento: EquipamentoApiResponse): 
 // NOVA TRANSFORMAÇÃO: Frontend -> API (SEM PERDER DADOS)
 export const transformFrontendToApi = (equipamento: any): CreateEquipamentoApiData => {
   console.log('TRANSFORM: Dados de entrada:', equipamento);
-  
+
   // Se já vem no formato da API (do modal), usar direto
-  if (equipamento.classificacao && equipamento.planta_id) {
+  // Verificar por unidade_id OU planta_id (nova estrutura ou antiga)
+  if (equipamento.classificacao && (equipamento.unidade_id || equipamento.planta_id)) {
     console.log('TRANSFORM: Dados já estão no formato da API');
     return equipamento as CreateEquipamentoApiData;
   }
-  
+
   // Senão, transformar do formato do frontend
   const apiData: CreateEquipamentoApiData = {
     nome: equipamento.nome,
     classificacao: equipamento.classificacao || 'UC',
     criticidade: equipamento.criticidade || '3',
-    
+
     // IDs - usar tanto os nomes com underscore quanto sem
+    // Priorizar unidade_id sobre planta_id (nova estrutura)
+    unidade_id: equipamento.unidade_id || equipamento.unidadeId,
     planta_id: equipamento.planta_id || equipamento.plantaId,
     proprietario_id: equipamento.proprietario_id || equipamento.proprietarioId,
     equipamento_pai_id: equipamento.equipamento_pai_id || equipamento.equipamentoPaiId,
@@ -379,11 +398,22 @@ export function useEquipamentos(): UseEquipamentosReturn {
     try {
       setLoading(true);
       setError(null);
-      
+
+      console.log('🔍 [HOOK] getEquipamento chamado com ID:', id);
       const response = await equipamentosApi.findOne(id);
-      return transformApiToFrontend(response);
-      
+      console.log('📦 [HOOK] Resposta da API (response):', response);
+      console.log('📦 [HOOK] response.id:', response.id);
+      console.log('📦 [HOOK] response.nome:', response.nome);
+      console.log('📦 [HOOK] response.tipo_equipamento:', response.tipo_equipamento);
+      console.log('📦 [HOOK] response.dados_tecnicos:', response.dados_tecnicos);
+
+      const transformed = transformApiToFrontend(response);
+      console.log('✨ [HOOK] Equipamento transformado:', transformed);
+
+      return transformed;
+
     } catch (err) {
+      console.error('❌ [HOOK] Erro em getEquipamento:', err);
       handleError(err, 'getEquipamento');
       throw err;
     } finally {
@@ -401,24 +431,33 @@ export function useEquipamentos(): UseEquipamentosReturn {
       setError(null);
       setLastFilters(filters);
       
+      // Filtros hierárquicos: unidade tem prioridade sobre planta
+      // Se unidade está selecionada, não enviamos planta_id
+      const hasUnidade = filters?.unidadeId && filters.unidadeId !== 'all';
+      const hasPlanta = filters?.plantaId && filters.plantaId !== 'all';
+
       const params: EquipamentosQueryParams = {
         page: filters?.page || 1,
         limit: filters?.limit || 10,
         search: filters?.search || undefined,
         classificacao: (filters?.classificacao !== 'all' ? filters?.classificacao : undefined) as 'UC' | 'UAR' | undefined,
         criticidade: (filters?.criticidade !== 'all' ? filters?.criticidade : undefined) as '1' | '2' | '3' | '4' | '5' | undefined,
-        planta_id: filters?.plantaId !== 'all' ? filters?.plantaId : undefined,
-        proprietario_id: filters?.proprietarioId !== 'all' ? filters?.proprietarioId : undefined
+        // Se unidade está selecionada, usar apenas unidade_id
+        // Caso contrário, usar planta_id se disponível
+        unidade_id: hasUnidade ? filters.unidadeId : undefined,
+        planta_id: hasUnidade ? undefined : (hasPlanta ? filters.plantaId : undefined)
       };
       
       const response = await equipamentosApi.findAll(params);
-      
-      const equipamentosTransformados = response.data.map(transformApiToFrontend);
-      
+
+      // A API retorna: { success: true, data: { data: [], pagination: {} }, meta: {} }
+      // Então precisamos acessar response.data.data
+      const equipamentosTransformados = response.data.data.map(transformApiToFrontend);
+
       setEquipamentos(equipamentosTransformados);
-      setTotalPages(response.pagination.pages);
-      setCurrentPage(response.pagination.page);
-      setTotal(response.pagination.total);
+      setTotalPages(response.data.pagination.pages);
+      setCurrentPage(response.data.pagination.page);
+      setTotal(response.data.pagination.total);
       
       return equipamentosTransformados;
       
@@ -444,17 +483,18 @@ export function useEquipamentos(): UseEquipamentosReturn {
       };
       
       const response = await equipamentosApi.findByPlanta(plantaId, params);
-      
-      const equipamentosTransformados = response.data.map(transformApiToFrontend);
-      
+
+      // A API retorna: { success: true, data: { data: [], pagination: {}, planta: {} }, meta: {} }
+      const equipamentosTransformados = response.data.data.map(transformApiToFrontend);
+
       setEquipamentos(equipamentosTransformados);
-      setTotalPages(response.pagination.pages);
-      setCurrentPage(response.pagination.page);
-      setTotal(response.pagination.total);
-      
+      setTotalPages(response.data.pagination.pages);
+      setCurrentPage(response.data.pagination.page);
+      setTotal(response.data.pagination.total);
+
       return {
         equipamentos: equipamentosTransformados,
-        planta: response.planta
+        planta: response.data.planta
       };
       
     } catch (err) {
@@ -507,14 +547,14 @@ export function useEquipamentos(): UseEquipamentosReturn {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await equipamentosApi.findComponentesParaGerenciar(ucId);
-      
+
       return {
         equipamentoUC: response.equipamentoUC,
-        componentes: response.componentes.map(transformApiToFrontend)
+        componentes: (response.componentes || []).map(transformApiToFrontend)
       };
-      
+
     } catch (err) {
       handleError(err, 'fetchComponentesParaGerenciar');
       return {
@@ -530,16 +570,16 @@ export function useEquipamentos(): UseEquipamentosReturn {
     try {
       setLoading(true);
       setError(null);
-      
+
       const componentesApi = componentes.map(comp => transformFrontendToApi(comp));
-      
+
       const response = await equipamentosApi.salvarComponentesUARLote(ucId, componentesApi);
-      
+
       return {
         message: response.message,
-        componentes: response.componentes.map(transformApiToFrontend)
+        componentes: (response.componentes || []).map(transformApiToFrontend)
       };
-      
+
     } catch (err) {
       handleError(err, 'salvarComponentesUARLote');
       throw err;

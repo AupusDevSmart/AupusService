@@ -24,10 +24,12 @@ export interface Anomalia extends BaseEntity {
   
   // Campos para relacionamento com a nova estrutura
   plantaId?: number;
+  unidadeId?: number; // NOVO: Equipamentos agora pertencem a Unidades
   equipamentoId?: number; // Pode ser UC ou UAR
-  
+
   // Support for API field names (snake_case)
   planta_id?: string | number;
+  unidade_id?: string | number; // NOVO: Support para unidade_id da API
   equipamento_id?: string | number;
   ordem_servico_id?: string;
   criado_por?: string;
@@ -65,11 +67,13 @@ export interface AnomaliaFormData {
   prioridade: PrioridadeAnomalia;
   observacoes?: string;
   plantaId?: number | string;
+  unidadeId?: number | string; // NOVO: Equipamentos agora pertencem a Unidades
   equipamentoId?: number | string;
   anexos?: File[];
   // Support for nested localizacao object from form
   localizacao?: {
     plantaId?: number | string;
+    unidadeId?: number | string; // NOVO: Unidade no objeto de localização
     equipamentoId?: number | string;
     local?: string;
     ativo?: string;
@@ -83,6 +87,7 @@ export interface AnomaliasFilters extends BaseFiltersType {
   prioridade: string;
   origem: string;
   planta: string;
+  unidade: string; // NOVO: Filtro por unidade
 }
 
 // Estado do modal

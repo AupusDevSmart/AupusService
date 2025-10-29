@@ -38,6 +38,7 @@ const initialFilters: AnomaliasFilters = {
   prioridade: 'all',
   origem: 'all',
   planta: 'all',
+  unidade: 'all', // NOVO: Filtro por unidade
   page: 1,
   limit: 10,
 };

@@ -7,8 +7,10 @@ import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/ty
 
 export interface ProprietarioBasico {
   id: string; // CORRIGIDO: string em vez de number
-  razaoSocial: string;
-  cnpjCpf: string;
+  nome?: string; // Nome do proprietário (vem do backend)
+  razaoSocial?: string; // Alias para nome (compatibilidade)
+  cnpjCpf?: string;
+  cpf_cnpj?: string; // Alias para cnpjCpf (compatibilidade com backend)
   tipo: 'pessoa_fisica' | 'pessoa_juridica';
 }
 
@@ -20,6 +22,25 @@ export interface Planta extends BaseEntity {
   localizacao?: string;
   proprietarioId: string; // CORRIGIDO: string em vez de number
   proprietario?: ProprietarioBasico;
+}
+
+export interface Unidade extends BaseEntity {
+  id: string;
+  criadoEm: string;
+  plantaId: string;
+  nome: string;
+  tipo: string;
+  estado: string;
+  cidade: string;
+  latitude: number;
+  longitude: number;
+  potencia: number;
+  status: string;
+  planta?: {
+    id: string;
+    nome: string;
+    proprietario?: ProprietarioBasico;
+  };
 }
 
 export interface DadoTecnico {
@@ -54,15 +75,16 @@ export interface Equipamento extends BaseEntity {
   // Informações básicas
   nome: string;
   classificacao: 'UC' | 'UAR';
-  
+
   // Relacionamentos hierárquicos - TODOS CORRIGIDOS PARA STRING
-  plantaId?: string;
+  unidadeId?: string; // NOVO: Equipamentos UC agora pertencem a Unidades
   proprietarioId?: string;
   equipamentoPaiId?: string;
-  
+
   // Referências para exibição
   proprietario?: ProprietarioBasico;
-  planta?: Planta;
+  unidade?: Unidade; // NOVO: Referência para Unidade (que contém a Planta)
+  planta?: Planta; // Mantido para compatibilidade (acessível via unidade.planta)
   equipamentoPai?: EquipamentoPai;
   
   // Dados técnicos básicos
@@ -123,7 +145,8 @@ export interface EquipamentoFormData {
   nome: string;
   classificacao: 'UC' | 'UAR';
   proprietarioId?: string; // CORRIGIDO: string
-  plantaId?: string; // CORRIGIDO: string
+  plantaId?: string; // Mantido para seleção cascata (não enviado para API)
+  unidadeId?: string; // NOVO: Usado para criar/atualizar equipamento
   equipamentoPaiId?: string; // CORRIGIDO: string
   fabricante?: string;
   modelo?: string;
@@ -159,7 +182,8 @@ export interface EquipamentoFormData {
 
 export interface EquipamentosFilters extends BaseFiltersType {
   proprietarioId: string;
-  plantaId: string;
+  plantaId: string; // Mantido para filtro por planta (busca em unidade.plantaId)
+  unidadeId?: string; // NOVO: Filtro direto por unidade
   criticidade: string;
   classificacao: string;
   equipamentoPaiId?: string;
@@ -259,8 +283,8 @@ export const validateEquipamentoData = (data: EquipamentoFormData): {
     errors.push('Classificação (UC/UAR) é obrigatória');
   }
   
-  if (data.classificacao === 'UC' && !data.plantaId) {
-    errors.push('Equipamento UC deve ter uma planta');
+  if (data.classificacao === 'UC' && !data.unidadeId) {
+    errors.push('Equipamento UC deve ter uma unidade');
   }
   
   if (data.classificacao === 'UAR' && !data.equipamentoPaiId) {
@@ -291,8 +315,8 @@ export const getUARsByUC = (equipamentos: Equipamento[], ucId: string): Equipame
 };
 
 export const getUCsByPlanta = (equipamentos: Equipamento[], plantaId: string): Equipamento[] => {
-  return equipamentos.filter(eq => 
-    eq.classificacao === 'UC' && eq.plantaId === plantaId
+  return equipamentos.filter(eq =>
+    eq.classificacao === 'UC' && eq.unidade?.plantaId === plantaId
   );
 };
 

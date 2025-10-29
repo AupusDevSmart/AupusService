@@ -13,7 +13,7 @@ const getAuthToken = () => {
 };
 
 export const api = axios.create({
-  baseURL: "https://aupus-service-api.aupusenergia.com.br/api/v1/",
+  baseURL: "http://localhost:3000/api/v1",
   withCredentials: true,
   withXSRFToken: true,
 
