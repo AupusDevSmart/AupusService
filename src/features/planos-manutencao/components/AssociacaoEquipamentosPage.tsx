@@ -6,7 +6,7 @@ import { TitleCard } from '@/components/common/title-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useEquipamentos } from '@/features/equipamentos_xxx/hooks/useEquipamentos';
+import { useEquipamentos } from '@/features/equipamentos/hooks/useEquipamentos';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { CreatePlanoManutencaoApiData, PlanoManutencaoApiResponse } from '@/services/planos-manutencao.services';
 import {

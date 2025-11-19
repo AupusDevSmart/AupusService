@@ -8,7 +8,8 @@ import { api } from '@/config/api';
 export interface CreateEquipamentoApiData {
   nome: string;
   classificacao: 'UC' | 'UAR';
-  planta_id?: string;
+  unidade_id?: string; // ✅ NOVO: Equipamentos UC agora pertencem a unidades
+  planta_id?: string; // Mantido para compatibilidade
   proprietario_id?: string;
   equipamento_pai_id?: string;
   fabricante?: string;
@@ -52,7 +53,8 @@ export interface EquipamentoApiResponse {
   id: string;
   nome: string;
   classificacao: 'UC' | 'UAR';
-  planta_id?: string;
+  unidade_id?: string; // ✅ NOVO: Equipamentos UC agora pertencem a unidades
+  planta_id?: string; // Mantido para compatibilidade
   proprietario_id?: string;
   equipamento_pai_id?: string;
   fabricante?: string;

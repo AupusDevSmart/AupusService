@@ -29,6 +29,7 @@ interface BaseModalProps<T extends BaseEntity> {
   onBeforeSubmit?: (data: any) => Promise<boolean> | boolean;
   onAfterSubmit?: (data: any) => void;
   onValidationError?: (errors: Record<string, string>) => void;
+  customActions?: React.ReactNode; // Custom action buttons for the footer
 }
 
 export function BaseModal<T extends BaseEntity>({
@@ -52,7 +53,8 @@ export function BaseModal<T extends BaseEntity>({
   cancelButtonText,
   onBeforeSubmit,
   onAfterSubmit,
-  onValidationError
+  onValidationError,
+  customActions
 }: BaseModalProps<T>) {
   const [formData, setFormData] = useState<any>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -305,47 +307,58 @@ export function BaseModal<T extends BaseEntity>({
         onClick={handleBackdropClick}
       />
       
-      <div className="fixed inset-0 z-50 pointer-events-none">
-        <div 
+      <div className="fixed inset-0 z-50 pointer-events-none flex justify-end">
+        <div
           ref={modalRef}
           className={cn(
-            "absolute top-0 right-0 h-full bg-background shadow-2xl pointer-events-auto",
+            // ✅ RESPONSIVO: Mobile fullscreen, Desktop sidebar à direita
+            "fixed inset-0",
+            "md:relative md:h-full",
+            "bg-background shadow-2xl pointer-events-auto",
             "transform transition-all duration-300 ease-in-out",
-            isOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0",
+            // ✅ RESPONSIVO: Animações por breakpoint
+            isOpen
+              ? "translate-y-0 md:translate-y-0 md:translate-x-0 opacity-100"
+              : "translate-y-full md:translate-y-0 md:translate-x-full opacity-0",
             "border-l border-border overflow-hidden flex flex-col",
-            width
+            // ✅ RESPONSIVO: Width progressivo
+            "w-full md:w-[90vw] lg:w-[70vw] xl:w-[60vw]",
+            width // Permite override via prop
           )}
         >
-          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-6 py-4 shrink-0">
+          {/* ✅ RESPONSIVO: Header com padding progressivo */}
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-3 sm:px-4 md:px-6 py-3 sm:py-4 shrink-0">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {icon}
-                <div>
-                  <h2 className="text-lg font-semibold">{title}</h2>
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                {icon && <div className="shrink-0">{icon}</div>}
+                <div className="min-w-0">
+                  {/* ✅ RESPONSIVO: Título com tamanho progressivo e truncate */}
+                  <h2 className="text-base sm:text-lg font-semibold truncate">{title}</h2>
                   {hasUnsavedChanges && !isViewMode && (
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      Alterações não salvas
+                      <AlertCircle className="h-3 w-3 shrink-0" />
+                      <span className="truncate">Alterações não salvas</span>
                     </p>
                   )}
                 </div>
               </div>
-              
-              <Button 
-                variant="ghost" 
-                size="icon" 
+
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={handleClose}
                 disabled={isLoading}
-                className="h-8 w-8 hover:bg-muted"
+                className="h-8 w-8 hover:bg-muted shrink-0"
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
+          {/* ✅ RESPONSIVO: Content com padding progressivo */}
           <div className="flex-1 overflow-y-auto">
-            <div className="p-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="p-3 sm:p-4 md:p-6">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 <BaseForm
                   fields={formFields}
                   data={formData}
@@ -363,44 +376,53 @@ export function BaseModal<T extends BaseEntity>({
           </div>
 
           {showFooter && (
-            <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t px-6 py-4 shrink-0">
-              <div className="flex flex-col gap-2">
-                {!isViewMode && (
-                  <Button 
-                    type="submit" 
-                    disabled={isLoading}
-                    className="w-full flex items-center gap-2"
-                    onClick={() => handleSubmit()}
-                  >
-                    {isLoading ? (
-                      <>
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        {loadingText}
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4" />
-                        {getSubmitButtonText()}
-                      </>
-                    )}
-                  </Button>
-                )}
-                
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={handleClose}
-                  disabled={isLoading}
-                  className={cn(
-                    "w-full flex items-center gap-2",
-                    hasUnsavedChanges && !isViewMode && "border-amber-200 text-amber-700 hover:bg-amber-50"
+            /* ✅ RESPONSIVO: Footer com padding progressivo */
+            <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t px-3 sm:px-4 md:px-6 py-3 sm:py-4 shrink-0">
+              {customActions ? (
+                <div className="space-y-2">
+                  {customActions}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {!isViewMode && (
+                    <Button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full flex items-center justify-center gap-2 text-sm sm:text-base"
+                      onClick={() => handleSubmit()}
+                    >
+                      {isLoading ? (
+                        <>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          <span className="truncate">{loadingText}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{getSubmitButtonText()}</span>
+                        </>
+                      )}
+                    </Button>
                   )}
-                >
-                  <X className="h-4 w-4" />
-                  {getCancelButtonText()}
-                  {hasUnsavedChanges && !isViewMode && " (não salvo)"}
-                </Button>
-              </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleClose}
+                    disabled={isLoading}
+                    className={cn(
+                      "w-full flex items-center justify-center gap-2 text-sm sm:text-base",
+                      hasUnsavedChanges && !isViewMode && "border-amber-200 text-amber-700 hover:bg-amber-50"
+                    )}
+                  >
+                    <X className="h-4 w-4 shrink-0" />
+                    <span className="truncate">
+                      {getCancelButtonText()}
+                      {hasUnsavedChanges && !isViewMode && " (não salvo)"}
+                    </span>
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>

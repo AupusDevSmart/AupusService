@@ -22,14 +22,15 @@ import {
   RefreshCw,
   X
 } from 'lucide-react';
-import { useGenericTable } from '@/hooks/useGenericTable';
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { ExecucaoOS, ExecucaoOSFilters, StatusExecucaoOS } from '../types';
+import { ExecucaoOS, ExecucaoOSFilters } from '../types';
+import type { ExecucaoOSApiResponse } from '@/services/execucao-os.service';
 import { execucaoOSTableColumns } from '../config/table-config';
 import { execucaoOSFilterConfig } from '../config/filter-config';
 import { execucaoOSFormFields, execucaoOSFormGroups } from '../config/form-config';
-import { mockExecucoesOS } from '../data/mock-data';
 import { useExecucaoOS } from '../hooks/useExecucaoOS';
+import { transformApiArrayToExecucaoOS } from '../utils/transform-api-data';
+import { execucaoOSTransitionsService, type StatusExecucaoOS } from '@/services/execucao-os-transitions.service';
 
 const initialFilters: ExecucaoOSFilters = {
   search: '',
@@ -45,57 +46,22 @@ const initialFilters: ExecucaoOSFilters = {
 };
 
 export function ExecucaoOSPage() {
-  
-  const {
-    paginatedData: execucoes,
-    pagination,
-    filters,
-    loading,
-    setLoading,
-    handleFilterChange,
-    handlePageChange
-  } = useGenericTable({
-    data: mockExecucoesOS,
-    initialFilters,
-    searchFields: ['responsavelExecucao'],
-    customFilters: {
-      periodo: (item: ExecucaoOS, value: string) => {
-        if (value === 'all') return true;
-        
-        const hoje = new Date();
-        const ontem = new Date(hoje);
-        ontem.setDate(hoje.getDate() - 1);
-        
-        const itemDate = item.dataInicioReal ? new Date(item.dataInicioReal) : 
-                        item.os.dataProgramada ? new Date(item.os.dataProgramada) : null;
-        if (!itemDate) return false;
-        
-        switch (value) {
-          case 'hoje':
-            return itemDate.toDateString() === hoje.toDateString();
-          case 'ontem':
-            return itemDate.toDateString() === ontem.toDateString();
-          case 'esta_semana':
-            const tempHojeInicio = new Date(hoje);
-            const inicioSemana = new Date(tempHojeInicio.setDate(tempHojeInicio.getDate() - tempHojeInicio.getDay()));
-            const tempHojeFim = new Date(hoje);
-            const fimSemana = new Date(tempHojeFim.setDate(tempHojeFim.getDate() + (6 - tempHojeFim.getDay() + hoje.getDay())));
-            return itemDate >= inicioSemana && itemDate <= fimSemana;
-          default:
-            return true;
-        }
-      }
-    }
+  // Estados para dados da API
+  const [execucoes, setExecucoes] = useState<ExecucaoOS[]>([]);
+  const [filters, setFilters] = useState<ExecucaoOSFilters>(initialFilters);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0
   });
+  const [loading, setLoading] = useState(false);
 
   const {
+    listarExecucoes,
     pausarExecucao,
     retomarExecucao,
-    finalizarExecucao,
     cancelarExecucao,
-    editarExecucao,
-    gerarRelatorioExecucao,
-    exportarDadosExecucao,
     loading: hookLoading
   } = useExecucaoOS();
 
@@ -116,30 +82,84 @@ export function ExecucaoOSPage() {
     criticas: 0
   });
 
-  // Calcular estatísticas
-  useEffect(() => {
-    const total = mockExecucoesOS.length;
-    const programadas = mockExecucoesOS.filter(exec => exec.statusExecucao === 'PROGRAMADA').length;
-    const emExecucao = mockExecucoesOS.filter(exec => exec.statusExecucao === 'EM_EXECUCAO').length;
-    const pausadas = mockExecucoesOS.filter(exec => exec.statusExecucao === 'PAUSADA').length;
-    const finalizadas = mockExecucoesOS.filter(exec => exec.statusExecucao === 'FINALIZADA').length;
-    const criticas = mockExecucoesOS.filter(exec => exec.os.prioridade === 'CRITICA').length;
-    
+  // ✅ Carregar dados da API
+  const carregarDados = async () => {
+    try {
+      setLoading(true);
+      console.log('🔍 Carregando execuções com filtros:', filters);
+
+      // Converter filtros do frontend para o formato da API
+      const params: any = {
+        page: filters.page,
+        limit: filters.limit
+      };
+
+      if (filters.search) params.search = filters.search;
+      if (filters.statusExecucao && filters.statusExecucao !== 'all') params.status_execucao = filters.statusExecucao;
+      if (filters.tipo && filters.tipo !== 'all') params.tipo = filters.tipo;
+      if (filters.prioridade && filters.prioridade !== 'all') params.prioridade = filters.prioridade;
+      if (filters.responsavel && filters.responsavel !== 'all') params.responsavel_id = filters.responsavel;
+      if (filters.planta && filters.planta !== 'all') params.planta_id = filters.planta;
+
+      const response = await listarExecucoes(params);
+
+      console.log('✅ Execuções carregadas (API):', response);
+
+      // ✅ Transformar dados da API para o formato esperado pelo frontend
+      const execucoesFormatadas = transformApiArrayToExecucaoOS(response.data || []);
+
+      console.log('✅ Execuções formatadas (Frontend):', execucoesFormatadas);
+
+      setExecucoes(execucoesFormatadas);
+      setPagination({
+        page: response.pagination?.page || 1,
+        limit: response.pagination?.limit || 10,
+        total: response.pagination?.total || 0,
+        totalPages: response.pagination?.pages || 0
+      });
+
+      // Calcular estatísticas dos dados retornados
+      calcularEstatisticas(execucoesFormatadas);
+
+    } catch (error) {
+      console.error('❌ Erro ao carregar execuções:', error);
+      setExecucoes([]);
+      setPagination({ page: 1, limit: 10, total: 0, totalPages: 0 });
+      setStats({
+        total: 0,
+        programadas: 0,
+        emExecucao: 0,
+        pausadas: 0,
+        finalizadas: 0,
+        atrasadas: 0,
+        criticas: 0
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calcular estatísticas dos dados
+  const calcularEstatisticas = (dados: ExecucaoOS[]) => {
+    const total = dados.length;
+    const programadas = dados.filter(exec => exec.statusExecucao === 'PROGRAMADA').length;
+    const emExecucao = dados.filter(exec => exec.statusExecucao === 'EM_EXECUCAO').length;
+    const pausadas = dados.filter(exec => exec.statusExecucao === 'PAUSADA').length;
+    const finalizadas = dados.filter(exec => exec.statusExecucao === 'FINALIZADA').length;
+    const criticas = dados.filter(exec => exec.os?.prioridade === 'CRITICA' || exec.os?.prioridade === 'URGENTE').length;
+
     // Calcular OS atrasadas
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-    
-    let atrasadas = 0;
-    mockExecucoesOS.forEach(exec => {
-      if (exec.os.dataProgramada && exec.statusExecucao === 'PROGRAMADA') {
+
+    const atrasadas = dados.filter(exec => {
+      if (exec.os?.dataProgramada && exec.statusExecucao === 'PROGRAMADA') {
         const dataProgramada = new Date(exec.os.dataProgramada);
         dataProgramada.setHours(0, 0, 0, 0);
-        
-        if (dataProgramada < hoje) {
-          atrasadas++;
-        }
+        return dataProgramada < hoje;
       }
-    });
+      return false;
+    }).length;
 
     setStats({
       total,
@@ -150,117 +170,87 @@ export function ExecucaoOSPage() {
       atrasadas,
       criticas
     });
+  };
+
+  // Carregar dados ao montar o componente
+  useEffect(() => {
+    carregarDados();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Recarregar ao mudar filtros ou página
+  useEffect(() => {
+    carregarDados();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
+
+  // Handlers de filtros e paginação
+  const handleFilterChange = (key: string, value: any) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value,
+      page: 1 // Reset page when filter changes
+    }));
+  };
+
+  const handlePageChange = (page: number) => {
+    setFilters(prev => ({
+      ...prev,
+      page
+    }));
+  };
+
   const handleSuccess = async () => {
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await carregarDados();
     setLoading(false);
     closeModal();
   };
 
   const handleSubmit = async (data: any) => {
     if (!modalState.entity) return;
-    
+
     try {
       console.log('💾 Salvando dados da execução:', data);
-      
+
       if (modalState.mode === 'finalizar') {
-        // Para finalização, usar dados dos cards para estruturar a resposta
+        // Para finalização, estruturar dados conforme API espera
         const finalizacaoData = {
-          resultadoServico: data.resultadoServico || '',
-          problemasEncontrados: data.problemasEncontrados || '',
+          data_hora_fim_real: new Date().toISOString(),
+          resultado_servico: data.resultadoServico || '',
+          problemas_encontrados: data.problemasEncontrados || '',
           recomendacoes: data.recomendacoes || '',
-          proximaManutencao: data.proximaManutencao || '',
-          avaliacaoQualidade: data.avaliacaoQualidade || 5,
-          observacoesQualidade: data.observacoesQualidade || '',
-          
-          // Processar dados dos cards de materiais
-          materiaisConsumidos: data.materiaisConsumidos?.map((m: any) => ({
-            descricao: m.descricao,
-            quantidade_planejada: m.quantidade_planejada || 0,
-            quantidade_consumida: m.quantidade_consumida || 0,
-            unidade: m.unidade || 'UN',
-            custo_unitario: m.custo_unitario || 0,
-            disponivel: m.disponivel !== undefined ? m.disponivel : true,
-            confirmado: m.confirmado || false,
-            observacoes: m.observacoes || null
+          proxima_manutencao: data.proximaManutencao || null,
+          avaliacao_qualidade: Number(data.avaliacaoQualidade) || 5,
+          observacoes_qualidade: data.observacoesQualidade || '',
+
+          // Materiais utilizados
+          materiais_consumidos: data.materiaisConsumidos?.map((m: any) => ({
+            id: m.id,
+            quantidade_consumida: m.quantidade_consumida || m.quantidade_planejada || 0,
+            observacoes: m.observacoes || ''
           })) || [],
-          
-          // Processar dados dos cards de ferramentas
-          ferramentasUtilizadas: data.ferramentasUtilizadas?.map((f: any) => ({
-            descricao: f.descricao,
-            quantidade: f.quantidade || 1,
-            confirmada: f.confirmada || false,
-            disponivel: f.disponivel !== undefined ? f.disponivel : true,
-            utilizada: f.utilizada || false,
-            condicao_antes: f.condicao_antes || null,
-            condicao_depois: f.condicao_depois || null,
-            observacoes: f.observacoes || null
+
+          // Ferramentas utilizadas
+          ferramentas_utilizadas: data.ferramentasUtilizadas?.map((f: any) => ({
+            id: f.id,
+            condicao_depois: f.condicao_depois || 'Boa',
+            observacoes: f.observacoes || ''
           })) || [],
-          
-          // Processar dados dos cards de técnicos
-          tecnicosPresentes: data.tecnicos?.map((t: any) => ({
-            nome: t.nome,
-            especialidade: t.especialidade,
-            horas_estimadas: t.horas_estimadas || 8,
-            horas_trabalhadas: t.horas_trabalhadas || 0,
-            custo_hora: t.custo_hora || 0,
-            presente: t.presente || false,
-            tecnico_id: t.tecnico_id || null
-          })) || []
+
+          // ✅ Dados da reserva de veículo
+          km_final: data.kmFinalReserva ? Number(data.kmFinalReserva) : undefined,
+          observacoes_veiculo: data.observacoesFinalizacaoReserva || undefined
         };
 
-        await finalizarExecucao(String(modalState.entity.id), finalizacaoData);
-        
+        await execucaoOSTransitionsService.finalizar(String(modalState.entity.id), finalizacaoData);
+
       } else {
-        // Para edição normal, mapear campos do formulário
-        const statusExecucao = data.statusExecucao as StatusExecucaoOS | undefined;
-        
-        const dadosExecucao = {
-          statusExecucao,
-          dataInicioReal: data.dataInicioReal,
-          horaInicioReal: data.horaInicioReal,
-          dataFimReal: data.dataFimReal,
-          horaFimReal: data.horaFimReal,
-          responsavelExecucao: data.responsavelExecucao,
-          funcaoResponsavel: data.funcaoResponsavel,
-          
-          // Dados das atividades
-          atividadesRealizadas: data.atividadesRealizadas,
-          checklistConcluido: data.checklistConcluido || 0,
-          procedimentosSeguidos: data.procedimentosSeguidos,
-          
-          // Segurança
-          equipamentosSeguranca: data.equipamentosSeguranca,
-          incidentesSeguranca: data.incidentesSeguranca,
-          medidasSegurancaAdicionais: data.medidasSegurancaAdicionais,
-          
-          // Custos
-          custosAdicionais: parseFloat(data.custosAdicionais) || 0,
-          
-          // Observações
-          observacoesExecucao: data.observacoesExecucao,
-          motivoPausas: data.motivoPausas,
-          motivoCancelamento: data.motivoCancelamento,
-          
-          // Arrays de recursos (processados dos cards)
-          materiaisConsumidos: data.materiaisConsumidos || [],
-          ferramentasUtilizadas: data.ferramentasUtilizadas || [],
-          tecnicos: data.tecnicos || [],
-          
-          // Resultados (se disponíveis)
-          resultadoServico: data.resultadoServico,
-          problemasEncontrados: data.problemasEncontrados,
-          recomendacoes: data.recomendacoes,
-          proximaManutencao: data.proximaManutencao,
-          avaliacaoQualidade: data.avaliacaoQualidade,
-          observacoesQualidade: data.observacoesQualidade
-        };
-        
-        await editarExecucao(String(modalState.entity.id), dadosExecucao);
+        // Para edição, usar atualizarProgresso
+        console.warn('⚠️ Edição de execução não implementada - use os botões de ação específicos');
+        alert('Use os botões de ação (Pausar, Retomar, Finalizar) para alterar o status da execução.');
+        return;
       }
-      
+
       await handleSuccess();
     } catch (error) {
       console.error('Erro ao salvar execução:', error);
@@ -288,58 +278,202 @@ export function ExecucaoOSPage() {
     return icons[modalState.mode as keyof typeof icons] || <Timer className="h-5 w-5 text-orange-600 dark:text-orange-400" />;
   };
 
+  // Helper para converter data ISO para formato datetime-local
+  const formatDateTimeLocal = (isoDate: string | null | undefined): string => {
+    if (!isoDate) return '';
+
+    try {
+      const date = new Date(isoDate);
+
+      // Verificar se a data é válida
+      if (isNaN(date.getTime())) return '';
+
+      // Formato: yyyy-MM-ddThh:mm
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (error) {
+      console.error('Erro ao formatar data:', isoDate, error);
+      return '';
+    }
+  };
+
   const getModalEntity = () => {
     if (!modalState.entity) return null;
-    
-    const execucao = modalState.entity;
-    
-    // Transformar dados para o formato do formulário com arrays garantidos
-    return {
-      id: execucao.id,
-      numeroOS: execucao.os.numeroOS,
-      descricaoOS: execucao.os.descricao,
-      localAtivo: `${execucao.os.local} - ${execucao.os.ativo}`,
-      tipoOS: execucao.os.tipo,
-      prioridadeOS: execucao.os.prioridade,
-      statusExecucao: execucao.statusExecucao,
-      dataInicioReal: execucao.dataInicioReal,
-      horaInicioReal: execucao.horaInicioReal,
-      dataFimReal: execucao.dataFimReal,
-      horaFimReal: execucao.horaFimReal,
-      responsavelExecucao: execucao.responsavelExecucao,
-      funcaoResponsavel: execucao.funcaoResponsavel,
-      
-      // Arrays de recursos (garantindo que existem)
-      materiaisConsumidos: execucao.materiaisConsumidos || [],
-      ferramentasUtilizadas: execucao.ferramentasUtilizadas || [],
-      tecnicos: execucao.tecnicos || [],
-      
-      // Atividades
-      atividadesRealizadas: execucao.atividadesRealizadas,
-      checklistConcluido: execucao.checklistConcluido,
-      procedimentosSeguidos: execucao.procedimentosSeguidos,
-      
-      // Segurança
-      equipamentosSeguranca: execucao.equipamentosSeguranca,
-      incidentesSeguranca: execucao.incidentesSeguranca,
-      medidasSegurancaAdicionais: execucao.medidasSegurancaAdicionais,
-      
-      // Custos
-      custosAdicionais: execucao.custosAdicionais,
-      
-      // Resultados
-      resultadoServico: execucao.resultadoServico,
-      problemasEncontrados: execucao.problemasEncontrados,
-      recomendacoes: execucao.recomendacoes,
-      proximaManutencao: execucao.proximaManutencao,
-      avaliacaoQualidade: execucao.avaliacaoQualidade,
-      observacoesQualidade: execucao.observacoesQualidade,
-      
+
+    const exec = modalState.entity;
+
+    // ✅ Mapear TODOS os dados disponíveis da execução para o formulário
+    const mapped = {
+      // Identificação
+      id: exec.id,
+      numeroOS: exec.numeroOS || exec.numero_os || exec.os?.numeroOS || '',
+      descricaoOS: exec.descricao || exec.os?.descricao || '',
+      localAtivo: `${exec.local || exec.os?.local || ''} - ${exec.ativo || exec.os?.ativo || ''}`,
+      tipoOS: exec.tipo || exec.os?.tipo || '',
+      prioridadeOS: exec.prioridade || exec.os?.prioridade || '',
+
+      // Origem da OS - agrupando dados para o OrigemOSCard
+      origemCard: {
+        origem: exec.origem || exec.dados_origem?.tipo || 'PLANEJAMENTO',
+        planoManutencao: exec.plano_manutencao?.nome || '',
+        // Programação: passar o objeto completo se disponível, senão o ID
+        programacaoOrigem: exec.programacao || exec.programacao_id || '',
+        // Anomalia: priorizar o objeto expandido
+        anomalia: exec.anomalia ||
+                  (exec.anomalia_id?.trim() ? {
+                    id: exec.anomalia_id.trim(),
+                    descricao: `Anomalia vinculada - ID: ${exec.anomalia_id.trim().substring(0, 8)}...`
+                  } : null),
+        tarefa: exec.tarefas_os?.[0] || null,
+        _dadosCompletos: exec // Para debug
+      },
+
+      // Reserva de Veículo - agrupando dados para o ReservaVeiculoCard
+      reservaCard: {
+        veiculo: exec.reserva_veiculo?.veiculo?.placa || '',
+        kmInicial: exec.reserva_veiculo?.km_inicial || '',
+        dataInicioReserva: exec.reserva_veiculo?.data_inicio || '',
+        horaInicioReserva: exec.reserva_veiculo?.hora_inicio || '',
+        dataFimReserva: exec.reserva_veiculo?.data_fim || '',
+        horaFimReserva: exec.reserva_veiculo?.hora_fim || '',
+        finalidadeReserva: exec.reserva_veiculo?.finalidade || ''
+      },
+
+      // Dados de execução da reserva (editáveis)
+      kmInicialReserva: exec.reserva_veiculo?.km_inicial || '',
+      kmFinalReserva: exec.reserva_veiculo?.km_final || '',
+      observacoesFinalizacaoReserva: exec.reserva_veiculo?.observacoes_finalizacao || '',
+
+      // Status e execução
+      statusExecucao: exec.statusExecucao || exec.status || exec.os?.status || 'PLANEJADA',
+      dataHoraInicioReal: formatDateTimeLocal(
+        exec.data_hora_inicio_real ||
+        exec.dataHoraInicioReal ||
+        exec.os?.dataHoraInicioReal ||
+        exec.dataInicioReal
+      ),
+      dataHoraFimReal: formatDateTimeLocal(
+        exec.data_hora_fim_real ||
+        exec.dataHoraFimReal ||
+        exec.os?.dataHoraFimReal ||
+        exec.dataFimReal
+      ),
+      tempoTotalExecucao: exec.tempoTotalExecucao ||
+                          exec.tempo_execucao_minutos ||
+                          exec.os?.tempoTotalExecucao ||
+                          '',
+
+      // Equipe e responsável
+      responsavelExecucao: exec.responsavelExecucao ||
+                          exec.responsavel ||
+                          exec.os?.responsavel ||
+                          '',
+      funcaoResponsavel: exec.time_equipe ||
+                        exec.os?.time_equipe ||
+                        '',
+      tecnicos: exec.tecnicos ||
+               exec.tecnicosPresentes ||
+               exec.os?.tecnicos ||
+               [],
+
+      // Recursos utilizados
+      materiaisConsumidos: exec.materiais ||
+                          exec.materiaisConsumidos ||
+                          exec.os?.materiais ||
+                          [],
+      ferramentasUtilizadas: exec.ferramentas ||
+                            exec.ferramentasUtilizadas ||
+                            exec.os?.ferramentas ||
+                            [],
+      custosAdicionais: exec.custo_real ||
+                       exec.os?.custo_real ||
+                       '',
+
+      // Atividades e checklist
+      atividadesRealizadas: exec.observacoes_execucao ||
+                           exec.observacoesExecucao ||
+                           exec.os?.observacoesExecucao ||
+                           '',
+      checklistConcluido: (
+        exec.checklistAtividades ||
+        exec.checklist_atividades ||
+        exec.os?.checklistAtividades ||
+        []
+      ).filter((c: any) => c.concluida).length || '',
+      procedimentosSeguidos: '',
+
+      // Segurança (campos não mapeados na API - deixar vazios)
+      equipamentosSeguranca: '',
+      incidentesSeguranca: '',
+      medidasSegurancaAdicionais: '',
+
+      // Resultados da execução
+      resultadoServico: exec.resultado_servico ||
+                       exec.resultadoServico ||
+                       exec.os?.resultadoServico ||
+                       '',
+      problemasEncontrados: exec.problemas_encontrados ||
+                           exec.problemasEncontrados ||
+                           exec.os?.problemasEncontrados ||
+                           '',
+      recomendacoes: exec.recomendacoes ||
+                    exec.os?.recomendacoes ||
+                    '',
+      proximaManutencao: formatDateTimeLocal(
+        exec.proxima_manutencao ||
+        exec.proximaManutencao ||
+        exec.os?.proximaManutencao
+      ),
+
+      // Qualidade
+      avaliacaoQualidade: exec.avaliacao_qualidade ||
+                         exec.avaliacaoQualidade ||
+                         exec.os?.avaliacaoQualidade ||
+                         '',
+      observacoesQualidade: exec.observacoes_qualidade ||
+                           exec.os?.observacoesQualidade ||
+                           '',
+
       // Observações
-      observacoesExecucao: execucao.observacoesExecucao,
-      motivoPausas: execucao.motivoPausas,
-      motivoCancelamento: execucao.motivoCancelamento
+      observacoesExecucao: exec.observacoes_execucao ||
+                          exec.observacoesExecucao ||
+                          exec.os?.observacoesExecucao ||
+                          '',
+      motivoPausas: '', // Não mapeado diretamente - seria necessário buscar do histórico
+      motivoCancelamento: exec.motivo_cancelamento ||
+                         exec.os?.motivoCancelamento ||
+                         '',
+
+      // Auditoria
+      finalizadoPor: exec.finalizado_por ||
+                    exec.os?.finalizadoPor ||
+                    '',
+      dataFinalizacao: formatDateTimeLocal(
+        exec.data_hora_fim_real ||
+        exec.dataFinalizacao ||
+        exec.os?.dataFinalizacao
+      ),
+      aprovadoPor: exec.aprovado_por ||
+                  exec.os?.aprovadoPor ||
+                  '',
+      dataAprovacao: formatDateTimeLocal(
+        exec.data_aprovacao ||
+        exec.dataAprovacao ||
+        exec.os?.dataAprovacao
+      ),
+
+      // Dados completos para debug (opcional)
+      _dadosCompletos: exec
     };
+
+    console.log('✅ getModalEntity - Dados mapeados:', mapped);
+
+    return mapped;
   };
 
   const handleView = (execucao: ExecucaoOS) => {
@@ -349,6 +483,14 @@ export function ExecucaoOSPage() {
 
   const handleEdit = (execucao: ExecucaoOS) => {
     console.log('Editar execução:', execucao);
+
+    // ✅ VALIDAÇÃO: Não permitir edição de execuções finalizadas ou canceladas
+    if (execucao.statusExecucao === 'FINALIZADA' || execucao.statusExecucao === 'CANCELADA') {
+      alert('Execuções finalizadas ou canceladas não podem ser editadas. Use o modo visualizar.');
+      openModal('view', execucao);
+      return;
+    }
+
     openModal('edit', execucao);
   };
 
@@ -356,25 +498,32 @@ export function ExecucaoOSPage() {
   const handleIniciar = async (execucao: ExecucaoOS) => {
     console.log('Iniciando execução:', execucao.id);
     try {
-      await retomarExecucao(String(execucao.id));
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setLoading(false);
+      await retomarExecucao(String(execucao.id), {
+        data_hora_retomada: new Date().toISOString(),
+        observacoes_retomada: 'Execução iniciada'
+      });
+      await carregarDados();
     } catch (error) {
       console.error('Erro ao iniciar execução:', error);
+      alert('Erro ao iniciar execução');
     }
   };
 
   const handlePausar = async (execucao: ExecucaoOS) => {
     console.log('Pausando execução:', execucao.id);
     try {
-      const motivo = prompt('Motivo da pausa (opcional):');
-      await pausarExecucao(String(execucao.id), motivo || undefined);
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setLoading(false);
+      const motivo = prompt('Motivo da pausa:');
+      if (!motivo) return;
+
+      await pausarExecucao(String(execucao.id), {
+        data_hora_pausa: new Date().toISOString(),
+        motivo_pausa: motivo,
+        observacoes_pausa: motivo
+      });
+      await carregarDados();
     } catch (error) {
       console.error('Erro ao pausar execução:', error);
+      alert('Erro ao pausar execução');
     }
   };
 
@@ -388,13 +537,16 @@ export function ExecucaoOSPage() {
     try {
       const motivo = prompt('Motivo do cancelamento:');
       if (!motivo) return;
-      
-      await cancelarExecucao(String(execucao.id), motivo);
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setLoading(false);
+
+      await cancelarExecucao(String(execucao.id), {
+        data_hora_cancelamento: new Date().toISOString(),
+        motivo_cancelamento: motivo,
+        observacoes_cancelamento: motivo
+      });
+      await carregarDados();
     } catch (error) {
       console.error('Erro ao cancelar execução:', error);
+      alert('Erro ao cancelar execução');
     }
   };
 
@@ -404,49 +556,344 @@ export function ExecucaoOSPage() {
   };
 
   const handleExportar = async () => {
-    console.log('Exportando execuções...');
-    try {
-      const ids = execucoes.map(exec => String(exec.id));
-      const blob = await exportarDadosExecucao(ids);
-      
-      // Criar download do arquivo
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `execucoes-os-${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error('Erro ao exportar:', error);
-    }
+    console.log('⚠️ Exportar execuções não implementado ainda');
+    alert('Funcionalidade de exportação será implementada em breve');
   };
 
   const handleGerarRelatorio = async (execucao: ExecucaoOS) => {
-    console.log('Gerando relatório de execução:', execucao.id);
-    try {
-      const blob = await gerarRelatorioExecucao(String(execucao.id));
-      
-      // Criar download do arquivo
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `relatorio-execucao-${execucao.os.numeroOS}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error('Erro ao gerar relatório:', error);
-    }
+    console.log('⚠️ Gerar relatório não implementado ainda:', execucao.id);
+    alert('Funcionalidade de relatório será implementada em breve');
   };
 
   const handleAtualizar = async () => {
     console.log('Atualizando dados...');
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setLoading(false);
+    await carregarDados();
+  };
+
+  // ============================================================================
+  // AÇÕES DE TRANSIÇÃO DE STATUS
+  // ============================================================================
+
+  /**
+   * Determina quais ações estão disponíveis para o status atual da OS
+   */
+  const getAvailableActions = (status: string | undefined): string[] => {
+    if (!status) return [];
+
+    const statusMap: Record<string, string[]> = {
+      'PLANEJADA': ['programar', 'cancelar'],
+      'PROGRAMADA': ['iniciar', 'cancelar'],
+      'EM_EXECUCAO': ['pausar', 'finalizar', 'cancelar'],
+      'PAUSADA': ['retomar', 'finalizar', 'cancelar'],
+      'FINALIZADA': [],
+      'CANCELADA': []
+    };
+
+    return statusMap[status] || [];
+  };
+
+  /**
+   * Handler para programar OS (PLANEJADA → PROGRAMADA)
+   */
+  const handleProgramarOS = async () => {
+    if (!modalState.entity) return;
+
+    try {
+      // Função helper para validar IDs ULID (26 caracteres)
+      const isValidULID = (id: string): boolean => {
+        return typeof id === 'string' && id.length === 26;
+      };
+
+      // Extrair e validar IDs
+      const materiais = (modalState.entity.materiais || modalState.entity.materiaisConsumidos || []);
+      const ferramentas = (modalState.entity.ferramentas || modalState.entity.ferramentasUtilizadas || []);
+      const tecnicos = (modalState.entity.tecnicos || modalState.entity.tecnicosPresentes || []);
+
+      const materiaisIds = materiais
+        .map((m: any) => m.id || m.material_id)
+        .filter((id: any) => id && isValidULID(id));
+
+      const ferramentasIds = ferramentas
+        .map((f: any) => f.id || f.ferramenta_id)
+        .filter((id: any) => id && isValidULID(id));
+
+      const tecnicosIds = tecnicos
+        .map((t: any) => t.id || t.tecnico_id)
+        .filter((id: any) => id && isValidULID(id));
+
+      console.log('📋 Programar OS - IDs validados:', {
+        materiais: materiaisIds,
+        ferramentas: ferramentasIds,
+        tecnicos: tecnicosIds
+      });
+
+      const data = {
+        data_hora_programada: new Date().toISOString(),
+        responsavel: modalState.entity.responsavel || 'Não atribuído',
+        materiais_confirmados: materiaisIds,
+        ferramentas_confirmadas: ferramentasIds,
+        tecnicos_confirmados: tecnicosIds,
+      };
+
+      await execucaoOSTransitionsService.programar(modalState.entity.id, data);
+      await carregarDados();
+      closeModal();
+      alert('OS programada com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao programar OS:', error);
+      const errorMsg = error?.response?.data?.error?.message ||
+                       error?.response?.data?.message ||
+                       'Erro ao programar OS. Verifique os dados e tente novamente.';
+      alert(errorMsg);
+    }
+  };
+
+  /**
+   * Handler para iniciar execução (PROGRAMADA → EM_EXECUCAO)
+   */
+  const handleIniciarExecucao = async () => {
+    if (!modalState.entity) return;
+
+    try {
+      const equipePresente = prompt('Informe a equipe presente (separada por vírgulas):');
+      if (!equipePresente) return;
+
+      const data = {
+        equipe_presente: equipePresente.split(',').map(e => e.trim()),
+        responsavel_execucao: modalState.entity.responsavel || 'Não atribuído',
+        observacoes_inicio: 'Execução iniciada via modal',
+        data_hora_inicio_real: new Date().toISOString()
+      };
+
+      await execucaoOSTransitionsService.iniciar(modalState.entity.id, data);
+      await handleSuccess();
+    } catch (error) {
+      console.error('Erro ao iniciar execução:', error);
+      alert('Erro ao iniciar execução. Tente novamente.');
+    }
+  };
+
+  /**
+   * Handler para pausar execução (EM_EXECUCAO → PAUSADA)
+   */
+  const handlePausarExecucao = async () => {
+    if (!modalState.entity) return;
+
+    try {
+      const motivo = prompt('Motivo da pausa:');
+      if (!motivo) return;
+
+      const data = {
+        motivo_pausa: motivo,
+        observacoes: ''
+      };
+
+      await execucaoOSTransitionsService.pausar(modalState.entity.id, data);
+      await handleSuccess();
+    } catch (error) {
+      console.error('Erro ao pausar execução:', error);
+      alert('Erro ao pausar execução. Tente novamente.');
+    }
+  };
+
+  /**
+   * Handler para retomar execução (PAUSADA → EM_EXECUCAO)
+   */
+  const handleRetomarExecucao = async () => {
+    if (!modalState.entity) return;
+
+    try {
+      const observacoes = prompt('Observações da retomada (opcional):') || '';
+
+      const data = {
+        observacoes_retomada: observacoes
+      };
+
+      await execucaoOSTransitionsService.retomar(modalState.entity.id, data);
+      await handleSuccess();
+    } catch (error) {
+      console.error('Erro ao retomar execução:', error);
+      alert('Erro ao retomar execução. Tente novamente.');
+    }
+  };
+
+  /**
+   * Handler para finalizar OS (EM_EXECUCAO/PAUSADA → FINALIZADA)
+   */
+  const handleFinalizarOS = async () => {
+    if (!modalState.entity) return;
+
+    try {
+      const resultado = prompt('Resultado do serviço executado:');
+      if (!resultado) return;
+
+      const avaliacao = prompt('Avaliação da qualidade (1-5):');
+      if (!avaliacao || isNaN(Number(avaliacao)) || Number(avaliacao) < 1 || Number(avaliacao) > 5) {
+        alert('Avaliação inválida. Informe um número entre 1 e 5.');
+        return;
+      }
+
+      const data = {
+        data_hora_fim_real: new Date().toISOString(),
+        resultado_servico: resultado,
+        problemas_encontrados: '',
+        recomendacoes: '',
+        materiais_consumidos: (modalState.entity.materiais || []).map((m: any) => ({
+          id: m.id,
+          quantidade_consumida: m.quantidade_consumida || m.quantidade_planejada || 0,
+          observacoes: ''
+        })),
+        ferramentas_utilizadas: (modalState.entity.ferramentas || []).map((f: any) => ({
+          id: f.id,
+          condicao_depois: 'Boa',
+          observacoes: ''
+        })),
+        avaliacao_qualidade: Number(avaliacao),
+        observacoes_qualidade: ''
+      };
+
+      await execucaoOSTransitionsService.finalizar(modalState.entity.id, data);
+      await handleSuccess();
+    } catch (error) {
+      console.error('Erro ao finalizar OS:', error);
+      alert('Erro ao finalizar OS. Tente novamente.');
+    }
+  };
+
+  /**
+   * Handler para cancelar OS (QUALQUER → CANCELADA)
+   */
+  const handleCancelarOS = async () => {
+    if (!modalState.entity) return;
+
+    try {
+      const motivo = prompt('Motivo do cancelamento:');
+      if (!motivo) return;
+
+      const confirmacao = confirm(`Tem certeza que deseja cancelar esta OS?\n\nMotivo: ${motivo}`);
+      if (!confirmacao) return;
+
+      const data = {
+        motivo_cancelamento: motivo,
+        observacoes: ''
+      };
+
+      await execucaoOSTransitionsService.cancelar(modalState.entity.id, data);
+      await handleSuccess();
+    } catch (error) {
+      console.error('Erro ao cancelar OS:', error);
+      alert('Erro ao cancelar OS. Tente novamente.');
+    }
+  };
+
+  /**
+   * Renderiza os botões de ação conforme o status atual da OS
+   */
+  const renderActionButtons = () => {
+    if (!modalState.entity) return null;
+
+    const status = modalState.entity.statusExecucao || modalState.entity.status;
+    const availableActions = getAvailableActions(status);
+
+    if (availableActions.length === 0) {
+      return (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={closeModal}
+          className="w-full"
+        >
+          <X className="h-4 w-4 mr-2" />
+          Fechar
+        </Button>
+      );
+    }
+
+    const actionButtons: Record<string, JSX.Element> = {
+      programar: (
+        <Button
+          key="programar"
+          onClick={handleProgramarOS}
+          disabled={loading}
+          className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+        >
+          <Calendar className="h-4 w-4 mr-2" />
+          Programar OS
+        </Button>
+      ),
+      iniciar: (
+        <Button
+          key="iniciar"
+          onClick={handleIniciarExecucao}
+          disabled={loading}
+          className="w-full bg-green-600 hover:bg-green-700 text-white"
+        >
+          <Play className="h-4 w-4 mr-2" />
+          Iniciar Execução
+        </Button>
+      ),
+      pausar: (
+        <Button
+          key="pausar"
+          onClick={handlePausarExecucao}
+          disabled={loading}
+          className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
+        >
+          <Pause className="h-4 w-4 mr-2" />
+          Pausar Execução
+        </Button>
+      ),
+      retomar: (
+        <Button
+          key="retomar"
+          onClick={handleRetomarExecucao}
+          disabled={loading}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          <Play className="h-4 w-4 mr-2" />
+          Retomar Execução
+        </Button>
+      ),
+      finalizar: (
+        <Button
+          key="finalizar"
+          onClick={handleFinalizarOS}
+          disabled={loading}
+          className="w-full bg-green-600 hover:bg-green-700 text-white"
+        >
+          <CheckCircle className="h-4 w-4 mr-2" />
+          Finalizar OS
+        </Button>
+      ),
+      cancelar: (
+        <Button
+          key="cancelar"
+          onClick={handleCancelarOS}
+          disabled={loading}
+          variant="destructive"
+          className="w-full"
+        >
+          <X className="h-4 w-4 mr-2" />
+          Cancelar OS
+        </Button>
+      )
+    };
+
+    return (
+      <>
+        {availableActions.map(action => actionButtons[action])}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={closeModal}
+          disabled={loading}
+          className="w-full"
+        >
+          <X className="h-4 w-4 mr-2" />
+          Fechar
+        </Button>
+      </>
+    );
   };
 
   return (
@@ -459,129 +906,150 @@ export function ExecucaoOSPage() {
             description="Acompanhe e gerencie a execução das ordens de serviço em campo com recursos detalhados"
           />
           
-          {/* Dashboard */}
-          <div className="grid grid-cols-2 md:grid-cols-7 gap-4 mb-6">
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Total</div>
+          {/* ✅ RESPONSIVO: Dashboard com grid progressivo */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-2 sm:gap-3 md:gap-4 mb-4 md:mb-6">
+            {/* ✅ RESPONSIVO: Card Total */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 md:p-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</div>
+                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Total</div>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.programadas}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Programadas</div>
+
+            {/* ✅ RESPONSIVO: Card Programadas */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 md:p-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 dark:text-purple-400 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.programadas}</div>
+                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Programadas</div>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Play className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.emExecucao}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Em Execução</div>
+
+            {/* ✅ RESPONSIVO: Card Em Execução */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 md:p-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Play className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600 dark:text-orange-400 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.emExecucao}</div>
+                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Em Execução</div>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Pause className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.pausadas}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Pausadas</div>
+
+            {/* ✅ RESPONSIVO: Card Pausadas */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 md:p-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Pause className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-600 dark:text-yellow-400 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.pausadas}</div>
+                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Pausadas</div>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.finalizadas}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Finalizadas</div>
+
+            {/* ✅ RESPONSIVO: Card Finalizadas */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 md:p-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 dark:text-green-400 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.finalizadas}</div>
+                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Finalizadas</div>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Clock className="h-6 w-6 text-red-600 dark:text-red-400" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.atrasadas}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Atrasadas</div>
+
+            {/* ✅ RESPONSIVO: Card Atrasadas */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 md:p-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-red-600 dark:text-red-400 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.atrasadas}</div>
+                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Atrasadas</div>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.criticas}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Críticas</div>
+
+            {/* ✅ RESPONSIVO: Card Críticas */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 md:p-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-red-600 dark:text-red-400 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.criticas}</div>
+                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Críticas</div>
                 </div>
               </div>
             </div>
           </div>
           
-          {/* Filtros e Ações */}
-          <div className="flex flex-col lg:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <BaseFilters 
+          {/* ✅ RESPONSIVO: Filtros e Ações */}
+          <div className="flex flex-col gap-3 md:gap-4 mb-4 md:mb-6">
+            {/* Filtros */}
+            <div className="flex-1 min-w-0">
+              <BaseFilters
                 filters={filters}
                 config={execucaoOSFilterConfig}
                 onFilterChange={handleFilterChange}
               />
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleAtualizar} disabled={loading || hookLoading}>
-                <RefreshCw className={`mr-1 h-4 w-4 ${(loading || hookLoading) ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Atualizar</span>
+
+            {/* ✅ RESPONSIVO: Actions - empilhados em mobile, horizontal em desktop */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAtualizar}
+                disabled={loading || hookLoading}
+                className="w-full sm:w-auto justify-center sm:justify-start"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 shrink-0 ${(loading || hookLoading) ? 'animate-spin' : ''}`} />
+                <span>Atualizar</span>
               </Button>
-              
-              <Button variant="outline" size="sm" onClick={handleExportar}>
-                <Download className="mr-1 h-4 w-4" />
-                <span className="hidden sm:inline">Relatório</span>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportar}
+                className="w-full sm:w-auto justify-center sm:justify-start"
+              >
+                <Download className="mr-2 h-4 w-4 shrink-0" />
+                <span>Relatório</span>
               </Button>
             </div>
           </div>
 
-          {/* Alertas importantes */}
+          {/* ✅ RESPONSIVO: Alertas importantes */}
           {(stats.atrasadas > 0 || stats.criticas > 0) && (
-            <div className="mb-6 space-y-3">
+            <div className="mb-4 md:mb-6 space-y-2 sm:space-y-3">
               {stats.atrasadas > 0 && (
-                <div className="p-4 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Clock className="h-5 w-5 text-red-600 dark:text-red-400" />
-                    <div>
-                      <h4 className="font-medium text-red-900 dark:text-red-100">
+                <div className="p-3 sm:p-4 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-lg">
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-medium text-sm sm:text-base text-red-900 dark:text-red-100">
                         {stats.atrasadas} OS em atraso
                       </h4>
-                      <p className="text-sm text-red-700 dark:text-red-300">
-                        Ordens de serviço que passaram da data programada e ainda não foram executadas.
+                      <p className="text-xs sm:text-sm text-red-700 dark:text-red-300 mt-0.5">
+                        Ordens de serviço que passaram da data programada.
                       </p>
                     </div>
                   </div>
                 </div>
               )}
-              
+
               {stats.criticas > 0 && (
-                <div className="p-4 bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                    <div>
-                      <h4 className="font-medium text-orange-900 dark:text-orange-100">
+                <div className="p-3 sm:p-4 bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800 rounded-lg">
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-medium text-sm sm:text-base text-orange-900 dark:text-orange-100">
                         {stats.criticas} OS críticas
                       </h4>
-                      <p className="text-sm text-orange-700 dark:text-orange-300">
+                      <p className="text-xs sm:text-sm text-orange-700 dark:text-orange-300 mt-0.5">
                         Ordens de serviço com prioridade crítica requerem atenção imediata.
                       </p>
                     </div>
@@ -603,73 +1071,27 @@ export function ExecucaoOSPage() {
               onEdit={handleEdit}
               emptyMessage="Nenhuma execução de OS encontrada."
               emptyIcon={<FileText className="h-8 w-8 text-gray-400" />}
-              customActions={[
-                {
-                  key: 'iniciar',
-                  label: 'Iniciar',
-                  handler: handleIniciar,
-                  condition: (item: ExecucaoOS) => item.statusExecucao === 'PROGRAMADA',
-                  icon: <Play className="h-4 w-4" />,
-                  variant: 'default'
-                },
-                {
-                  key: 'pausar',
-                  label: 'Pausar',
-                  handler: handlePausar,
-                  condition: (item: ExecucaoOS) => item.statusExecucao === 'EM_EXECUCAO',
-                  icon: <Pause className="h-4 w-4" />,
-                  variant: 'outline'
-                },
-                {
-                  key: 'finalizar',
-                  label: 'Finalizar',
-                  handler: handleFinalizar,
-                  condition: (item: ExecucaoOS) => item.statusExecucao === 'EM_EXECUCAO' || item.statusExecucao === 'PAUSADA',
-                  icon: <CheckCircle className="h-4 w-4" />
-                },
-                {
-                  key: 'relatorio',
-                  label: 'Relatório',
-                  handler: handleGerarRelatorio,
-                  condition: (item: ExecucaoOS) => item.statusExecucao !== 'PROGRAMADA',
-                  icon: <FileText className="h-4 w-4" />,
-                  variant: 'outline'
-                },
-                {
-                  key: 'anexos',
-                  label: 'Anexos',
-                  handler: handleAnexos,
-                  condition: (item: ExecucaoOS) => item.statusExecucao !== 'PROGRAMADA',
-                  icon: <Camera className="h-4 w-4" />,
-                  variant: 'outline'
-                },
-                {
-                  key: 'cancelar',
-                  label: 'Cancelar',
-                  handler: handleCancelar,
-                  condition: (item: ExecucaoOS) => item.statusExecucao !== 'FINALIZADA' && item.statusExecucao !== 'CANCELADA',
-                  icon: <X className="h-4 w-4" />,
-                  variant: 'destructive'
-                }
-              ]}
             />
           </div>
         </div>
 
         {/* Modal com Cards */}
-        <BaseModal
-          isOpen={modalState.isOpen}
-          mode={modalState.mode}
-          entity={getModalEntity()}
-          title={getModalTitle()}
-          icon={getModalIcon()}
-          formFields={execucaoOSFormFields}
-          groups={execucaoOSFormGroups}
-          onClose={closeModal}
-          onSubmit={handleSubmit}
-          width="w-[1200px]"
-          loading={loading || hookLoading}
-        />
+        {modalState.entity && (
+          <BaseModal
+            isOpen={modalState.isOpen}
+            mode={modalState.mode}
+            entity={getModalEntity()!}
+            title={getModalTitle()}
+            icon={getModalIcon()}
+            formFields={execucaoOSFormFields}
+            groups={execucaoOSFormGroups}
+            onClose={closeModal}
+            onSubmit={handleSubmit}
+            width="w-[1200px]"
+            loading={loading || hookLoading}
+            customActions={renderActionButtons()}
+          />
+        )}
       </Layout.Main>
     </Layout>
   );

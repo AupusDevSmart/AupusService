@@ -1,570 +1,545 @@
 // src/features/execucao-os/hooks/useExecucaoOS.ts
 import { useState, useCallback } from 'react';
-import { ExecucaoOS, FinalizarExecucaoData, MaterialConsumido, FerramentaUtilizada } from '../types';
-import { mockExecucoesOS } from '../data/mock-data';
+import { execucaoOSApi } from '@/services/execucao-os.service';
+import type {
+  ExecucaoOSApiResponse,
+  ExecucaoOSListApiResponse,
+  QueryExecucaoOSApiParams,
+  IniciarExecucaoApiData,
+  PausarExecucaoApiData,
+  RetomarExecucaoApiData,
+  FinalizarExecucaoApiData,
+  CancelarExecucaoApiData,
+  AtualizarProgressoApiData,
+  ExecutarTarefaApiData,
+  TarefaExecucaoApiResponse,
+  AnexoExecucaoApiResponse,
+  EquipeExecucaoApiResponse,
+  PausaExecucaoApiResponse,
+  TipoAnexoExecucao
+} from '@/services/execucao-os.service';
 
 interface UseExecucaoOSReturn {
   // Estados
   loading: boolean;
-  
-  // Operações CRUD
-  obterExecucao: (id: string) => Promise<ExecucaoOS | null>;
-  editarExecucao: (id: string, dados: Partial<ExecucaoOS>) => Promise<ExecucaoOS>;
-  
-  // Operações de execução
-  pausarExecucao: (id: string, motivo?: string) => Promise<{ success: boolean }>;
-  retomarExecucao: (id: string) => Promise<{ success: boolean }>;
-  finalizarExecucao: (id: string, dados: FinalizarExecucaoData) => Promise<{ success: boolean }>;
-  cancelarExecucao: (id: string, motivo: string) => Promise<{ success: boolean }>;
-  
-  // Gerenciamento de atividades
-  atualizarChecklist: (id: string, checklistAtividades: any[]) => Promise<{ success: boolean }>;
-  adicionarAtividade: (id: string, atividade: string) => Promise<{ success: boolean }>;
-  
-  // Gerenciamento de recursos
-  atualizarMateriaisConsumidos: (id: string, materiais: MaterialConsumido[]) => Promise<{ success: boolean }>;
-  atualizarFerramentasUtilizadas: (id: string, ferramentas: FerramentaUtilizada[]) => Promise<{ success: boolean }>;
-  
-  // Registros de tempo
-  registrarTempo: (id: string, tecnicoId: string, atividade: string, tempoMinutos: number) => Promise<{ success: boolean }>;
-  
-  // Anexos
-  adicionarAnexo: (id: string, anexo: any) => Promise<{ success: boolean }>;
-  removerAnexo: (id: string, anexoId: string) => Promise<{ success: boolean }>;
-  
+  error: string | null;
+
+  // Operações de listagem e busca
+  listarExecucoes: (params?: QueryExecucaoOSApiParams) => Promise<ExecucaoOSListApiResponse>;
+  buscarExecucao: (id: string) => Promise<ExecucaoOSApiResponse>;
+  getDashboard: () => Promise<any>;
+
+  // Operações de fluxo de execução
+  iniciarExecucao: (id: string, data: IniciarExecucaoApiData) => Promise<ExecucaoOSApiResponse>;
+  pausarExecucao: (id: string, data: PausarExecucaoApiData) => Promise<ExecucaoOSApiResponse>;
+  retomarExecucao: (id: string, data: RetomarExecucaoApiData) => Promise<ExecucaoOSApiResponse>;
+  finalizarExecucao: (id: string, data: FinalizarExecucaoApiData) => Promise<ExecucaoOSApiResponse>;
+  cancelarExecucao: (id: string, data: CancelarExecucaoApiData) => Promise<ExecucaoOSApiResponse>;
+  atualizarProgresso: (id: string, data: AtualizarProgressoApiData) => Promise<ExecucaoOSApiResponse>;
+
+  // Operações de aprovação
+  aprovarExecucao: (id: string, observacoes?: string, aprovadoPor?: string) => Promise<ExecucaoOSApiResponse>;
+  reprovarExecucao: (id: string, motivo: string, reprovadoPor?: string) => Promise<ExecucaoOSApiResponse>;
+
+  // Operações de tarefas
+  listarTarefas: (id: string) => Promise<TarefaExecucaoApiResponse[]>;
+  executarTarefa: (id: string, tarefaId: string, data: ExecutarTarefaApiData) => Promise<TarefaExecucaoApiResponse>;
+
+  // Operações de equipe
+  listarEquipe: (id: string) => Promise<EquipeExecucaoApiResponse[]>;
+  adicionarMembroEquipe: (id: string, tecnicoId: string, papel: 'RESPONSAVEL' | 'AUXILIAR' | 'SUPERVISOR') => Promise<EquipeExecucaoApiResponse>;
+  removerMembroEquipe: (id: string, membroId: string) => Promise<void>;
+
+  // Operações de anexos
+  listarAnexos: (id: string) => Promise<AnexoExecucaoApiResponse[]>;
+  uploadAnexo: (id: string, file: File, tipo: TipoAnexoExecucao, descricao?: string, usuarioId?: string) => Promise<AnexoExecucaoApiResponse>;
+  downloadAnexo: (id: string, anexoId: string) => Promise<Blob>;
+  removerAnexo: (id: string, anexoId: string) => Promise<void>;
+
+  // Operações de histórico e pausas
+  listarPausas: (id: string) => Promise<PausaExecucaoApiResponse[]>;
+  buscarHistoricoCompleto: (id: string) => Promise<any>;
+
   // Relatórios
-  gerarRelatorioExecucao: (id: string) => Promise<Blob>;
-  exportarDadosExecucao: (ids: string[]) => Promise<Blob>;
+  getRelatorioPerformance: (params?: any) => Promise<any>;
+  getRelatorioCustos: (params?: any) => Promise<any>;
+  getRelatorioEficiencia: (params?: any) => Promise<any>;
 }
 
 export const useExecucaoOS = (): UseExecucaoOSReturn => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Simular delay de API
-  const simulateDelay = (ms: number = 1000) => 
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Função helper para tratamento de erros
+  const handleError = useCallback((err: any, defaultMessage: string) => {
+    console.error('❌ [useExecucaoOS] Erro:', err);
+    const errorMessage = err?.response?.data?.message || err?.message || defaultMessage;
+    setError(errorMessage);
+    throw err;
+  }, []);
 
-  // Gerar ID único
-  const generateId = () => String(Date.now() + Math.random());
+  // ============================================================================
+  // LISTAGEM E BUSCA
+  // ============================================================================
 
-  // ✅ OBTER EXECUÇÃO POR ID
-  const obterExecucao = useCallback(async (id: string): Promise<ExecucaoOS | null> => {
+  const listarExecucoes = useCallback(async (params?: QueryExecucaoOSApiParams): Promise<ExecucaoOSListApiResponse> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('🔍 Buscando execução:', id);
-      await simulateDelay(500);
-      
-      const execucao = mockExecucoesOS.find(exec => exec.id === parseInt(id));
-      console.log(execucao ? '✅ Execução encontrada' : '❌ Execução não encontrada');
-      return execucao || null;
-    } catch (error) {
-      console.error('❌ Erro ao buscar execução:', error);
-      throw error;
+      console.log('🔍 [useExecucaoOS] Listando execuções com params:', params);
+      const response = await execucaoOSApi.findAll(params);
+      console.log('✅ [useExecucaoOS] Execuções listadas:', response.pagination);
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao listar execuções');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
-  // ✅ EDITAR EXECUÇÃO
-  const editarExecucao = useCallback(async (id: string, dados: Partial<ExecucaoOS>): Promise<ExecucaoOS> => {
+  const buscarExecucao = useCallback(async (id: string): Promise<ExecucaoOSApiResponse> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('✏️ Editando execução:', id, dados);
-      await simulateDelay(1200);
-      
-      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
-      if (index === -1) {
-        throw new Error('Execução não encontrada');
-      }
-      
-      const execucaoAtualizada = {
-        ...mockExecucoesOS[index],
-        ...dados,
-        atualizadoEm: new Date().toISOString()
-      };
-      
-      mockExecucoesOS[index] = execucaoAtualizada;
-      console.log('✅ Execução editada com sucesso');
-      return execucaoAtualizada;
-    } catch (error) {
-      console.error('❌ Erro ao editar execução:', error);
-      throw error;
+      console.log('🔍 [useExecucaoOS] Buscando execução:', id);
+      const response = await execucaoOSApi.findOne(id);
+      console.log('✅ [useExecucaoOS] Execução encontrada:', response.numero_execucao);
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao buscar execução');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
-  // ✅ PAUSAR EXECUÇÃO
-  const pausarExecucao = useCallback(async (id: string, motivo?: string): Promise<{ success: boolean }> => {
+  const getDashboard = useCallback(async (): Promise<any> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('⏸️ Pausando execução:', id, motivo);
-      await simulateDelay(1000);
-      
-      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
-      if (index === -1) {
-        throw new Error('Execução não encontrada');
-      }
-      
-      const execucaoAtualizada = {
-        ...mockExecucoesOS[index],
-        statusExecucao: 'PAUSADA' as const,
-        atualizadoEm: new Date().toISOString()
-      };
-      
-      mockExecucoesOS[index] = execucaoAtualizada;
-      console.log('✅ Execução pausada com sucesso');
-      
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Erro ao pausar execução:', error);
-      throw error;
+      console.log('📊 [useExecucaoOS] Carregando dashboard');
+      const response = await execucaoOSApi.getDashboard();
+      console.log('✅ [useExecucaoOS] Dashboard carregado');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao carregar dashboard');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
-  // ✅ RETOMAR EXECUÇÃO
-  const retomarExecucao = useCallback(async (id: string): Promise<{ success: boolean }> => {
+  // ============================================================================
+  // FLUXO DE EXECUÇÃO
+  // ============================================================================
+
+  const iniciarExecucao = useCallback(async (id: string, data: IniciarExecucaoApiData): Promise<ExecucaoOSApiResponse> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('▶️ Retomando execução:', id);
-      await simulateDelay(800);
-      
-      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
-      if (index === -1) {
-        throw new Error('Execução não encontrada');
-      }
-      
-      const execucaoAtualizada = {
-        ...mockExecucoesOS[index],
-        statusExecucao: 'EM_EXECUCAO' as const,
-        atualizadoEm: new Date().toISOString()
-      };
-      
-      mockExecucoesOS[index] = execucaoAtualizada;
-      console.log('✅ Execução retomada com sucesso');
-      
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Erro ao retomar execução:', error);
-      throw error;
+      console.log('▶️ [useExecucaoOS] Iniciando execução:', id);
+      const response = await execucaoOSApi.iniciar(id, data);
+      console.log('✅ [useExecucaoOS] Execução iniciada');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao iniciar execução');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
-  // ✅ FINALIZAR EXECUÇÃO
-  const finalizarExecucao = useCallback(async (id: string, dados: FinalizarExecucaoData): Promise<{ success: boolean }> => {
+  const pausarExecucao = useCallback(async (id: string, data: PausarExecucaoApiData): Promise<ExecucaoOSApiResponse> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('🏁 Finalizando execução:', id, dados);
-      await simulateDelay(2000);
-      
-      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
-      if (index === -1) {
-        throw new Error('Execução não encontrada');
-      }
-      
-      const agora = new Date();
-      const execucaoAtualizada = {
-        ...mockExecucoesOS[index],
-        statusExecucao: 'FINALIZADA' as const,
-        dataFimReal: agora.toISOString().split('T')[0],
-        horaFimReal: agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        resultadoServico: dados.resultadoServico,
-        problemasEncontrados: dados.problemasEncontrados,
-        recomendacoes: dados.recomendacoes,
-        proximaManutencao: dados.proximaManutencao,
-        materiaisConsumidos: dados.materiaisConsumidos,
-        ferramentasUtilizadas: dados.ferramentasUtilizadas,
-        avaliacaoQualidade: dados.avaliacaoQualidade,
-        observacoesQualidade: dados.observacoesQualidade,
-        aprovadoPor: 'Usuário Atual',
-        dataAprovacao: agora.toISOString(),
-        atualizadoEm: agora.toISOString()
-      };
-      
-      mockExecucoesOS[index] = execucaoAtualizada;
-      console.log('✅ Execução finalizada com sucesso');
-      
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Erro ao finalizar execução:', error);
-      throw error;
+      console.log('⏸️ [useExecucaoOS] Pausando execução:', id);
+      const response = await execucaoOSApi.pausar(id, data);
+      console.log('✅ [useExecucaoOS] Execução pausada');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao pausar execução');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
-  // ✅ CANCELAR EXECUÇÃO
-  const cancelarExecucao = useCallback(async (id: string, motivo: string): Promise<{ success: boolean }> => {
+  const retomarExecucao = useCallback(async (id: string, data: RetomarExecucaoApiData): Promise<ExecucaoOSApiResponse> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('❌ Cancelando execução:', id, motivo);
-      await simulateDelay(1000);
-      
-      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
-      if (index === -1) {
-        throw new Error('Execução não encontrada');
-      }
-      
-      const execucaoAtualizada = {
-        ...mockExecucoesOS[index],
-        statusExecucao: 'CANCELADA' as const,
-        resultadoServico: `Execução cancelada: ${motivo}`,
-        atualizadoEm: new Date().toISOString()
-      };
-      
-      mockExecucoesOS[index] = execucaoAtualizada;
-      console.log('✅ Execução cancelada com sucesso');
-      
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Erro ao cancelar execução:', error);
-      throw error;
+      console.log('▶️ [useExecucaoOS] Retomando execução:', id);
+      const response = await execucaoOSApi.retomar(id, data);
+      console.log('✅ [useExecucaoOS] Execução retomada');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao retomar execução');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
-  // ✅ ATUALIZAR CHECKLIST
-  const atualizarChecklist = useCallback(async (id: string, checklistAtividades: any[]): Promise<{ success: boolean }> => {
+  const finalizarExecucao = useCallback(async (id: string, data: FinalizarExecucaoApiData): Promise<ExecucaoOSApiResponse> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('📋 Atualizando checklist:', id);
-      await simulateDelay(800);
-      
-      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
-      if (index === -1) {
-        throw new Error('Execução não encontrada');
-      }
-      
-      const execucaoAtualizada = {
-        ...mockExecucoesOS[index],
-        checklistAtividades,
-        atualizadoEm: new Date().toISOString()
-      };
-      
-      mockExecucoesOS[index] = execucaoAtualizada;
-      console.log('✅ Checklist atualizado com sucesso');
-      
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Erro ao atualizar checklist:', error);
-      throw error;
+      console.log('🏁 [useExecucaoOS] Finalizando execução:', id);
+      const response = await execucaoOSApi.finalizar(id, data);
+      console.log('✅ [useExecucaoOS] Execução finalizada');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao finalizar execução');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
-  // ✅ ADICIONAR ATIVIDADE
-  const adicionarAtividade = useCallback(async (id: string, atividade: string): Promise<{ success: boolean }> => {
+  const cancelarExecucao = useCallback(async (id: string, data: CancelarExecucaoApiData): Promise<ExecucaoOSApiResponse> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('➕ Adicionando atividade:', id, atividade);
-      await simulateDelay(600);
-      
-      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
-      if (index === -1) {
-        throw new Error('Execução não encontrada');
-      }
-      
-      const novaAtividade = {
-        id: generateId(),
-        osId: id,
-        atividade,
-        concluida: false
-      };
-      
-      const execucaoAtualizada = {
-        ...mockExecucoesOS[index],
-        checklistAtividades: [...mockExecucoesOS[index].checklistAtividades, novaAtividade],
-        atualizadoEm: new Date().toISOString()
-      };
-      
-      mockExecucoesOS[index] = execucaoAtualizada;
-      console.log('✅ Atividade adicionada com sucesso');
-      
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Erro ao adicionar atividade:', error);
-      throw error;
+      console.log('❌ [useExecucaoOS] Cancelando execução:', id);
+      const response = await execucaoOSApi.cancelar(id, data);
+      console.log('✅ [useExecucaoOS] Execução cancelada');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao cancelar execução');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
-  // ✅ ATUALIZAR MATERIAIS CONSUMIDOS
-  const atualizarMateriaisConsumidos = useCallback(async (id: string, materiais: MaterialConsumido[]): Promise<{ success: boolean }> => {
+  const atualizarProgresso = useCallback(async (id: string, data: AtualizarProgressoApiData): Promise<ExecucaoOSApiResponse> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('📦 Atualizando materiais consumidos:', id);
-      await simulateDelay(800);
-      
-      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
-      if (index === -1) {
-        throw new Error('Execução não encontrada');
-      }
-      
-      const execucaoAtualizada = {
-        ...mockExecucoesOS[index],
-        materiaisConsumidos: materiais,
-        atualizadoEm: new Date().toISOString()
-      };
-      
-      mockExecucoesOS[index] = execucaoAtualizada;
-      console.log('✅ Materiais atualizados com sucesso');
-      
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Erro ao atualizar materiais:', error);
-      throw error;
+      console.log('📈 [useExecucaoOS] Atualizando progresso:', id);
+      const response = await execucaoOSApi.atualizarProgresso(id, data);
+      console.log('✅ [useExecucaoOS] Progresso atualizado');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao atualizar progresso');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
-  // ✅ ATUALIZAR FERRAMENTAS UTILIZADAS
-  const atualizarFerramentasUtilizadas = useCallback(async (id: string, ferramentas: FerramentaUtilizada[]): Promise<{ success: boolean }> => {
+  // ============================================================================
+  // APROVAÇÃO
+  // ============================================================================
+
+  const aprovarExecucao = useCallback(async (id: string, observacoes?: string, aprovadoPor?: string): Promise<ExecucaoOSApiResponse> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('🔧 Atualizando ferramentas utilizadas:', id);
-      await simulateDelay(800);
-      
-      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
-      if (index === -1) {
-        throw new Error('Execução não encontrada');
-      }
-      
-      const execucaoAtualizada = {
-        ...mockExecucoesOS[index],
-        ferramentasUtilizadas: ferramentas,
-        atualizadoEm: new Date().toISOString()
-      };
-      
-      mockExecucoesOS[index] = execucaoAtualizada;
-      console.log('✅ Ferramentas atualizadas com sucesso');
-      
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Erro ao atualizar ferramentas:', error);
-      throw error;
+      console.log('✅ [useExecucaoOS] Aprovando execução:', id);
+      const response = await execucaoOSApi.aprovar(id, observacoes, aprovadoPor);
+      console.log('✅ [useExecucaoOS] Execução aprovada');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao aprovar execução');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
-  // ✅ REGISTRAR TEMPO
-  const registrarTempo = useCallback(async (id: string, tecnicoId: string, atividade: string, tempoMinutos: number): Promise<{ success: boolean }> => {
+  const reprovarExecucao = useCallback(async (id: string, motivo: string, reprovadoPor?: string): Promise<ExecucaoOSApiResponse> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('⏱️ Registrando tempo:', id, tecnicoId, atividade, tempoMinutos);
-      await simulateDelay(600);
-      
-      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
-      if (index === -1) {
-        throw new Error('Execução não encontrada');
-      }
-      
-      const novoRegistro = {
-        id: generateId(),
-        osId: id,
-        tecnicoId,
-        tecnicoNome: 'Técnico',
-        dataInicio: new Date().toISOString().split('T')[0],
-        horaInicio: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        dataFim: new Date().toISOString().split('T')[0],
-        horaFim: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        tempoTotal: tempoMinutos,
-        atividade
-      };
-      
-      const execucaoAtualizada = {
-        ...mockExecucoesOS[index],
-        registrosTempoTecnicos: [...mockExecucoesOS[index].registrosTempoTecnicos, novoRegistro],
-        atualizadoEm: new Date().toISOString()
-      };
-      
-      mockExecucoesOS[index] = execucaoAtualizada;
-      console.log('✅ Tempo registrado com sucesso');
-      
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Erro ao registrar tempo:', error);
-      throw error;
+      console.log('❌ [useExecucaoOS] Reprovando execução:', id);
+      const response = await execucaoOSApi.reprovar(id, motivo, reprovadoPor);
+      console.log('✅ [useExecucaoOS] Execução reprovada');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao reprovar execução');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
-  // ✅ ADICIONAR ANEXO
-  const adicionarAnexo = useCallback(async (id: string, anexo: any): Promise<{ success: boolean }> => {
+  // ============================================================================
+  // TAREFAS
+  // ============================================================================
+
+  const listarTarefas = useCallback(async (id: string): Promise<TarefaExecucaoApiResponse[]> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('📎 Adicionando anexo:', id, anexo);
-      await simulateDelay(1200);
-      
-      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
-      if (index === -1) {
-        throw new Error('Execução não encontrada');
-      }
-      
-      const novoAnexo = {
-        id: generateId(),
-        osId: id,
-        tipo: anexo.tipo || 'documento',
-        nome: anexo.nome,
-        url: anexo.url || `/uploads/${anexo.nome}`,
-        descricao: anexo.descricao,
-        uploadedAt: new Date().toISOString(),
-        uploadedBy: 'Usuário Atual'
-      };
-      
-      const execucaoAtualizada = {
-        ...mockExecucoesOS[index],
-        anexos: [...mockExecucoesOS[index].anexos, novoAnexo],
-        atualizadoEm: new Date().toISOString()
-      };
-      
-      mockExecucoesOS[index] = execucaoAtualizada;
-      console.log('✅ Anexo adicionado com sucesso');
-      
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Erro ao adicionar anexo:', error);
-      throw error;
+      console.log('📋 [useExecucaoOS] Listando tarefas:', id);
+      const response = await execucaoOSApi.getTarefas(id);
+      console.log('✅ [useExecucaoOS] Tarefas listadas:', response.length);
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao listar tarefas');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
-  // ✅ REMOVER ANEXO
-  const removerAnexo = useCallback(async (id: string, anexoId: string): Promise<{ success: boolean }> => {
+  const executarTarefa = useCallback(async (id: string, tarefaId: string, data: ExecutarTarefaApiData): Promise<TarefaExecucaoApiResponse> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('🗑️ Removendo anexo:', id, anexoId);
-      await simulateDelay(800);
-      
-      const index = mockExecucoesOS.findIndex(exec => exec.id === parseInt(id));
-      if (index === -1) {
-        throw new Error('Execução não encontrada');
-      }
-      
-      const execucaoAtualizada = {
-        ...mockExecucoesOS[index],
-        anexos: mockExecucoesOS[index].anexos.filter(anexo => anexo.id !== anexoId),
-        atualizadoEm: new Date().toISOString()
-      };
-      
-      mockExecucoesOS[index] = execucaoAtualizada;
-      console.log('✅ Anexo removido com sucesso');
-      
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Erro ao remover anexo:', error);
-      throw error;
+      console.log('🔧 [useExecucaoOS] Executando tarefa:', tarefaId);
+      const response = await execucaoOSApi.executarTarefa(id, tarefaId, data);
+      console.log('✅ [useExecucaoOS] Tarefa executada');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao executar tarefa');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
-  // ✅ GERAR RELATÓRIO DE EXECUÇÃO
-  const gerarRelatorioExecucao = useCallback(async (id: string): Promise<Blob> => {
+  // ============================================================================
+  // EQUIPE
+  // ============================================================================
+
+  const listarEquipe = useCallback(async (id: string): Promise<EquipeExecucaoApiResponse[]> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('📊 Gerando relatório de execução:', id);
-      await simulateDelay(2000);
-      
-      const execucao = mockExecucoesOS.find(exec => exec.id === parseInt(id));
-      if (!execucao) {
-        throw new Error('Execução não encontrada');
-      }
-      
-      const relatorio = `RELATÓRIO DE EXECUÇÃO DE OS
-==========================================
-
-OS: ${execucao.os.numeroOS}
-Descrição: ${execucao.os.descricao}
-Local: ${execucao.os.local}
-Ativo: ${execucao.os.ativo}
-
-EXECUÇÃO:
-Status: ${execucao.statusExecucao}
-Responsável: ${execucao.responsavelExecucao}
-Equipe: ${execucao.equipePresente.join(', ')}
-Início: ${execucao.dataInicioReal} às ${execucao.horaInicioReal}
-${execucao.dataFimReal ? `Fim: ${execucao.dataFimReal} às ${execucao.horaFimReal}` : ''}
-
-CHECKLIST:
-${execucao.checklistAtividades.map(atividade => 
-  `${atividade.concluida ? '✅' : '⬜'} ${atividade.atividade}`
-).join('\n')}
-
-RESULTADO:
-${execucao.resultadoServico || 'Não informado'}
-
-${execucao.problemasEncontrados ? `PROBLEMAS:\n${execucao.problemasEncontrados}\n` : ''}
-${execucao.recomendacoes ? `RECOMENDAÇÕES:\n${execucao.recomendacoes}\n` : ''}
-
-AVALIAÇÃO: ${execucao.avaliacaoQualidade ? `${execucao.avaliacaoQualidade}/5 estrelas` : 'Não avaliado'}
-`;
-      
-      const blob = new Blob([relatorio], { type: 'text/plain;charset=utf-8;' });
-      console.log('✅ Relatório gerado com sucesso');
-      
-      return blob;
-    } catch (error) {
-      console.error('❌ Erro ao gerar relatório:', error);
-      throw error;
+      console.log('👥 [useExecucaoOS] Listando equipe:', id);
+      const response = await execucaoOSApi.getEquipe(id);
+      console.log('✅ [useExecucaoOS] Equipe listada:', response.length);
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao listar equipe');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
 
-  // ✅ EXPORTAR DADOS DE EXECUÇÃO
-  const exportarDadosExecucao = useCallback(async (ids: string[]): Promise<Blob> => {
+  const adicionarMembroEquipe = useCallback(async (
+    id: string,
+    tecnicoId: string,
+    papel: 'RESPONSAVEL' | 'AUXILIAR' | 'SUPERVISOR'
+  ): Promise<EquipeExecucaoApiResponse> => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('📄 Exportando dados de execução:', ids);
-      await simulateDelay(2500);
-      
-      const execucoesSelecionadas = mockExecucoesOS.filter(exec => ids.includes(exec.id.toString()));
-      
-      const header = 'OS,Descrição,Status,Responsável,Início,Fim,Duração,Avaliação\n';
-      const csvContent = execucoesSelecionadas.map(exec => {
-        const duracao = exec.tempoTotalExecucao ? `${Math.floor(exec.tempoTotalExecucao / 60)}h ${exec.tempoTotalExecucao % 60}min` : 'N/A';
-        return `"${exec.os.numeroOS}","${exec.os.descricao}","${exec.statusExecucao}","${exec.responsavelExecucao}","${exec.dataInicioReal} ${exec.horaInicioReal}","${exec.dataFimReal || 'N/A'} ${exec.horaFimReal || ''}","${duracao}","${exec.avaliacaoQualidade || 'N/A'}/5"`;
-      }).join('\n');
-      
-      const blob = new Blob([header + csvContent], { type: 'text/csv;charset=utf-8;' });
-      console.log(`✅ Exportação concluída: ${execucoesSelecionadas.length} execuções`);
-      
-      return blob;
-    } catch (error) {
-      console.error('❌ Erro ao exportar dados:', error);
-      throw error;
+      console.log('➕ [useExecucaoOS] Adicionando membro à equipe:', tecnicoId);
+      const response = await execucaoOSApi.adicionarMembro(id, tecnicoId, papel);
+      console.log('✅ [useExecucaoOS] Membro adicionado');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao adicionar membro à equipe');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleError]);
+
+  const removerMembroEquipe = useCallback(async (id: string, membroId: string): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('➖ [useExecucaoOS] Removendo membro da equipe:', membroId);
+      await execucaoOSApi.removerMembro(id, membroId);
+      console.log('✅ [useExecucaoOS] Membro removido');
+    } catch (err) {
+      return handleError(err, 'Erro ao remover membro da equipe');
+    } finally {
+      setLoading(false);
+    }
+  }, [handleError]);
+
+  // ============================================================================
+  // ANEXOS
+  // ============================================================================
+
+  const listarAnexos = useCallback(async (id: string): Promise<AnexoExecucaoApiResponse[]> => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('📎 [useExecucaoOS] Listando anexos:', id);
+      const response = await execucaoOSApi.getAnexos(id);
+      console.log('✅ [useExecucaoOS] Anexos listados:', response.length);
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao listar anexos');
+    } finally {
+      setLoading(false);
+    }
+  }, [handleError]);
+
+  const uploadAnexo = useCallback(async (
+    id: string,
+    file: File,
+    tipo: TipoAnexoExecucao,
+    descricao?: string,
+    usuarioId?: string
+  ): Promise<AnexoExecucaoApiResponse> => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('📤 [useExecucaoOS] Fazendo upload de anexo:', file.name);
+      const response = await execucaoOSApi.uploadAnexo(id, file, tipo, descricao, usuarioId);
+      console.log('✅ [useExecucaoOS] Anexo enviado');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao fazer upload de anexo');
+    } finally {
+      setLoading(false);
+    }
+  }, [handleError]);
+
+  const downloadAnexo = useCallback(async (id: string, anexoId: string): Promise<Blob> => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('📥 [useExecucaoOS] Baixando anexo:', anexoId);
+      const response = await execucaoOSApi.downloadAnexo(id, anexoId);
+      console.log('✅ [useExecucaoOS] Anexo baixado');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao baixar anexo');
+    } finally {
+      setLoading(false);
+    }
+  }, [handleError]);
+
+  const removerAnexo = useCallback(async (id: string, anexoId: string): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('🗑️ [useExecucaoOS] Removendo anexo:', anexoId);
+      await execucaoOSApi.deleteAnexo(id, anexoId);
+      console.log('✅ [useExecucaoOS] Anexo removido');
+    } catch (err) {
+      return handleError(err, 'Erro ao remover anexo');
+    } finally {
+      setLoading(false);
+    }
+  }, [handleError]);
+
+  // ============================================================================
+  // HISTÓRICO E PAUSAS
+  // ============================================================================
+
+  const listarPausas = useCallback(async (id: string): Promise<PausaExecucaoApiResponse[]> => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('⏸️ [useExecucaoOS] Listando pausas:', id);
+      const response = await execucaoOSApi.getPausas(id);
+      console.log('✅ [useExecucaoOS] Pausas listadas:', response.length);
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao listar pausas');
+    } finally {
+      setLoading(false);
+    }
+  }, [handleError]);
+
+  const buscarHistoricoCompleto = useCallback(async (id: string): Promise<any> => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('📜 [useExecucaoOS] Buscando histórico completo:', id);
+      const response = await execucaoOSApi.getHistoricoCompleto(id);
+      console.log('✅ [useExecucaoOS] Histórico carregado');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao buscar histórico');
+    } finally {
+      setLoading(false);
+    }
+  }, [handleError]);
+
+  // ============================================================================
+  // RELATÓRIOS
+  // ============================================================================
+
+  const getRelatorioPerformance = useCallback(async (params?: any): Promise<any> => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('📊 [useExecucaoOS] Gerando relatório de performance');
+      const response = await execucaoOSApi.getRelatorioPerformance(params);
+      console.log('✅ [useExecucaoOS] Relatório gerado');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao gerar relatório de performance');
+    } finally {
+      setLoading(false);
+    }
+  }, [handleError]);
+
+  const getRelatorioCustos = useCallback(async (params?: any): Promise<any> => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('💰 [useExecucaoOS] Gerando relatório de custos');
+      const response = await execucaoOSApi.getRelatorioCustos(params);
+      console.log('✅ [useExecucaoOS] Relatório gerado');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao gerar relatório de custos');
+    } finally {
+      setLoading(false);
+    }
+  }, [handleError]);
+
+  const getRelatorioEficiencia = useCallback(async (params?: any): Promise<any> => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('⚡ [useExecucaoOS] Gerando relatório de eficiência');
+      const response = await execucaoOSApi.getRelatorioEficiencia(params);
+      console.log('✅ [useExecucaoOS] Relatório gerado');
+      return response;
+    } catch (err) {
+      return handleError(err, 'Erro ao gerar relatório de eficiência');
+    } finally {
+      setLoading(false);
+    }
+  }, [handleError]);
+
+  // ============================================================================
+  // RETORNO DO HOOK
+  // ============================================================================
 
   return {
     loading,
-    obterExecucao,
-    editarExecucao,
+    error,
+
+    // Listagem e busca
+    listarExecucoes,
+    buscarExecucao,
+    getDashboard,
+
+    // Fluxo de execução
+    iniciarExecucao,
     pausarExecucao,
     retomarExecucao,
     finalizarExecucao,
     cancelarExecucao,
-    atualizarChecklist,
-    adicionarAtividade,
-    atualizarMateriaisConsumidos,
-    atualizarFerramentasUtilizadas,
-    registrarTempo,
-    adicionarAnexo,
+    atualizarProgresso,
+
+    // Aprovação
+    aprovarExecucao,
+    reprovarExecucao,
+
+    // Tarefas
+    listarTarefas,
+    executarTarefa,
+
+    // Equipe
+    listarEquipe,
+    adicionarMembroEquipe,
+    removerMembroEquipe,
+
+    // Anexos
+    listarAnexos,
+    uploadAnexo,
+    downloadAnexo,
     removerAnexo,
-    gerarRelatorioExecucao,
-    exportarDadosExecucao
+
+    // Histórico e pausas
+    listarPausas,
+    buscarHistoricoCompleto,
+
+    // Relatórios
+    getRelatorioPerformance,
+    getRelatorioCustos,
+    getRelatorioEficiencia
   };
 };

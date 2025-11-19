@@ -231,8 +231,14 @@ export interface ProgramacaoResponse {
   observacoes?: string;
   observacoes_programacao?: string;
   justificativa?: string;
+  observacoes_analise?: string;
   motivo_rejeicao?: string;
+  sugestoes_melhoria?: string;
   motivo_cancelamento?: string;
+  observacoes_aprovacao?: string;
+  ajustes_orcamento?: number;
+  data_programada_sugerida?: string;
+  hora_programada_sugerida?: string;
   tarefas_programacao: TarefaProgramacaoResponse[];
   criado_por?: string;
   criado_por_id?: string;
@@ -247,6 +253,18 @@ export interface ProgramacaoResponse {
   tecnicos: TecnicoProgramacaoResponse[];
   historico: HistoricoProgramacaoResponse[];
   ordem_servico?: any;
+  reserva_veiculo?: {
+    id: string;
+    veiculo_id: string;
+    data_inicio: string;
+    data_fim: string;
+    hora_inicio: string;
+    hora_fim: string;
+    responsavel: string;
+    finalidade: string;
+    status: string;
+    veiculo?: any;
+  };
 }
 
 export interface ProgramacaoDetalhesResponse extends ProgramacaoResponse {
@@ -322,20 +340,8 @@ export class ProgramacaoOSApiService {
   }
 
   async buscarPorId(id: string): Promise<ProgramacaoDetalhesResponse> {
-    console.log('🔍 PROGRAMACAO-OS API: Buscando programação por ID:', id);
-
     try {
       const response = await api.get<ProgramacaoDetalhesResponse>(`${this.baseEndpoint}/${id}`);
-
-      console.log('✅ PROGRAMACAO-OS API: Programação encontrada:', {
-        id: response.data.id,
-        dados_origem: response.data.dados_origem,
-        tarefas_ids: response.data.tarefas_ids,
-        materiais: response.data.materiais,
-        tecnicos: response.data.tecnicos,
-        ferramentas: response.data.ferramentas
-      });
-
       return response.data;
     } catch (error: any) {
       console.error('💥 PROGRAMACAO-OS API: Erro ao buscar programação:', error);

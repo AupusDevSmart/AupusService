@@ -42,7 +42,7 @@ export const useUserStore = create(
       isSuperAdmin: () => get().getUserRole() === 'super_admin',
     }),
     {
-      name: 'user-storage',
+      name: 'service-user-storage', // Prefixo 'service-' para evitar conflito com NexOn
       version: 3,
       storage: createJSONStorage(() => localStorage),
     },

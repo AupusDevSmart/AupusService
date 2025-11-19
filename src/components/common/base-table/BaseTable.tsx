@@ -118,7 +118,10 @@ export function BaseTable<T extends BaseEntity>({
 
   return (
     <div className="border rounded-md bg-card">
-      <Table>
+      {/* ✅ RESPONSIVO: Wrapper com scroll horizontal em mobile */}
+      <div className="overflow-x-auto -mx-3 sm:mx-0">
+        <div className="inline-block min-w-full align-middle px-3 sm:px-0">
+          <Table>
         <TableHeader>
           <TableRow>
             {columns.map((column, index) => (
@@ -250,19 +253,23 @@ export function BaseTable<T extends BaseEntity>({
           )}
         </TableBody>
       </Table>
-      
-      {/* Paginação */}
+        </div>
+      </div>
+
+      {/* ✅ RESPONSIVO: Paginação */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t">
-          <div className="text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 sm:px-4 py-3 border-t">
+          {/* ✅ RESPONSIVO: Info de resultados - ocultar em mobile */}
+          <div className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
             Mostrando <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> a{' '}
             <span className="font-medium">
               {Math.min(pagination.page * pagination.limit, pagination.total)}
             </span>{' '}
             de <span className="font-medium">{pagination.total}</span> resultados
           </div>
-          
-          <div className="flex items-center space-x-2">
+
+          {/* ✅ RESPONSIVO: Controles de paginação */}
+          <div className="flex items-center space-x-1 sm:space-x-2">
             <Button 
               variant="outline" 
               size="sm" 

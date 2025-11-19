@@ -65,27 +65,6 @@ export function WorkflowModal({
               type: 'textarea',
               placeholder: 'Observações da aprovação (opcional)',
               required: false
-            },
-            {
-              key: 'ajustes_orcamento',
-              label: 'Ajustes no Orçamento (R$)',
-              type: 'number',
-              placeholder: 'Ajustes no valor orçado (opcional)',
-              required: false
-            },
-            {
-              key: 'data_programada_sugerida',
-              label: 'Data Sugerida',
-              type: 'date',
-              placeholder: 'Data sugerida para programação',
-              required: false
-            },
-            {
-              key: 'hora_programada_sugerida',
-              label: 'Hora Sugerida',
-              type: 'time',
-              placeholder: 'Hora sugerida para programação',
-              required: false
             }
           ]
         };

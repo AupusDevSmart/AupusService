@@ -101,7 +101,7 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
     loadUnidades();
   }, [plantaId]);
 
-  // Sincronizar com valor externo
+  // Sincronizar com valor externo (apenas quando value muda externamente)
   React.useEffect(() => {
     if (value?.planta_id !== plantaId) {
       setPlantaId(value?.planta_id || '');
@@ -112,7 +112,8 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
     if (value?.equipamento_id !== equipamentoId) {
       setEquipamentoId(value?.equipamento_id || '');
     }
-  }, [value, plantaId, unidadeId, equipamentoId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]); // ✅ Apenas value como dependência para evitar loops
 
   // Carregar equipamentos quando unidade muda ou no modo edit
   React.useEffect(() => {
@@ -125,9 +126,8 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
       setLoadingEquipamentos(true);
       try {
         console.log('Carregando equipamentos da unidade:', unidadeId);
-        // TODO: Atualizar para unidade_id quando backend for migrado para nova estrutura
         const response = await equipamentosService.findAll({
-          planta_id: unidadeId, // Temporariamente usando planta_id até backend suportar unidades
+          unidade_id: unidadeId, // ✅ Corrigido: usar unidade_id para filtrar corretamente
           limit: 100
         });
         
@@ -217,7 +217,7 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
   };
 
   const handleEquipamentoChange = (newEquipamentoId: string) => {
-    console.log('Equipamento selecionado:', newEquipamentoId);
+    console.log('🎯 Equipamento selecionado:', newEquipamentoId);
 
     setEquipamentoId(newEquipamentoId);
 
@@ -227,6 +227,7 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
       equipamento_id: newEquipamentoId || undefined
     };
 
+    console.log('📤 Enviando onChange com valor:', newValue);
     onChange(newValue);
   };
 

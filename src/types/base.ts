@@ -46,8 +46,8 @@ export interface ExtendedPaginatedResponse<T> {
   };
 }
 
-// ✅ CORRIGIDO: Adicionar 'programar' aos modos válidos
-export type ModalMode = 'create' | 'edit' | 'view' | 'programar';
+// ✅ CORRIGIDO: Adicionar todos os modos de transição de OS
+export type ModalMode = 'create' | 'edit' | 'view' | 'programar' | 'iniciar' | 'pausar' | 'retomar' | 'finalizar' | 'cancelar' | 'anexos';
 
 export interface BaseModalState<T = any> {
   isOpen: boolean;
@@ -84,6 +84,8 @@ export interface FormField {
   colSpan?: number; // ✅ ADICIONADO: Para layout em grid
   helpText?: string; // ✅ ADICIONADO: Texto de ajuda
   computeDisabled?: (entity?: any, formData?: any) => boolean; // ✅ ADICIONADO: Para campos condicionalmente desabilitados
+  width?: 'full' | 'half' | 'third' | 'two-thirds' | 'quarter' | 'three-quarters'; // ✅ ADICIONADO: Para controle de largura do campo
+  startNewRow?: boolean; // ✅ ADICIONADO: Para forçar nova linha no layout
 }
 
 export interface FormFieldProps {

@@ -26,6 +26,3 @@ export { useExecucaoOS } from './hooks/useExecucaoOS';
 export { execucaoOSTableColumns } from './config/table-config';
 export { execucaoOSFilterConfig } from './config/filter-config';
 export { execucaoOSFormFields } from './config/form-config';
-
-// Exportar dados mock
-export { mockExecucoesOS } from './data/mock-data';

@@ -60,8 +60,8 @@ const formatarTempo = (minutos?: number) => {
 };
 
 // Função para calcular progresso do checklist
-const calcularProgresso = (checklist: ChecklistAtividade[]) => {
-  if (!checklist.length) return 0;
+const calcularProgresso = (checklist?: ChecklistAtividade[]) => {
+  if (!checklist || !checklist.length) return 0;
   const concluidas = checklist.filter(item => item.concluida).length;
   return Math.round((concluidas / checklist.length) * 100);
 };
@@ -75,16 +75,16 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
       <div className="space-y-1">
         <div className="flex items-center gap-2 font-medium">
           <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          <span className="font-mono text-sm">{exec.os.numeroOS}</span>
+          <span className="font-mono text-sm">{exec.os?.numeroOS || 'N/A'}</span>
         </div>
-        <div className="text-sm text-gray-600 dark:text-gray-300 truncate max-w-48" title={exec.os.descricao}>
-          {exec.os.descricao}
+        <div className="text-sm text-gray-600 dark:text-gray-300 truncate max-w-48" title={exec.os?.descricao}>
+          {exec.os?.descricao || 'Sem descrição'}
         </div>
         <div className="flex items-center gap-2">
-          <Badge className={`text-xs border-0 ${exec.os.prioridade === 'CRITICA' ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>
-            {exec.os.tipo}
+          <Badge className={`text-xs border-0 ${exec.os?.prioridade === 'CRITICA' ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>
+            {exec.os?.tipo || 'N/A'}
           </Badge>
-          {exec.os.prioridade === 'CRITICA' && (
+          {exec.os?.prioridade === 'CRITICA' && (
             <Badge className="text-xs bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 border-0">
               Crítica
             </Badge>
@@ -100,12 +100,12 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <MapPin className="h-3 w-3 text-gray-500 dark:text-gray-400" />
-          <span className="text-sm truncate max-w-32" title={exec.os.local}>
-            {exec.os.local}
+          <span className="text-sm truncate max-w-32" title={exec.os?.local}>
+            {exec.os?.local || 'N/A'}
           </span>
         </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-40" title={exec.os.ativo}>
-          {exec.os.ativo}
+        <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-40" title={exec.os?.ativo}>
+          {exec.os?.ativo || 'N/A'}
         </div>
       </div>
     )
@@ -134,13 +134,13 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
         <div className="flex items-center gap-2">
           <Calendar className="h-3 w-3 text-blue-500 dark:text-blue-400" />
           <span className="text-sm">
-            {exec.os.dataProgramada ? new Date(exec.os.dataProgramada).toLocaleDateString('pt-BR') : 'N/A'}
+            {exec.os?.dataProgramada ? new Date(exec.os.dataProgramada).toLocaleDateString('pt-BR') : 'N/A'}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <Clock className="h-3 w-3 text-gray-500 dark:text-gray-400" />
           <span className="text-xs text-gray-600 dark:text-gray-400">
-            {exec.os.horaProgramada}
+            {exec.os?.horaProgramada || 'N/A'}
           </span>
         </div>
       </div>
@@ -183,7 +183,7 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
             {exec.responsavelExecucao}
           </span>
         </div>
-        {exec.equipePresente.length > 0 && (
+        {exec.equipePresente && exec.equipePresente.length > 0 && (
           <div className="flex items-center gap-2">
             <Users className="h-3 w-3 text-purple-600 dark:text-purple-400" />
             <span className="text-xs text-gray-600 dark:text-gray-400">
@@ -191,7 +191,7 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
             </span>
           </div>
         )}
-        {exec.os.viatura && typeof exec.os.viatura === 'object' && (
+        {exec.os?.viatura && typeof exec.os.viatura === 'object' && (
           <div className="flex items-center gap-2">
             <Truck className="h-3 w-3 text-purple-600 dark:text-purple-400" />
             <span className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-20">
@@ -208,15 +208,15 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
     hideOnTablet: true,
     render: (exec) => {
       const progresso = calcularProgresso(exec.checklistAtividades);
-      const totalAtividades = exec.checklistAtividades.length;
-      const concluidasAtividades = exec.checklistAtividades.filter(a => a.concluida).length;
-      
+      const totalAtividades = exec.checklistAtividades?.length || 0;
+      const concluidasAtividades = exec.checklistAtividades?.filter(a => a.concluida).length || 0;
+
       return (
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-              <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${progresso}%` }}
               ></div>
             </div>
@@ -244,7 +244,7 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
           </span>
         </div>
         <div className="text-xs text-gray-500 dark:text-gray-400">
-          Est: {formatarTempo(exec.os.duracaoEstimada * 60)}
+          Est: {formatarTempo(exec.os?.duracaoEstimada ? exec.os.duracaoEstimada * 60 : undefined)}
         </div>
       </div>
     )

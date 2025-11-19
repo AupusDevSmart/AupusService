@@ -29,8 +29,7 @@ export interface AnomaliasStats {
 export interface CreateAnomaliaDto {
   descricao: string;
   localizacao: {
-    plantaId: string;
-    equipamentoId: string;
+    equipamentoId?: string;
     local: string;
     ativo: string;
   };
@@ -42,7 +41,6 @@ export interface CreateAnomaliaDto {
 
 export interface UpdateAnomaliaDto extends Partial<Omit<CreateAnomaliaDto, 'localizacao'>> {
   localizacao?: {
-    plantaId?: string;
     equipamentoId?: string;
     local?: string;
     ativo?: string;
@@ -77,13 +75,19 @@ class AnomaliasApiService {
     if (filters.prioridade && filters.prioridade !== 'all') params.append('prioridade', filters.prioridade);
     if (filters.origem && filters.origem !== 'all') params.append('origem', filters.origem);
     if (filters.planta && filters.planta !== 'all') params.append('planta', filters.planta);
+    // ✅ NOVO: Filtro por unidade
+    if (filters.unidade && filters.unidade !== 'all') params.append('unidade', filters.unidade);
 
     const url = `${this.baseUrl}?${params}`;
-    // // console.log('📡 [AnomaliasService] URL:', url);
-    
+    console.log('📡 [AnomaliasService] URL completa:', url);
+
     const response = await api.get(url);
-    // // console.log('📨 [AnomaliasService] Resposta:', response.data);
-    
+    console.log('📨 [AnomaliasService] Resposta:', {
+      total: response.data?.pagination?.total || 0,
+      quantidade: response.data?.data?.length || 0,
+      primeiraAnomalia: response.data?.data?.[0] || null
+    });
+
     return response.data;
   }
 
@@ -97,32 +101,31 @@ class AnomaliasApiService {
   }
 
   async create(data: AnomaliaFormData): Promise<Anomalia> {
-    // // console.log('✨ [AnomaliasService] Criando anomalia:', data);
-    
-    // Se há anexos, usar multipart/form-data
-    if (data.anexos && data.anexos.length > 0) {
-      return this.createWithAttachments(data);
-    }
-
-    // Sem anexos, usar JSON normal
+    // Criar anomalia sem anexos - anexos são enviados separadamente depois
     const createDto: CreateAnomaliaDto = {
       descricao: data.descricao,
-      localizacao: {
-        plantaId: data.plantaId?.toString() || '',
+      localizacao: data.localizacao || {
         equipamentoId: data.equipamentoId?.toString() || '',
-        local: data.local,
-        ativo: data.ativo
+        local: data.local || '',
+        ativo: data.ativo || ''
       },
       condicao: data.condicao,
       origem: data.origem,
       prioridade: data.prioridade,
       observacoes: data.observacoes
     };
-    
+
     const response = await api.post(this.baseUrl, createDto);
-    // // console.log('✅ [AnomaliasService] Anomalia criada:', response.data);
-    
     return response.data;
+  }
+
+  // Novo método para fazer upload de anexos após criação
+  async uploadAnexos(anomaliaId: string, files: File[]): Promise<void> {
+    const anexosService = await import('./anexos-anomalias.service');
+
+    for (const file of files) {
+      await anexosService.anexosAnomaliasService.uploadAnexo(anomaliaId, file);
+    }
   }
 
   private async createWithAttachments(data: AnomaliaFormData): Promise<Anomalia> {
@@ -132,7 +135,6 @@ class AnomaliasApiService {
     
     // Dados da anomalia
     formData.append('descricao', data.descricao);
-    formData.append('localizacao[plantaId]', data.plantaId?.toString() || '');
     formData.append('localizacao[equipamentoId]', data.equipamentoId?.toString() || '');
     formData.append('localizacao[local]', data.local);
     formData.append('localizacao[ativo]', data.ativo);
@@ -173,9 +175,8 @@ class AnomaliasApiService {
     };
     
     // Se há dados de localização, estruturar corretamente
-    if (data.plantaId || data.equipamentoId || data.local || data.ativo) {
+    if (data.equipamentoId || data.local || data.ativo) {
       updateDto.localizacao = {
-        plantaId: data.plantaId?.toString() || '',
         equipamentoId: data.equipamentoId?.toString() || '',
         local: data.local || '',
         ativo: data.ativo || ''

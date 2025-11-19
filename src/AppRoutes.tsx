@@ -1,8 +1,7 @@
-import { createBrowserRouter } from 'react-router-dom';
-// import { Login } from './pages/login';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { FeatureWrapper } from './components/common/FeatureWrapper';
 import { ConfiguracoesDiasUteisPage, FeriadosPage } from './features/agenda';
-import { EquipamentosPage } from './features/equipamentos_xxx/components/EquipamentosPage';
+import { EquipamentosPage } from './features/equipamentos/components/EquipamentosPage';
 import { ExecucaoOSPage } from './features/execucao-os';
 import { FerramentasPage } from './features/ferramentas/components/FerramentasPage';
 import { FornecedoresPage } from './features/fornecedores/components/FornecedoresPage';
@@ -13,30 +12,50 @@ import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
 import { TarefasPage } from './features/tarefas/components/TarefasPage';
 import { UnidadesPage } from './features/unidades/components/UnidadesPage';
-import { UsuariosPage } from './features/usuarios/components/UsuariosPage'; // ✅ NOVA IMPORTAÇÃO
+import { UsuariosPage } from './features/usuarios/components/UsuariosPage';
 import { VeiculosPage } from './features/veiculos/components/VeiculosPage';
 import { AppTemplate } from './pages/AppTemplate';
 import { AnomaliaPage } from './pages/anomalias';
-import { DashboardPage } from './pages/dashboard'; // Importando o novo componente
+import { DashboardPage } from './pages/dashboard';
 import { Settings } from './pages/settings';
+import { LoginPage } from './pages/login/LoginPage';
+import { useUserStore } from './store/useUserStore';
+
+/**
+ * Componente de rota protegida
+ * Verifica se o usuário está autenticado antes de renderizar
+ */
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useUserStore();
+
+  if (!user?.id) {
+    const currentPath = window.location.pathname;
+    return <Navigate to={`/login?redirectTo=${currentPath}`} replace />;
+  }
+
+  return <>{children}</>;
+}
 
 export const appRoutes = createBrowserRouter([
-//   {
-//     path: '/login',
-//     element: <Login />,
-//   },
-//   {
-//     path: '/reset-password',
-//     element: <ResetPassword />,
-//   },
+  // ✅ Rota pública de login
+  {
+    path: '/login',
+    element: <LoginPage />,
+  },
+
+  // ✅ Rotas protegidas
   {
     path: '/',
-    element: <AppTemplate />,
+    element: (
+      <ProtectedRoute>
+        <AppTemplate />
+      </ProtectedRoute>
+    ),
     children: [
-      // {
-      //   index: true,
-      //   element: <DefaultRedirect />,
-      // },
+      {
+        index: true,
+        element: <Navigate to="/dashboard" replace />,
+      },
       {
         path: 'dashboard',
         element: (
@@ -188,5 +207,11 @@ export const appRoutes = createBrowserRouter([
         ),
       },
     ],
+  },
+
+  // ✅ Rota 404 - Redireciona para login
+  {
+    path: '*',
+    element: <Navigate to="/login" replace />,
   },
 ]);

@@ -33,30 +33,47 @@ export const useOrigemDados = () => {
   const [planosDisponiveis, setPlanosDisponiveis] = useState<PlanoDisponivel[]>([]);
 
   // Carregar anomalias disponíveis (apenas pendentes/em análise)
-  const carregarAnomalias = useCallback(async () => {
+  const carregarAnomalias = useCallback(async (plantaId?: string, unidadeId?: string) => {
+    console.log('🔍 [useOrigemDados] Carregando anomalias disponíveis...', { plantaId, unidadeId });
+
     setLoading(true);
     try {
-      // console.log('🔍 [useOrigemDados] Carregando anomalias disponíveis...');
-
       // Criar filtros corretos baseados no tipo AnomaliasFilters
       const filtros = {
         page: 1,
         limit: 100,
         search: '',
         periodo: 'all',
-        status: 'EM_ANALISE', // Filtrar apenas anomalias que podem gerar OS
+        status: 'all', // ✅ MOSTRAR TODAS as anomalias (não apenas EM_ANALISE)
         prioridade: 'all',
         origem: 'all',
-        planta: 'all'
+        // ✅ NOVO: Filtrar por planta e unidade
+        planta: plantaId || 'all',
+        unidade: unidadeId || 'all'
       };
+
+      console.log('📋 [useOrigemDados] Filtros aplicados:', filtros);
 
       const response = await anomaliasService.findAll(filtros);
 
+      console.log('📊 [useOrigemDados] Total de anomalias antes do filtro:', response.data.length);
+
       const anomaliasFiltradas = response.data
-        .filter(anomalia => 
-          // Filtrar apenas anomalias que podem gerar OS
-          ['AGUARDANDO', 'EM_ANALISE'].includes(anomalia.status)
-        )
+        .filter(anomalia => {
+          // ✅ PERMITIR: AGUARDANDO, EM_ANALISE (podem gerar OS)
+          // ❌ BLOQUEAR: OS_GERADA, RESOLVIDA, CANCELADA (já tem OS ou não faz sentido)
+          const statusPermitido = ['AGUARDANDO', 'EM_ANALISE'].includes(anomalia.status);
+
+          if (!statusPermitido) {
+            console.log('⚠️ [useOrigemDados] Anomalia bloqueada por status:', {
+              id: anomalia.id,
+              descricao: anomalia.descricao,
+              status: anomalia.status
+            });
+          }
+
+          return statusPermitido;
+        })
         .map(anomalia => {
           // console.log('🔄 [useOrigemDados] Mapeando anomalia:', {
           //   id: anomalia.id,
@@ -91,9 +108,10 @@ export const useOrigemDados = () => {
   }, []);
 
   // Carregar planos de manutenção ativos
-  const carregarPlanos = useCallback(async (plantaId?: string) => {
+  const carregarPlanos = useCallback(async (plantaId?: string, unidadeId?: string) => {
     console.log('🔍 [useOrigemDados] INÍCIO - Carregando planos de manutenção...', {
       plantaId,
+      unidadeId,
       timestamp: new Date().toISOString()
     });
 
@@ -108,16 +126,28 @@ export const useOrigemDados = () => {
 
       let response;
 
-      if (plantaId) {
-        // Limpar espaços extras do plantaId
-        const cleanPlantaId = plantaId.trim();
-        console.log('🎯 [useOrigemDados] Usando endpoint POR PLANTA - /por-planta/' + cleanPlantaId, {
-          plantaIdOriginal: plantaId,
-          plantaIdLimpo: cleanPlantaId,
-          temEspacoExtra: plantaId !== cleanPlantaId
+      // ✅ PRIORIDADE 1: Filtrar por unidade (mais específico)
+      if (unidadeId) {
+        const cleanUnidadeId = unidadeId.trim();
+        console.log('🎯 [useOrigemDados] Usando endpoint POR UNIDADE - /por-unidade/' + cleanUnidadeId);
+
+        response = await planosManutencaoApi.findByUnidade(cleanUnidadeId, {
+          status: 'ATIVO',
+          limit: 100,
+          page: 1,
+          incluir_tarefas: false
         });
 
-        // Usar o novo endpoint específico para buscar planos por planta
+        console.log('📊 [useOrigemDados] Resposta do endpoint por unidade:', {
+          total: response.data?.length || 0,
+          pagination: response.pagination
+        });
+      }
+      // ✅ PRIORIDADE 2: Filtrar por planta
+      else if (plantaId) {
+        const cleanPlantaId = plantaId.trim();
+        console.log('🎯 [useOrigemDados] Usando endpoint POR PLANTA - /por-planta/' + cleanPlantaId);
+
         response = await planosManutencaoApi.findByPlanta(cleanPlantaId, {
           status: 'ATIVO',
           limit: 100,
@@ -127,13 +157,13 @@ export const useOrigemDados = () => {
 
         console.log('📊 [useOrigemDados] Resposta do endpoint por planta:', {
           total: response.data?.length || 0,
-          pagination: response.pagination,
-          primeiroPlanoDados: response.data?.[0] || null
+          pagination: response.pagination
         });
-      } else {
+      }
+      // ✅ FALLBACK: Endpoint geral (não recomendado para OS)
+      else {
         console.log('📋 [useOrigemDados] Usando endpoint GERAL - /planos-manutencao');
 
-        // Usar o endpoint geral se não houver plantaId
         response = await planosManutencaoApi.findAll({
           status: 'ATIVO',
           limit: 100,
@@ -142,8 +172,7 @@ export const useOrigemDados = () => {
 
         console.log('📊 [useOrigemDados] Resposta do endpoint geral:', {
           total: response.data?.length || 0,
-          pagination: response.pagination,
-          primeiroPlanoDados: response.data?.[0] || null
+          pagination: response.pagination
         });
       }
 

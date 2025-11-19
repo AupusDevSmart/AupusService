@@ -30,6 +30,3 @@ export { useProgramacaoOS } from './hooks/useProgramacaoOS';
 export { programacaoOSTableColumns } from './config/table-config';
 export { programacaoOSFilterConfig } from './config/filter-config';
 export { programacaoOSFormFields } from './config/form-config';
-
-// Exportar dados mock
-export { mockOrdensServico } from './data/mock-data';

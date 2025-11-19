@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limpar Autenticação - AupusService</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #b91c1c;
+        }
+        .success {
+            background: #10b981;
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 20px;
+            display: none;
+        }
+        .info {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3b82f6;
+        }
+        pre {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Limpar Autenticação do AupusService</h1>
+
+        <div class="info">
+            <strong>Por que usar isso?</strong>
+            <p>Como o AupusNexOn e AupusService compartilham o mesmo localhost, eles podem compartilhar dados de autenticação. Este script limpa apenas os dados do <strong>AupusService</strong>.</p>
+        </div>
+
+        <h3>Dados atuais no localStorage:</h3>
+        <pre id="current-data"></pre>
+
+        <button onclick="clearServiceAuth()">🗑️ Limpar Auth do Service</button>
+        <button onclick="clearAllAuth()" style="background: #9333ea">🔥 Limpar Tudo (Service + NexOn)</button>
+
+        <div class="success" id="success-message">
+            ✅ Dados limpos com sucesso! Você pode fechar esta página.
+        </div>
+    </div>
+
+    <script>
+        // Mostrar dados atuais
+        function showCurrentData() {
+            const data = {
+                'Service Auth Token': localStorage.getItem('service_authToken') || 'não encontrado',
+                'Service Refresh Token': localStorage.getItem('service_refreshToken') || 'não encontrado',
+                'Service User Storage': localStorage.getItem('service-user-storage') || 'não encontrado',
+                'NexOn Auth Token': localStorage.getItem('authToken') || 'não encontrado',
+                'NexOn Refresh Token': localStorage.getItem('refreshToken') || 'não encontrado',
+                'NexOn User Storage': localStorage.getItem('user-storage') || 'não encontrado',
+            };
+
+            document.getElementById('current-data').textContent = JSON.stringify(data, null, 2);
+        }
+
+        // Limpar apenas auth do Service
+        function clearServiceAuth() {
+            localStorage.removeItem('service_authToken');
+            localStorage.removeItem('service_refreshToken');
+            localStorage.removeItem('service-user-storage');
+
+            document.getElementById('success-message').style.display = 'block';
+            document.getElementById('success-message').textContent =
+                '✅ Dados do AupusService limpos! O NexOn continua logado.';
+
+            setTimeout(() => {
+                showCurrentData();
+            }, 500);
+        }
+
+        // Limpar tudo
+        function clearAllAuth() {
+            // Service
+            localStorage.removeItem('service_authToken');
+            localStorage.removeItem('service_refreshToken');
+            localStorage.removeItem('service-user-storage');
+
+            // NexOn
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user-storage');
+
+            document.getElementById('success-message').style.display = 'block';
+            document.getElementById('success-message').textContent =
+                '✅ Todos os dados de autenticação foram limpos!';
+
+            setTimeout(() => {
+                showCurrentData();
+            }, 500);
+        }
+
+        // Mostrar dados ao carregar
+        showCurrentData();
+    </script>
+</body>
+</html>

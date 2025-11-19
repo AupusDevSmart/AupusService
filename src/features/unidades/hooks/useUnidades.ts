@@ -9,8 +9,8 @@ import {
   createUnidade,
   updateUnidade,
   deleteUnidade,
-  getUnidadeEstatisticas,
-  getUnidadeEquipamentos,
+  // getUnidadeEstatisticas, // ❌ Não existe no serviço
+  // getUnidadeEquipamentos, // ❌ Não existe no serviço
 } from '@/services/unidades.services';
 import type {
   UnidadeFilters,
@@ -122,49 +122,51 @@ export const useUnidade = (id?: string) => {
 
 /**
  * Hook para buscar estatísticas de uma unidade
+ * ❌ DESABILITADO: getUnidadeEstatisticas não existe no serviço
  */
-export const useUnidadeEstatisticas = (id?: string) => {
-  const {
-    data: estatisticas,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ['unidade', id, 'estatisticas'],
-    queryFn: () => getUnidadeEstatisticas(id!),
-    enabled: !!id,
-    staleTime: 1000 * 60 * 2, // 2 minutos
-  });
+// export const useUnidadeEstatisticas = (id?: string) => {
+//   const {
+//     data: estatisticas,
+//     isLoading,
+//     error,
+//   } = useQuery({
+//     queryKey: ['unidade', id, 'estatisticas'],
+//     queryFn: () => getUnidadeEstatisticas(id!),
+//     enabled: !!id,
+//     staleTime: 1000 * 60 * 2, // 2 minutos
+//   });
 
-  return {
-    estatisticas,
-    isLoading,
-    error,
-  };
-};
+//   return {
+//     estatisticas,
+//     isLoading,
+//     error,
+//   };
+// };
 
 /**
  * Hook para buscar equipamentos de uma unidade
+ * ❌ DESABILITADO: getUnidadeEquipamentos não existe no serviço
  */
-export const useUnidadeEquipamentos = (
-  id?: string,
-  filters?: { page?: number; limit?: number; search?: string }
-) => {
-  const {
-    data: equipamentosData,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ['unidade', id, 'equipamentos', filters],
-    queryFn: () => getUnidadeEquipamentos(id!, filters),
-    enabled: !!id,
-    staleTime: 1000 * 60 * 2, // 2 minutos
-  });
+// export const useUnidadeEquipamentos = (
+//   id?: string,
+//   filters?: { page?: number; limit?: number; search?: string }
+// ) => {
+//   const {
+//     data: equipamentosData,
+//     isLoading,
+//     error,
+//   } = useQuery({
+//     queryKey: ['unidade', id, 'equipamentos', filters],
+//     queryFn: () => getUnidadeEquipamentos(id!, filters),
+//     enabled: !!id,
+//     staleTime: 1000 * 60 * 2, // 2 minutos
+//   });
 
-  return {
-    equipamentos: equipamentosData?.data || [],
-    pagination: equipamentosData?.pagination,
-    unidade: equipamentosData?.unidade,
-    isLoading,
-    error,
-  };
-};
+//   return {
+//     equipamentos: equipamentosData?.data || [],
+//     pagination: equipamentosData?.pagination,
+//     unidade: equipamentosData?.unidade,
+//     isLoading,
+//     error,
+//   };
+// };

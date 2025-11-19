@@ -1,14 +1,14 @@
 // src/features/anomalias/components/LocalizacaoController.tsx - VERSÃO FINAL LIMPA
-import { useEquipamentos } from '@/features/equipamentos_xxx/hooks/useEquipamentos';
+import { useEquipamentos } from '@/features/equipamentos/hooks/useEquipamentos';
 import { PlantaResponse, PlantasService } from '@/services/plantas.services';
 import { getUnidadesByPlanta } from '@/services/unidades.services';
 import { Loader2 } from 'lucide-react';
 import React from 'react';
 
 interface LocalizacaoValue {
-  plantaId?: number;
-  unidadeId?: number; // NOVO: Unidade do equipamento
-  equipamentoId?: number;
+  plantaId?: string | number; // Pode ser CUID (string) ou número
+  unidadeId?: string | number; // NOVO: Unidade do equipamento
+  equipamentoId?: string | number; // Pode ser CUID (string) ou número
   local?: string;
   ativo?: string;
 }
@@ -33,15 +33,18 @@ export const LocalizacaoController = ({
   const [loadingPlantas, setLoadingPlantas] = React.useState(false);
   const [loadingPlantaEspecifica, setLoadingPlantaEspecifica] = React.useState(false);
   const [loadingUnidades, setLoadingUnidades] = React.useState(false); // NOVO: Loading state para unidades
-  const [plantaId, setPlantaId] = React.useState('');
-  const [unidadeId, setUnidadeId] = React.useState(''); // NOVO: Estado para unidadeId
-  const [equipamentoId, setEquipamentoId] = React.useState('');
   const [hasLoaded, setHasLoaded] = React.useState(false);
-  
-  const { equipamentos, fetchEquipamentosByPlanta, loading: loadingEquipamentos } = useEquipamentos();
-  
+
+  const { equipamentos, fetchEquipamentos, fetchEquipamentosByPlanta, loading: loadingEquipamentos } = useEquipamentos();
+
   const isCreateMode = mode === 'create';
   const isViewMode = mode === 'view';
+
+  // ✅ USAR VALUE DIRETAMENTE - Sem estados internos que conflitam
+  const plantaId = value?.plantaId?.toString().trim() || '';
+  const unidadeId = value?.unidadeId?.toString().trim() || '';
+  const equipamentoId = value?.equipamentoId?.toString().trim() || '';
+
 
   // Inicialização otimizada por modo
   React.useEffect(() => {
@@ -60,21 +63,11 @@ export const LocalizacaoController = ({
         } finally {
           setLoadingPlantas(false);
         }
-        
+
       } else {
         // MODO VIEW/EDIT: Carregar apenas a planta específica da anomalia
         if (value?.plantaId) {
           const plantaIdStr = value.plantaId.toString().trim();
-          const unidadeIdStr = value.unidadeId?.toString().trim(); // NOVO: Capturar unidadeId
-          const equipamentoIdStr = value.equipamentoId?.toString().trim();
-
-          setPlantaId(plantaIdStr);
-          if (unidadeIdStr) {
-            setUnidadeId(unidadeIdStr);
-          }
-          if (equipamentoIdStr) {
-            setEquipamentoId(equipamentoIdStr);
-          }
 
           // Carregar dados da planta específica
           setLoadingPlantaEspecifica(true);
@@ -125,10 +118,8 @@ export const LocalizacaoController = ({
 
       setLoadingUnidades(true);
       try {
-        console.log('Carregando unidades da planta:', plantaId);
         const response = await getUnidadesByPlanta(plantaId);
         setUnidades(response || []);
-        console.log('Unidades carregadas:', response?.length || 0);
       } catch (error) {
         console.error('Erro ao carregar unidades:', error);
         setUnidades([]);
@@ -144,50 +135,31 @@ export const LocalizacaoController = ({
   const handlePlantaChange = async (newPlantaId: string) => {
     if (!isCreateMode) return;
 
-    setPlantaId(newPlantaId);
-    setUnidadeId(''); // NOVO: Resetar unidade quando planta muda
-    setEquipamentoId(''); // Resetar equipamento quando planta muda
-
-    const plantaSelecionada = plantas.find(p => p.id.toString() === newPlantaId);
+    const plantaIdTrimmed = newPlantaId.trim();
+    const plantaSelecionada = plantas.find(p => p.id.toString().trim() === plantaIdTrimmed);
 
     const novoValue: LocalizacaoValue = {
-      plantaId: newPlantaId ? Number(newPlantaId) : undefined,
-      unidadeId: undefined, // NOVO: Resetar unidadeId
-      equipamentoId: undefined,
+      plantaId: plantaIdTrimmed || undefined,
+      unidadeId: undefined, // Resetar quando planta muda
+      equipamentoId: undefined, // Resetar quando planta muda
       local: plantaSelecionada?.nome || '',
       ativo: ''
     };
 
     onChange(novoValue);
-
-    if (newPlantaId) {
-      try {
-        await fetchEquipamentosByPlanta(newPlantaId, { 
-          proprietarioId: 'all',
-          plantaId: newPlantaId,
-          classificacao: 'UC',
-          criticidade: 'all',
-          limit: 100 
-        });
-      } catch (error) {
-        // Erro no carregamento dos equipamentos
-      }
-    }
   };
 
-  // NOVO: Handler para mudança de unidade
+  // Handler para mudança de unidade
   const handleUnidadeChange = async (newUnidadeId: string) => {
     if (!isCreateMode) return;
 
-    setUnidadeId(newUnidadeId);
-    setEquipamentoId(''); // Resetar equipamento quando unidade muda
-
-    const plantaSelecionada = plantas.find(p => p.id.toString() === plantaId);
+    const unidadeIdTrimmed = newUnidadeId.trim();
+    const plantaSelecionada = plantas.find(p => p.id.toString().trim() === plantaId.trim());
 
     const novoValue: LocalizacaoValue = {
-      plantaId: plantaId ? Number(plantaId) : undefined,
-      unidadeId: newUnidadeId ? Number(newUnidadeId) : undefined,
-      equipamentoId: undefined,
+      plantaId: plantaId || undefined,
+      unidadeId: unidadeIdTrimmed || undefined,
+      equipamentoId: undefined, // Resetar quando unidade muda
       local: plantaSelecionada?.nome || '',
       ativo: ''
     };
@@ -195,34 +167,32 @@ export const LocalizacaoController = ({
     onChange(novoValue);
 
     // Carregar equipamentos da unidade
-    if (newUnidadeId) {
+    if (unidadeIdTrimmed) {
       try {
-        // TODO: Atualizar para usar unidade_id quando backend suportar
-        await fetchEquipamentosByPlanta(newUnidadeId, {
+        await fetchEquipamentos({
           proprietarioId: 'all',
-          plantaId: newUnidadeId, // Temporariamente usando plantaId
+          plantaId: plantaId,
+          unidadeId: unidadeIdTrimmed,
           classificacao: 'UC',
           criticidade: 'all',
           limit: 100
         });
       } catch (error) {
-        // Erro no carregamento dos equipamentos
+        console.error('Erro ao carregar equipamentos da unidade:', error);
       }
     }
   };
 
   const handleEquipamentoChange = (newEquipamentoId: string) => {
-    if (isViewMode) return; // VIEW não permite edição
-
-    setEquipamentoId(newEquipamentoId);
+    if (isViewMode) return;
 
     const equipamentoSelecionado = equipamentos.find(eq => eq.id.toString() === newEquipamentoId);
-    const plantaSelecionada = plantas.find(p => p.id.toString() === plantaId);
+    const plantaSelecionada = plantas.find(p => p.id.toString().trim() === plantaId.trim());
 
     const novoValue: LocalizacaoValue = {
-      plantaId: plantaId ? Number(plantaId) : undefined,
-      unidadeId: unidadeId ? Number(unidadeId) : undefined, // NOVO: Incluir unidadeId
-      equipamentoId: newEquipamentoId ? Number(newEquipamentoId) : undefined,
+      plantaId: plantaId || undefined,
+      unidadeId: unidadeId || undefined,
+      equipamentoId: newEquipamentoId || undefined,
       local: plantaSelecionada?.nome || '',
       ativo: equipamentoSelecionado?.nome || ''
     };
@@ -257,7 +227,7 @@ export const LocalizacaoController = ({
         <label className="text-sm font-medium">
           Planta/Local <span className="text-red-500">*</span>
         </label>
-        
+
         {isCreateMode ? (
           // MODO CREATE: Select com lista completa
           <select

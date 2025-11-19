@@ -25,7 +25,6 @@ export const planosFormFields: FormField[] = [
               });
             }
           }}
-          onMultipleChange={props.onMultipleChange}
           disabled={props.disabled}
           mode={props.mode}
         />

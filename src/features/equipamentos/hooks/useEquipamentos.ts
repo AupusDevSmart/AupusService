@@ -34,17 +34,17 @@ export const transformApiToFrontend = (apiEquipamento: EquipamentoApiResponse): 
   };
 
   return {
-    id: apiEquipamento.id,
+    id: apiEquipamento.id?.trim() || apiEquipamento.id, // ✅ TRIM: remover espaços dos IDs
     criadoEm: apiEquipamento.created_at?.toString() || new Date().toISOString(),
     atualizadoEm: apiEquipamento.updated_at?.toString() || new Date().toISOString(),
 
     // Dados básicos
     nome: apiEquipamento.nome || '',
     classificacao: apiEquipamento.classificacao || 'UC',
-    // TODO: Atualizar para unidade_id quando backend for migrado para nova estrutura
-    unidadeId: apiEquipamento.planta_id, // Temporariamente usando planta_id até backend suportar unidades
-    proprietarioId: apiEquipamento.proprietario_id,
-    equipamentoPaiId: apiEquipamento.equipamento_pai_id,
+    // ✅ CORRIGIDO: usar unidade_id do backend
+    unidadeId: (apiEquipamento as any).unidade_id?.trim() || apiEquipamento.planta_id?.trim(), // Priorizar unidade_id, fallback para planta_id
+    proprietarioId: apiEquipamento.proprietario_id?.trim(),
+    equipamentoPaiId: apiEquipamento.equipamento_pai_id?.trim(),
     
     // Dados técnicos
     fabricante: apiEquipamento.fabricante,
@@ -450,15 +450,48 @@ export function useEquipamentos(): UseEquipamentosReturn {
       
       const response = await equipamentosApi.findAll(params);
 
-      // A API retorna: { success: true, data: { data: [], pagination: {} }, meta: {} }
-      // Então precisamos acessar response.data.data
-      const equipamentosTransformados = response.data.data.map(transformApiToFrontend);
+      console.log('📦 [HOOK] fetchEquipamentos - Resposta completa:', response);
+      console.log('📦 [HOOK] fetchEquipamentos - response.data:', response.data);
+      console.log('📦 [HOOK] fetchEquipamentos - response.data?.data:', response.data?.data);
+      console.log('📦 [HOOK] fetchEquipamentos - response.data?.pagination:', response.data?.pagination);
+
+      // O interceptor Axios desempacota: { success, data: { data: [], pagination: {} } } → { data: [], pagination: {} }
+      // Então response.data = { data: [], pagination: {} }
+
+      let equipamentosData: any[] = [];
+      let paginationData: any = { page: 1, pages: 1, total: 0 };
+
+      // Verificar estrutura após o interceptor
+      if (response.data && typeof response.data === 'object' && 'data' in response.data && 'pagination' in response.data) {
+        // Estrutura esperada: { data: [...], pagination: {...} }
+        equipamentosData = response.data.data || [];
+        paginationData = response.data.pagination || paginationData;
+        console.log('📦 [HOOK] fetchEquipamentos - Estrutura detectada: { data, pagination }');
+      } else if (Array.isArray(response.data)) {
+        // Resposta direta: response.data = []
+        equipamentosData = response.data;
+        paginationData = response.pagination || response.meta?.pagination || paginationData;
+        console.log('📦 [HOOK] fetchEquipamentos - Estrutura detectada: array direto');
+      } else if (Array.isArray(response)) {
+        // Resposta direta sem wrapper
+        equipamentosData = response;
+        console.log('📦 [HOOK] fetchEquipamentos - Estrutura detectada: response é array');
+      } else {
+        console.error('📦 [HOOK] fetchEquipamentos - Estrutura não reconhecida:', response);
+      }
+
+      console.log('📦 [HOOK] fetchEquipamentos - equipamentosData:', equipamentosData);
+      console.log('📦 [HOOK] fetchEquipamentos - paginationData:', paginationData);
+
+      const equipamentosTransformados = Array.isArray(equipamentosData)
+        ? equipamentosData.map(transformApiToFrontend)
+        : [];
 
       setEquipamentos(equipamentosTransformados);
-      setTotalPages(response.data.pagination.pages);
-      setCurrentPage(response.data.pagination.page);
-      setTotal(response.data.pagination.total);
-      
+      setTotalPages(paginationData.pages || 1);
+      setCurrentPage(paginationData.page || 1);
+      setTotal(paginationData.total || equipamentosTransformados.length);
+
       return equipamentosTransformados;
       
     } catch (err) {

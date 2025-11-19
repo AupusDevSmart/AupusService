@@ -377,6 +377,7 @@ export const tarefasFormFields: FormField[] = [
     type: 'select',
     required: false,
     options: [], // Será carregado dinamicamente
+    excludeFromSubmit: true, // ✅ Campo apenas informativo, não enviar à API
   },
   {
     key: 'equipamento_id',

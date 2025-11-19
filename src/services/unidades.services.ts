@@ -33,8 +33,22 @@ class UnidadesService {
         dataKeys: response.data ? Object.keys(response.data) : []
       });
 
-      // A API retorna { success: true, data: { data: [], pagination: {} } }
-      return response.data.data || response.data;
+      // O interceptor Axios desempacota: { success, data: { data: [], pagination: {} } } → { data: [], pagination: {} }
+      // Então response.data já é { data: [], pagination: {} }
+      if (response.data && 'data' in response.data && 'pagination' in response.data) {
+        return response.data as PaginatedUnidadeResponse;
+      }
+
+      // Fallback: se a estrutura for diferente, criar uma resposta válida
+      return {
+        data: Array.isArray(response.data) ? response.data : [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: Array.isArray(response.data) ? response.data.length : 0,
+          totalPages: 1
+        }
+      };
     } catch (error) {
       console.error('❌ [UnidadesService] Erro ao listar unidades:', error);
       throw error;

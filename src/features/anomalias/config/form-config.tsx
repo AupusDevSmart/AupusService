@@ -94,6 +94,22 @@ export const anomaliasFormFields: FormField[] = [
     group: 'observacoes',
   },
 
+  // ✅ NOVO: Observações da análise (só visível em modo view quando analisada)
+  {
+    key: 'observacoes_analise',
+    label: 'Observações da Análise',
+    type: 'textarea',
+    required: false,
+    disabled: true, // Sempre disabled pois é apenas para visualização
+    placeholder: 'Nenhuma observação registrada na análise',
+    group: 'analise',
+    visibleInModes: ['view'], // Só aparece no modo visualização
+    condition: (entity: any) => {
+      // Só mostrar se tiver observações de análise
+      return entity?.observacoes_analise && entity.observacoes_analise.trim() !== '';
+    }
+  },
+
   // Anexos - ✅ CORRIGIDO: Usar função estável
   {
     key: 'anexos',

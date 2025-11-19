@@ -4,6 +4,8 @@ import { ProgramacaoSelector } from '../components/ProgramacaoSelector';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
 import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManager';
+import { OrigemOSCard } from '../components/OrigemOSCard';
+import { ReservaVeiculoCard } from '../components/ReservaVeiculoCard';
 
 export const execucaoOSFormFields: FormField[] = [
   // Seleção da Programação - GRUPO: selecao
@@ -23,35 +25,107 @@ export const execucaoOSFormFields: FormField[] = [
     label: 'Número da OS',
     type: 'text',
     disabled: true,
-    group: 'identificacao'
-  },
-  {
-    key: 'descricaoOS',
-    label: 'Descrição da OS',
-    type: 'textarea',
-    disabled: true,
-    group: 'identificacao'
-  },
-  {
-    key: 'localAtivo',
-    label: 'Local/Ativo',
-    type: 'text',
-    disabled: true,
-    group: 'identificacao'
+    group: 'identificacao',
+    width: 'half'
   },
   {
     key: 'tipoOS',
     label: 'Tipo da OS',
     type: 'text',
     disabled: true,
-    group: 'identificacao'
+    group: 'identificacao',
+    width: 'half'
+  },
+  {
+    key: 'descricaoOS',
+    label: 'Descrição da OS',
+    type: 'textarea',
+    disabled: true,
+    group: 'identificacao',
+    width: 'full',
+    startNewRow: true
+  },
+  {
+    key: 'localAtivo',
+    label: 'Local/Ativo',
+    type: 'text',
+    disabled: true,
+    group: 'identificacao',
+    width: 'two-thirds'
   },
   {
     key: 'prioridadeOS',
     label: 'Prioridade',
     type: 'text',
     disabled: true,
-    group: 'identificacao'
+    group: 'identificacao',
+    width: 'third'
+  },
+
+  // Origem da OS - GRUPO: origem
+  {
+    key: 'origemCard',
+    label: 'Origem da OS',
+    type: 'custom',
+    component: OrigemOSCard,
+    group: 'origem',
+    width: 'full'
+  },
+
+  // Reserva de Veículo - GRUPO: reserva
+  {
+    key: 'reservaCard',
+    label: 'Reserva de Veículo',
+    type: 'custom',
+    component: ReservaVeiculoCard,
+    group: 'reserva',
+    width: 'full'
+  },
+
+  // Dados de Execução da Reserva - GRUPO: reserva
+  {
+    key: 'kmInicialReserva',
+    label: 'KM Inicial (Saída)',
+    type: 'number',
+    placeholder: 'KM do veículo ao sair',
+    group: 'reserva',
+    width: 'half',
+    startNewRow: true,
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      // Mostrar se tem reserva E está em execução/pausada/finalizada
+      const temReserva = entity?.reservaCard || formData?.reservaCard;
+      return temReserva && (status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA');
+    }
+  },
+  {
+    key: 'kmFinalReserva',
+    label: 'KM Final (Retorno)',
+    type: 'number',
+    placeholder: 'KM do veículo ao retornar',
+    group: 'reserva',
+    width: 'half',
+    required: true,
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      // Mostrar apenas ao finalizar se tem reserva
+      const temReserva = entity?.reservaCard || formData?.reservaCard;
+      return temReserva && status === 'FINALIZADA';
+    }
+  },
+  {
+    key: 'observacoesFinalizacaoReserva',
+    label: 'Observações sobre o Uso do Veículo',
+    type: 'textarea',
+    placeholder: 'Condições do veículo, problemas encontrados, etc.',
+    group: 'reserva',
+    width: 'full',
+    startNewRow: true,
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      const temReserva = entity?.reservaCard || formData?.reservaCard;
+      return temReserva && status === 'FINALIZADA';
+    }
   },
 
   // Controle de Execução - GRUPO: controle
@@ -60,34 +134,53 @@ export const execucaoOSFormFields: FormField[] = [
     label: 'Status da Execução',
     type: 'select',
     required: true,
+    disabled: true, // ✅ Status não pode ser mudado manualmente - usar botões de ação
     options: [
+      { value: 'PLANEJADA', label: 'Planejada' },
       { value: 'PROGRAMADA', label: 'Programada' },
       { value: 'EM_EXECUCAO', label: 'Em Execução' },
       { value: 'PAUSADA', label: 'Pausada' },
       { value: 'FINALIZADA', label: 'Finalizada' },
       { value: 'CANCELADA', label: 'Cancelada' }
     ],
-    group: 'controle'
-  },
-  {
-    key: 'dataHoraInicioReal',
-    label: 'Data e Hora Início Real',
-    type: 'datetime-local',
-    group: 'controle'
-  },
-  {
-    key: 'dataHoraFimReal',
-    label: 'Data e Hora Fim Real',
-    type: 'datetime-local',
-    showOnlyOnMode: ['edit', 'finalizar'],
-    group: 'controle'
+    group: 'controle',
+    width: 'half'
   },
   {
     key: 'tempoTotalExecucao',
     label: 'Tempo Total de Execução (min)',
     type: 'number',
     disabled: true,
-    group: 'controle'
+    group: 'controle',
+    width: 'half',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+    }
+  },
+  {
+    key: 'dataHoraInicioReal',
+    label: 'Data e Hora Início Real',
+    type: 'datetime-local',
+    group: 'controle',
+    width: 'half',
+    startNewRow: true,
+    required: true,
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+    }
+  },
+  {
+    key: 'dataHoraFimReal',
+    label: 'Data e Hora Fim Real',
+    type: 'datetime-local',
+    group: 'controle',
+    width: 'half',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'FINALIZADA';
+    }
   },
 
   // Equipe e Responsável - GRUPO: equipe
@@ -97,14 +190,24 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'text',
     required: true,
     placeholder: 'Nome do responsável',
-    group: 'equipe'
+    group: 'equipe',
+    width: 'two-thirds',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'PROGRAMADA' || status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+    }
   },
   {
     key: 'funcaoResponsavel',
     label: 'Função do Responsável',
     type: 'text',
     placeholder: 'Ex: Técnico Mecânico',
-    group: 'equipe'
+    group: 'equipe',
+    width: 'third',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'PROGRAMADA' || status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+    }
   },
 
   // Técnicos da Execução - GRUPO: equipe
@@ -121,7 +224,10 @@ export const execucaoOSFormFields: FormField[] = [
       title: 'Equipe Presente'
     },
     defaultValue: [],
-    group: 'equipe'
+    group: 'equipe',
+    width: 'full',
+    startNewRow: true,
+    condition: () => true // ✅ Sempre mostrar
   },
 
   // Atividades e Checklist - GRUPO: atividades
@@ -130,7 +236,13 @@ export const execucaoOSFormFields: FormField[] = [
     label: 'Atividades Realizadas',
     type: 'textarea',
     placeholder: 'Descreva as atividades executadas',
-    group: 'atividades'
+    group: 'atividades',
+    width: 'full',
+    required: true,
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+    }
   },
   {
     key: 'checklistConcluido',
@@ -139,14 +251,25 @@ export const execucaoOSFormFields: FormField[] = [
     min: 0,
     max: 100,
     placeholder: '0-100',
-    group: 'atividades'
+    group: 'atividades',
+    width: 'quarter',
+    startNewRow: true,
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+    }
   },
   {
     key: 'procedimentosSeguidos',
     label: 'Procedimentos Seguidos',
     type: 'textarea',
     placeholder: 'Liste os procedimentos seguidos',
-    group: 'atividades'
+    group: 'atividades',
+    width: 'three-quarters',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+    }
   },
 
   // Recursos Consumidos - Materiais - GRUPO: recursos
@@ -162,7 +285,9 @@ export const execucaoOSFormFields: FormField[] = [
       title: 'Materiais Efetivamente Utilizados'
     },
     defaultValue: [],
-    group: 'recursos'
+    group: 'recursos',
+    width: 'full',
+    condition: () => true // ✅ Sempre mostrar
   },
 
   // Recursos Utilizados - Ferramentas - GRUPO: recursos
@@ -179,7 +304,10 @@ export const execucaoOSFormFields: FormField[] = [
       title: 'Ferramentas Efetivamente Utilizadas'
     },
     defaultValue: [],
-    group: 'recursos'
+    group: 'recursos',
+    width: 'full',
+    startNewRow: true,
+    condition: () => true // ✅ Sempre mostrar
   },
 
   {
@@ -187,7 +315,13 @@ export const execucaoOSFormFields: FormField[] = [
     label: 'Custos Adicionais (R$)',
     type: 'number',
     placeholder: 'Custos não planejados',
-    group: 'recursos'
+    group: 'recursos',
+    width: 'third',
+    startNewRow: true,
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+    }
   },
 
   // Condições de Segurança - GRUPO: seguranca
@@ -196,21 +330,33 @@ export const execucaoOSFormFields: FormField[] = [
     label: 'EPIs e Equipamentos de Segurança',
     type: 'textarea',
     placeholder: 'Liste os EPIs utilizados',
-    group: 'seguranca'
+    group: 'seguranca',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+    }
   },
   {
     key: 'incidentesSeguranca',
     label: 'Incidentes de Segurança',
     type: 'textarea',
     placeholder: 'Relate qualquer incidente ou quase acidente',
-    group: 'seguranca'
+    group: 'seguranca',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+    }
   },
   {
     key: 'medidasSegurancaAdicionais',
     label: 'Medidas de Segurança Adicionais',
     type: 'textarea',
     placeholder: 'Medidas extras de segurança adotadas',
-    group: 'seguranca'
+    group: 'seguranca',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+    }
   },
 
   // Resultados e Qualidade - GRUPO: resultados
@@ -220,31 +366,43 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Descreva o resultado obtido',
     required: true,
-    showOnlyOnMode: ['edit', 'finalizar'],
-    group: 'resultados'
+    group: 'resultados',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'FINALIZADA';
+    }
   },
   {
     key: 'problemasEncontrados',
     label: 'Problemas Encontrados',
     type: 'textarea',
     placeholder: 'Descreva problemas identificados durante a execução',
-    showOnlyOnMode: ['edit', 'finalizar'],
-    group: 'resultados'
+    group: 'resultados',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'FINALIZADA';
+    }
   },
   {
     key: 'recomendacoes',
     label: 'Recomendações',
     type: 'textarea',
     placeholder: 'Recomendações para futuras manutenções',
-    showOnlyOnMode: ['edit', 'finalizar'],
-    group: 'resultados'
+    group: 'resultados',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'FINALIZADA';
+    }
   },
   {
     key: 'proximaManutencao',
     label: 'Próxima Manutenção',
     type: 'datetime-local',
-    showOnlyOnMode: ['edit', 'finalizar'],
-    group: 'resultados'
+    group: 'resultados',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'FINALIZADA';
+    }
   },
 
   // Avaliação de Qualidade - GRUPO: qualidade
@@ -256,16 +414,24 @@ export const execucaoOSFormFields: FormField[] = [
     max: 5,
     placeholder: '1 a 5 estrelas',
     required: true,
-    showOnlyOnMode: ['edit', 'finalizar'],
-    group: 'qualidade'
+    group: 'qualidade',
+    width: 'quarter',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'FINALIZADA';
+    }
   },
   {
     key: 'observacoesQualidade',
     label: 'Observações da Qualidade',
     type: 'textarea',
     placeholder: 'Comentários sobre a qualidade do serviço',
-    showOnlyOnMode: ['edit', 'finalizar'],
-    group: 'qualidade'
+    group: 'qualidade',
+    width: 'three-quarters',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'FINALIZADA';
+    }
   },
 
   // Observações e Paradas - GRUPO: observacoes
@@ -282,8 +448,11 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Descreva os motivos das pausas durante a execução',
     condition: (entity, formData) => {
-      return formData?.statusExecucao === 'PAUSADA' || 
-             (entity && entity.statusExecucao === 'PAUSADA');
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      // Mostrar se está pausada OU se já passou pela pausa e tem conteúdo
+      return status === 'PAUSADA' ||
+             (status === 'EM_EXECUCAO' && entity?.motivoPausas) ||
+             (status === 'FINALIZADA' && entity?.motivoPausas);
     },
     group: 'observacoes'
   },
@@ -306,32 +475,49 @@ export const execucaoOSFormFields: FormField[] = [
     label: 'Finalizado Por',
     type: 'text',
     disabled: true,
-    showOnlyOnMode: ['view'],
-    group: 'auditoria'
+    group: 'auditoria',
+    width: 'half',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'FINALIZADA' || status === 'CANCELADA';
+    }
   },
   {
     key: 'dataFinalizacao',
     label: 'Data da Finalização',
     type: 'datetime-local',
     disabled: true,
-    showOnlyOnMode: ['view'],
-    group: 'auditoria'
+    group: 'auditoria',
+    width: 'half',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'FINALIZADA' || status === 'CANCELADA';
+    }
   },
   {
     key: 'aprovadoPor',
     label: 'Aprovado Por',
     type: 'text',
     disabled: true,
-    showOnlyOnMode: ['view'],
-    group: 'auditoria'
+    group: 'auditoria',
+    width: 'half',
+    startNewRow: true,
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'FINALIZADA';
+    }
   },
   {
     key: 'dataAprovacao',
     label: 'Data da Aprovação',
     type: 'datetime-local',
     disabled: true,
-    showOnlyOnMode: ['view'],
-    group: 'auditoria'
+    group: 'auditoria',
+    width: 'half',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'FINALIZADA';
+    }
   }
 ];
 
@@ -350,6 +536,16 @@ export const execucaoOSFormGroups = [
     key: 'identificacao',
     title: 'Identificação da OS',
     fields: ['numeroOS', 'descricaoOS', 'localAtivo', 'tipoOS', 'prioridadeOS'] // ✅ ADICIONADO: mapping explícito
+  },
+  {
+    key: 'origem',
+    title: 'Origem da OS',
+    fields: ['origemCard']
+  },
+  {
+    key: 'reserva',
+    title: 'Reserva de Veículo',
+    fields: ['reservaCard', 'kmInicialReserva', 'kmFinalReserva', 'observacoesFinalizacaoReserva']
   },
   {
     key: 'controle',
@@ -379,20 +575,14 @@ export const execucaoOSFormGroups = [
   {
     key: 'resultados',
     title: 'Resultados da Execução',
-    fields: ['resultadoServico', 'problemasEncontrados', 'recomendacoes', 'proximaManutencao'], // ✅ ADICIONADO: mapping explícito
-    conditional: {
-      field: 'mode',
-      value: 'finalizar'
-    }
+    fields: ['resultadoServico', 'problemasEncontrados', 'recomendacoes', 'proximaManutencao'] // ✅ Campos controlados por condition individual baseada em status
+    // Removido conditional do grupo - deixar os campos controlarem sua própria visibilidade
   },
   {
     key: 'qualidade',
     title: 'Avaliação de Qualidade',
-    fields: ['avaliacaoQualidade', 'observacoesQualidade'], // ✅ ADICIONADO: mapping explícito
-    conditional: {
-      field: 'mode',
-      value: 'finalizar'
-    }
+    fields: ['avaliacaoQualidade', 'observacoesQualidade'] // ✅ Campos controlados por condition individual baseada em status
+    // Removido conditional do grupo - deixar os campos controlarem sua própria visibilidade
   },
   {
     key: 'observacoes',
@@ -402,10 +592,7 @@ export const execucaoOSFormGroups = [
   {
     key: 'auditoria',
     title: 'Informações de Auditoria',
-    fields: ['finalizadoPor', 'dataFinalizacao', 'aprovadoPor', 'dataAprovacao'], // ✅ ADICIONADO: mapping explícito
-    conditional: {
-      field: 'mode',
-      value: 'view'
-    }
+    fields: ['finalizadoPor', 'dataFinalizacao', 'aprovadoPor', 'dataAprovacao'] // ✅ Campos controlados por condition individual baseada em status
+    // Removido conditional do grupo - deixar os campos controlarem sua própria visibilidade
   }
 ];

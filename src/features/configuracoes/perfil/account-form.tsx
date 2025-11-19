@@ -12,9 +12,8 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { toast } from '@/components/ui/use-toast'
-import { ImagePlus, User, Eye, EyeOff } from 'lucide-react'
-import { useState } from 'react'
+import { ImagePlus, User, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import {
   Card,
   CardContent,
@@ -22,6 +21,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { useUserStore } from '@/store/useUserStore'
+import { useUpdateProfile } from './hooks/useUpdateProfile'
+import { getAvatarUrl } from '@/lib/getAvatarUrl'
 
 const profileFormSchema = z.object({
   name: z
@@ -30,28 +32,28 @@ const profileFormSchema = z.object({
       message: 'Nome deve ter pelo menos 2 caracteres.',
     })
     .max(30, {
-      message: 'Nome não deve ter mais que 30 caracteres.',
+      message: 'Nome nao deve ter mais que 30 caracteres.',
     }),
   cpf: z
     .string()
     .min(11, {
-      message: 'CPF inválido.',
+      message: 'CPF invalido.',
     })
     .max(14, {
-      message: 'CPF inválido.',
+      message: 'CPF invalido.',
     }),
   email: z
     .string()
     .email({
-      message: 'Email inválido.',
+      message: 'Email invalido.',
     }),
   phone: z
     .string()
     .min(10, {
-      message: 'Telefone inválido.',
+      message: 'Telefone invalido.',
     })
     .max(15, {
-      message: 'Telefone inválido.',
+      message: 'Telefone invalido.',
     }),
   password: z
     .string()
@@ -69,10 +71,11 @@ const profileFormSchema = z.object({
     .string()
     .optional(),
   image: z
-    .instanceof(File)
-    .refine(file => file.size < 2 * 1024 * 1024, {
-      message: 'A imagem deve ter no máximo 2MB.',
+    .instanceof(FileList)
+    .refine(files => files.length === 0 || files.length === 1, {
+      message: 'Por favor, selecione uma imagem.',
     })
+    .transform(files => files.length > 0 ? files[0] : null)
     .optional(),
 }).refine((data) => {
   if (data.newPassword && !data.password) {
@@ -80,7 +83,7 @@ const profileFormSchema = z.object({
   }
   return true;
 }, {
-  message: "Senha atual é obrigatória para alterar a senha",
+  message: "Senha atual eh obrigatoria para alterar a senha",
   path: ["password"],
 }).refine((data) => {
   if (data.newPassword && data.confirmPassword && data.newPassword !== data.confirmPassword) {
@@ -88,46 +91,101 @@ const profileFormSchema = z.object({
   }
   return true;
 }, {
-  message: "As senhas não correspondem",
+  message: "As senhas nao correspondem",
   path: ["confirmPassword"],
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>
 
-const defaultValues: Partial<ProfileFormValues> = {
-  name: 'João Silva',
-  cpf: '123.456.789-00',
-  email: 'joao.silva@email.com',
-  phone: '(11) 98765-4321',
-}
-
 export function AccountForm() {
+  const { user } = useUserStore()
+  const { updateProfile, changePassword, uploadProfileImage, isUpdating, isChangingPassword, isUploadingImage } = useUpdateProfile()
+
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+
+  // Valores padrao carregados do usuario logado
+  const defaultValues: Partial<ProfileFormValues> = {
+    name: user?.nome || '',
+    cpf: user?.cpf_cnpj || '',
+    email: user?.email || '',
+    phone: user?.telefone || '',
+  }
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues,
-    mode: 'onChange',
   })
 
-  function onSubmit(data: ProfileFormValues) {
-    toast({
-      title: 'Você enviou os seguintes valores:',
-      description: (
-        <pre className='mt-2 w-[340px] rounded-md bg-slate-950 p-4'>
-          <code className='text-white'>
-            {JSON.stringify({
-              ...data,
-              passwordChanged: !!data.newPassword,
-              image: data.image ? data.image.name : null
-            }, null, 2)}
-          </code>
-        </pre>
-      ),
-    })
+  // Atualizar formulario quando usuario carregar
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        name: user.nome || '',
+        cpf: user.cpf_cnpj || '',
+        email: user.email || '',
+        phone: user.telefone || '',
+      })
+
+      // Carregar avatar existente do usuario usando a funcao utilitaria
+      if (user.avatar_url && !previewUrl) {
+        const url = getAvatarUrl(user.avatar_url);
+        if (url) {
+          setPreviewUrl(url);
+        }
+      }
+    }
+  }, [user, form])
+
+  async function onSubmit(data: ProfileFormValues) {
+    if (!user?.id) return
+
+    // 1. Upload de imagem primeiro (se houver)
+    if (uploadedFile) {
+      const uploadResult = await uploadProfileImage(uploadedFile)
+      if (!uploadResult.success) {
+        // Se o upload falhar, ainda continua com os outros dados
+        console.error('Erro ao fazer upload da imagem:', uploadResult.error)
+      } else {
+        setUploadedFile(null)
+        // Atualiza o preview com a nova URL retornada
+        if (uploadResult.imageUrl) {
+          const fullUrl = getAvatarUrl(uploadResult.imageUrl)
+          if (fullUrl) {
+            setPreviewUrl(fullUrl)
+          }
+        }
+      }
+    }
+
+    // 2. Atualizar dados do perfil
+    const profileData = {
+      nome: data.name,
+      cpfCnpj: data.cpf,
+      email: data.email,
+      telefone: data.phone,
+    }
+
+    const profileResult = await updateProfile(profileData)
+    if (!profileResult.success) return
+
+    // 3. Alterar senha se fornecida
+    if (data.password && data.newPassword) {
+      const passwordResult = await changePassword({
+        senhaAtual: data.password,
+        novaSenha: data.newPassword,
+      })
+
+      if (passwordResult.success) {
+        // Limpar campos de senha apos sucesso
+        form.setValue('password', '')
+        form.setValue('newPassword', '')
+        form.setValue('confirmPassword', '')
+      }
+    }
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,7 +193,9 @@ export function AccountForm() {
     if (file) {
       const url = URL.createObjectURL(file)
       setPreviewUrl(url)
-      form.setValue('image', file)
+      setUploadedFile(file)
+      //@ts-ignore
+      form.setValue('image', e.target.files as FileList)
     }
   }
 
@@ -158,7 +218,7 @@ export function AccountForm() {
               <CardHeader>
                 <CardTitle>Perfil</CardTitle>
                 <CardDescription>
-                  Gerencie suas informações de perfil.
+                  Gerencie suas informacoes de perfil.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -201,7 +261,7 @@ export function AccountForm() {
                         </div>
                       </FormControl>
                       <FormDescription>
-                        A imagem deve ser no formato JPG, PNG ou GIF com tamanho máximo de 2MB.
+                        A imagem deve ser no formato JPG, PNG ou GIF com tamanho maximo de 2MB.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -215,9 +275,9 @@ export function AccountForm() {
             <div className="w-full lg:w-1/2">
               <Card className="h-full">
                 <CardHeader>
-                  <CardTitle>Informações Pessoais</CardTitle>
+                  <CardTitle>Informacoes Pessoais</CardTitle>
                   <CardDescription>
-                    Atualize suas informações pessoais.
+                    Atualize suas informacoes pessoais.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -231,7 +291,7 @@ export function AccountForm() {
                           <Input placeholder='Seu nome' {...field} />
                         </FormControl>
                         <FormDescription>
-                          Este é o nome que será exibido no seu perfil.
+                          Este eh o nome que sera exibido no seu perfil.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -245,10 +305,10 @@ export function AccountForm() {
                       <FormItem>
                         <FormLabel>CPF</FormLabel>
                         <FormControl>
-                          <Input placeholder='123.456.789-00' {...field} value={field.value ?? ''} />
+                          <Input placeholder='123.456.789-00' {...field} />
                         </FormControl>
                         <FormDescription>
-                          Seu CPF será usado apenas para fins de identificação.
+                          Seu CPF sera usado apenas para fins de identificacao.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -263,7 +323,7 @@ export function AccountForm() {
                 <CardHeader>
                   <CardTitle>Contato</CardTitle>
                   <CardDescription>
-                    Atualize suas informações de contato.
+                    Atualize suas informacoes de contato.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -277,7 +337,7 @@ export function AccountForm() {
                           <Input type="email" placeholder='seu.email@exemplo.com' {...field} />
                         </FormControl>
                         <FormDescription>
-                          Este email será usado para comunicações importantes.
+                          Este email sera usado para comunicacoes importantes.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -291,7 +351,7 @@ export function AccountForm() {
                       <FormItem>
                         <FormLabel>Telefone</FormLabel>
                         <FormControl>
-                          <Input placeholder='(11) 98765-4321' {...field} value={field.value ?? ''} />
+                          <Input placeholder='(11) 98765-4321' {...field} />
                         </FormControl>
                         <FormDescription>
                           Seu telefone para contato.
@@ -308,7 +368,7 @@ export function AccountForm() {
           <div className="w-full">
             <Card className="h-full">
               <CardHeader>
-                <CardTitle>Segurança</CardTitle>
+                <CardTitle>Seguranca</CardTitle>
                 <CardDescription>
                   Altere sua senha para manter sua conta segura.
                 </CardDescription>
@@ -324,9 +384,8 @@ export function AccountForm() {
                         <div className="relative">
                           <Input
                             type={showPassword ? "text" : "password"}
-                            placeholder='••••••••'
+                            placeholder='********'
                             {...field}
-                            value={field.value ?? ''}
                           />
                           <button
                             type="button"
@@ -338,7 +397,7 @@ export function AccountForm() {
                         </div>
                       </FormControl>
                       <FormDescription>
-                        Digite sua senha atual para confirmar alterações.
+                        Digite sua senha atual para confirmar alteracoes.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -355,9 +414,8 @@ export function AccountForm() {
                         <div className="relative">
                           <Input
                             type={showNewPassword ? "text" : "password"}
-                            placeholder='••••••••'
+                            placeholder='********'
                             {...field}
-                            value={field.value ?? ''}
                           />
                           <button
                             type="button"
@@ -386,9 +444,8 @@ export function AccountForm() {
                         <div className="relative">
                           <Input
                             type={showConfirmPassword ? "text" : "password"}
-                            placeholder='••••••••'
+                            placeholder='********'
                             {...field}
-                            value={field.value ?? ''}
                           />
                           <button
                             type="button"
@@ -411,7 +468,20 @@ export function AccountForm() {
           </div>
 
 
-          <Button type='submit' className="w-auto rounded-sm">Atualizar perfil</Button>
+          <Button
+            type='submit'
+            className="w-auto rounded-sm bg-card-foreground text-card"
+            disabled={isUpdating || isChangingPassword || isUploadingImage}
+          >
+            {(isUpdating || isChangingPassword || isUploadingImage) ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              'Atualizar perfil'
+            )}
+          </Button>
         </div>
       </form>
     </Form>

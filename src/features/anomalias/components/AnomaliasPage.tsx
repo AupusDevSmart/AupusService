@@ -58,35 +58,57 @@ export function AnomaliasPage() {
   };
 
   const handleSubmit = async (data: AnomaliaFormData) => {
-    console.log('🔄 [AnomaliasPage] Salvando anomalia:', data);
-    
     try {
-      const transformedData: AnomaliaFormData = {
-        ...data,
-        ...(data.localizacao && {
-          plantaId: data.localizacao.plantaId || data.plantaId,
-          equipamentoId: data.localizacao.equipamentoId || data.equipamentoId,
-          local: data.localizacao.local || data.local,
-          ativo: data.localizacao.ativo || data.ativo,
-        })
+      // Extrair valores de localização
+      const equipamentoId = data.localizacao?.equipamentoId || data.equipamentoId;
+      const local = data.localizacao?.local || data.local;
+      const ativo = data.localizacao?.ativo || data.ativo;
+
+      // Validar campos obrigatórios
+      if (!local || local.trim() === '') {
+        throw new Error('O campo "Local" é obrigatório. Por favor, selecione uma planta.');
+      }
+      if (!ativo || ativo.trim() === '') {
+        throw new Error('O campo "Equipamento" é obrigatório. Por favor, selecione um equipamento.');
+      }
+
+      // ✅ Transformar para o formato que o backend espera
+      const transformedData: any = {
+        descricao: data.descricao,
+        condicao: data.condicao,
+        origem: data.origem,
+        prioridade: data.prioridade,
+        observacoes: data.observacoes || '',
+        localizacao: {
+          local: local.trim(),
+          ativo: ativo.trim(),
+          ...(equipamentoId && equipamentoId.toString().trim() !== '' && {
+            equipamentoId: equipamentoId.toString().trim()
+          })
+        },
+        // Anexos NÃO são enviados aqui - serão enviados separadamente
       };
-      
-      delete (transformedData as any).localizacao;
-      
-      console.log('🔄 [AnomaliasPage] Data transformed for API:', {
-        original: data,
-        transformed: transformedData
-      });
-      
+
       if (modalState.mode === 'create') {
-        await criarAnomalia(transformedData);
+        const anomaliaCriada = await criarAnomalia(transformedData);
+
+        // Upload anexos DEPOIS de criar a anomalia
+        if (data.anexos && Array.isArray(data.anexos) && data.anexos.length > 0) {
+          try {
+            const { anomaliasService } = await import('@/services/anomalias.service');
+            await anomaliasService.uploadAnexos(anomaliaCriada.id.trim(), data.anexos as File[]);
+          } catch (uploadError) {
+            console.error('Erro ao fazer upload dos anexos:', uploadError);
+          }
+        }
       } else if (modalState.mode === 'edit' && modalState.entity) {
         await editarAnomalia(modalState.entity.id, transformedData);
       }
-      
+
       await handleSuccess();
     } catch (error) {
       console.error('❌ [AnomaliasPage] Erro ao salvar anomalia:', error);
+      throw error;
     }
   };
 
@@ -114,22 +136,15 @@ export function AnomaliasPage() {
           local: '',
           ativo: ''
         },
+        anexos: [], // ✅ Inicializar como array vazio
         criadoEm: new Date().toISOString(),
         atualizadoEm: new Date().toISOString(),
       };
     }
     
     if (entity && (modalState.mode === 'edit' || modalState.mode === 'view')) {
-      console.log('🔍 [AnomaliasPage] Original entity from DB:', entity);
-      console.log('🔍 [AnomaliasPage] Entity prioridade field:', {
-        prioridade: entity.prioridade,
-        type: typeof entity.prioridade,
-        keys: Object.keys(entity)
-      });
-      
-      const transformed = {
+      return {
         ...entity,
-        // Garantir que prioridade está correta
         prioridade: entity.prioridade || 'MEDIA',
         plantaId: entity.planta_id || entity.plantaId || '',
         equipamentoId: entity.equipamento_id || entity.equipamentoId || '',
@@ -141,17 +156,8 @@ export function AnomaliasPage() {
           local: entity.local || '',
           ativo: entity.ativo || ''
         },
-        // Anexos - garantir que estão presentes se existem
         anexos: (entity as any).anexos || []
       };
-      
-      console.log('🔍 [AnomaliasPage] Transformed entity:', {
-        prioridade: transformed.prioridade,
-        anexos: transformed.anexos,
-        anexosLength: transformed.anexos?.length || 0
-      });
-      
-      return transformed;
     }
     
     return entity;
@@ -173,12 +179,15 @@ export function AnomaliasPage() {
   }, []);
 
   const handleView = useCallback((anomalia: Anomalia) => {
-    console.log('👁️ [AnomaliasPage] Clicou em Visualizar:', anomalia);
     openModal('view', anomalia);
   }, [openModal]);
 
   const handleEdit = useCallback((anomalia: Anomalia) => {
-    console.log('✏️ [AnomaliasPage] Clicou em Editar:', anomalia);
+    // ✅ BLOQUEAR edição de anomalias já analisadas
+    if (anomalia.status !== 'AGUARDANDO' && anomalia.status !== 'EM_ANALISE') {
+      alert(`Não é possível editar uma anomalia com status "${anomalia.status}". Apenas anomalias "AGUARDANDO" ou "EM_ANALISE" podem ser editadas.`);
+      return;
+    }
     openModal('edit', anomalia);
   }, [openModal]);
 
@@ -410,6 +419,11 @@ export function AnomaliasPage() {
                 key: 'observacoes',
                 title: 'Observações Adicionais',
                 fields: ['observacoes']
+              },
+              {
+                key: 'analise',
+                title: 'Análise da Anomalia',
+                fields: ['observacoes_analise']
               },
               {
                 key: 'anexos',

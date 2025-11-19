@@ -59,7 +59,25 @@ export const useProgramacaoOS = () => {
       const result = await programacaoOSApi.listar(filters);
       return result;
     } catch (error) {
-      return handleError(error, 'Erro ao listar programações');
+      console.error('Erro ao listar programações:', error);
+      // Retornar estrutura válida mesmo em caso de erro
+      return {
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0
+        },
+        stats: {
+          rascunho: 0,
+          pendentes: 0,
+          em_analise: 0,
+          aprovadas: 0,
+          rejeitadas: 0,
+          canceladas: 0
+        }
+      };
     } finally {
       setLoading(false);
     }
@@ -207,23 +225,33 @@ export const useProgramacaoOS = () => {
     }
   }, []);
 
-  const iniciarExecucao = useCallback(async (id: string, dados: IniciarExecucaoData) => {
-    // console.log('▶️ Iniciando execução da OS:', id, dados);
+  const iniciarExecucao = useCallback(async (programacaoId: string, dados: IniciarExecucaoData) => {
+    console.log('▶️ Iniciando execução da OS a partir da programação:', programacaoId, dados);
     setLoading(true);
-    
+
     try {
-      // Simula API de execução
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Aqui você faria a chamada real para a API de execução-os
-      // const execucao = await execucaoOSApi.iniciar(id, dados);
-      
-      // console.log('✅ Execução iniciada com sucesso');
-      return { 
-        success: true, 
-        message: 'Execução iniciada com sucesso!',
-        execucaoId: `exec-${Date.now()}`
+      // ✅ Chamada real para a API de execução-os
+      const response = await programacaoOSApi.post(
+        `/execucao-os/iniciar-de-programacao/${programacaoId}`,
+        {
+          responsavel_execucao: dados.responsavelExecucao,
+          equipe_presente: dados.equipePresente,
+          observacoes_inicio: dados.observacoesInicio,
+          data_hora_inicio_real: new Date().toISOString(),
+        }
+      );
+
+      console.log('✅ Execução iniciada com sucesso:', response.data);
+
+      return {
+        success: true,
+        message: response.data.message || 'Execução iniciada com sucesso!',
+        execucaoId: response.data.os_id
       };
+    } catch (error: any) {
+      console.error('❌ Erro ao iniciar execução:', error);
+      setError(error.response?.data?.message || 'Erro ao iniciar execução');
+      throw error;
     } finally {
       setLoading(false);
     }

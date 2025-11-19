@@ -13,7 +13,6 @@ import { programacaoOSTableColumns } from '../config/table-config';
 import { programacaoOSFilterConfig } from '../config/filter-config';
 import { programacaoOSFormFields, programacaoOSFormGroups } from '../config/form-config';
 import { useProgramacaoOS } from '../hooks/useProgramacaoOS';
-import { IniciarExecucaoModal } from './IniciarExecucaoModal';
 import { WorkflowModal } from './WorkflowModal';
 import { processarMateriaisComCustos, processarTecnicosComCustos } from '@/utils/recursos.utils';
 import type { ProgramacaoResponse, ProgramacaoDetalhesResponse, ProgramacaoFiltersDto, CreateProgramacaoDto } from '@/services/programacao-os.service';
@@ -84,7 +83,14 @@ export function ProgramacaoOSPage() {
     total: 0,
     totalPages: 0
   });
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<{
+    rascunho: number;
+    pendentes: number;
+    em_analise: number;
+    aprovadas: number;
+    rejeitadas: number;
+    canceladas: number;
+  }>({
     rascunho: 0,
     pendentes: 0,
     em_analise: 0,
@@ -92,10 +98,6 @@ export function ProgramacaoOSPage() {
     rejeitadas: 0,
     canceladas: 0
   });
-
-  // Estados para modais
-  const [showIniciarModal, setShowIniciarModal] = useState(false);
-  const [osSelecionada, setOsSelecionada] = useState<ProgramacaoResponse | null>(null);
 
   // Estados para workflow modal
   const [showWorkflowModal, setShowWorkflowModal] = useState(false);
@@ -127,11 +129,39 @@ export function ProgramacaoOSPage() {
   const carregarDados = async () => {
     try {
       const response = await listarProgramacoes(filters);
-      setProgramacoes(response.data);
-      setPagination(response.pagination);
-      setStats(response.stats);
+      setProgramacoes(response.data || []);
+      setPagination(response.pagination || {
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0
+      });
+      setStats(response.stats || {
+        rascunho: 0,
+        pendentes: 0,
+        em_analise: 0,
+        aprovadas: 0,
+        rejeitadas: 0,
+        canceladas: 0
+      });
     } catch (error) {
-      // console.error('Erro ao carregar programações:', error);
+      console.error('Erro ao carregar programações:', error);
+      // Manter estados com valores padrão em caso de erro
+      setProgramacoes([]);
+      setPagination({
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0
+      });
+      setStats({
+        rascunho: 0,
+        pendentes: 0,
+        em_analise: 0,
+        aprovadas: 0,
+        rejeitadas: 0,
+        canceladas: 0
+      });
     }
   };
 
@@ -211,6 +241,13 @@ export function ProgramacaoOSPage() {
 
         // Veículo - campos atualizados para snake_case
         necessita_veiculo: data.necessita_veiculo || data.necessitaVeiculo || false,
+        // Extrair dados de reserva_veiculo (objeto retornado pelo componente customizado)
+        veiculo_id: data.reserva_veiculo?.veiculo_id || data.veiculo_id || null,
+        reserva_data_inicio: data.reserva_veiculo?.reserva_data_inicio || data.reserva_data_inicio || null,
+        reserva_data_fim: data.reserva_veiculo?.reserva_data_fim || data.reserva_data_fim || null,
+        reserva_hora_inicio: data.reserva_veiculo?.reserva_hora_inicio || data.reserva_hora_inicio || null,
+        reserva_hora_fim: data.reserva_veiculo?.reserva_hora_fim || data.reserva_hora_fim || null,
+        reserva_finalidade: data.reserva_veiculo?.reserva_finalidade || data.reserva_finalidade || null,
         assentos_necessarios: data.assentos_necessarios || data.assentosNecessarios ?
           parseInt(data.assentos_necessarios || data.assentosNecessarios) : null,
         carga_necessaria: data.carga_necessaria || data.cargaNecessaria ?
@@ -272,6 +309,15 @@ export function ProgramacaoOSPage() {
       };
 
       console.log('📤 Dados preparados para API:', preparedData);
+      console.log('🚗 [DEBUG RESERVA] Dados de reserva extraídos:', {
+        reserva_veiculo_original: data.reserva_veiculo,
+        veiculo_id: preparedData.veiculo_id,
+        reserva_data_inicio: preparedData.reserva_data_inicio,
+        reserva_data_fim: preparedData.reserva_data_fim,
+        reserva_hora_inicio: preparedData.reserva_hora_inicio,
+        reserva_hora_fim: preparedData.reserva_hora_fim,
+        reserva_finalidade: preparedData.reserva_finalidade
+      });
 
       if (modalState.mode === 'create') {
         await criarProgramacao(preparedData as CreateProgramacaoDto);
@@ -304,12 +350,16 @@ export function ProgramacaoOSPage() {
 
       console.log('📦 [ProgramacaoOSPage] Dados completos recebidos da API:', {
         id: dadosCompletos.id,
+        status: dadosCompletos.status,
         origem: dadosCompletos.origem,
         dados_origem: dadosCompletos.dados_origem,
         tarefas_ids: dadosCompletos.tarefas_ids,
         materiais: dadosCompletos.materiais?.length || 0,
         tecnicos: dadosCompletos.tecnicos?.length || 0,
-        ferramentas: dadosCompletos.ferramentas?.length || 0
+        ferramentas: dadosCompletos.ferramentas?.length || 0,
+        observacoes_analise: dadosCompletos.observacoes_analise,
+        motivo_rejeicao: dadosCompletos.motivo_rejeicao,
+        motivo_cancelamento: dadosCompletos.motivo_cancelamento
       });
 
       console.log('🔧 [ProgramacaoOSPage] Abrindo modal com dados processados...');
@@ -490,30 +540,6 @@ export function ProgramacaoOSPage() {
     }
   };
 
-  // Handler para iniciar execução (simulado)
-  const handleIniciarExecucao = async (programacao: ProgramacaoResponse) => {
-    setOsSelecionada(programacao);
-    setShowIniciarModal(true);
-  };
-
-  const handleConfirmarIniciarExecucao = async (dados: any) => {
-    if (!osSelecionada) return;
-    
-    try {
-      const resultado = await iniciarExecucao(osSelecionada.id, dados);
-      
-      if (resultado.success) {
-        setShowIniciarModal(false);
-        setOsSelecionada(null);
-        alert(`✅ ${resultado.message}\n\nA OS foi transferida para a tela de Execução.`);
-        await carregarDados();
-      }
-    } catch (error) {
-      // console.error('Erro ao iniciar execução:', error);
-      alert('❌ Erro ao iniciar execução. Tente novamente.');
-    }
-  };
-
   const handleExportar = async () => {
     try {
       const blob = await exportarOS(filters);
@@ -647,6 +673,18 @@ export function ProgramacaoOSPage() {
       assentos_necessarios: entity.assentos_necessarios ?? null,
       carga_necessaria: entity.carga_necessaria ?? null,
       observacoes_veiculo: entity.observacoes_veiculo ?? '',
+      // ✅ CORREÇÃO: Mapear reserva_veiculo dependendo do modo
+      reserva_veiculo: modalState.mode === 'edit' && entity.reserva_veiculo ? {
+        // Para EDIT: converter para formato do ReservaViaturaField
+        veiculo_id: entity.reserva_veiculo.veiculo_id,
+        reserva_data_inicio: entity.reserva_veiculo.data_inicio ?
+          new Date(entity.reserva_veiculo.data_inicio).toISOString().split('T')[0] : '',
+        reserva_data_fim: entity.reserva_veiculo.data_fim ?
+          new Date(entity.reserva_veiculo.data_fim).toISOString().split('T')[0] : '',
+        reserva_hora_inicio: entity.reserva_veiculo.hora_inicio,
+        reserva_hora_fim: entity.reserva_veiculo.hora_fim,
+        reserva_finalidade: entity.reserva_veiculo.finalidade
+      } : entity.reserva_veiculo ?? null, // Para VIEW: manter formato original da API
 
       // Campos de planejamento e programação (manter snake_case)
       tempo_estimado: entity.tempo_estimado ?? 0,
@@ -661,6 +699,16 @@ export function ProgramacaoOSPage() {
       observacoes: entity.observacoes ?? '',
       observacoes_programacao: entity.observacoes_programacao ?? '',
       justificativa: entity.justificativa ?? '',
+
+      // Campos de workflow
+      observacoes_analise: entity.observacoes_analise ?? '',
+      motivo_rejeicao: entity.motivo_rejeicao ?? '',
+      sugestoes_melhoria: entity.sugestoes_melhoria ?? '',
+      motivo_cancelamento: entity.motivo_cancelamento ?? '',
+      observacoes_aprovacao: entity.observacoes_aprovacao ?? '',
+      ajustes_orcamento: entity.ajustes_orcamento ?? null,
+      data_programada_sugerida: entity.data_programada_sugerida ?? '',
+      hora_programada_sugerida: entity.hora_programada_sugerida ?? '',
 
       // Campos de auditoria
       criado_por: entity.criado_por,
@@ -910,19 +958,6 @@ export function ProgramacaoOSPage() {
                   </Button>
                 )}
 
-                {/* Iniciar Execução */}
-                {modalState.entity.status === 'APROVADA' && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleIniciarExecucao(modalState.entity!)}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Play className="h-4 w-4" />
-                    Iniciar Execução
-                  </Button>
-                )}
-
                 {/* Cancelar */}
                 {!['CANCELADA', 'APROVADA'].includes(modalState.entity.status) && (
                   <Button
@@ -953,18 +988,6 @@ export function ProgramacaoOSPage() {
             </div>
           )}
         </BaseModal>
-
-        {/* Modal para iniciar execução */}
-        <IniciarExecucaoModal
-          isOpen={showIniciarModal}
-          os={osSelecionada as any}
-          onClose={() => {
-            setShowIniciarModal(false);
-            setOsSelecionada(null);
-          }}
-          onConfirm={handleConfirmarIniciarExecucao}
-          loading={loading}
-        />
 
         {/* Modal para ações de workflow */}
         <WorkflowModal

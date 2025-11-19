@@ -1,13 +1,14 @@
-import { 
-  LogOut, 
-  Sun, 
-  Moon, 
+import {
+  LogOut,
+  Sun,
+  Moon,
   Laptop2,
   UserCog
 } from "lucide-react"
 import {
   Avatar,
   AvatarFallback,
+  AvatarImage,
 } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -25,7 +26,8 @@ import {
 } from "@/components/ui/sidebar"
 import { useUserStore } from "@/store/useUserStore"
 import { getInitials } from "@/lib/getInitials"
-import {  useTheme } from "@/components/theme-provider"
+import { getAvatarUrl } from "@/lib/getAvatarUrl"
+import { useTheme } from "@/components/theme-provider"
 import { useNavigate } from "react-router-dom"
 import clsx from "clsx" // Para manipulação condicional de classes
 
@@ -44,6 +46,8 @@ export function NavUser() {
     navigate('/configuracoes/perfil');
   }
 
+  const avatarUrl = getAvatarUrl(user?.avatar_url);
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -54,11 +58,24 @@ export function NavUser() {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarFallback className="rounded-lg">{getInitials('Nicolas Santana')}</AvatarFallback>
+                {avatarUrl && (
+                  <AvatarImage
+                    src={avatarUrl}
+                    alt={user?.nome || 'Usuário'}
+                    className="object-cover"
+                    onError={(e) => {
+                      console.error('❌ [NAV-USER] Erro ao carregar imagem:', avatarUrl);
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                )}
+                <AvatarFallback className="rounded-lg">
+                  {getInitials(user?.nome || 'Usuário')}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{"Nicolas Santana"}</span>
-                <span className="truncate text-xs">{'nicolassantanakruger@gmail.com'}</span>
+                <span className="truncate font-semibold">{user?.nome || 'Usuário'}</span>
+                <span className="truncate text-xs">{user?.email || ''}</span>
               </div>
             </SidebarMenuButton>
           </DropdownMenuTrigger>
@@ -71,11 +88,24 @@ export function NavUser() {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg">{getInitials("Nicolas Santana")}</AvatarFallback>
+                  {avatarUrl && (
+                    <AvatarImage
+                      src={avatarUrl}
+                      alt={user?.nome || 'Usuário'}
+                      className="object-cover"
+                      onError={(e) => {
+                        console.error('❌ [NAV-USER] Erro ao carregar imagem:', avatarUrl);
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  )}
+                  <AvatarFallback className="rounded-lg">
+                    {getInitials(user?.nome || 'Usuário')}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{"Nicolas Santana"}</span>
-                  <span className="truncate text-xs">{'nicolassantanakruger@gmail.com'}</span>
+                  <span className="truncate font-semibold">{user?.nome || 'Usuário'}</span>
+                  <span className="truncate text-xs">{user?.email || ''}</span>
                 </div>
               </div>
             </DropdownMenuLabel>

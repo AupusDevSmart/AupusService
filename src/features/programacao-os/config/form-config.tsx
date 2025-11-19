@@ -5,6 +5,8 @@ import { OrigemOSCard } from '../components/OrigemOSCard';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
 import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManager';
+import { ReservaViaturaField } from '../components/ReservaViaturaField';
+import { ReservaVinculadaCard } from '../components/ReservaVinculadaCard';
 
 export const programacaoOSFormFields: FormField[] = [
   // Informações básicas - GRUPO: identificacao
@@ -252,6 +254,43 @@ export const programacaoOSFormFields: FormField[] = [
     }
   },
   {
+    key: 'reserva_veiculo',
+    label: 'Reserva de Veículo',
+    type: 'custom',
+    component: ReservaViaturaField,
+    componentProps: (formData: any) => ({
+      dataProgramada: formData?.data_hora_programada || formData?.data_previsao_inicio
+    }),
+    showOnlyWhen: {
+      field: 'necessita_veiculo',
+      value: true
+    },
+    showOnlyOnMode: ['create', 'edit'],
+    group: 'veiculo',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+  {
+    key: 'reserva_vinculada',
+    label: 'Reserva de Veículo Vinculada',
+    type: 'custom',
+    showOnlyWhen: {
+      field: 'necessita_veiculo',
+      value: true
+    },
+    showOnlyOnMode: 'view',
+    group: 'veiculo',
+    render: (props: any) => {
+      const { entity } = props;
+      return (
+        <ReservaVinculadaCard
+          reserva={entity?.reserva_veiculo}
+        />
+      );
+    }
+  },
+  {
     key: 'assentos_necessarios',
     label: 'Assentos Necessários',
     type: 'number',
@@ -400,9 +439,8 @@ export const programacaoOSFormFields: FormField[] = [
     disabled: true,
     group: 'workflow',
     condition: (entity: any) => {
-      // Mostrar se tem observações OU se o status indica que passou pela análise
-      return ['EM_ANALISE', 'APROVADA', 'REJEITADA'].includes(entity?.status) &&
-             (entity?.observacoes_analise || ['APROVADA', 'REJEITADA'].includes(entity?.status));
+      // Mostrar sempre que o status indica que passou pela análise
+      return ['EM_ANALISE', 'APROVADA', 'REJEITADA'].includes(entity?.status);
     }
   },
 
@@ -418,40 +456,6 @@ export const programacaoOSFormFields: FormField[] = [
       return entity?.status === 'APROVADA';
     }
   },
-  {
-    key: 'ajustes_orcamento',
-    label: 'Ajustes no Orçamento (R$)',
-    type: 'number',
-    placeholder: 'Ajustes no valor orçado',
-    disabled: true,
-    group: 'workflow',
-    condition: (entity: any) => {
-      return entity?.status === 'APROVADA';
-    }
-  },
-  {
-    key: 'data_programada_sugerida',
-    label: 'Data Sugerida para Programação',
-    type: 'date',
-    placeholder: 'Data sugerida',
-    disabled: true,
-    group: 'workflow',
-    condition: (entity: any) => {
-      return entity?.status === 'APROVADA';
-    }
-  },
-  {
-    key: 'hora_programada_sugerida',
-    label: 'Hora Sugerida para Programação',
-    type: 'time',
-    placeholder: 'Hora sugerida',
-    disabled: true,
-    group: 'workflow',
-    condition: (entity: any) => {
-      return entity?.status === 'APROVADA';
-    }
-  },
-
   // Campos de rejeição - mostrar apenas se foi rejeitada
   {
     key: 'motivo_rejeicao',
@@ -472,7 +476,7 @@ export const programacaoOSFormFields: FormField[] = [
     disabled: true,
     group: 'workflow',
     condition: (entity: any) => {
-      return entity?.status === 'REJEITADA' && entity?.sugestoes_melhoria;
+      return entity?.status === 'REJEITADA';
     }
   },
 
@@ -594,7 +598,7 @@ export const programacaoOSFormGroups = [
   {
     key: 'veiculo',
     title: 'Requisitos de Veículo',
-    fields: ['necessita_veiculo', 'assentos_necessarios', 'carga_necessaria', 'observacoes_veiculo']
+    fields: ['necessita_veiculo', 'reserva_veiculo', 'reserva_vinculada', 'assentos_necessarios', 'carga_necessaria', 'observacoes_veiculo']
   },
   {
     key: 'recursos',
@@ -610,26 +614,15 @@ export const programacaoOSFormGroups = [
     key: 'workflow',
     title: 'Histórico de Ações',
     fields: [
-      'observacoes_analise', 'observacoes_aprovacao', 'ajustes_orcamento',
-      'data_programada_sugerida', 'hora_programada_sugerida',
-      'motivo_rejeicao', 'sugestoes_melhoria', 'motivo_cancelamento'
+      'observacoes_aprovacao',
+      'motivo_rejeicao', 'sugestoes_melhoria', 'motivo_cancelamento',
+      'observacoes_analise'
     ],
     conditional: {
       field: 'status',
       value: function(entity: any) {
-        // Mostrar grupo apenas se há informações de workflow para exibir
-        if (!entity?.status || ['RASCUNHO', 'PENDENTE'].includes(entity.status)) {
-          return false;
-        }
-
-        // Verificar se há pelo menos um campo de workflow preenchido
-        const workflowFields = [
-          'observacoes_analise', 'observacoes_aprovacao', 'ajustes_orcamento',
-          'data_programada_sugerida', 'hora_programada_sugerida',
-          'motivo_rejeicao', 'sugestoes_melhoria', 'motivo_cancelamento'
-        ];
-
-        return workflowFields.some(field => entity[field]);
+        // Mostrar grupo sempre que o status indica que passou por alguma ação de workflow
+        return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
       }
     }
   },

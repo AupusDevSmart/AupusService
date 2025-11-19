@@ -18,6 +18,9 @@ export interface Anomalia extends BaseEntity {
   status: StatusAnomalia;
   prioridade: PrioridadeAnomalia;
   observacoes?: string;
+  observacoes_analise?: string; // ✅ NOVO: Observações da análise
+  analisado_por?: string; // ✅ NOVO: Quem analisou
+  data_analise?: string; // ✅ NOVO: Quando foi analisada
   criadoPor?: string;
   atualizadoEm?: string;
   ordemServicoId?: string;

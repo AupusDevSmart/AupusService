@@ -176,6 +176,7 @@ export interface OrdemServico extends BaseEntity {
   equipamento_id?: string;
   anomalia_id?: string;
   plano_manutencao_id?: string;
+  reserva_id?: string;
   dados_origem?: any;
 
   // Planejamento (da programação)
@@ -256,7 +257,7 @@ export interface ExecucaoOS extends OrdemServico {
   progresso_checklist?: number;
   esta_atrasada?: boolean;
   dias_atraso?: number;
-  
+
   // Alias para compatibilidade com componentes existentes
   numeroOS?: string; // Alias para numero_os
   statusExecucao?: StatusExecucaoOS; // Alias para status
@@ -271,7 +272,31 @@ export interface ExecucaoOS extends OrdemServico {
   resultadoServico?: string; // Alias para resultado_servico
   problemasEncontrados?: string; // Alias para problemas_encontrados
   observacoesExecucao?: string; // Alias para observacoes_execucao
-  
+
+  // Relacionamento com reserva de veículo
+  reserva_veiculo?: {
+    id: string;
+    veiculo_id: string;
+    veiculo?: {
+      id: string;
+      placa: string;
+      modelo?: string;
+      marca?: string;
+    };
+    data_inicio: string;
+    data_fim: string;
+    hora_inicio: string;
+    hora_fim: string;
+    finalidade: string;
+    km_inicial?: number;
+    km_final?: number;
+    status?: string;
+    data_finalizacao?: string;
+    finalizado_por?: string;
+    finalizado_por_id?: string;
+    observacoes_finalizacao?: string;
+  };
+
   // Dados da OS original (para compatibilidade)
   os?: {
     numeroOS: string;

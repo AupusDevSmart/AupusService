@@ -1,4 +1,4 @@
-// src/features/programacao-os/components/OrigemOSSelector.tsx - VERSÃO CORRIGIDA
+// src/features/programacao-os/components/OrigemOSSelector.tsx - VERSÃO REFATORADA (Padrão Controlled Component)
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,10 +13,14 @@ import {
   FileText,
   CheckCircle2,
   Clock,
-  Settings
+  Settings,
+  MapPin,
+  Building2
 } from 'lucide-react';
 import { useOrigemDados } from '../hooks/useOrigemDados';
 import { MultiplePlanosSelector } from './MultiplePlanosSelector';
+import { usePlantas } from '@/features/plantas/hooks/usePlantas';
+import { useUnidadesByPlanta } from '@/features/unidades/hooks/useUnidades';
 
 interface OrigemOSSelectorProps {
   value: {
@@ -24,8 +28,10 @@ interface OrigemOSSelectorProps {
     anomaliaId?: string;
     planoId?: string;
     tarefasSelecionadas?: string[];
-    // Novos campos para múltiplos planos
+    // Campos de hierarquia (Planta → Unidade → Anomalia/Plano)
     plantaId?: string;
+    unidadeId?: string;
+    // Novos campos para múltiplos planos
     planosSelecionados?: string[];
     tarefasPorPlano?: any;
   };
@@ -40,6 +46,14 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
   onLocalAtivoChange,
   disabled = false
 }) => {
+  // ✅ DERIVAR VALORES DIRETAMENTE DAS PROPS PRIMEIRO - Antes dos hooks que dependem deles
+  const tipo = value.tipo || 'MANUAL';
+  const plantaId = value.plantaId?.toString().trim() || '';
+  const unidadeId = value.unidadeId?.toString().trim() || '';
+  const anomaliaId = value.anomaliaId?.toString().trim() || '';
+  const planoId = value.planoId?.toString().trim() || '';
+  const tarefasSelecionadas = value.tarefasSelecionadas || [];
+
   const {
     anomaliasDisponiveis,
     planosDisponiveis,
@@ -49,29 +63,77 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
     loading
   } = useOrigemDados();
 
+  // ✅ Hooks para carregar plantas e unidades
+  const {
+    plantas,
+    carregarPlantasSimples,
+    loading: loadingPlantas
+  } = usePlantas();
+
+  // ✅ Hook correto: usar useUnidadesByPlanta que filtra por planta (usa plantaId já definido acima)
+  const {
+    unidades,
+    isLoading: loadingUnidades
+  } = useUnidadesByPlanta(plantaId || undefined);
+
+  // ✅ APENAS UI STATE - Não armazena valores de negócio que vêm das props
   const [searchTerm, setSearchTerm] = useState('');
   const [tarefasDoPlano, setTarefasDoPlano] = useState<any[]>([]);
   const [equipamentosSelecionados] = useState<number[]>([1]);
   const [loadingTarefas, setLoadingTarefas] = useState(false);
 
-  // Carregar dados ao montar o componente
+  // Carregar plantas ao montar
   useEffect(() => {
-    carregarAnomalias();
-    carregarPlanos();
-  }, [carregarAnomalias, carregarPlanos]);
+    carregarPlantasSimples();
+  }, [carregarPlantasSimples]);
+
+  // ✅ useUnidadesByPlanta já carrega automaticamente quando plantaId muda
+
+  // Carregar anomalias/planos quando unidade for selecionada
+  useEffect(() => {
+    if (tipo === 'ANOMALIA' && plantaId && unidadeId) {
+      console.log('🔍 [OrigemOSSelector] Carregando anomalias filtradas:', { plantaId, unidadeId });
+      carregarAnomalias(plantaId, unidadeId);
+    }
+  }, [tipo, plantaId, unidadeId, carregarAnomalias]);
 
   // Quando o plano for selecionado, carregar suas tarefas
   useEffect(() => {
     const carregarTarefasPlano = async () => {
-      if (value.tipo === 'PLANO_MANUTENCAO' && value.planoId && value.planoId !== '') {
-        // console.log('Carregando tarefas para plano:', value.planoId);
+      if (tipo === 'PLANO_MANUTENCAO' && planoId && planoId !== '') {
         setLoadingTarefas(true);
         try {
-          const tarefas = await gerarTarefasDoPlano(value.planoId, equipamentosSelecionados.map(String));
-          // console.log('Tarefas carregadas:', tarefas);
-          setTarefasDoPlano(tarefas || []);
+          const tarefas = await gerarTarefasDoPlano(planoId, equipamentosSelecionados.map(String));
+
+          // ✅ VALIDAÇÃO EM TEMPO REAL - Detectar IDs mockados imediatamente
+          const tarefasValidadas = (tarefas || []).map(tarefa => {
+            const tarefaId = tarefa.id?.toString().trim() || '';
+
+            // Validar se o ID é um CUID válido (26 caracteres)
+            if (tarefaId.length !== 26) {
+              console.warn('⚠️ [OrigemOSSelector] ID de tarefa com comprimento inválido:', {
+                tarefaId,
+                comprimento: tarefaId.length,
+                esperado: 26,
+                descricao: tarefa.descricao
+              });
+            }
+
+            // Detectar IDs mockados (padrão cmg...)
+            if (tarefaId.includes('cmg')) {
+              console.error('❌ [OrigemOSSelector] DETECTADO ID MOCKADO:', {
+                tarefaId,
+                descricao: tarefa.descricao,
+                planoId
+              });
+            }
+
+            return tarefa;
+          });
+
+          setTarefasDoPlano(tarefasValidadas);
         } catch (error) {
-          // console.error('Erro ao carregar tarefas:', error);
+          console.error('Erro ao carregar tarefas:', error);
           setTarefasDoPlano([]);
         } finally {
           setLoadingTarefas(false);
@@ -82,44 +144,90 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
     };
 
     carregarTarefasPlano();
-  }, [value.planoId, value.tipo, gerarTarefasDoPlano, equipamentosSelecionados]);
+  }, [planoId, tipo, gerarTarefasDoPlano, equipamentosSelecionados]);
 
   const handleTipoChange = (tipo: 'ANOMALIA' | 'PLANO_MANUTENCAO' | 'MANUAL') => {
-    // console.log('Mudando tipo para:', tipo);
+    console.log('🔄 [OrigemOSSelector] Mudando tipo para:', tipo);
 
     const novoValor = {
       tipo,
+      // Resetar hierarquia completa
+      plantaId: undefined,
+      unidadeId: undefined,
       anomaliaId: undefined,
       planoId: undefined,
       tarefasSelecionadas: [],
-      // Limpar novos campos
-      plantaId: undefined,
+      // Limpar campos de múltiplos planos
       planosSelecionados: [],
       tarefasPorPlano: {}
     };
 
     onChange(novoValor);
     setTarefasDoPlano([]);
-    setSearchTerm(''); // Limpa a busca
+    setSearchTerm('');
 
     // Limpar local e ativo quando muda tipo de origem
     if (onLocalAtivoChange) {
       if (tipo === 'MANUAL') {
-        onLocalAtivoChange('', ''); // Para manual, deixa vazio para preenchimento manual
+        onLocalAtivoChange('', '');
       }
     }
   };
 
+  // ✅ NOVO: Handlers para seleção de planta e unidade
+  const handlePlantaChange = (newPlantaId: string) => {
+    console.log('🏭 [OrigemOSSelector] Selecionando planta:', newPlantaId);
+
+    const novoValor = {
+      ...value,
+      // Se string vazia, setar como undefined para mostrar lista de seleção
+      plantaId: newPlantaId || undefined,
+      // Resetar unidade e seleções dependentes
+      unidadeId: undefined,
+      anomaliaId: undefined,
+      planoId: undefined,
+      tarefasSelecionadas: []
+    };
+
+    onChange(novoValor);
+  };
+
+  const handleUnidadeChange = (newUnidadeId: string) => {
+    console.log('🏢 [OrigemOSSelector] Selecionando unidade:', newUnidadeId);
+
+    const novoValor = {
+      ...value,
+      // Se string vazia, setar como undefined para mostrar lista de seleção
+      unidadeId: newUnidadeId || undefined,
+      // Resetar apenas seleções dependentes (manter planta)
+      anomaliaId: undefined,
+      planoId: undefined,
+      tarefasSelecionadas: []
+    };
+
+    onChange(novoValor);
+  };
+
   const handleAnomaliaChange = (anomaliaId: string) => {
-    // console.log('Selecionando anomalia:', anomaliaId);
-    
+    console.log('🔍 [OrigemOSSelector] Selecionando anomalia:', anomaliaId);
+
+    // ✅ Se string vazia, limpar seleção (para botão "Trocar")
     if (!anomaliaId || anomaliaId === '') {
-      // console.log('ID da anomalia inválido');
+      const novoValor = {
+        ...value,
+        anomaliaId: undefined
+      };
+      onChange(novoValor);
+
+      // Limpar local/ativo
+      if (onLocalAtivoChange) {
+        onLocalAtivoChange('', '');
+      }
       return;
     }
 
     const anomaliaSelecionada = anomaliasDisponiveis.find(a => String(a.id) === String(anomaliaId));
-    
+
     if (!anomaliaSelecionada) {
       // console.log('Anomalia não encontrada:', anomaliaId);
       // console.log('Anomalias disponíveis:', anomaliasDisponiveis);
@@ -129,13 +237,15 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
     // Criar novo objeto de valor
     const novoValor = {
       tipo: 'ANOMALIA' as const,
+      plantaId: value.plantaId,
+      unidadeId: value.unidadeId,
       anomaliaId: String(anomaliaId), // Garantir que é string
       planoId: undefined,
       tarefasSelecionadas: []
     };
 
     // console.log('Enviando novo valor:', novoValor);
-    
+
     // Chamar onChange
     onChange(novoValor);
 
@@ -171,19 +281,40 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
   };
 
   const handleTarefaToggle = (tarefaId: string, checked: boolean) => {
-    // console.log('Toggle tarefa:', tarefaId, checked);
-    
-    const tarefasAtuais = value.tarefasSelecionadas || [];
+    const tarefaIdTrimmed = tarefaId.trim();
+
+    // ✅ VALIDAÇÃO EM TEMPO REAL - Prevenir seleção de IDs inválidos
+    if (checked) {
+      // Validar comprimento do CUID
+      if (tarefaIdTrimmed.length !== 26) {
+        console.error('❌ [OrigemOSSelector] Tentativa de selecionar tarefa com ID inválido (comprimento):', {
+          tarefaId: tarefaIdTrimmed,
+          comprimento: tarefaIdTrimmed.length,
+          esperado: 26
+        });
+        // Não permitir seleção de IDs inválidos
+        return;
+      }
+
+      // Validar padrão mockado
+      if (tarefaIdTrimmed.includes('cmg')) {
+        console.error('❌ [OrigemOSSelector] Tentativa de selecionar tarefa com ID MOCKADO:', {
+          tarefaId: tarefaIdTrimmed
+        });
+        // Não permitir seleção de IDs mockados
+        return;
+      }
+    }
+
     const novasTarefas = checked
-      ? [...tarefasAtuais, tarefaId]
-      : tarefasAtuais.filter(id => id !== tarefaId);
+      ? [...tarefasSelecionadas, tarefaIdTrimmed]
+      : tarefasSelecionadas.filter(id => id !== tarefaIdTrimmed);
 
     const novoValor = {
       ...value,
       tarefasSelecionadas: novasTarefas
     };
 
-    // console.log('Novas tarefas selecionadas:', novasTarefas);
     onChange(novoValor);
 
     // Atualizar local e ativo baseado nas tarefas selecionadas
@@ -216,14 +347,32 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
   };
 
   const handleSelectAllTarefas = () => {
-    const todasTarefas = tarefasDoPlano.map(t => t.id);
+    // ✅ VALIDAÇÃO EM TEMPO REAL - Filtrar apenas IDs válidos ao selecionar todas
+    const todasTarefasValidas = tarefasDoPlano
+      .map(t => t.id?.toString().trim() || '')
+      .filter(id => {
+        // Validar comprimento e padrão
+        const isValidLength = id.length === 26;
+        const isNotMocked = !id.includes('cmg');
+
+        if (!isValidLength || !isNotMocked) {
+          console.warn('⚠️ [OrigemOSSelector] Tarefa excluída ao selecionar todas (ID inválido):', {
+            tarefaId: id,
+            comprimento: id.length,
+            mockado: id.includes('cmg')
+          });
+        }
+
+        return isValidLength && isNotMocked;
+      });
+
     const novoValor = {
       ...value,
-      tarefasSelecionadas: todasTarefas
+      tarefasSelecionadas: todasTarefasValidas
     };
-    
+
     onChange(novoValor);
-    updateLocalAtivoFromTarefas(todasTarefas);
+    updateLocalAtivoFromTarefas(todasTarefasValidas);
   };
 
   const handleDeselectAllTarefas = () => {
@@ -252,12 +401,162 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
     plano.categoria.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // ✅ NOVO: Renderizar seletor de Planta
+  const renderPlantaSelector = () => {
+    if (tipo === 'MANUAL') return null;
+
+    // ✅ Comparar com trim() porque os IDs do backend podem ter espaços
+    const plantaSelecionada = plantas.find(p => p.id?.trim() === plantaId);
+
+    return (
+      <div className="space-y-4">
+        <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+          <MapPin className="h-4 w-4" />
+          1. Selecione a Planta
+        </Label>
+
+        {/* ✅ Se já selecionou, mostrar apenas a selecionada com botão para trocar */}
+        {plantaSelecionada ? (
+          <Card className="border-primary bg-primary/10">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  <div>
+                    <h4 className="font-medium text-sm">{plantaSelecionada.nome}</h4>
+                    <p className="text-xs text-muted-foreground">{plantaSelecionada.localizacao}</p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handlePlantaChange('')}
+                  disabled={disabled}
+                >
+                  Trocar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : loadingPlantas ? (
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div className="grid gap-2 max-h-48 overflow-y-auto border border-border rounded-lg p-2 bg-muted/30">
+            {plantas.map((planta) => (
+              <Card
+                key={planta.id}
+                className="cursor-pointer transition-all duration-200 border-border bg-card hover:bg-accent hover:text-accent-foreground hover:border-primary/50"
+                onClick={() => {
+                  if (!disabled) {
+                    handlePlantaChange(planta.id);
+                  }
+                }}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <div>
+                      <h4 className="font-medium text-sm">{planta.nome}</h4>
+                      <p className="text-xs text-muted-foreground">{planta.localizacao}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+
+            {plantas.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>Nenhuma planta encontrada</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ✅ NOVO: Renderizar seletor de Unidade
+  const renderUnidadeSelector = () => {
+    if (tipo === 'MANUAL' || !plantaId) return null;
+
+    // ✅ Comparar com trim() porque os IDs do backend podem ter espaços
+    const unidadeSelecionada = unidades.find(u => u.id?.trim() === unidadeId);
+
+    return (
+      <div className="space-y-4">
+        <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+          <Building2 className="h-4 w-4" />
+          2. Selecione a Unidade
+        </Label>
+
+        {/* ✅ Se já selecionou, mostrar apenas a selecionada com botão para trocar */}
+        {unidadeSelecionada ? (
+          <Card className="border-primary bg-primary/10">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <h4 className="font-medium text-sm">{unidadeSelecionada.nome}</h4>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleUnidadeChange('')}
+                  disabled={disabled}
+                >
+                  Trocar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : loadingUnidades ? (
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div className="grid gap-2 max-h-48 overflow-y-auto border border-border rounded-lg p-2 bg-muted/30">
+            {unidades.map((unidade) => (
+              <Card
+                key={unidade.id}
+                className="cursor-pointer transition-all duration-200 border-border bg-card hover:bg-accent hover:text-accent-foreground hover:border-primary/50"
+                onClick={() => {
+                  if (!disabled) {
+                    handleUnidadeChange(unidade.id);
+                  }
+                }}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    <h4 className="font-medium text-sm">{unidade.nome}</h4>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+
+            {unidades.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>Nenhuma unidade encontrada para esta planta</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderTipoSelector = () => (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
         <Button
           type="button"
-          variant={value.tipo === 'ANOMALIA' ? 'default' : 'outline'}
+          variant={tipo === 'ANOMALIA' ? 'default' : 'outline'}
           className="h-20 flex-col gap-2"
           onClick={() => handleTipoChange('ANOMALIA')}
           disabled={disabled}
@@ -268,7 +567,7 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
 
         <Button
           type="button"
-          variant={value.tipo === 'PLANO_MANUTENCAO' ? 'default' : 'outline'}
+          variant={tipo === 'PLANO_MANUTENCAO' ? 'default' : 'outline'}
           className="h-20 flex-col gap-2"
           onClick={() => handleTipoChange('PLANO_MANUTENCAO')}
           disabled={disabled}
@@ -279,7 +578,7 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
 
         <Button
           type="button"
-          variant={value.tipo === 'MANUAL' ? 'default' : 'outline'}
+          variant={tipo === 'MANUAL' ? 'default' : 'outline'}
           className="h-20 flex-col gap-2"
           onClick={() => handleTipoChange('MANUAL')}
           disabled={disabled}
@@ -292,77 +591,139 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
   );
 
   const renderAnomaliaSelector = () => {
+    // ✅ NOVO: Só mostrar se planta e unidade estiverem selecionadas
+    if (!plantaId || !unidadeId) {
+      return (
+        <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg bg-muted/30">
+          <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p>Selecione uma planta e unidade primeiro</p>
+        </div>
+      );
+    }
+
+    const anomaliaSelecionada = anomaliasDisponiveis.find(a => String(a.id).trim() === anomaliaId);
+
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar anomalia..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            disabled={disabled}
-            className="bg-background border-border text-foreground placeholder:text-muted-foreground"
-          />
-        </div>
+        <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4" />
+          3. Selecione a Anomalia
+        </Label>
 
-        <div className="max-h-64 overflow-y-auto space-y-2 border border-border rounded-lg p-2 bg-muted/30">
-          {anomaliasFiltradas.map((anomalia) => {
-            const isSelected = String(value.anomaliaId) === String(anomalia.id);
-            
-            return (
-              <Card
-                key={anomalia.id}
-                className={`cursor-pointer transition-all duration-200 ${
-                  isSelected
-                    ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/20'
-                    : 'border-border bg-card hover:bg-accent hover:text-accent-foreground hover:border-primary/50'
-                } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onClick={() => {
-                  if (!disabled) {
-                    // console.log('Click na anomalia:', anomalia.id);
-                    handleAnomaliaChange(String(anomalia.id));
-                  }
-                }}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <AlertTriangle className="h-4 w-4 text-destructive" />
-                        <Badge
-                          variant={anomalia.prioridade === 'CRITICA' || anomalia.prioridade === 'ALTA' ? 'destructive' : 'secondary'}
-                          className="text-xs"
-                        >
-                          {anomalia.prioridade}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {anomalia.status}
-                        </Badge>
-                      </div>
-                      <h4 className="font-medium text-sm text-foreground">{anomalia.descricao}</h4>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {anomalia.local} - {anomalia.ativo}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Data: {anomalia.data}
-                      </p>
-                    </div>
-                    {isSelected && (
-                      <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0 ml-2" />
-                    )}
+        {/* ✅ Se já selecionou, mostrar apenas a selecionada com botão para trocar */}
+        {anomaliaSelecionada ? (
+          <Card className="border-primary bg-primary/10">
+            <CardContent className="p-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                    <Badge
+                      variant={anomaliaSelecionada.prioridade === 'CRITICA' || anomaliaSelecionada.prioridade === 'ALTA' ? 'destructive' : 'secondary'}
+                      className="text-xs"
+                    >
+                      {anomaliaSelecionada.prioridade}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {anomaliaSelecionada.status}
+                    </Badge>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-
-          {anomaliasFiltradas.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>Nenhuma anomalia encontrada</p>
+                  <h4 className="font-medium text-sm">{anomaliaSelecionada.descricao}</h4>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {anomaliaSelecionada.local} - {anomaliaSelecionada.ativo}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAnomaliaChange('')}
+                  disabled={disabled}
+                >
+                  Trocar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar anomalia..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                disabled={disabled}
+                className="bg-background border-border text-foreground placeholder:text-muted-foreground"
+              />
             </div>
-          )}
-        </div>
+
+            <div className="max-h-64 overflow-y-auto space-y-2 border border-border rounded-lg p-2 bg-muted/30">
+              {anomaliasFiltradas.map((anomalia) => {
+                const isSelected = anomaliaId === String(anomalia.id).trim();
+
+                return (
+                  <Card
+                    key={anomalia.id}
+                    className={`cursor-pointer transition-all duration-200 ${
+                      isSelected
+                        ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/20'
+                        : 'border-border bg-card hover:bg-accent hover:text-accent-foreground hover:border-primary/50'
+                    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => {
+                      if (!disabled) {
+                        // console.log('Click na anomalia:', anomalia.id);
+                        handleAnomaliaChange(String(anomalia.id));
+                      }
+                    }}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <AlertTriangle className="h-4 w-4 text-destructive" />
+                            <Badge
+                              variant={anomalia.prioridade === 'CRITICA' || anomalia.prioridade === 'ALTA' ? 'destructive' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {anomalia.prioridade}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {anomalia.status}
+                            </Badge>
+                          </div>
+                          <h4 className="font-medium text-sm text-foreground">{anomalia.descricao}</h4>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {anomalia.local} - {anomalia.ativo}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Data: {anomalia.data}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0 ml-2" />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+
+              {anomaliasFiltradas.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="font-medium">Nenhuma anomalia disponível</p>
+                  <p className="text-xs mt-2">
+                    Não há anomalias pendentes (AGUARDANDO ou EM_ANALISE) para esta unidade.
+                  </p>
+                  <p className="text-xs mt-1">
+                    Anomalias já resolvidas ou com OS gerada não aparecem aqui.
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     );
   };
@@ -382,7 +743,7 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
 
       <div className="max-h-64 overflow-y-auto space-y-2 border border-border rounded-lg p-2 bg-muted/30">
         {planosFiltrados.map((plano) => {
-          const isSelected = String(value.planoId) === String(plano.id);
+          const isSelected = planoId === String(plano.id).trim();
           
           return (
             <Card
@@ -438,9 +799,7 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
   );
 
   const renderTarefasSelector = () => {
-    if (!value.planoId || value.planoId === '') return null;
-
-    const tarefasSelecionadas = value.tarefasSelecionadas || [];
+    if (!planoId || planoId === '') return null;
 
     if (loadingTarefas) {
       return (
@@ -584,15 +943,25 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
     <div className="space-y-6">
       {renderTipoSelector()}
 
-      {value.tipo === 'ANOMALIA' && renderAnomaliaSelector()}
+      {/* ✅ HIERARQUIA: Tipo → Planta → Unidade → Anomalia */}
 
-      {value.tipo === 'PLANO_MANUTENCAO' && (
+      {/* Passo 1: Selecionar Planta (apenas para ANOMALIA) */}
+      {tipo === 'ANOMALIA' && renderPlantaSelector()}
+
+      {/* Passo 2: Selecionar Unidade (apenas para ANOMALIA) */}
+      {tipo === 'ANOMALIA' && renderUnidadeSelector()}
+
+      {/* Passo 3a: Selecionar Anomalia (se tipo for ANOMALIA) */}
+      {tipo === 'ANOMALIA' && renderAnomaliaSelector()}
+
+      {/* Passo 3b: Selecionar Planos (se tipo for PLANO_MANUTENCAO) */}
+      {tipo === 'PLANO_MANUTENCAO' && (
         <MultiplePlanosSelector
           value={{
             tipo: 'PLANO_MANUTENCAO',
             plantaId: value.plantaId,
             planosSelecionados: value.planosSelecionados || [],
-            tarefasSelecionadas: value.tarefasSelecionadas || [],
+            tarefasSelecionadas: tarefasSelecionadas,
             tarefasPorPlano: value.tarefasPorPlano || {}
           }}
           onChange={onChange}
@@ -601,7 +970,8 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
         />
       )}
 
-      {value.tipo === 'MANUAL' && (
+      {/* Tipo MANUAL: Sem seleção necessária */}
+      {tipo === 'MANUAL' && (
         <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg bg-muted/30">
           <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
           <p>Ordem de Serviço criada manualmente</p>

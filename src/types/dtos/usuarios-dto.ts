@@ -12,6 +12,9 @@ export interface UsuarioDTO {
 
   nome: string;
   email: string;
+  cpf_cnpj?: string;
+  telefone?: string;
+  avatar_url?: string;
 
   all_permissions: Permissao[];
 
@@ -37,10 +40,22 @@ export enum UsuarioRole {
 
 interface Role {
   id: string;
-  name: string; 
+  name: string;
   description: string;
   created_at: Date;
   updated_at: Date;
+}
+
+export interface UpdateUsuarioDto {
+  nome?: string;
+  email?: string;
+  telefone?: string;
+  cpfCnpj?: string;
+}
+
+export interface ChangePasswordDto {
+  senhaAtual: string;
+  novaSenha: string;
 }
 
 export type Permissao =

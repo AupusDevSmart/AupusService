@@ -143,14 +143,30 @@ export const MultiplePlanosSelector: React.FC<MultiplePlanosSelectorProps> = ({
           console.log('🔍 [MULTIPLOS PLANOS] IDs das tarefas:', tarefas?.map(t => ({ id: t.id, tipo: typeof t.id, isMock: t.id?.includes('cmg') })));
 
           // ✅ VALIDAÇÃO: Verificar se algum ID é mockado
+          // ✅ VALIDAÇÃO EM TEMPO REAL - Detectar e alertar sobre IDs inválidos
           const tarefasValidadas = (tarefas || []).map(tarefa => {
-            if (tarefa.id && typeof tarefa.id === 'string' && tarefa.id.includes('cmg')) {
-              console.error('❌ [MULTIPLOS PLANOS] DETECTADO ID MOCKADO:', {
-                tarefaId: tarefa.id,
-                tarefaNome: tarefa.nome || tarefa.descricao,
+            const tarefaId = tarefa.id?.toString().trim() || '';
+
+            // Validar comprimento do CUID
+            if (tarefaId.length !== 26) {
+              console.warn('⚠️ [MultiplePlanosSelector] ID de tarefa com comprimento inválido:', {
+                tarefaId,
+                comprimento: tarefaId.length,
+                esperado: 26,
+                descricao: tarefa.descricao,
                 planoId: cleanPlanoId
               });
             }
+
+            // Detectar IDs mockados
+            if (tarefaId && tarefaId.includes('cmg')) {
+              console.error('❌ [MultiplePlanosSelector] DETECTADO ID MOCKADO:', {
+                tarefaId,
+                descricao: tarefa.nome || tarefa.descricao,
+                planoId: cleanPlanoId
+              });
+            }
+
             return tarefa;
           });
 
@@ -189,10 +205,35 @@ export const MultiplePlanosSelector: React.FC<MultiplePlanosSelectorProps> = ({
   };
 
   const handleTarefaToggle = (tarefaId: string, checked: boolean) => {
+    const tarefaIdTrimmed = tarefaId.trim();
+
+    // ✅ VALIDAÇÃO EM TEMPO REAL - Prevenir seleção de IDs inválidos
+    if (checked) {
+      // Validar comprimento do CUID (aceitar 25 ou 26 por causa de IDs com espaços no banco)
+      if (tarefaIdTrimmed.length < 25 || tarefaIdTrimmed.length > 26) {
+        console.error('❌ [MultiplePlanosSelector] Tentativa de selecionar tarefa com ID inválido (comprimento):', {
+          tarefaId: tarefaIdTrimmed,
+          comprimento: tarefaIdTrimmed.length,
+          esperado: '25-26'
+        });
+        // Não permitir seleção de IDs inválidos
+        return;
+      }
+
+      // Validar padrão mockado
+      if (tarefaIdTrimmed.includes('cmg')) {
+        console.error('❌ [MultiplePlanosSelector] Tentativa de selecionar tarefa com ID MOCKADO:', {
+          tarefaId: tarefaIdTrimmed
+        });
+        // Não permitir seleção de IDs mockados
+        return;
+      }
+    }
+
     const tarefasAtuais = value.tarefasSelecionadas || [];
     const novasTarefas = checked
-      ? [...tarefasAtuais, tarefaId]
-      : tarefasAtuais.filter(id => id !== tarefaId);
+      ? [...tarefasAtuais, tarefaIdTrimmed]
+      : tarefasAtuais.filter(id => id !== tarefaIdTrimmed);
 
     const novoValor: MultiplePlanosValue = {
       ...value,
@@ -244,11 +285,29 @@ export const MultiplePlanosSelector: React.FC<MultiplePlanosSelectorProps> = ({
     const grupo = value.tarefasPorPlano[planoId];
     if (!grupo) return;
 
-    const todasTarefasDoPlano = grupo.tarefas.map(t => t.id);
+    // ✅ VALIDAÇÃO EM TEMPO REAL - Filtrar apenas IDs válidos ao selecionar todas
+    const todasTarefasValidas = grupo.tarefas
+      .map(t => t.id?.toString().trim() || '')
+      .filter(id => {
+        const isValidLength = id.length >= 25 && id.length <= 26; // Aceitar 25 ou 26 por causa de IDs com espaços
+        const isNotMocked = !id.includes('cmg');
+
+        if (!isValidLength || !isNotMocked) {
+          console.warn('⚠️ [MultiplePlanosSelector] Tarefa excluída ao selecionar todas (ID inválido):', {
+            tarefaId: id,
+            comprimento: id.length,
+            mockado: id.includes('cmg'),
+            planoId
+          });
+        }
+
+        return isValidLength && isNotMocked;
+      });
+
     const tarefasAtuais = value.tarefasSelecionadas.filter(id =>
-      !grupo.tarefas.some(t => t.id === id)
+      !grupo.tarefas.some(t => t.id?.toString().trim() === id)
     );
-    const novasTarefas = [...tarefasAtuais, ...todasTarefasDoPlano];
+    const novasTarefas = [...tarefasAtuais, ...todasTarefasValidas];
 
     const novoValor: MultiplePlanosValue = {
       ...value,

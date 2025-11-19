@@ -8,10 +8,13 @@ interface TitleCardProps {
 
 export function TitleCard({ title, description, children }: TitleCardProps) {
   return (
-    <div className="w-full mb-8">
-      <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+    // ✅ RESPONSIVO: Margem progressiva e padding lateral em mobile
+    <div className="w-full mb-4 sm:mb-6 md:mb-8 px-3 sm:px-0">
+      {/* ✅ RESPONSIVO: Título com tamanho progressivo */}
+      <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">{title}</h1>
       {description && (
-        <p className="text-base text-muted-foreground mt-2">{description}</p>
+        // ✅ RESPONSIVO: Descrição com tamanho e margem progressivos
+        <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">{description}</p>
       )}
       {children}
     </div>

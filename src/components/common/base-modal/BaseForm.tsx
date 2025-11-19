@@ -91,9 +91,6 @@ export function BaseForm({
   }, [onChange]); // ✅ Só onChange como dependência
 
   const handleFieldChange = (key: string, value: unknown) => {
-    // console.log('🔄 BaseForm: handleFieldChange:', { key, value, valueType: typeof value });
-    // console.log('🔄 BaseForm: Estado atual do data:', data);
-
     let newData: Record<string, unknown>;
 
     if (key.includes('.')) {
@@ -112,9 +109,7 @@ export function BaseForm({
       };
     }
 
-    // console.log('📤 BaseForm: Enviando newData para onChange:', newData);
     onChange(newData);
-    // console.log('✅ BaseForm: onChange chamado com sucesso');
   };
 
   const handleMultipleFieldsChange = (updates: Record<string, unknown>) => {
@@ -281,7 +276,6 @@ export function BaseForm({
       try {
         return React.createElement(field.render as any, fieldProps);
       } catch (error) {
-        // console.error(`❌ Erro ao renderizar campo customizado ${field.key}:`, error);
         return (
           <div className="p-2 border border-dashed border-red-300 rounded text-sm text-red-600 bg-red-50">
             Erro ao renderizar "{field.label}": {(error as Error).message}
@@ -495,7 +489,8 @@ export function BaseForm({
   }, [data.origem]);
 
   return (
-    <div className="space-y-6">
+    // ✅ RESPONSIVO: Espaçamento progressivo entre grupos
+    <div className="space-y-4 sm:space-y-6">
       {Object.entries(groupedFields).map(([groupName, groupFields], groupIndex) => {
         if (groupFields.length === 0) {
           // console.log(`⚠️ Grupo '${groupName}' está vazio`);
@@ -504,51 +499,101 @@ export function BaseForm({
 
         return (
           <div key={groupName}>
-            {groupIndex > 0 && <Separator className="my-6" />}
-            
+            {/* ✅ RESPONSIVO: Separator com margem progressiva */}
+            {groupIndex > 0 && <Separator className="my-4 sm:my-6" />}
+
             {groupName !== 'main' && (
-              <div className="mb-4">
-                <h3 className="text-base font-semibold text-foreground border-b pb-2 capitalize">
+              <div className="mb-3 sm:mb-4">
+                {/* ✅ RESPONSIVO: Título com tamanho progressivo */}
+                <h3 className="text-sm sm:text-base font-semibold text-foreground border-b pb-1.5 sm:pb-2 capitalize">
                   {groups?.find(g => g.key === groupName)?.title || groupName.replace(/_/g, ' ')}
                 </h3>
               </div>
             )}
-            
-            <div className="grid grid-cols-1 gap-4">
-              {groupFields.map((field) => {
-                const colSpan = (field as any).colSpan || 1;
-                
-                return (
-                  <div 
-                    key={field.key} 
-                    className={colSpan > 1 ? `col-span-${colSpan}` : ''}
-                  >
-                    {field.type !== 'checkbox' && (
-                      <Label htmlFor={field.key} className="text-sm font-medium">
-                        {field.label}
-                        {field.required && <span className="text-red-500 ml-1">*</span>}
-                      </Label>
-                    )}
-                    
-                    <div className={field.type !== 'checkbox' ? 'mt-1' : ''}>
-                      {renderField(field)}
-                    </div>
-                    
-                    {errors[field.key] && (
-                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                        <span>⚠️</span>
-                        {errors[field.key]}
-                      </p>
-                    )}
-                    
-                    {(field as any).helpText && !errors[field.key] && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {(field as any).helpText}
-                      </p>
-                    )}
+
+            {/* ✅ RESPONSIVO: Espaçamento progressivo entre fields */}
+            <div className="space-y-3 sm:space-y-4">
+              {(() => {
+                // Agrupar campos por linha
+                const rows: FormField[][] = [];
+                let currentRow: FormField[] = [];
+
+                groupFields.forEach((field, index) => {
+                  const fieldWidth = (field as any).width || 'full';
+                  const shouldStartNewRow = (field as any).startNewRow || currentRow.length === 0;
+
+                  // Se deve iniciar nova linha ou linha atual está cheia, finaliza linha atual
+                  if (shouldStartNewRow && currentRow.length > 0) {
+                    rows.push(currentRow);
+                    currentRow = [];
+                  }
+
+                  currentRow.push(field);
+
+                  // Se o campo ocupa linha inteira, finaliza a linha
+                  if (fieldWidth === 'full') {
+                    rows.push(currentRow);
+                    currentRow = [];
+                  }
+
+                  // Último campo - adiciona a linha
+                  if (index === groupFields.length - 1 && currentRow.length > 0) {
+                    rows.push(currentRow);
+                  }
+                });
+
+                return rows.map((rowFields, rowIndex) => (
+                  // ✅ RESPONSIVO: Grid sempre 12 colunas, gap progressivo
+                  <div key={`row-${rowIndex}`} className="grid grid-cols-12 gap-3 sm:gap-4">
+                    {rowFields.map((field) => {
+                      const fieldWidth = (field as any).width || 'full';
+
+                      // ✅ RESPONSIVO: Mapear width com breakpoints (mobile sempre full-width)
+                      const colSpanMap: Record<string, string> = {
+                        'full': 'col-span-12',
+                        'half': 'col-span-12 sm:col-span-6',
+                        'third': 'col-span-12 sm:col-span-4',
+                        'two-thirds': 'col-span-12 sm:col-span-8',
+                        'quarter': 'col-span-12 sm:col-span-3',
+                        'three-quarters': 'col-span-12 sm:col-span-9'
+                      };
+
+                      const colSpan = colSpanMap[fieldWidth] || 'col-span-12';
+
+                      return (
+                        <div
+                          key={field.key}
+                          className={colSpan}
+                        >
+                          {field.type !== 'checkbox' && (
+                            <Label htmlFor={field.key} className="text-sm font-medium">
+                              {field.label}
+                              {field.required && <span className="text-red-500 ml-1">*</span>}
+                            </Label>
+                          )}
+
+                          <div className={field.type !== 'checkbox' ? 'mt-1' : ''}>
+                            {renderField(field)}
+                          </div>
+
+                          {errors[field.key] && (
+                            <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                              <span>⚠️</span>
+                              {errors[field.key]}
+                            </p>
+                          )}
+
+                          {(field as any).helpText && !errors[field.key] && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {(field as any).helpText}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                ));
+              })()}
             </div>
           </div>
         );
