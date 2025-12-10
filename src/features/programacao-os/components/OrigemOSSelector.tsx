@@ -19,8 +19,8 @@ import {
 } from 'lucide-react';
 import { useOrigemDados } from '../hooks/useOrigemDados';
 import { MultiplePlanosSelector } from './MultiplePlanosSelector';
-import { usePlantas } from '@/features/plantas/hooks/usePlantas';
-import { useUnidadesByPlanta } from '@/features/unidades/hooks/useUnidades';
+import { usePlantas } from '@nexon/features/plantas/hooks/usePlantas';
+import { useUnidadesByPlanta } from '@nexon/features/unidades/hooks/useUnidades';
 
 interface OrigemOSSelectorProps {
   value: {
@@ -85,7 +85,8 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
   // Carregar plantas ao montar
   useEffect(() => {
     carregarPlantasSimples();
-  }, [carregarPlantasSimples]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ✅ Executar apenas uma vez ao montar
 
   // ✅ useUnidadesByPlanta já carrega automaticamente quando plantaId muda
 

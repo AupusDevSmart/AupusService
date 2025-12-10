@@ -61,7 +61,7 @@ export function LoginPage() {
       {/* Layout Desktop - Duas Colunas */}
       <div className="hidden lg:grid lg:grid-cols-2 w-full min-h-screen">
         {/* Coluna Esquerda - Logo e Branding */}
-        <div className="bg-white dark:bg-gray-900 flex flex-col items-center justify-center p-12 border-r border-gray-200 dark:border-gray-800">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 flex flex-col items-center justify-center p-12 border-r border-gray-200 dark:border-gray-700">
           <div className="flex flex-col items-center space-y-8 max-w-lg">
             {/* Logo */}
             <div className="w-48 h-48 xl:w-64 xl:h-64">

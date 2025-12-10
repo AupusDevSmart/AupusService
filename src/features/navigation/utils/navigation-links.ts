@@ -107,6 +107,14 @@ export const navigationLinks: Array<NavigationLink> = [
         icon: Wrench,
         label: 'Equipamentos',
         hint: 'Equipamentos',
+      },
+      {
+        key: 'concessionarias',
+        featureKey: 'Concessionarias',
+        path: '/concessionarias',
+        icon: Zap,
+        label: 'Concessionárias',
+        hint: 'Concessionárias',
       }
     ]
   },

@@ -1,18 +1,21 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { FeatureWrapper } from './components/common/FeatureWrapper';
 import { ConfiguracoesDiasUteisPage, FeriadosPage } from './features/agenda';
-import { EquipamentosPage } from './features/equipamentos/components/EquipamentosPage';
+// ✅ Páginas compartilhadas do NexOn (usam services/hooks do NexOn)
+import { ConcessionariasPage } from '@nexon/features/concessionarias/components/ConcessionariasPage';
+import { EquipamentosPage } from '@nexon/features/equipamentos/components/EquipamentosPage';
+import { PlantasPage } from '@nexon/features/plantas/components/PlantasPage';
+import { UnidadesPage } from '@nexon/features/unidades/components/UnidadesPage';
+import { UsuariosPage } from '@nexon/features/usuarios/components/UsuariosPage';
+// Páginas exclusivas do Service
 import { ExecucaoOSPage } from './features/execucao-os';
 import { FerramentasPage } from './features/ferramentas/components/FerramentasPage';
 import { FornecedoresPage } from './features/fornecedores/components/FornecedoresPage';
 import { AssociacaoEquipamentosPage } from './features/planos-manutencao/components/AssociacaoEquipamentosPage';
 import { PlanosManutencaoPage } from './features/planos-manutencao/components/PlanosManutencaoPage';
-import { PlantasPage } from './features/plantas/components/PlantasPage';
 import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
 import { TarefasPage } from './features/tarefas/components/TarefasPage';
-import { UnidadesPage } from './features/unidades/components/UnidadesPage';
-import { UsuariosPage } from './features/usuarios/components/UsuariosPage';
 import { VeiculosPage } from './features/veiculos/components/VeiculosPage';
 import { AppTemplate } from './pages/AppTemplate';
 import { AnomaliaPage } from './pages/anomalias';
@@ -106,6 +109,15 @@ export const appRoutes = createBrowserRouter([
         element: (
           <FeatureWrapper feature="Equipamentos">
             <EquipamentosPage />
+          </FeatureWrapper>
+        ),
+      },
+      // ✅ NOVA: Rota para concessionarias
+      {
+        path: 'concessionarias',
+        element: (
+          <FeatureWrapper feature="Concessionarias">
+            <ConcessionariasPage />
           </FeatureWrapper>
         ),
       },

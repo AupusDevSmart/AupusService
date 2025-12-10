@@ -9,8 +9,8 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Crown } from 'lucide-react';
-import { useUsuarios } from '@/features/usuarios/hooks/useUsuarios';
-import { Usuario } from '@/features/usuarios/types';
+import { useUsuarios } from '@nexon/features/usuarios/hooks/useUsuarios';
+import { Usuario } from '@nexon/features/usuarios/types';
 
 interface GerenteSelectProps {
   value?: string;

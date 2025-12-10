@@ -1,5 +1,5 @@
 // src/features/anomalias/components/LocalizacaoController.tsx - VERSÃO FINAL LIMPA
-import { useEquipamentos } from '@/features/equipamentos/hooks/useEquipamentos';
+import { useEquipamentos } from '@nexon/features/equipamentos/hooks/useEquipamentos';
 import { PlantaResponse, PlantasService } from '@/services/plantas.services';
 import { getUnidadesByPlanta } from '@/services/unidades.services';
 import { Loader2 } from 'lucide-react';

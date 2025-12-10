@@ -17,7 +17,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useOrigemDados } from '../hooks/useOrigemDados';
-import { usePlantas } from '@/features/plantas/hooks/usePlantas';
+import { usePlantas } from '@nexon/features/plantas/hooks/usePlantas';
 
 interface TarefasPorPlano {
   [planoId: string]: {
@@ -67,7 +67,8 @@ export const MultiplePlanosSelector: React.FC<MultiplePlanosSelectorProps> = ({
   // Carregar plantas ao montar
   useEffect(() => {
     carregarPlantasSimples();
-  }, [carregarPlantasSimples]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ✅ Executar apenas uma vez ao montar
 
   // Carregar planos quando a planta for selecionada (evitar infinite loop)
   useEffect(() => {
