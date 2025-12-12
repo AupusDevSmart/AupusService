@@ -12,7 +12,7 @@ export interface CreateSubTarefaData {
   descricao: string;
   obrigatoria?: boolean;
   tempo_estimado?: number;
-  ordem: number;
+  ordem?: number;
 }
 
 export interface CreateRecursoTarefaData {
@@ -36,7 +36,7 @@ export interface CreateTarefaData {
   criticidade: number;                // Obrigatório: Criticidade (1-5)
   duracao_estimada: number;           // Obrigatório: Duração estimada
   tempo_estimado: number;             // Obrigatório: Tempo estimado em minutos
-  ordem: number;                      // Obrigatório: Ordem da tarefa no plano
+  ordem?: number;                     // Opcional: Ordem da tarefa no plano (removido)
   planejador?: string;                // Opcional: Nome do planejador
   responsavel?: string;               // Opcional: Pessoa responsável
   observacoes?: string;               // Opcional: Observações
@@ -70,7 +70,7 @@ export interface SubTarefaResponse {
   descricao: string;
   obrigatoria: boolean;
   tempo_estimado?: number;
-  ordem: number;
+  ordem?: number;
   tarefa_id: string;
   created_at: Date;
   updated_at: Date;
@@ -114,7 +114,7 @@ export interface TarefaResponse {
   criticidade: number;
   duracao_estimada: number;
   tempo_estimado: number;
-  ordem: number;
+  ordem?: number;
   planta_id?: string;
   unidade_id?: string;                // NOVO: ID da unidade
   equipamento_id?: string;

@@ -1,17 +1,18 @@
 // src/features/execucao-os/components/ExecucaoOSPage.tsx - ATUALIZADA COM CARDS
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/components/common/base-table/BaseTable';
 import { BaseFilters } from '@/components/common/base-filters/BaseFilters';
 import { BaseModal } from '@/components/common/base-modal/BaseModal';
 import { Button } from '@/components/ui/button';
-import { 
-  Play, 
-  Pause, 
-  CheckCircle, 
-  Eye, 
-  Edit, 
+import {
+  Play,
+  Pause,
+  CheckCircle,
+  Eye,
+  Edit,
   Calendar,
   Timer,
   AlertTriangle,
@@ -31,6 +32,10 @@ import { execucaoOSFormFields, execucaoOSFormGroups } from '../config/form-confi
 import { useExecucaoOS } from '../hooks/useExecucaoOS';
 import { transformApiArrayToExecucaoOS } from '../utils/transform-api-data';
 import { execucaoOSTransitionsService, type StatusExecucaoOS } from '@/services/execucao-os-transitions.service';
+import { useUserStore } from '@/store/useUserStore';
+import { execucaoOSApi } from '@/services/execucao-os.service';
+import { IniciarExecucaoModal } from './IniciarExecucaoModal';
+import { FinalizarExecucaoModal } from './FinalizarExecucaoModal';
 
 const initialFilters: ExecucaoOSFilters = {
   search: '',
@@ -46,6 +51,9 @@ const initialFilters: ExecucaoOSFilters = {
 };
 
 export function ExecucaoOSPage() {
+  const { user } = useUserStore(); // Hook para obter usuário logado
+  const [searchParams, setSearchParams] = useSearchParams(); // Para ler parâmetros da URL
+
   // Estados para dados da API
   const [execucoes, setExecucoes] = useState<ExecucaoOS[]>([]);
   const [filters, setFilters] = useState<ExecucaoOSFilters>(initialFilters);
@@ -70,6 +78,11 @@ export function ExecucaoOSPage() {
     openModal,
     closeModal
   } = useGenericModal<ExecucaoOS>();
+
+  // Estados para modais personalizados
+  const [showIniciarModal, setShowIniciarModal] = useState(false);
+  const [showFinalizarModal, setShowFinalizarModal] = useState(false);
+  const [execucaoSelecionada, setExecucaoSelecionada] = useState<ExecucaoOS | null>(null);
 
   // Contadores para dashboard
   const [stats, setStats] = useState({
@@ -184,6 +197,50 @@ export function ExecucaoOSPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
+  // Abrir modal automaticamente quando vier com execucaoId na URL
+  useEffect(() => {
+    const execucaoIdParam = searchParams.get('execucaoId');
+
+    if (execucaoIdParam) {
+      const abrirModalAutomatico = async () => {
+        try {
+          // Primeiro tentar buscar na lista carregada
+          let execucaoEncontrada = execucoes.find(exec => exec.id === execucaoIdParam);
+
+          // Se não encontrar na lista, buscar diretamente da API
+          if (!execucaoEncontrada) {
+            console.log('📌 Execução não está na lista atual. Buscando da API:', execucaoIdParam);
+
+            const response = await execucaoOSApi.findOne(execucaoIdParam);
+
+            if (response) {
+              // Transformar os dados da API para o formato esperado
+              const execucoesTransformadas = transformApiArrayToExecucaoOS([response]);
+              execucaoEncontrada = execucoesTransformadas[0];
+            }
+          }
+
+          if (execucaoEncontrada) {
+            console.log('📌 Abrindo modal automaticamente para execução:', execucaoIdParam);
+            handleView(execucaoEncontrada);
+          }
+
+          // Remover o parâmetro da URL após abrir o modal (ou tentar)
+          setSearchParams({});
+        } catch (error) {
+          console.error('❌ Erro ao buscar execução para abrir modal:', error);
+          setSearchParams({});
+        }
+      };
+
+      // Só executar quando a lista já foi carregada ou após o primeiro load
+      if (execucoes.length > 0 || loading === false) {
+        abrirModalAutomatico();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [execucoes, searchParams, loading]);
+
   // Handlers de filtros e paginação
   const handleFilterChange = (key: string, value: any) => {
     setFilters(prev => ({
@@ -223,19 +280,37 @@ export function ExecucaoOSPage() {
           avaliacao_qualidade: Number(data.avaliacaoQualidade) || 5,
           observacoes_qualidade: data.observacoesQualidade || '',
 
+          // Auto-fill usuário logado como finalizador
+          finalizado_por_id: user?.id || undefined,
+
           // Materiais utilizados
-          materiais_consumidos: data.materiaisConsumidos?.map((m: any) => ({
-            id: m.id,
-            quantidade_consumida: m.quantidade_consumida || m.quantidade_planejada || 0,
-            observacoes: m.observacoes || ''
-          })) || [],
+          materiais_consumidos: (data.materiaisConsumidos || [])
+            .filter((m: any) => {
+              const qtd = m.quantidade_consumida || m.quantidade_planejada || 0;
+              return qtd >= 0.001; // Filtrar apenas materiais com quantidade >= 0.001
+            })
+            .map((m: any) => {
+              // Extrair ID string (pode estar em m.id, m.material_id, ou m.id.id)
+              const materialId = typeof m.id === 'string' ? m.id :
+                                (m.material_id || m.id?.id || '');
+              return {
+                id: materialId,
+                quantidade_consumida: Math.max(0.001, m.quantidade_consumida || m.quantidade_planejada || 0.001),
+                observacoes: m.observacoes || ''
+              };
+            }),
 
           // Ferramentas utilizadas
-          ferramentas_utilizadas: data.ferramentasUtilizadas?.map((f: any) => ({
-            id: f.id,
-            condicao_depois: f.condicao_depois || 'Boa',
-            observacoes: f.observacoes || ''
-          })) || [],
+          ferramentas_utilizadas: (data.ferramentasUtilizadas || []).map((f: any) => {
+            // Extrair ID string (pode estar em f.id, f.ferramenta_id, ou f.id.id)
+            const ferramentaId = typeof f.id === 'string' ? f.id :
+                                (f.ferramenta_id || f.id?.id || '');
+            return {
+              id: ferramentaId,
+              condicao_depois: f.condicao_depois || 'Boa',
+              observacoes: f.observacoes || ''
+            };
+          }),
 
           // ✅ Dados da reserva de veículo
           km_final: data.kmFinalReserva ? Number(data.kmFinalReserva) : undefined,
@@ -317,19 +392,10 @@ export function ExecucaoOSPage() {
       tipoOS: exec.tipo || exec.os?.tipo || '',
       prioridadeOS: exec.prioridade || exec.os?.prioridade || '',
 
-      // Origem da OS - agrupando dados para o OrigemOSCard
+      // Origem da OS - passar programacao_id para o wrapper buscar os dados
       origemCard: {
-        origem: exec.origem || exec.dados_origem?.tipo || 'PLANEJAMENTO',
-        planoManutencao: exec.plano_manutencao?.nome || '',
-        // Programação: passar o objeto completo se disponível, senão o ID
-        programacaoOrigem: exec.programacao || exec.programacao_id || '',
-        // Anomalia: priorizar o objeto expandido
-        anomalia: exec.anomalia ||
-                  (exec.anomalia_id?.trim() ? {
-                    id: exec.anomalia_id.trim(),
-                    descricao: `Anomalia vinculada - ID: ${exec.anomalia_id.trim().substring(0, 8)}...`
-                  } : null),
-        tarefa: exec.tarefas_os?.[0] || null,
+        programacao_id: exec.programacao_id || exec.os?.programacao_id || '',
+        programacaoOrigem: exec.programacao || exec.os?.programacao || null,
         _dadosCompletos: exec // Para debug
       },
 
@@ -654,22 +720,25 @@ export function ExecucaoOSPage() {
   const handleIniciarExecucao = async () => {
     if (!modalState.entity) return;
 
+    setExecucaoSelecionada(modalState.entity);
+    setShowIniciarModal(true);
+  };
+
+  /**
+   * Confirmar início de execução do modal
+   */
+  const confirmarInicioExecucao = async (data: any) => {
+    if (!execucaoSelecionada) return;
+
     try {
-      const equipePresente = prompt('Informe a equipe presente (separada por vírgulas):');
-      if (!equipePresente) return;
-
-      const data = {
-        equipe_presente: equipePresente.split(',').map(e => e.trim()),
-        responsavel_execucao: modalState.entity.responsavel || 'Não atribuído',
-        observacoes_inicio: 'Execução iniciada via modal',
-        data_hora_inicio_real: new Date().toISOString()
-      };
-
-      await execucaoOSTransitionsService.iniciar(modalState.entity.id, data);
+      await execucaoOSTransitionsService.iniciar(execucaoSelecionada.id, data);
+      setShowIniciarModal(false);
+      setExecucaoSelecionada(null);
       await handleSuccess();
+      alert('Execução iniciada com sucesso!');
     } catch (error) {
       console.error('Erro ao iniciar execução:', error);
-      alert('Erro ao iniciar execução. Tente novamente.');
+      throw error; // Re-throw para o modal tratar
     }
   };
 
@@ -723,40 +792,25 @@ export function ExecucaoOSPage() {
   const handleFinalizarOS = async () => {
     if (!modalState.entity) return;
 
+    setExecucaoSelecionada(modalState.entity);
+    setShowFinalizarModal(true);
+  };
+
+  /**
+   * Confirmar finalização de execução do modal
+   */
+  const confirmarFinalizacaoExecucao = async (data: any) => {
+    if (!execucaoSelecionada) return;
+
     try {
-      const resultado = prompt('Resultado do serviço executado:');
-      if (!resultado) return;
-
-      const avaliacao = prompt('Avaliação da qualidade (1-5):');
-      if (!avaliacao || isNaN(Number(avaliacao)) || Number(avaliacao) < 1 || Number(avaliacao) > 5) {
-        alert('Avaliação inválida. Informe um número entre 1 e 5.');
-        return;
-      }
-
-      const data = {
-        data_hora_fim_real: new Date().toISOString(),
-        resultado_servico: resultado,
-        problemas_encontrados: '',
-        recomendacoes: '',
-        materiais_consumidos: (modalState.entity.materiais || []).map((m: any) => ({
-          id: m.id,
-          quantidade_consumida: m.quantidade_consumida || m.quantidade_planejada || 0,
-          observacoes: ''
-        })),
-        ferramentas_utilizadas: (modalState.entity.ferramentas || []).map((f: any) => ({
-          id: f.id,
-          condicao_depois: 'Boa',
-          observacoes: ''
-        })),
-        avaliacao_qualidade: Number(avaliacao),
-        observacoes_qualidade: ''
-      };
-
-      await execucaoOSTransitionsService.finalizar(modalState.entity.id, data);
+      await execucaoOSTransitionsService.finalizar(execucaoSelecionada.id, data);
+      setShowFinalizarModal(false);
+      setExecucaoSelecionada(null);
       await handleSuccess();
+      alert('Execução finalizada com sucesso!');
     } catch (error) {
       console.error('Erro ao finalizar OS:', error);
-      alert('Erro ao finalizar OS. Tente novamente.');
+      throw error; // Re-throw para o modal tratar
     }
   };
 
@@ -1090,6 +1144,42 @@ export function ExecucaoOSPage() {
             width="w-[1200px]"
             loading={loading || hookLoading}
             customActions={renderActionButtons()}
+          />
+        )}
+
+        {/* Modal Iniciar Execução */}
+        {execucaoSelecionada && (
+          <IniciarExecucaoModal
+            open={showIniciarModal}
+            onClose={() => {
+              setShowIniciarModal(false);
+              setExecucaoSelecionada(null);
+            }}
+            onConfirm={confirmarInicioExecucao}
+            execucao={{
+              numeroOS: execucaoSelecionada.numeroOS || execucaoSelecionada.numero_os || '',
+              descricaoOS: execucaoSelecionada.descricao || '',
+              tecnicos: execucaoSelecionada.tecnicos || []
+            }}
+          />
+        )}
+
+        {/* Modal Finalizar Execução */}
+        {execucaoSelecionada && (
+          <FinalizarExecucaoModal
+            open={showFinalizarModal}
+            onClose={() => {
+              setShowFinalizarModal(false);
+              setExecucaoSelecionada(null);
+            }}
+            onConfirm={confirmarFinalizacaoExecucao}
+            execucao={{
+              numeroOS: execucaoSelecionada.numeroOS || execucaoSelecionada.numero_os || '',
+              descricaoOS: execucaoSelecionada.descricao || '',
+              materiais: execucaoSelecionada.materiais || [],
+              ferramentas: execucaoSelecionada.ferramentas || [],
+              reserva_veiculo: execucaoSelecionada.reserva_veiculo
+            }}
           />
         )}
       </Layout.Main>

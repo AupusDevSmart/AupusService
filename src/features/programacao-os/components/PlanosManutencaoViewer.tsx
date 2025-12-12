@@ -200,11 +200,11 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
 
   const getCriticidadeBadge = (criticidade: number) => {
     const configs = {
-      1: { color: 'bg-muted text-foreground', label: 'Baixa' },
-      2: { color: 'bg-blue-100 text-blue-700', label: 'Baixa-Média' },
-      3: { color: 'bg-yellow-100 text-yellow-700', label: 'Média' },
-      4: { color: 'bg-orange-100 text-orange-700', label: 'Alta' },
-      5: { color: 'bg-red-100 text-red-700', label: 'Crítica' }
+      1: { color: 'bg-muted text-foreground dark:bg-muted dark:text-foreground', label: 'Baixa' },
+      2: { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', label: 'Baixa-Média' },
+      3: { color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300', label: 'Média' },
+      4: { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300', label: 'Alta' },
+      5: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300', label: 'Crítica' }
     };
     const config = configs[criticidade as keyof typeof configs] || configs[3];
     return (
@@ -216,15 +216,15 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
 
   const getCategoriasIcons = (categoria: string) => {
     const icons = {
-      MECANICA: <Wrench className="h-4 w-4 text-blue-600" />,
-      ELETRICA: <Settings className="h-4 w-4 text-yellow-600" />,
-      INSTRUMENTACAO: <Settings className="h-4 w-4 text-purple-600" />,
-      LUBRIFICACAO: <Package className="h-4 w-4 text-green-600" />,
-      LIMPEZA: <CheckCircle className="h-4 w-4 text-teal-600" />,
-      INSPECAO: <AlertTriangle className="h-4 w-4 text-orange-600" />,
-      CALIBRACAO: <Settings className="h-4 w-4 text-red-600" />,
+      MECANICA: <Wrench className="h-4 w-4 text-blue-600 dark:text-blue-400" />,
+      ELETRICA: <Settings className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />,
+      INSTRUMENTACAO: <Settings className="h-4 w-4 text-purple-600 dark:text-purple-400" />,
+      LUBRIFICACAO: <Package className="h-4 w-4 text-green-600 dark:text-green-400" />,
+      LIMPEZA: <CheckCircle className="h-4 w-4 text-teal-600 dark:text-teal-400" />,
+      INSPECAO: <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />,
+      CALIBRACAO: <Settings className="h-4 w-4 text-red-600 dark:text-red-400" />,
     };
-    return icons[categoria as keyof typeof icons] || <FileText className="h-4 w-4 text-gray-600" />;
+    return icons[categoria as keyof typeof icons] || <FileText className="h-4 w-4 text-gray-600 dark:text-gray-400" />;
   };
 
   if (loading) {
@@ -232,13 +232,13 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-blue-600" />
+            <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             {title}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
             <span className="ml-2 text-muted-foreground">Carregando dados...</span>
           </div>
         </CardContent>
@@ -251,13 +251,13 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-gray-400" />
+            <Calendar className="h-5 w-5 text-muted-foreground" />
             {title}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
-            <Calendar className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+            <Calendar className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
             <p>Nenhuma tarefa de plano de manutenção vinculada</p>
           </div>
         </CardContent>
@@ -271,19 +271,19 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <AlertTriangle className="h-5 w-5 text-orange-500 dark:text-orange-400" />
             {title}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <AlertTriangle className="h-12 w-12 mx-auto mb-2 text-orange-400" />
-            <p className="text-orange-600 font-medium mb-2">Tarefas com referências inválidas</p>
+            <AlertTriangle className="h-12 w-12 mx-auto mb-2 text-orange-400 dark:text-orange-500" />
+            <p className="text-orange-600 dark:text-orange-400 font-medium mb-2">Tarefas com referências inválidas</p>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
               Esta programação possui tarefas com IDs que não existem na base de dados.
               As tarefas podem ter sido criadas com dados mockados ou removidas posteriormente.
             </p>
-            <Badge variant="outline" className="mt-3 text-orange-600 border-orange-300">
+            <Badge variant="outline" className="mt-3 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700">
               {tarefasIds.length} tarefa{tarefasIds.length !== 1 ? 's' : ''} com problema{tarefasIds.length !== 1 ? 's' : ''}
             </Badge>
           </div>
@@ -296,7 +296,7 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-blue-600" />
+          <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           {title}
           <Badge variant="secondary" className="ml-auto">
             {planos.length} plano{planos.length !== 1 ? 's' : ''}, {tarefas.length} tarefa{tarefas.length !== 1 ? 's' : ''}
@@ -311,20 +311,20 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
           const isExpanded = expandedPlanos.has(plano.id);
 
           return (
-            <Card key={`${instanceId.current}-plano-${planoIndex}-${plano.id}`} className="border-l-4 border-l-blue-500">
+            <Card key={`${instanceId.current}-plano-${planoIndex}-${plano.id}`} className="border-l-4 border-l-blue-500 dark:border-l-blue-400">
               <Collapsible open={isExpanded} onOpenChange={() => togglePlanoExpanded(plano.id)}>
                 <CollapsibleTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="w-full p-4 h-auto justify-start hover:bg-gray-50"
+                    className="w-full p-4 h-auto justify-start hover:bg-muted/50"
                   >
                     <div className="flex items-center w-full">
                       {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-gray-400 mr-2" />
+                        <ChevronDown className="h-4 w-4 text-muted-foreground mr-2" />
                       ) : (
-                        <ChevronRight className="h-4 w-4 text-gray-400 mr-2" />
+                        <ChevronRight className="h-4 w-4 text-muted-foreground mr-2" />
                       )}
-                      <Settings className="h-5 w-5 text-blue-600 mr-3" />
+                      <Settings className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
                       <div className="text-left flex-1">
                         <div className="font-medium text-foreground">{plano.nome}</div>
                         <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
@@ -339,7 +339,7 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                           )}
                         </div>
                       </div>
-                      <Badge variant="outline" className="text-blue-600 border-blue-200">
+                      <Badge variant="outline" className="text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700">
                         {tarefasDoPlano.length} tarefa{tarefasDoPlano.length !== 1 ? 's' : ''}
                       </Badge>
                     </div>
@@ -361,9 +361,9 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                               >
                                 <div className="flex items-center w-full">
                                   {tarefaExpanded ? (
-                                    <ChevronDown className="h-3 w-3 text-gray-400 mr-2" />
+                                    <ChevronDown className="h-3 w-3 text-muted-foreground mr-2" />
                                   ) : (
-                                    <ChevronRight className="h-3 w-3 text-gray-400 mr-2" />
+                                    <ChevronRight className="h-3 w-3 text-muted-foreground mr-2" />
                                   )}
                                   {getCategoriasIcons(tarefa.categoria)}
                                   <div className="text-left flex-1 ml-2">
@@ -392,7 +392,7 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                             <CollapsibleContent>
                               <div className="px-3 pb-3 space-y-3">
                                 {/* Descrição da Tarefa */}
-                                <div className="bg-gray-50 rounded p-3">
+                                <div className="bg-muted/50 dark:bg-muted/30 rounded p-3">
                                   <p className="text-sm text-foreground">{tarefa.descricao}</p>
                                   {tarefa.observacoes && (
                                     <p className="text-xs text-muted-foreground mt-2 italic">
@@ -432,10 +432,10 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                                     <div className="space-y-1">
                                       {tarefa.sub_tarefas.map((subTarefa, subTarefaIndex) => (
                                         <div key={`${instanceId.current}-sub-${subTarefaIndex}-${subTarefa.id}`} className="flex items-center gap-2 text-xs bg-card rounded p-2 border">
-                                          <span className="font-mono text-gray-400">{subTarefa.ordem}</span>
+                                          <span className="font-mono text-muted-foreground">{subTarefa.ordem}</span>
                                           <span className="flex-1">{subTarefa.descricao}</span>
                                           {subTarefa.obrigatoria && (
-                                            <Badge variant="outline" className="text-xs text-red-600 border-red-200">
+                                            <Badge variant="outline" className="text-xs text-red-600 dark:text-red-400 border-red-200 dark:border-red-700">
                                               Obrigatória
                                             </Badge>
                                           )}
@@ -465,7 +465,7 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                                             </span>
                                           )}
                                           {recurso.obrigatorio && (
-                                            <Badge variant="outline" className="text-xs text-red-600 border-red-200">
+                                            <Badge variant="outline" className="text-xs text-red-600 dark:text-red-400 border-red-200 dark:border-red-700">
                                               Obrigatório
                                             </Badge>
                                           )}

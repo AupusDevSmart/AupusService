@@ -239,7 +239,7 @@ export interface ProgramacaoResponse {
   ajustes_orcamento?: number;
   data_programada_sugerida?: string;
   hora_programada_sugerida?: string;
-  tarefas_programacao: TarefaProgramacaoResponse[];
+  tarefas_programacao?: TarefaProgramacaoResponse[];
   criado_por?: string;
   criado_por_id?: string;
   analisado_por?: string;
@@ -248,10 +248,10 @@ export interface ProgramacaoResponse {
   aprovado_por?: string;
   aprovado_por_id?: string;
   data_aprovacao?: string;
-  materiais: MaterialProgramacaoResponse[];
-  ferramentas: FerramentaProgramacaoResponse[];
-  tecnicos: TecnicoProgramacaoResponse[];
-  historico: HistoricoProgramacaoResponse[];
+  materiais?: MaterialProgramacaoResponse[];
+  ferramentas?: FerramentaProgramacaoResponse[];
+  tecnicos?: TecnicoProgramacaoResponse[];
+  historico?: HistoricoProgramacaoResponse[];
   ordem_servico?: any;
   reserva_veiculo?: {
     id: string;

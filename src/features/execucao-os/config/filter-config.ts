@@ -1,30 +1,20 @@
 // src/features/execucao-os/config/filter-config.ts
 import { FilterConfig } from '@/types/base';
 
-// Mock data para os filtros
-const mockPlantas = [
-  { value: '1', label: 'Planta Industrial A' },
-  { value: '2', label: 'Planta Industrial B' },
-  { value: '3', label: 'Escritório Central' },
-  { value: '4', label: 'Subestação Sul' }
-];
-
-const mockResponsaveis = [
-  { value: 'João Silva', label: 'João Silva' },
-  { value: 'Maria Santos', label: 'Maria Santos' },
-  { value: 'Carlos Oliveira', label: 'Carlos Oliveira' },
-  { value: 'Pedro Costa', label: 'Pedro Costa' },
-  { value: 'Ana Lima', label: 'Ana Lima' }
-];
-
-const mockPeriodos = [
-  { value: 'hoje', label: 'Hoje' },
-  { value: 'ontem', label: 'Ontem' },
-  { value: 'esta_semana', label: 'Esta Semana' },
-  { value: 'semana_passada', label: 'Semana Passada' },
-  { value: 'este_mes', label: 'Este Mês' },
-  { value: 'mes_passado', label: 'Mês Passado' }
-];
+/**
+ * ✅ FILTROS ESSENCIAIS SIMPLIFICADOS
+ *
+ * Mantidos apenas os filtros mais importantes e funcionais:
+ * - search: Busca geral por múltiplos campos
+ * - statusExecucao: Status atual da execução (PROGRAMADA, EM_EXECUCAO, PAUSADA, etc.)
+ * - tipo: Classificação da OS (PREVENTIVA, CORRETIVA, etc.)
+ * - prioridade: Nível de urgência (CRITICA, ALTA, MEDIA, BAIXA)
+ *
+ * ❌ REMOVIDOS (mock data sem integração com API):
+ * - responsavel: Dados mockados, sem conexão real
+ * - planta/local: Dados mockados, sem conexão real
+ * - periodo: Dados mockados, funcionalidade duplicada
+ */
 
 export const execucaoOSFilterConfig: FilterConfig[] = [
   {
@@ -36,17 +26,18 @@ export const execucaoOSFilterConfig: FilterConfig[] = [
   {
     key: 'statusExecucao',
     type: 'select',
-    label: 'Status Execução',
+    label: 'Status',
     placeholder: 'Todos os status',
     options: [
       { value: 'all', label: 'Todos os status' },
+      { value: 'PLANEJADA', label: 'Planejada' },
       { value: 'PROGRAMADA', label: 'Programada' },
       { value: 'EM_EXECUCAO', label: 'Em Execução' },
       { value: 'PAUSADA', label: 'Pausada' },
       { value: 'FINALIZADA', label: 'Finalizada' },
       { value: 'CANCELADA', label: 'Cancelada' }
     ],
-    className: 'min-w-40'
+    className: 'min-w-44'
   },
   {
     key: 'tipo',
@@ -69,45 +60,12 @@ export const execucaoOSFilterConfig: FilterConfig[] = [
     label: 'Prioridade',
     placeholder: 'Todas as prioridades',
     options: [
-      { value: 'all', label: 'Todas as prioridades' },
+      { value: 'all', label: 'Todas' },
       { value: 'CRITICA', label: 'Crítica' },
       { value: 'ALTA', label: 'Alta' },
       { value: 'MEDIA', label: 'Média' },
       { value: 'BAIXA', label: 'Baixa' }
     ],
-    className: 'min-w-44'
-  },
-  {
-    key: 'responsavel',
-    type: 'select',
-    label: 'Responsável',
-    placeholder: 'Todos os responsáveis',
-    options: [
-      { value: 'all', label: 'Todos os responsáveis' },
-      ...mockResponsaveis
-    ],
-    className: 'min-w-48'
-  },
-  {
-    key: 'planta',
-    type: 'select',
-    label: 'Local',
-    placeholder: 'Todos os locais',
-    options: [
-      { value: 'all', label: 'Todos os locais' },
-      ...mockPlantas
-    ],
-    className: 'min-w-52'
-  },
-  {
-    key: 'periodo',
-    type: 'select',
-    label: 'Período',
-    placeholder: 'Todos os períodos',
-    options: [
-      { value: 'all', label: 'Todos os períodos' },
-      ...mockPeriodos
-    ],
-    className: 'min-w-44'
+    className: 'min-w-36'
   }
 ];

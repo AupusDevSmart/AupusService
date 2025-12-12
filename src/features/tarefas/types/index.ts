@@ -14,7 +14,7 @@ export interface SubTarefa {
   descricao: string;
   obrigatoria: boolean;
   tempoEstimado?: number; // em minutos
-  ordem: number;
+  ordem?: number;
 }
 
 // Interface para recursos necessários

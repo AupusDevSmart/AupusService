@@ -2,6 +2,9 @@ import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LoginForm } from '@/features/login/components/LoginForm';
 import { useUserStore } from '@/store/useUserStore';
+import { useTheme } from '@/components/theme-provider';
+import { Moon, Sun } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 /**
  * Página de Login
@@ -11,6 +14,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useUserStore();
+  const { theme, setTheme } = useTheme();
 
   // Pegar redirectTo da URL ou usar /dashboard como padrão
   const redirectTo = searchParams.get('redirectTo') || '/dashboard';
@@ -22,8 +26,26 @@ export function LoginPage() {
     }
   }, [user, navigate, redirectTo]);
 
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
   return (
-    <div className="min-h-screen w-full bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen w-full bg-background relative">
+      {/* Botão de toggle de tema - canto superior direito */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 z-50 hover:bg-accent"
+        aria-label="Toggle theme"
+      >
+        {theme === 'dark' ? (
+          <Sun className="h-5 w-5" />
+        ) : (
+          <Moon className="h-5 w-5" />
+        )}
+      </Button>
       {/* Layout Mobile - Centralizado */}
       <div className="w-full lg:hidden min-h-screen flex flex-col items-center justify-center p-6">
         {/* Logo e Branding */}
@@ -61,7 +83,7 @@ export function LoginPage() {
       {/* Layout Desktop - Duas Colunas */}
       <div className="hidden lg:grid lg:grid-cols-2 w-full min-h-screen">
         {/* Coluna Esquerda - Logo e Branding */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 flex flex-col items-center justify-center p-12 border-r border-gray-200 dark:border-gray-700">
+        <div className="bg-[#0f0e1f] flex flex-col items-center justify-center p-12 border-r border-border/20">
           <div className="flex flex-col items-center space-y-8 max-w-lg">
             {/* Logo */}
             <div className="w-48 h-48 xl:w-64 xl:h-64">
@@ -74,20 +96,20 @@ export function LoginPage() {
 
             {/* Título e Descrição */}
             <div className="text-center space-y-4">
-              <h1 className="text-4xl xl:text-5xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-4xl xl:text-5xl font-semibold text-white">
                 Aupus Service
               </h1>
-              <p className="text-lg xl:text-xl text-gray-600 dark:text-gray-400 leading-relaxed">
+              <p className="text-lg xl:text-xl text-white/70 leading-relaxed">
                 Sistema de Gestão de Manutenção
               </p>
-              <p className="text-base text-gray-500 dark:text-gray-500 mt-6">
+              <p className="text-base text-white/60 mt-6">
                 Controle completo da manutenção dos seus equipamentos
               </p>
             </div>
 
             {/* Footer Desktop */}
             <div className="mt-12 text-center">
-              <p className="text-sm text-gray-500 dark:text-gray-500">
+              <p className="text-sm text-white/50">
                 © 2024 Aupus. Todos os direitos reservados.
               </p>
             </div>

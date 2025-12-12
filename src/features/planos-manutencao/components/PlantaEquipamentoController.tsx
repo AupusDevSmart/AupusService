@@ -35,6 +35,11 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
   const [unidadeId, setUnidadeId] = React.useState(value?.unidade_id || ''); // NOVO: Estado para unidade
   const [equipamentoId, setEquipamentoId] = React.useState(value?.equipamento_id || '');
 
+  // Estados para armazenar nomes carregados
+  const [plantaNome, setPlantaNome] = React.useState<string>('');
+  const [unidadeNome, setUnidadeNome] = React.useState<string>('');
+  const [dadosCarregados, setDadosCarregados] = React.useState(false);
+
   const equipamentosService = React.useMemo(() => new EquipamentosApiService(), []);
   
   const isCreateMode = mode === 'create';
@@ -108,12 +113,52 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
     }
     if (value?.unidade_id !== unidadeId) {
       setUnidadeId(value?.unidade_id || '');
+      // Reset do flag de carregamento quando unidadeId muda
+      if (value?.unidade_id) {
+        setDadosCarregados(false);
+      }
     }
     if (value?.equipamento_id !== equipamentoId) {
       setEquipamentoId(value?.equipamento_id || '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]); // ✅ Apenas value como dependência para evitar loops
+  }, [value]);
+
+  // Carregar dados em modo view/edit: buscar equipamento que já vem com unidade (com nome e planta_id)
+  React.useEffect(() => {
+    const loadDadosViewMode = async () => {
+      if ((isViewMode || isEditMode) && equipamentoId && !dadosCarregados) {
+        try {
+          const equipamento = await equipamentosService.findOne(equipamentoId);
+
+          // O equipamento já vem com a unidade completa
+          if (equipamento.unidade) {
+            const unidade = equipamento.unidade;
+
+            // Pegar nome da unidade
+            setUnidadeNome(unidade.nome);
+            setUnidadeId(unidade.id);
+
+            // Buscar nome da planta usando planta_id da unidade
+            if (unidade.planta_id) {
+              const planta = await PlantasService.getPlanta(unidade.planta_id);
+              setPlantaNome(planta.nome);
+              setPlantaId(planta.id);
+            }
+
+            setDadosCarregados(true);
+          } else {
+            setDadosCarregados(true);
+          }
+        } catch (error) {
+          console.error('Erro ao buscar dados do equipamento:', error);
+          setDadosCarregados(true);
+        }
+      }
+    };
+
+    loadDadosViewMode();
+  }, [equipamentoId, isViewMode, isEditMode, dadosCarregados, equipamentosService]);
 
   // Carregar equipamentos quando unidade muda ou no modo edit
   React.useEffect(() => {
@@ -231,42 +276,28 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
     onChange(newValue);
   };
 
-  // Função para obter nome da planta
+  // Função para obter nome da planta (SIMPLIFICADA)
   const getPlantaNome = (): string => {
-    if (!plantaId) return '';
+    // Usar estado se disponível (modo view)
+    if (plantaNome) return plantaNome;
 
-    // Primeiro: tenta usar dados aninhados da API
-    if ((value as any)?.planta_nome) {
-      return (value as any).planta_nome;
-    }
-
-    // Segundo: busca na lista carregada
+    // Buscar na lista se disponível (modo create/edit)
     const planta = plantas.find(p => p.id === plantaId);
-    if (planta?.nome) {
-      return planta.nome;
-    }
+    if (planta?.nome) return planta.nome;
 
-    // Fallback: mostra o ID
-    return `Planta ID: ${plantaId}`;
+    return plantaId ? `Planta ID: ${plantaId}` : '';
   };
 
-  // Função para obter nome da unidade
+  // Função para obter nome da unidade (SIMPLIFICADA)
   const getUnidadeNome = (): string => {
-    if (!unidadeId) return '';
+    // Usar estado se disponível (modo view)
+    if (unidadeNome) return unidadeNome;
 
-    // Primeiro: tenta usar dados aninhados da API
-    if ((value as any)?.unidade_nome) {
-      return (value as any).unidade_nome;
-    }
-
-    // Segundo: busca na lista carregada
+    // Buscar na lista se disponível (modo create/edit)
     const unidade = unidades.find(u => u.id === unidadeId);
-    if (unidade?.nome) {
-      return unidade.nome;
-    }
+    if (unidade?.nome) return unidade.nome;
 
-    // Fallback: mostra o ID
-    return `Unidade ID: ${unidadeId}`;
+    return unidadeId ? `Unidade ID: ${unidadeId}` : '';
   };
 
   // Função para obter nome do equipamento
@@ -288,30 +319,58 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
     return `Equipamento ID: ${equipamentoId}`;
   };
 
+  // ==============================================
+  // MODO VIEW/EDIT: Interface simples apenas para exibição (NÃO EDITÁVEL)
+  // ==============================================
+  if (isViewMode || isEditMode) {
+    return (
+      <div className="space-y-4">
+        {/* Planta */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Planta/Local</label>
+          <input
+            type="text"
+            value={plantaNome || 'Carregando...'}
+            disabled
+            className="w-full p-2 border rounded-md bg-muted text-foreground opacity-60 cursor-not-allowed"
+          />
+        </div>
+
+        {/* Unidade */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Unidade</label>
+          <input
+            type="text"
+            value={unidadeNome || 'Carregando...'}
+            disabled
+            className="w-full p-2 border rounded-md bg-muted text-foreground opacity-60 cursor-not-allowed"
+          />
+        </div>
+
+        {/* Equipamento */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Equipamento</label>
+          <input
+            type="text"
+            value={getEquipamentoNome() || 'Carregando...'}
+            disabled
+            className="w-full p-2 border rounded-md bg-muted text-foreground opacity-60 cursor-not-allowed"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ==============================================
+  // MODO CREATE: Interface com selects dinâmicos
+  // ==============================================
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <label className="text-sm font-medium">
           Planta/Local <span className="text-red-500">*</span>
         </label>
-        
-        {isViewMode || isEditMode ? (
-          <>
-            {process.env.NODE_ENV === 'development' && (
-              <div className="text-xs text-blue-600 mb-1">
-                Debug Planta: ID={plantaId}, Nome="{getPlantaNome()}", Plantas na lista={plantas.length}
-                <br />
-                Dados aninhados: planta_nome={(value as any)?.planta_nome || 'undefined'}
-              </div>
-            )}
-            <input
-              type="text"
-              value={getPlantaNome() || 'Planta não especificada'}
-              disabled
-              className="w-full p-2 border rounded-md bg-muted text-foreground opacity-60 cursor-not-allowed"
-            />
-          </>
-        ) : (
+        {(
           <>
             {loadingPlantas && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">

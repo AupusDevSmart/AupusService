@@ -46,12 +46,12 @@ export function LoginForm({ redirectTo = '/dashboard' }: LoginFormProps) {
   };
 
   return (
-    <Card className="w-full shadow-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+    <Card className="w-full shadow-lg border border-border bg-card">
       <CardHeader className="space-y-1 pb-6 px-6 lg:px-8 pt-8 lg:pt-10">
-        <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-semibold text-center text-gray-900 dark:text-white">
+        <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-semibold text-center text-foreground">
           Entrar
         </CardTitle>
-        <CardDescription className="text-center text-sm lg:text-base text-gray-600 dark:text-gray-400">
+        <CardDescription className="text-center text-sm lg:text-base text-muted-foreground">
           Digite suas credenciais para acessar o sistema
         </CardDescription>
       </CardHeader>
@@ -131,7 +131,7 @@ export function LoginForm({ redirectTo = '/dashboard' }: LoginFormProps) {
         <CardFooter className="px-6 lg:px-8 pb-8 lg:pb-10 pt-4">
           <Button
             type="submit"
-            className="w-full h-11 lg:h-12 text-base font-medium bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+            className="w-full h-11 lg:h-12 text-base font-medium bg-foreground text-background hover:bg-foreground/90"
             disabled={isLoading}
           >
             {isLoading ? (

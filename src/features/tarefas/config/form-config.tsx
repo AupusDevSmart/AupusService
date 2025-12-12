@@ -30,8 +30,7 @@ const SubTarefasController = ({ value, onChange, disabled }: FormFieldProps) => 
     const novaSubTarefa = {
       descricao: '',
       obrigatoria: false,
-      tempo_estimado: 0,
-      ordem: subTarefas.length + 1
+      tempo_estimado: 0
     };
     const novasSubTarefas = [...subTarefas, novaSubTarefa];
     setSubTarefas(novasSubTarefas);
@@ -385,6 +384,28 @@ export const tarefasFormFields: FormField[] = [
     type: 'select',
     required: false,
     options: [], // Será carregado dinamicamente
+    render: ({ value, entity, mode }) => {
+      // Em modo view, mostrar informações completas do equipamento
+      if (mode === 'view' && entity?.equipamento) {
+        return (
+          <div className="p-3 border rounded-md bg-muted/30">
+            <div className="text-sm font-medium">{entity.equipamento.nome}</div>
+            {entity.equipamento.tipo_equipamento && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Tipo: {entity.equipamento.tipo_equipamento}
+              </div>
+            )}
+            {entity.equipamento.tag && (
+              <div className="text-xs text-muted-foreground">
+                TAG: {entity.equipamento.tag}
+              </div>
+            )}
+          </div>
+        );
+      }
+      // Para outros modos, retornar undefined para usar o componente padrão de select
+      return undefined;
+    }
   },
 
   // Classificação
@@ -487,13 +508,6 @@ export const tarefasFormFields: FormField[] = [
     type: 'number',
     required: true,
     placeholder: 'Ex: 180',
-  },
-  {
-    key: 'ordem',
-    label: 'Ordem da Tarefa',
-    type: 'number',
-    required: true,
-    placeholder: 'Ex: 1',
   },
   {
     key: 'planejador',

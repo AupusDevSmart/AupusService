@@ -4,7 +4,7 @@ import { ProgramacaoSelector } from '../components/ProgramacaoSelector';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
 import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManager';
-import { OrigemOSCard } from '../components/OrigemOSCard';
+import { OrigemOSCardWrapper } from '../components/OrigemOSCardWrapper';
 import { ReservaVeiculoCard } from '../components/ReservaVeiculoCard';
 
 export const execucaoOSFormFields: FormField[] = [
@@ -67,7 +67,7 @@ export const execucaoOSFormFields: FormField[] = [
     key: 'origemCard',
     label: 'Origem da OS',
     type: 'custom',
-    component: OrigemOSCard,
+    component: OrigemOSCardWrapper,
     group: 'origem',
     width: 'full'
   },
@@ -231,6 +231,7 @@ export const execucaoOSFormFields: FormField[] = [
   },
 
   // Atividades e Checklist - GRUPO: atividades
+  // ⚠️ MOVIDO PARA FinalizarExecucaoModal - Só mostra em visualização de execuções finalizadas
   {
     key: 'atividadesRealizadas',
     label: 'Atividades Realizadas',
@@ -238,10 +239,12 @@ export const execucaoOSFormFields: FormField[] = [
     placeholder: 'Descreva as atividades executadas',
     group: 'atividades',
     width: 'full',
-    required: true,
+    disabled: true,
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
-      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+      const value = formData?.atividadesRealizadas || entity?.atividadesRealizadas;
+      // Só mostrar em view de execuções finalizadas E se houver valor
+      return status === 'FINALIZADA' && !!value;
     }
   },
   {
@@ -252,11 +255,13 @@ export const execucaoOSFormFields: FormField[] = [
     max: 100,
     placeholder: '0-100',
     group: 'atividades',
-    width: 'quarter',
+    width: 'third',
+    disabled: true,
     startNewRow: true,
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
-      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+      const value = formData?.checklistConcluido || entity?.checklistConcluido;
+      return status === 'FINALIZADA' && value !== undefined && value !== null;
     }
   },
   {
@@ -265,10 +270,12 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Liste os procedimentos seguidos',
     group: 'atividades',
-    width: 'three-quarters',
+    width: 'two-thirds',
+    disabled: true,
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
-      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+      const value = formData?.procedimentosSeguidos || entity?.procedimentosSeguidos;
+      return status === 'FINALIZADA' && !!value;
     }
   },
 
@@ -310,30 +317,37 @@ export const execucaoOSFormFields: FormField[] = [
     condition: () => true // ✅ Sempre mostrar
   },
 
+  // ⚠️ MOVIDO PARA FinalizarExecucaoModal - Só mostra em visualização
   {
     key: 'custosAdicionais',
     label: 'Custos Adicionais (R$)',
     type: 'number',
     placeholder: 'Custos não planejados',
     group: 'recursos',
-    width: 'third',
+    width: 'half',
+    disabled: true,
     startNewRow: true,
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
-      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+      const value = formData?.custosAdicionais || entity?.custosAdicionais;
+      return status === 'FINALIZADA' && value !== undefined && value !== null && value > 0;
     }
   },
 
   // Condições de Segurança - GRUPO: seguranca
+  // ⚠️ MOVIDO PARA FinalizarExecucaoModal - Só mostra em visualização de execuções finalizadas
   {
     key: 'equipamentosSeguranca',
     label: 'EPIs e Equipamentos de Segurança',
     type: 'textarea',
     placeholder: 'Liste os EPIs utilizados',
     group: 'seguranca',
+    width: 'full',
+    disabled: true,
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
-      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+      const value = formData?.equipamentosSeguranca || entity?.equipamentosSeguranca;
+      return status === 'FINALIZADA' && !!value;
     }
   },
   {
@@ -342,9 +356,13 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Relate qualquer incidente ou quase acidente',
     group: 'seguranca',
+    width: 'full',
+    disabled: true,
+    startNewRow: true,
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
-      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+      const value = formData?.incidentesSeguranca || entity?.incidentesSeguranca;
+      return status === 'FINALIZADA' && !!value;
     }
   },
   {
@@ -353,9 +371,13 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Medidas extras de segurança adotadas',
     group: 'seguranca',
+    width: 'full',
+    disabled: true,
+    startNewRow: true,
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
-      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+      const value = formData?.medidasSegurancaAdicionais || entity?.medidasSegurancaAdicionais;
+      return status === 'FINALIZADA' && !!value;
     }
   },
 
@@ -440,7 +462,12 @@ export const execucaoOSFormFields: FormField[] = [
     label: 'Observações da Execução',
     type: 'textarea',
     placeholder: 'Observações gerais sobre a execução',
-    group: 'observacoes'
+    group: 'observacoes',
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      // Mostrar apenas quando em execução, pausada ou finalizada
+      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+    }
   },
   {
     key: 'motivoPausas',

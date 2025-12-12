@@ -16,6 +16,7 @@ import { useProgramacaoOS } from '../hooks/useProgramacaoOS';
 import { WorkflowModal } from './WorkflowModal';
 import { processarMateriaisComCustos, processarTecnicosComCustos } from '@/utils/recursos.utils';
 import type { ProgramacaoResponse, ProgramacaoDetalhesResponse, ProgramacaoFiltersDto, CreateProgramacaoDto } from '@/services/programacao-os.service';
+import { useUserStore } from '@/store/useUserStore';
 
 // Função utilitária para converter datas para o formato datetime-local
 const formatToDateTimeLocal = (dateValue: any): string => {
@@ -73,7 +74,8 @@ const initialFilters: ProgramacaoFiltersDto = {
 export function ProgramacaoOSPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  
+  const { user } = useUserStore(); // Hook para obter usuário logado
+
   // Estados principais
   const [programacoes, setProgramacoes] = useState<ProgramacaoResponse[]>([]);
   const [filters, setFilters] = useState<ProgramacaoFiltersDto>(initialFilters);
@@ -320,7 +322,12 @@ export function ProgramacaoOSPage() {
       });
 
       if (modalState.mode === 'create') {
-        await criarProgramacao(preparedData as CreateProgramacaoDto);
+        // Auto-fill usuário logado como criador
+        const createData = {
+          ...preparedData,
+          criado_por_id: user?.id || undefined
+        };
+        await criarProgramacao(createData as CreateProgramacaoDto);
       } else if (modalState.mode === 'edit') {
         // ✅ CORREÇÃO: Mesma estrutura, só remover campos que não devem ser atualizados
         const updateData = { ...preparedData };
@@ -418,6 +425,13 @@ export function ProgramacaoOSPage() {
       await analisarProgramacao(programacao.id, dadosAnalise.observacoes_analise || '');
       await carregarDados();
       setShowWorkflowModal(false);
+
+      // Atualizar modal com dados mais recentes se estiver aberto
+      if (modalState.isOpen && modalState.entity?.id === programacao.id) {
+        const dadosAtualizados = await buscarProgramacao(programacao.id);
+        openModal(modalState.mode, dadosAtualizados);
+      }
+
       alert('✅ Programação enviada para análise com sucesso!');
     } catch (error) {
       console.error('Erro ao analisar:', error);
@@ -453,6 +467,13 @@ export function ProgramacaoOSPage() {
 
       await carregarDados();
       setShowWorkflowModal(false);
+
+      // Atualizar modal com dados mais recentes se estiver aberto
+      if (modalState.isOpen && modalState.entity?.id === programacao.id) {
+        const dadosAtualizados = await buscarProgramacao(programacao.id);
+        openModal(modalState.mode, dadosAtualizados);
+      }
+
       alert('✅ Programação aprovada! Uma ordem de serviço foi gerada automaticamente.');
     } catch (error) {
       console.error('Erro ao aprovar:', error);
@@ -484,6 +505,13 @@ export function ProgramacaoOSPage() {
       await rejeitarProgramacao(programacao.id, dadosRejeicao.motivo_rejeicao, dadosRejeicao.sugestoes_melhoria);
       await carregarDados();
       setShowWorkflowModal(false);
+
+      // Atualizar modal com dados mais recentes se estiver aberto
+      if (modalState.isOpen && modalState.entity?.id === programacao.id) {
+        const dadosAtualizados = await buscarProgramacao(programacao.id);
+        openModal(modalState.mode, dadosAtualizados);
+      }
+
       alert('✅ Programação rejeitada com sucesso!');
     } catch (error) {
       console.error('Erro ao rejeitar:', error);
@@ -515,6 +543,13 @@ export function ProgramacaoOSPage() {
       await cancelarProgramacao(programacao.id, dadosCancelamento.motivo_cancelamento);
       await carregarDados();
       setShowWorkflowModal(false);
+
+      // Atualizar modal com dados mais recentes se estiver aberto
+      if (modalState.isOpen && modalState.entity?.id === programacao.id) {
+        const dadosAtualizados = await buscarProgramacao(programacao.id);
+        openModal(modalState.mode, dadosAtualizados);
+      }
+
       alert('✅ Programação cancelada com sucesso!');
     } catch (error) {
       console.error('Erro ao cancelar:', error);
@@ -984,6 +1019,32 @@ export function ProgramacaoOSPage() {
                     Deletar
                   </Button>
                 )}
+
+                {/* Ir para Execução - Aparece quando programação está aprovada */}
+                {(() => {
+                  console.log('🔍 DEBUG Botão Ir para Execução:', {
+                    status: modalState.entity.status,
+                    isAprovada: modalState.entity.status === 'APROVADA',
+                    ordem_servico: modalState.entity.ordem_servico,
+                    ordem_servico_id: modalState.entity.ordem_servico?.id,
+                    shouldShowButton: modalState.entity.status === 'APROVADA' && modalState.entity.ordem_servico?.id
+                  });
+
+                  if (modalState.entity.status === 'APROVADA' && modalState.entity.ordem_servico?.id) {
+                    return (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => navigate(`/execucao-os?execucaoId=${modalState.entity.ordem_servico.id}`)}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Play className="h-4 w-4" />
+                        Ir para Execução
+                      </Button>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           )}

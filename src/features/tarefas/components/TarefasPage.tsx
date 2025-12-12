@@ -31,7 +31,6 @@ import { tarefasTableColumns } from '../config/table-config';
 import { tarefasFilterConfig } from '../config/filter-config';
 import { tarefasFormFields } from '../config/form-config';
 import { useTarefasApi } from '../hooks/useTarefasApi';
-import { planejarOSComTarefa } from '@/utils/planejarOS';
 import { AnexosManager } from './AnexosManager';
 import { FilterConfig } from '@/types/base';
 
@@ -351,7 +350,6 @@ export function TarefasPage() {
         ativo: true,
         duracao_estimada: 1,
         tempo_estimado: 60,
-        ordem: 1,
         data_ultima_execucao: new Date().toISOString().slice(0, 16),
         numero_execucoes: 0,
         sub_tarefas: [],
@@ -414,12 +412,6 @@ export function TarefasPage() {
         console.error('Erro ao excluir tarefa:', error);
       }
     }
-  };
-
-  // ✅ NOVA FUNCIONALIDADE: Planejar OS
-  const handlePlanejarOS = (tarefa: TarefaApiResponse) => {
-    console.log('🏷️ Planejando OS para tarefa:', tarefa.id);
-    planejarOSComTarefa(tarefa as any, navigate);
   };
 
   // Ações personalizadas para tarefas
@@ -638,21 +630,6 @@ export function TarefasPage() {
               emptyIcon={<Tag className="h-8 w-8 text-muted-foreground/50" />}
               customActions={[
                 {
-                  key: 'planejar_os',
-                  label: 'Planejar OS',
-                  handler: handlePlanejarOS,
-                  condition: (item: TarefaApiResponse) => item.status === 'ATIVA',
-                  icon: <Calendar className="h-4 w-4" />,
-                  variant: 'default'
-                },
-                // {
-                //   key: 'ver_plano',
-                //   label: 'Ver Plano',
-                //   handler: handleVerPlano,
-                //   condition: (item: TarefaApiResponse) => !!item.plano_manutencao_id,
-                //   icon: <Eye className="h-4 w-4" />
-                // },
-                {
                   key: 'toggle_status',
                   label: 'Ativar/Desativar',
                   handler: handleToggleStatus,
@@ -700,7 +677,7 @@ export function TarefasPage() {
             {
               key: 'planejamento',
               title: 'Planejamento',
-              fields: ['frequencia', 'frequencia_personalizada', 'duracao_estimada', 'tempo_estimado', 'ordem', 'planejador', 'responsavel', 'data_ultima_execucao', 'numero_execucoes']
+              fields: ['frequencia', 'frequencia_personalizada', 'duracao_estimada', 'tempo_estimado', 'planejador', 'responsavel', 'data_ultima_execucao', 'numero_execucoes']
             },
             { 
               key: 'atividades', 

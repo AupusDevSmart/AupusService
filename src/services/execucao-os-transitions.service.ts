@@ -75,6 +75,14 @@ export interface FinalizarOSDto {
   observacoes_qualidade?: string;
   km_final?: number;
   observacoes_veiculo?: string;
+  // Novos campos adicionados
+  atividades_realizadas?: string;
+  checklist_concluido?: number;
+  procedimentos_seguidos?: string;
+  equipamentos_seguranca?: string;
+  incidentes_seguranca?: string;
+  medidas_seguranca_adicionais?: string;
+  custos_adicionais?: number;
 }
 
 export interface CancelarOSDto {

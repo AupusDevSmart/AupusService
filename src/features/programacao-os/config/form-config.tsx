@@ -7,6 +7,28 @@ import { FerramentasCardManager } from '@/components/common/cards/FerramentasCar
 import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManager';
 import { ReservaViaturaField } from '../components/ReservaViaturaField';
 import { ReservaVinculadaCard } from '../components/ReservaVinculadaCard';
+import { FileText, Clock, Search, CheckCircle, XCircle, Ban } from 'lucide-react';
+
+// Mapeamento de ícones por status
+const statusIcons = {
+  RASCUNHO: FileText,
+  PENDENTE: Clock,
+  EM_ANALISE: Search,
+  APROVADA: CheckCircle,
+  REJEITADA: XCircle,
+  CANCELADA: Ban
+};
+
+// Helper para renderizar label com ícone
+const getStatusLabel = (value: string, label: string) => {
+  const Icon = statusIcons[value as keyof typeof statusIcons];
+  return Icon ? (
+    <span className="flex items-center gap-2">
+      <Icon className="h-4 w-4" />
+      {label}
+    </span>
+  ) : label;
+};
 
 export const programacaoOSFormFields: FormField[] = [
   // Informações básicas - GRUPO: identificacao
@@ -17,6 +39,41 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Gerado automaticamente',
     disabled: true,
     group: 'identificacao'
+  },
+  {
+    key: 'status',
+    label: 'Status Atual',
+    type: 'select',
+    disabled: true,
+    options: [
+      { value: 'RASCUNHO', label: 'Rascunho' },
+      { value: 'PENDENTE', label: 'Pendente' },
+      { value: 'EM_ANALISE', label: 'Em Análise' },
+      { value: 'APROVADA', label: 'Aprovada' },
+      { value: 'REJEITADA', label: 'Rejeitada' },
+      { value: 'CANCELADA', label: 'Cancelada' }
+    ],
+    group: 'identificacao',
+    showOnlyOnMode: ['view', 'edit'],
+    render: (props: any) => {
+      const { value } = props;
+      const Icon = statusIcons[value as keyof typeof statusIcons];
+      const option = [
+        { value: 'RASCUNHO', label: 'Rascunho' },
+        { value: 'PENDENTE', label: 'Pendente' },
+        { value: 'EM_ANALISE', label: 'Em Análise' },
+        { value: 'APROVADA', label: 'Aprovada' },
+        { value: 'REJEITADA', label: 'Rejeitada' },
+        { value: 'CANCELADA', label: 'Cancelada' }
+      ].find(opt => opt.value === value);
+
+      return (
+        <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-muted/50">
+          {Icon && <Icon className="h-4 w-4" />}
+          <span>{option?.label || value}</span>
+        </div>
+      );
+    }
   },
   {
     key: 'descricao',
@@ -144,17 +201,6 @@ export const programacaoOSFormFields: FormField[] = [
   },
 
   // Planejamento - GRUPO: planejamento
-  {
-    key: 'tempo_estimado',
-    label: 'Tempo Estimado (horas)',
-    type: 'number',
-    required: true,
-    placeholder: 'Ex: 4.5',
-    group: 'planejamento',
-    computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
-    }
-  },
   {
     key: 'duracao_estimada',
     label: 'Duração Estimada (horas)',
@@ -290,48 +336,6 @@ export const programacaoOSFormFields: FormField[] = [
       );
     }
   },
-  {
-    key: 'assentos_necessarios',
-    label: 'Assentos Necessários',
-    type: 'number',
-    placeholder: 'Quantidade de assentos',
-    showOnlyWhen: {
-      field: 'necessita_veiculo',
-      value: true
-    },
-    group: 'veiculo',
-    computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
-    }
-  },
-  {
-    key: 'carga_necessaria',
-    label: 'Capacidade de Carga (kg)',
-    type: 'number',
-    placeholder: 'Peso em kg',
-    showOnlyWhen: {
-      field: 'necessita_veiculo',
-      value: true
-    },
-    group: 'veiculo',
-    computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
-    }
-  },
-  {
-    key: 'observacoes_veiculo',
-    label: 'Observações do Veículo',
-    type: 'textarea',
-    placeholder: 'Requisitos específicos do veículo',
-    showOnlyWhen: {
-      field: 'necessita_veiculo',
-      value: true
-    },
-    group: 'veiculo',
-    computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
-    }
-  },
 
   // Recursos - Materiais - GRUPO: recursos
   {
@@ -393,19 +397,9 @@ export const programacaoOSFormFields: FormField[] = [
   // Observações - GRUPO: observacoes
   {
     key: 'observacoes',
-    label: 'Observações Gerais',
+    label: 'Observações',
     type: 'textarea',
-    placeholder: 'Observações adicionais',
-    group: 'observacoes',
-    computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
-    }
-  },
-  {
-    key: 'observacoes_programacao',
-    label: 'Observações da Programação',
-    type: 'textarea',
-    placeholder: 'Observações específicas da programação',
+    placeholder: 'Observações adicionais sobre a programação',
     group: 'observacoes',
     computeDisabled: (entity: any) => {
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
@@ -417,6 +411,11 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Justificativa para a execução desta OS',
     group: 'observacoes',
+    condition: (entity: any) => {
+      // Mostrar justificativa apenas em modo view quando já foi preenchida
+      // ou em modo create/edit quando ainda está em rascunho/pendente
+      return entity?.justificativa || ['RASCUNHO', 'PENDENTE', undefined].includes(entity?.status);
+    },
     computeDisabled: (entity: any) => {
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
     }
@@ -546,22 +545,6 @@ export const programacaoOSFormFields: FormField[] = [
     showOnlyOnMode: ['view'],
     group: 'auditoria',
     condition: (entity: any) => entity?.data_aprovacao
-  },
-  {
-    key: 'status',
-    label: 'Status Atual',
-    type: 'select',
-    disabled: true,
-    options: [
-      { value: 'RASCUNHO', label: '📝 Rascunho' },
-      { value: 'PENDENTE', label: '⏳ Pendente' },
-      { value: 'EM_ANALISE', label: '🔍 Em Análise' },
-      { value: 'APROVADA', label: '✅ Aprovada' },
-      { value: 'REJEITADA', label: '❌ Rejeitada' },
-      { value: 'CANCELADA', label: '🚫 Cancelada' }
-    ],
-    group: 'auditoria',
-    showOnlyOnMode: ['view', 'edit']
   }
 ];
 
@@ -570,7 +553,7 @@ export const programacaoOSFormGroups = [
   {
     key: 'identificacao',
     title: 'Identificação da OS',
-    fields: ['numeroOS', 'descricao', 'local', 'ativo']
+    fields: ['numeroOS', 'status', 'descricao']
   },
   {
     key: 'origem',
@@ -585,7 +568,7 @@ export const programacaoOSFormGroups = [
   {
     key: 'planejamento',
     title: 'Planejamento',
-    fields: ['tempo_estimado', 'duracao_estimada', 'data_previsao_inicio', 'data_previsao_fim', 'orcamento_previsto']
+    fields: ['duracao_estimada', 'data_previsao_inicio', 'data_previsao_fim', 'orcamento_previsto']
   },
   // TODO: Descomentar quando implementar programação detalhada
   /*
@@ -598,7 +581,7 @@ export const programacaoOSFormGroups = [
   {
     key: 'veiculo',
     title: 'Requisitos de Veículo',
-    fields: ['necessita_veiculo', 'reserva_veiculo', 'reserva_vinculada', 'assentos_necessarios', 'carga_necessaria', 'observacoes_veiculo']
+    fields: ['necessita_veiculo', 'reserva_veiculo', 'reserva_vinculada']
   },
   {
     key: 'recursos',
@@ -608,7 +591,7 @@ export const programacaoOSFormGroups = [
   {
     key: 'observacoes',
     title: 'Observações e Justificativas',
-    fields: ['observacoes', 'observacoes_programacao', 'justificativa']
+    fields: ['observacoes', 'justificativa']
   },
   {
     key: 'workflow',
@@ -630,7 +613,7 @@ export const programacaoOSFormGroups = [
     key: 'auditoria',
     title: 'Informações de Auditoria',
     fields: [
-      'status', 'criado_por', 'data_criacao', 'analisado_por', 'data_analise',
+      'criado_por', 'data_criacao', 'analisado_por', 'data_analise',
       'aprovado_por', 'data_aprovacao'
     ],
     conditional: {

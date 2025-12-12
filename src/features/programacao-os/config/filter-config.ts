@@ -1,30 +1,21 @@
 // src/features/programacao-os/config/filter-config.ts
 import { FilterConfig } from '@/types/base';
 
-// Mock data para os filtros (normalmente viria da API)
-const mockPlantas = [
-  { value: '1', label: 'Planta Industrial São Paulo' },
-  { value: '2', label: 'Planta Subestação Central' },
-  { value: '3', label: 'Estação de Bombeamento Sul' },
-  { value: '4', label: 'Oficina João Silva' }
-];
-
-const mockResponsaveis = [
-  { value: 'João Silva', label: 'João Silva' },
-  { value: 'Maria Santos', label: 'Maria Santos' },
-  { value: 'Carlos Oliveira', label: 'Carlos Oliveira' },
-  { value: 'Pedro Costa', label: 'Pedro Costa' },
-  { value: 'Ana Lima', label: 'Ana Lima' }
-];
-
-const mockPeriodos = [
-  { value: 'hoje', label: 'Hoje' },
-  { value: 'amanha', label: 'Amanhã' },
-  { value: 'esta_semana', label: 'Esta Semana' },
-  { value: 'proxima_semana', label: 'Próxima Semana' },
-  { value: 'este_mes', label: 'Este Mês' },
-  { value: 'proximo_mes', label: 'Próximo Mês' }
-];
+/**
+ * ✅ FILTROS ESSENCIAIS SIMPLIFICADOS
+ *
+ * Mantidos apenas os filtros mais importantes e funcionais:
+ * - search: Busca geral por múltiplos campos
+ * - status: Principal métrica de workflow (PENDENTE, EM_ANALISE, APROVADA, etc.)
+ * - tipo: Classificação da OS (PREVENTIVA, CORRETIVA, etc.)
+ * - prioridade: Nível de urgência (CRITICA, ALTA, MEDIA, BAIXA)
+ * - origem: Fonte da OS (ANOMALIA, PLANO_MANUTENCAO, MANUAL)
+ *
+ * ❌ REMOVIDOS (mock data sem integração com API):
+ * - planta: Dados mockados, sem conexão real
+ * - responsavel: Dados mockados, sem conexão real
+ * - periodo: Dados mockados, funcionalidade duplicada
+ */
 
 export const programacaoOSFilterConfig: FilterConfig[] = [
   {
@@ -40,14 +31,14 @@ export const programacaoOSFilterConfig: FilterConfig[] = [
     placeholder: 'Todos os status',
     options: [
       { value: 'all', label: 'Todos os status' },
+      { value: 'RASCUNHO', label: 'Rascunho' },
       { value: 'PENDENTE', label: 'Pendente' },
-      { value: 'PLANEJADA', label: 'Planejada' },
-      { value: 'PROGRAMADA', label: 'Programada' },
-      { value: 'EM_EXECUCAO', label: 'Em Execução' },
-      { value: 'FINALIZADA', label: 'Finalizada' },
+      { value: 'EM_ANALISE', label: 'Em Análise' },
+      { value: 'APROVADA', label: 'Aprovada' },
+      { value: 'REJEITADA', label: 'Rejeitada' },
       { value: 'CANCELADA', label: 'Cancelada' }
     ],
-    className: 'min-w-40'
+    className: 'min-w-44'
   },
   {
     key: 'tipo',
@@ -70,13 +61,13 @@ export const programacaoOSFilterConfig: FilterConfig[] = [
     label: 'Prioridade',
     placeholder: 'Todas as prioridades',
     options: [
-      { value: 'all', label: 'Todas as prioridades' },
+      { value: 'all', label: 'Todas' },
       { value: 'CRITICA', label: 'Crítica' },
       { value: 'ALTA', label: 'Alta' },
       { value: 'MEDIA', label: 'Média' },
       { value: 'BAIXA', label: 'Baixa' }
     ],
-    className: 'min-w-44'
+    className: 'min-w-36'
   },
   {
     key: 'origem',
@@ -84,44 +75,11 @@ export const programacaoOSFilterConfig: FilterConfig[] = [
     label: 'Origem',
     placeholder: 'Todas as origens',
     options: [
-      { value: 'all', label: 'Todas as origens' },
+      { value: 'all', label: 'Todas' },
       { value: 'ANOMALIA', label: 'Anomalia' },
-      { value: 'TAREFA', label: 'Tarefa' },
+      { value: 'PLANO_MANUTENCAO', label: 'Plano Manutenção' },
       { value: 'MANUAL', label: 'Manual' }
     ],
-    className: 'min-w-40'
-  },
-  {
-    key: 'planta',
-    type: 'select',
-    label: 'Planta',
-    placeholder: 'Todas as plantas',
-    options: [
-      { value: 'all', label: 'Todas as plantas' },
-      ...mockPlantas
-    ],
-    className: 'min-w-52'
-  },
-  {
-    key: 'responsavel',
-    type: 'select',
-    label: 'Responsável',
-    placeholder: 'Todos os responsáveis',
-    options: [
-      { value: 'all', label: 'Todos os responsáveis' },
-      ...mockResponsaveis
-    ],
     className: 'min-w-48'
-  },
-  {
-    key: 'periodo',
-    type: 'select',
-    label: 'Período',
-    placeholder: 'Todos os períodos',
-    options: [
-      { value: 'all', label: 'Todos os períodos' },
-      ...mockPeriodos
-    ],
-    className: 'min-w-44'
   }
 ];

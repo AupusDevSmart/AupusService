@@ -191,23 +191,5 @@ export const tarefasTableColumns: TableColumn<TarefaApiResponse>[] = [
         </Badge>
       );
     }
-  },
-  {
-    key: 'execucoes',
-    label: 'Execuções',
-    hideOnTablet: true,
-    render: (tarefa) => (
-      <div className="space-y-1">
-        <div className="text-sm font-medium">
-          {tarefa.numero_execucoes || 0}x
-        </div>
-        {/* Próxima execução removida temporariamente - não existe na API */}
-        {false && (
-          <div className="text-xs text-muted-foreground">
-            Próx: --
-          </div>
-        )}
-      </div>
-    )
   }
 ];
