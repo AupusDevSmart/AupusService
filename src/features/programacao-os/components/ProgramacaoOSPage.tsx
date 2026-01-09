@@ -322,12 +322,8 @@ export function ProgramacaoOSPage() {
       });
 
       if (modalState.mode === 'create') {
-        // Auto-fill usuário logado como criador
-        const createData = {
-          ...preparedData,
-          criado_por_id: user?.id || undefined
-        };
-        await criarProgramacao(createData as CreateProgramacaoDto);
+        // Backend preenche automaticamente criado_por_id
+        await criarProgramacao(preparedData as CreateProgramacaoDto);
       } else if (modalState.mode === 'edit') {
         // ✅ CORREÇÃO: Mesma estrutura, só remover campos que não devem ser atualizados
         const updateData = { ...preparedData };

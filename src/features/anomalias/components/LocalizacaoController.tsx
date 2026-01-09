@@ -30,6 +30,7 @@ export const LocalizacaoController = ({
   const [plantas, setPlantas] = React.useState<PlantaResponse[]>([]);
   const [plantaEspecifica, setPlantaEspecifica] = React.useState<PlantaResponse | null>(null);
   const [unidades, setUnidades] = React.useState<any[]>([]); // NOVO: Estado para unidades
+  const [unidadeEspecifica, setUnidadeEspecifica] = React.useState<any | null>(null); // NOVO: Unidade específica para VIEW/EDIT
   const [loadingPlantas, setLoadingPlantas] = React.useState(false);
   const [loadingPlantaEspecifica, setLoadingPlantaEspecifica] = React.useState(false);
   const [loadingUnidades, setLoadingUnidades] = React.useState(false); // NOVO: Loading state para unidades
@@ -44,6 +45,7 @@ export const LocalizacaoController = ({
   const plantaId = value?.plantaId?.toString().trim() || '';
   const unidadeId = value?.unidadeId?.toString().trim() || '';
   const equipamentoId = value?.equipamentoId?.toString().trim() || '';
+
 
 
   // Inicialização otimizada por modo
@@ -65,43 +67,53 @@ export const LocalizacaoController = ({
         }
 
       } else {
-        // MODO VIEW/EDIT: Carregar apenas a planta específica da anomalia
-        if (value?.plantaId) {
-          const plantaIdStr = value.plantaId.toString().trim();
+        // MODO VIEW/EDIT: Apenas criar mock e buscar unidade se tiver ID
+        setLoadingPlantaEspecifica(true);
 
-          // Carregar dados da planta específica
-          setLoadingPlantaEspecifica(true);
-          try {
-            const plantaData = await PlantasService.getPlanta(plantaIdStr);
-            setPlantaEspecifica(plantaData);
-            
-            // Se estiver em modo EDIT, carregar também os equipamentos
-            if (mode === 'edit') {
-              await fetchEquipamentosByPlanta(plantaIdStr, { 
-                proprietarioId: 'all',
-                plantaId: plantaIdStr,
-                classificacao: 'UC',
-                criticidade: 'all',
-                limit: 100 
-              });
+        // Sempre criar mock da planta com o nome que já temos
+        setPlantaEspecifica({
+          id: '',
+          nome: value.local || 'Planta não especificada',
+          cnpj: '',
+          localizacao: '',
+          horarioFuncionamento: '',
+          proprietarioId: '',
+          endereco: { logradouro: '', bairro: '', cidade: '', uf: '', cep: '' },
+          criadoEm: '',
+          atualizadoEm: ''
+        });
+
+        // Se tiver unidadeId, buscar em todas as plantas até encontrar
+        if (value?.unidadeId) {
+          const loadUnidade = async () => {
+            try {
+              const response = await PlantasService.getAllPlantas({ limit: 100 });
+              const todasPlantas = response.data;
+
+              for (const planta of todasPlantas) {
+                try {
+                  const unidadesData = await getUnidadesByPlanta(planta.id.toString());
+                  const unidadeEncontrada = unidadesData?.find(
+                    (u: any) => u.id?.toString().trim() === value.unidadeId.toString().trim()
+                  );
+
+                  if (unidadeEncontrada) {
+                    setUnidadeEspecifica(unidadeEncontrada);
+                    break;
+                  }
+                } catch (error) {
+                  // Planta sem acesso, continuar
+                }
+              }
+            } catch (error) {
+              console.error('❌ [LocalizacaoController] Erro ao buscar unidade:', error);
             }
-          } catch (error) {
-            // Se não conseguir carregar, criar um mock com os dados disponíveis
-            setPlantaEspecifica({
-              id: plantaIdStr,
-              nome: value.local || `Planta ID: ${plantaIdStr}`,
-              cnpj: '', 
-              localizacao: '', 
-              horarioFuncionamento: '', 
-              proprietarioId: '',
-              endereco: { logradouro: '', bairro: '', cidade: '', uf: '', cep: '' },
-              criadoEm: '', 
-              atualizadoEm: ''
-            });
-          } finally {
-            setLoadingPlantaEspecifica(false);
-          }
+          };
+
+          loadUnidade();
         }
+
+        setLoadingPlantaEspecifica(false);
       }
     };
 
@@ -130,6 +142,40 @@ export const LocalizacaoController = ({
 
     loadUnidades();
   }, [plantaId, isCreateMode]);
+
+  // NOVO: Carregar unidade específica quando tiver unidadeId no modo VIEW/EDIT
+  React.useEffect(() => {
+    const loadUnidadeEspecifica = async () => {
+      if (isCreateMode || !value?.unidadeId) {
+        return;
+      }
+
+      try {
+        const response = await PlantasService.getAllPlantas({ limit: 100 });
+        const todasPlantas = response.data;
+
+        for (const planta of todasPlantas) {
+          try {
+            const unidadesData = await getUnidadesByPlanta(planta.id.toString());
+            const unidadeEncontrada = unidadesData?.find(
+              (u: any) => u.id?.toString().trim() === value.unidadeId.toString().trim()
+            );
+
+            if (unidadeEncontrada) {
+              setUnidadeEspecifica(unidadeEncontrada);
+              return;
+            }
+          } catch (error) {
+            // Planta sem acesso, continuar
+          }
+        }
+      } catch (error) {
+        console.error('❌ [LocalizacaoController] Erro ao buscar unidade:', error);
+      }
+    };
+
+    loadUnidadeEspecifica();
+  }, [value?.unidadeId, isCreateMode]);
 
   // Handlers
   const handlePlantaChange = async (newPlantaId: string) => {
@@ -178,7 +224,7 @@ export const LocalizacaoController = ({
           limit: 100
         });
       } catch (error) {
-        console.error('Erro ao carregar equipamentos da unidade:', error);
+        console.error('❌ [LocalizacaoController] Erro ao carregar equipamentos da unidade:', error);
       }
     }
   };
@@ -186,13 +232,15 @@ export const LocalizacaoController = ({
   const handleEquipamentoChange = (newEquipamentoId: string) => {
     if (isViewMode) return;
 
-    const equipamentoSelecionado = equipamentos.find(eq => eq.id.toString() === newEquipamentoId);
+    const equipamentoSelecionado = equipamentos.find(
+      eq => eq.id.toString().trim() === newEquipamentoId.trim()
+    );
     const plantaSelecionada = plantas.find(p => p.id.toString().trim() === plantaId.trim());
 
     const novoValue: LocalizacaoValue = {
       plantaId: plantaId || undefined,
       unidadeId: unidadeId || undefined,
-      equipamentoId: newEquipamentoId || undefined,
+      equipamentoId: newEquipamentoId.trim() || undefined,
       local: plantaSelecionada?.nome || '',
       ativo: equipamentoSelecionado?.nome || ''
     };
@@ -201,10 +249,14 @@ export const LocalizacaoController = ({
   };
 
   // Equipamentos disponíveis - filtrar por unidade ao invés de planta
-  const equipamentosDisponiveis = equipamentos.filter(eq =>
-    eq.classificacao === 'UC' &&
-    (unidadeId ? eq.unidadeId?.toString().trim() === unidadeId.trim() : eq.unidade?.plantaId?.toString().trim() === plantaId.trim())
-  );
+  const equipamentosDisponiveis = React.useMemo(() => {
+    return equipamentos.filter(eq => {
+      const eqUnidadeId = (eq.unidadeId || eq.unidade_id || eq.unidade?.id)?.toString().trim();
+      const matchClassificacao = eq.classificacao === 'UC';
+      const matchUnidade = unidadeId ? eqUnidadeId === unidadeId.trim() : eq.unidade?.plantaId?.toString().trim() === plantaId.trim();
+      return matchClassificacao && matchUnidade;
+    });
+  }, [equipamentos, unidadeId, plantaId]);
 
   // Loading state
   if (!hasLoaded || (isCreateMode && loadingPlantas) || (!isCreateMode && loadingPlantaEspecifica)) {
@@ -295,7 +347,7 @@ export const LocalizacaoController = ({
           // MODO VIEW/EDIT: Input readonly
           <input
             type="text"
-            value={value?.unidadeNome || 'Unidade não especificada'}
+            value={unidadeEspecifica?.nome || 'Unidade não especificada'}
             disabled
             className="w-full p-2 border rounded-md bg-muted text-foreground opacity-60 cursor-not-allowed"
           />
@@ -332,7 +384,7 @@ export const LocalizacaoController = ({
                 }
               </option>
               {equipamentosDisponiveis.map((equipamento) => (
-                <option key={equipamento.id} value={equipamento.id}>
+                <option key={equipamento.id} value={equipamento.id.toString().trim()}>
                   {equipamento.nome}
                 </option>
               ))}

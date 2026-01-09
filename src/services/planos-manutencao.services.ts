@@ -40,6 +40,29 @@ export interface DuplicarPlanoApiData {
   criado_por?: string;              // Opcional - ID do usuário criador
 }
 
+export interface ClonarPlanoLoteDto {
+  equipamentos_destino_ids: string[];  // Array de IDs de equipamentos destino
+  novo_prefixo_tag?: string;           // Opcional - Prefixo para TAGs únicas
+  manter_nome_original?: boolean;      // Se true, mantém nome; se false, adiciona sufixo
+  criado_por?: string;                 // Opcional - ID do usuário criador
+}
+
+export interface DetalheClonagem {
+  equipamento_id: string;
+  equipamento_nome: string;
+  sucesso: boolean;
+  plano_id?: string;
+  plano_nome?: string;
+  total_tarefas?: number;
+  erro?: string;
+}
+
+export interface ClonarPlanoLoteResponseDto {
+  planos_criados: number;
+  planos_com_erro: number;
+  detalhes: DetalheClonagem[];
+}
+
 // DTOs de resposta
 export interface EquipamentoResumoDto {
   id: string;
@@ -359,6 +382,29 @@ export class PlanosManutencaoApiService {
     }
   }
 
+  async findByUnidade(unidadeId: string, params?: QueryPlanosPorPlantaParams): Promise<PlanosListApiResponse> {
+    // console.log('🔍 PLANOS API: Buscando planos por unidade:', unidadeId);
+
+    const finalParams = {
+      incluir_tarefas: params?.incluir_tarefas || false,
+      status: params?.status || 'ATIVO',
+      page: params?.page || 1,
+      limit: params?.limit || 10
+    };
+
+    try {
+      const response = await api.get<PlanosListApiResponse>(
+        `${this.baseEndpoint}/por-unidade/${unidadeId}`,
+        { params: finalParams }
+      );
+      // console.log('✅ PLANOS API: Planos da unidade encontrados:', response.data);
+      return response.data;
+    } catch (error: any) {
+      // console.error('💥 PLANOS API: Erro ao buscar planos da unidade:', error);
+      throw error;
+    }
+  }
+
   async getResumo(id: string): Promise<PlanoResumoDto> {
     // console.log('📋 PLANOS API: Obtendo resumo do plano:', id);
     
@@ -390,16 +436,32 @@ export class PlanosManutencaoApiService {
 
   async duplicar(id: string, data: DuplicarPlanoApiData): Promise<PlanoManutencaoApiResponse> {
     // console.log('📋 PLANOS API: Duplicando plano:', id, data);
-    
+
     try {
       const response = await api.post<PlanoManutencaoApiResponse>(
-        `${this.baseEndpoint}/${id}/duplicar`, 
+        `${this.baseEndpoint}/${id}/duplicar`,
         data
       );
       // console.log('✅ PLANOS API: Plano duplicado:', response.data);
       return response.data;
     } catch (error: any) {
       // console.error('💥 PLANOS API: Erro ao duplicar plano:', error);
+      throw error;
+    }
+  }
+
+  async clonarLote(id: string, data: ClonarPlanoLoteDto): Promise<ClonarPlanoLoteResponseDto> {
+    console.log('📋 PLANOS API: Clonando plano em lote:', id, data);
+
+    try {
+      const response = await api.post<ClonarPlanoLoteResponseDto>(
+        `${this.baseEndpoint}/${id}/clonar-lote`,
+        data
+      );
+      console.log('✅ PLANOS API: Clonagem em lote concluída:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('💥 PLANOS API: Erro ao clonar plano em lote:', error);
       throw error;
     }
   }

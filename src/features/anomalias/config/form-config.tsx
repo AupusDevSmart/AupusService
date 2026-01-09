@@ -46,6 +46,23 @@ export const anomaliasFormFields: FormField[] = [
 
   // Classificação
   {
+    key: 'status',
+    label: 'Status',
+    type: 'select',
+    required: true,
+    disabled: true, // Status é readonly, alterado automaticamente pelo sistema
+    options: [
+      { value: 'AGUARDANDO', label: 'Aguardando' },
+      { value: 'EM_ANALISE', label: 'Em Análise' },
+      { value: 'OS_GERADA', label: 'OS Gerada' },
+      { value: 'RESOLVIDA', label: 'Resolvida' },
+      { value: 'CANCELADA', label: 'Cancelada' }
+    ],
+    group: 'classificacao',
+    visibleInModes: ['view', 'edit'], // Mostrar em view e edit, ocultar em create
+    width: 'half', // Layout 2x2 em telas maiores
+  },
+  {
     key: 'condicao',
     label: 'Condição',
     type: 'select',
@@ -56,6 +73,7 @@ export const anomaliasFormFields: FormField[] = [
       { value: 'RISCO_ACIDENTE', label: 'Risco de Acidente' }
     ],
     group: 'classificacao',
+    width: 'half', // Layout 2x2 em telas maiores
   },
   {
     key: 'origem',
@@ -68,6 +86,7 @@ export const anomaliasFormFields: FormField[] = [
       { value: 'FALHA', label: 'Falha' }
     ],
     group: 'classificacao',
+    width: 'half', // Layout 2x2 em telas maiores
   },
   {
     key: 'prioridade',
@@ -82,6 +101,7 @@ export const anomaliasFormFields: FormField[] = [
       { value: 'CRITICA', label: 'Crítica' }   // Valor em maiúscula
     ],
     group: 'classificacao',
+    width: 'half', // Layout 2x2 em telas maiores
   },
 
   // Observações

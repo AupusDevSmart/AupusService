@@ -12,6 +12,7 @@ import { ExecucaoOSPage } from './features/execucao-os';
 import { FerramentasPage } from './features/ferramentas/components/FerramentasPage';
 import { FornecedoresPage } from './features/fornecedores/components/FornecedoresPage';
 import { AssociacaoEquipamentosPage } from './features/planos-manutencao/components/AssociacaoEquipamentosPage';
+import { ClonagemPlanosPage } from './features/planos-manutencao/components/ClonagemPlanosPage';
 import { PlanosManutencaoPage } from './features/planos-manutencao/components/PlanosManutencaoPage';
 import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
@@ -198,6 +199,14 @@ export const appRoutes = createBrowserRouter([
         element: (
           <FeatureWrapper feature="Equipamentos">
             <AssociacaoEquipamentosPage />
+          </FeatureWrapper>
+        ),
+      },
+      {
+        path: 'planos-manutencao/clonar',
+        element: (
+          <FeatureWrapper feature="Equipamentos">
+            <ClonagemPlanosPage />
           </FeatureWrapper>
         ),
       },

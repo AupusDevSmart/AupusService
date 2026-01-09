@@ -189,28 +189,5 @@ export const anomaliasTableColumns: TableColumn<Anomalia>[] = [
         )}
       </div>
     )
-  },
-  {
-    key: 'informacoes_cadastro',
-    label: 'Cadastro',
-    hideOnMobile: true,
-    render: (anomalia) => (
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-3 w-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">
-            {anomalia.criadoEm ? new Date(anomalia.criadoEm).toLocaleDateString('pt-BR') : 'N/A'}
-          </span>
-        </div>
-        {anomalia.atualizadoEm && (
-          <div className="flex items-center gap-2">
-            <Clock className="h-3 w-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">
-              Atualizada
-            </span>
-          </div>
-        )}
-      </div>
-    )
   }
 ];

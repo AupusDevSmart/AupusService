@@ -7,6 +7,8 @@ import {
   UpdatePlanoManutencaoApiData,
   UpdateStatusPlanoApiData,
   DuplicarPlanoApiData,
+  ClonarPlanoLoteDto,
+  ClonarPlanoLoteResponseDto,
   QueryPlanosApiParams,
   QueryPlanosPorPlantaParams,
   DashboardPlanosDto,
@@ -35,13 +37,15 @@ export interface UsePlanosManutencaoApiReturn {
   fetchPlanos: (params?: QueryPlanosApiParams) => Promise<PlanosListApiResponse>;
   fetchPlanoByEquipamento: (equipamentoId: string) => Promise<PlanoManutencaoApiResponse>;
   fetchPlanosByPlanta: (plantaId: string, params?: QueryPlanosPorPlantaParams) => Promise<PlanosListApiResponse>;
-  
+  fetchPlanosByUnidade: (unidadeId: string, params?: QueryPlanosPorPlantaParams) => Promise<PlanosListApiResponse>;
+
   // Operações específicas
   updateStatus: (id: string, data: UpdateStatusPlanoApiData) => Promise<PlanoManutencaoApiResponse>;
   duplicarPlano: (id: string, data: DuplicarPlanoApiData) => Promise<PlanoManutencaoApiResponse>;
+  clonarLote: (id: string, data: ClonarPlanoLoteDto) => Promise<ClonarPlanoLoteResponseDto>;
   getResumo: (id: string) => Promise<PlanoResumoDto>;
   getDashboard: () => Promise<DashboardPlanosDto>;
-  
+
   // Utilitários
   clearError: () => void;
   refreshData: () => Promise<void>;
@@ -290,6 +294,31 @@ export function usePlanosManutencaoApi(): UsePlanosManutencaoApiReturn {
     }
   }, [handleError]);
 
+  const fetchPlanosByUnidade = useCallback(async (unidadeId: string, params?: QueryPlanosPorPlantaParams): Promise<PlanosListApiResponse> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log('🔍 HOOK: Buscando planos por unidade:', unidadeId, params);
+
+      const response = await planosManutencaoApi.findByUnidade(unidadeId, params);
+      console.log('✅ HOOK: Planos da unidade encontrados:', response);
+
+      return response;
+    } catch (err) {
+      handleError(err, 'fetchPlanosByUnidade');
+
+      // Retornar resposta vazia em caso de erro
+      const emptyResponse: PlanosListApiResponse = {
+        data: [],
+        pagination: { page: 1, limit: 10, total: 0, pages: 0 }
+      };
+      return emptyResponse;
+    } finally {
+      setLoading(false);
+    }
+  }, [handleError]);
+
   // ============================================================================
   // OPERAÇÕES ESPECÍFICAS
   // ============================================================================
@@ -364,12 +393,12 @@ export function usePlanosManutencaoApi(): UsePlanosManutencaoApiReturn {
     try {
       setLoading(true);
       setError(null);
-      
+
       console.log('📊 HOOK: Obtendo dashboard dos planos');
-      
+
       const response = await planosManutencaoApi.getDashboard();
       console.log('✅ HOOK: Dashboard obtido:', response);
-      
+
       return response;
     } catch (err) {
       handleError(err, 'getDashboard');
@@ -398,6 +427,30 @@ export function usePlanosManutencaoApi(): UsePlanosManutencaoApiReturn {
     }
   }, [handleError]);
 
+  const clonarLote = useCallback(async (id: string, data: ClonarPlanoLoteDto): Promise<ClonarPlanoLoteResponseDto> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log('🔄 HOOK: Clonando plano em lote:', id, data);
+
+      const response = await planosManutencaoApi.clonarLote(id, data);
+      console.log('✅ HOOK: Clonagem em lote concluída:', response);
+
+      // Recarregar lista de planos após clonagem
+      if (response.planos_criados > 0) {
+        await refreshData();
+      }
+
+      return response;
+    } catch (err) {
+      handleError(err, 'clonarLote');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [handleError, refreshData]);
+
   return {
     // Estados
     loading,
@@ -419,13 +472,15 @@ export function usePlanosManutencaoApi(): UsePlanosManutencaoApiReturn {
     fetchPlanos,
     fetchPlanoByEquipamento,
     fetchPlanosByPlanta,
-    
+    fetchPlanosByUnidade,
+
     // Operações específicas
     updateStatus,
     duplicarPlano,
+    clonarLote,
     getResumo,
     getDashboard,
-    
+
     // Utilitários
     clearError,
     refreshData

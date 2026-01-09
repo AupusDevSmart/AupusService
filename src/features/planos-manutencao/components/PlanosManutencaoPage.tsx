@@ -387,6 +387,11 @@ export function PlanosManutencaoPage() {
     navigate(`/planos-manutencao/associar?planoId=${plano.id}`);
   };
 
+  const handleClonarPlano = (plano: PlanoManutencaoApiResponse) => {
+    console.log('📋 Navegando para clonagem do plano:', plano.id);
+    navigate(`/planos-manutencao/clonar?planoId=${plano.id}`);
+  };
+
   const handleVerTarefas = (plano: PlanoManutencaoApiResponse) => {
     console.log('📋 Navegando para tarefas do plano:', plano.id);
     navigate(`/tarefas?planoId=${plano.id}`);
@@ -563,6 +568,14 @@ export function PlanosManutencaoPage() {
                   variant: 'default'
                 },
                 {
+                  key: 'clonar',
+                  label: 'Clonar para Múltiplos',
+                  handler: handleClonarPlano,
+                  condition: (item: PlanoManutencaoApiResponse) => item.ativo && (item.total_tarefas || 0) > 0,
+                  icon: <Copy className="h-4 w-4" />,
+                  variant: 'default'
+                },
+                {
                   key: 'associar',
                   label: 'Associar Equipamentos',
                   handler: handleAssociarEquipamentos,
@@ -578,7 +591,7 @@ export function PlanosManutencaoPage() {
                 },
                 {
                   key: 'duplicar',
-                  label: 'Duplicar',
+                  label: 'Duplicar (mesmo equip.)',
                   handler: handleDuplicar,
                   icon: <Copy className="h-4 w-4" />
                 },

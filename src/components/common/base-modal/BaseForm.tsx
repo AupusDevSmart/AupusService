@@ -153,26 +153,40 @@ export function BaseForm({
   };
 
   const visibleFields = fields.filter((field) => {
+    // ✅ CORREÇÃO: Verificar showOnlyOnMode primeiro, mas NÃO retornar ainda
     if ((field as any).showOnlyOnMode && mode) {
       const showOnlyOnMode = Array.isArray((field as any).showOnlyOnMode)
         ? (field as any).showOnlyOnMode
         : [(field as any).showOnlyOnMode];
-      return showOnlyOnMode.includes(mode);
+      if (!showOnlyOnMode.includes(mode)) {
+        return false; // Se não passa no modo, não mostrar
+      }
     }
 
+    // ✅ Verificar hideOnMode
     if ((field as any).hideOnMode && mode) {
       const hideOnMode = Array.isArray((field as any).hideOnMode)
         ? (field as any).hideOnMode
         : [(field as any).hideOnMode];
-      return !hideOnMode.includes(mode);
+      if (hideOnMode.includes(mode)) {
+        return false; // Se deve esconder nesse modo, não mostrar
+      }
     }
 
+    // ✅ Verificar showOnlyWhen (SEMPRE verificar se o campo passou pelas verificações de modo)
     if ((field as any).showOnlyWhen) {
       const condition = (field as any).showOnlyWhen;
       const dependentFieldValue = data[condition.field];
+
+      // Para checkboxes, garantir que valores undefined/null são tratados como false
+      if (condition.value === true || condition.value === false) {
+        return Boolean(dependentFieldValue) === condition.value;
+      }
+
       return dependentFieldValue === condition.value;
     }
 
+    // ✅ Verificar condition customizada
     if ((field as any).condition) {
       const conditionFn = (field as any).condition;
       try {
@@ -183,7 +197,7 @@ export function BaseForm({
       }
     }
 
-    return true;
+    return true; // Se passou por todas as verificações, mostrar
   });
 
   const shouldShowGroup = (group: any): boolean => {

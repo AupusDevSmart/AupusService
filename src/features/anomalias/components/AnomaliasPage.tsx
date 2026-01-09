@@ -143,15 +143,21 @@ export function AnomaliasPage() {
     }
     
     if (entity && (modalState.mode === 'edit' || modalState.mode === 'view')) {
+      // ✅ CORRIGIDO: Buscar unidadeId e plantaId do objeto equipamento
+      const unidadeIdFromEquipamento = entity.equipamento?.unidade?.id || entity.equipamento?.unidadeId || entity.equipamento?.unidade_id;
+      const plantaIdFromEquipamento = entity.equipamento?.unidade?.planta?.id || entity.equipamento?.planta?.id || entity.equipamento?.plantaId;
+
       return {
         ...entity,
         prioridade: entity.prioridade || 'MEDIA',
-        plantaId: entity.planta_id || entity.plantaId || '',
+        plantaId: entity.planta_id || entity.plantaId || plantaIdFromEquipamento || '',
+        unidadeId: entity.unidade_id || entity.unidadeId || unidadeIdFromEquipamento || '',
         equipamentoId: entity.equipamento_id || entity.equipamentoId || '',
         local: entity.local || '',
         ativo: entity.ativo || '',
         localizacao: {
-          plantaId: entity.planta_id || entity.plantaId || '',
+          plantaId: entity.planta_id || entity.plantaId || plantaIdFromEquipamento || '',
+          unidadeId: entity.unidade_id || entity.unidadeId || unidadeIdFromEquipamento || '',
           equipamentoId: entity.equipamento_id || entity.equipamentoId || '',
           local: entity.local || '',
           ativo: entity.ativo || ''
@@ -413,7 +419,7 @@ export function AnomaliasPage() {
               {
                 key: 'classificacao',
                 title: 'Classificação',
-                fields: ['condicao', 'origem', 'prioridade']
+                fields: ['status', 'condicao', 'origem', 'prioridade']
               },
               {
                 key: 'observacoes',
