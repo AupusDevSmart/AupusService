@@ -6,6 +6,8 @@ const config = {
 		'./pages/**/*.{ts,tsx}',
 		'./components/**/*.{ts,tsx}',
 		'./src/**/*.{ts,tsx}',
+		// ✅ CRÍTICO: Incluir arquivos do NexOn para gerar classes CSS
+		'../../AupusNexOn/src/**/*.{ts,tsx}',
 	],
 	prefix: '',
 	theme: {

@@ -1,6 +1,6 @@
 // src/features/planos-manutencao/components/AssociacaoEquipamentosPage.tsx - USANDO API REAL
 
-import { BaseModal } from '@/components/common/base-modal/BaseModal';
+import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { Badge } from '@/components/ui/badge';

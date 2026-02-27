@@ -100,9 +100,10 @@ function PieChartSection({ title, data }: PieChartSectionProps) {
 
 export function ServiceSeverityCharts({ serviceSeverity, riskLevels }: ServiceSeverityChartsProps) {
   const severityData: ChartEntry[] = [
-    { name: 'Menor', value: serviceSeverity.minor, color: '#10B981' },
-    { name: 'Maior', value: serviceSeverity.major, color: '#3B82F6' },
-    { name: 'Crítica', value: serviceSeverity.critical, color: '#EF4444' }
+    { name: 'Baixa', value: serviceSeverity.baixa, color: '#10B981' },
+    { name: 'Média', value: serviceSeverity.media, color: '#F59E0B' },
+    { name: 'Alta', value: serviceSeverity.alta, color: '#F97316' },
+    { name: 'Crítica', value: serviceSeverity.critica, color: '#EF4444' }
   ];
 
   const riskData: ChartEntry[] = [

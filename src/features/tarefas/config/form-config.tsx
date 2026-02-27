@@ -78,16 +78,18 @@ const SubTarefasController = ({ value, onChange, disabled }: FormFieldProps) => 
       <div className="space-y-3">
         {subTarefas.map((subTarefa, index) => (
           <div key={index} className="p-4 border rounded-lg bg-muted/20">
-            <div className="flex items-start gap-3">
-              <div className="flex-1 space-y-3">
+            <div className="flex flex-col sm:flex-row items-start gap-3">
+              <div className="flex-1 w-full space-y-3">
+                {/* Descrição sempre ocupa linha inteira */}
                 <Input
                   placeholder="Descrição da sub-tarefa..."
                   value={subTarefa.descricao}
                   onChange={(e) => atualizarSubTarefa(index, 'descricao', e.target.value)}
                   disabled={disabled}
                 />
-                
-                <div className="flex items-center gap-4">
+
+                {/* Checkbox e tempo empilhados em mobile, lado a lado em desktop */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -95,11 +97,11 @@ const SubTarefasController = ({ value, onChange, disabled }: FormFieldProps) => 
                       onChange={(e) => atualizarSubTarefa(index, 'obrigatoria', e.target.checked)}
                       disabled={disabled}
                     />
-                    <span className="text-sm">Obrigatória</span>
+                    <span className="text-sm whitespace-nowrap">Obrigatória</span>
                   </label>
-                  
+
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">Tempo (min):</span>
+                    <span className="text-sm whitespace-nowrap">Tempo (min):</span>
                     <Input
                       type="number"
                       value={subTarefa.tempo_estimado || ''}
@@ -111,14 +113,14 @@ const SubTarefasController = ({ value, onChange, disabled }: FormFieldProps) => 
                   </div>
                 </div>
               </div>
-              
+
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => removerSubTarefa(index)}
                 disabled={disabled}
-                className="text-red-600 hover:text-red-700"
+                className="text-red-600 hover:text-red-700 self-end sm:self-start"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -195,9 +197,10 @@ const RecursosController = ({ value, onChange, disabled }: FormFieldProps) => {
       <div className="space-y-3">
         {recursos.map((recurso, index) => (
           <div key={index} className="p-4 border rounded-lg bg-muted/20">
-            <div className="flex items-start gap-3">
-              <div className="flex-1 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col sm:flex-row items-start gap-3">
+              <div className="flex-1 w-full space-y-3">
+                {/* Linha 1: Tipo e Descrição lado a lado em desktop */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium mb-1 block">Tipo</label>
                     <select
@@ -213,7 +216,7 @@ const RecursosController = ({ value, onChange, disabled }: FormFieldProps) => {
                       <option value="VIATURA">Viatura</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="text-xs font-medium mb-1 block">Descrição</label>
                     <Input
@@ -225,10 +228,11 @@ const RecursosController = ({ value, onChange, disabled }: FormFieldProps) => {
                     />
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-4">
+
+                {/* Linha 2: Quantidade, Unidade e Obrigatório empilhados em mobile, lado a lado em desktop */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">Qtd:</span>
+                    <span className="text-sm whitespace-nowrap">Qtd:</span>
                     <Input
                       type="text"
                       value={recurso.quantidade || ''}
@@ -238,9 +242,9 @@ const RecursosController = ({ value, onChange, disabled }: FormFieldProps) => {
                       placeholder="Ex: 25"
                     />
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">Unidade:</span>
+                    <span className="text-sm whitespace-nowrap">Unidade:</span>
                     <Input
                       value={recurso.unidade || ''}
                       onChange={(e) => atualizarRecurso(index, 'unidade', e.target.value)}
@@ -249,7 +253,7 @@ const RecursosController = ({ value, onChange, disabled }: FormFieldProps) => {
                       placeholder="Ex: un, kg, L"
                     />
                   </div>
-                  
+
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -257,18 +261,18 @@ const RecursosController = ({ value, onChange, disabled }: FormFieldProps) => {
                       onChange={(e) => atualizarRecurso(index, 'obrigatorio', e.target.checked)}
                       disabled={disabled}
                     />
-                    <span className="text-sm">Obrigatório</span>
+                    <span className="text-sm whitespace-nowrap">Obrigatório</span>
                   </label>
                 </div>
               </div>
-              
+
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => removerRecurso(index)}
                 disabled={disabled}
-                className="text-red-600 hover:text-red-700"
+                className="text-red-600 hover:text-red-700 self-end sm:self-start"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -346,6 +350,7 @@ export const tarefasFormFields: FormField[] = [
     type: 'select',
     required: true,
     options: [], // Será carregado dinamicamente
+    width: 'half', // 50% em desktop
   },
   {
     key: 'tag',
@@ -353,6 +358,7 @@ export const tarefasFormFields: FormField[] = [
     type: 'text',
     required: false, // Auto-gerado se não fornecido
     placeholder: 'Ex: COM-LUB-001 (auto-gerado se vazio)',
+    width: 'half', // 50% em desktop
   },
   {
     key: 'nome',
@@ -360,6 +366,7 @@ export const tarefasFormFields: FormField[] = [
     type: 'text',
     required: true,
     placeholder: 'Ex: Lubrificação Completa do Compressor',
+    width: 'full', // 100% - campo importante
   },
   {
     key: 'descricao',
@@ -367,6 +374,7 @@ export const tarefasFormFields: FormField[] = [
     type: 'textarea',
     required: true,
     placeholder: 'Descreva detalhadamente a tarefa a ser executada...',
+    width: 'full', // 100% - campo de texto longo
   },
 
   // Localização
@@ -377,6 +385,7 @@ export const tarefasFormFields: FormField[] = [
     required: false,
     options: [], // Será carregado dinamicamente
     excludeFromSubmit: true, // ✅ Campo apenas informativo, não enviar à API
+    width: 'half', // 50% em desktop
   },
   {
     key: 'equipamento_id',
@@ -384,6 +393,7 @@ export const tarefasFormFields: FormField[] = [
     type: 'select',
     required: false,
     options: [], // Será carregado dinamicamente
+    width: 'half', // 50% em desktop
     render: ({ value, entity, mode }) => {
       // Em modo view, mostrar informações completas do equipamento
       if (mode === 'view' && entity?.equipamento) {
@@ -424,6 +434,7 @@ export const tarefasFormFields: FormField[] = [
       { value: 'CALIBRACAO', label: 'Calibração' },
       { value: 'OUTROS', label: 'Outros' }
     ],
+    width: 'half', // 50% em desktop
   },
   {
     key: 'tipo_manutencao',
@@ -437,6 +448,7 @@ export const tarefasFormFields: FormField[] = [
       { value: 'INSPECAO', label: 'Inspeção' },
       { value: 'VISITA_TECNICA', label: 'Visita Técnica' }
     ],
+    width: 'half', // 50% em desktop
   },
   {
     key: 'criticidade',
@@ -450,6 +462,7 @@ export const tarefasFormFields: FormField[] = [
       { value: '4', label: 'Alta' },
       { value: '5', label: 'Muito Alta' }
     ],
+    width: 'half', // 50% em desktop
   },
   {
     key: 'condicao_ativo',
@@ -461,6 +474,7 @@ export const tarefasFormFields: FormField[] = [
       { value: 'FUNCIONANDO', label: 'Funcionando' },
       { value: 'QUALQUER', label: 'Qualquer' }
     ],
+    width: 'half', // 50% em desktop
   },
 
   // Planejamento
@@ -480,6 +494,7 @@ export const tarefasFormFields: FormField[] = [
       { value: 'ANUAL', label: 'Anual' },
       { value: 'PERSONALIZADA', label: 'Personalizada' }
     ],
+    width: 'half', // 50% em desktop
   },
   {
     key: 'frequencia_personalizada',
@@ -490,6 +505,7 @@ export const tarefasFormFields: FormField[] = [
     min: 1,
     max: 9999,
     defaultValue: 30, // ✅ NOVO: Valor padrão para evitar erro de validação
+    width: 'half', // 50% em desktop
     showOnlyWhen: {
       field: 'frequencia',
       value: 'PERSONALIZADA'
@@ -501,6 +517,7 @@ export const tarefasFormFields: FormField[] = [
     type: 'number',
     required: true,
     placeholder: 'Ex: 3',
+    width: 'half', // 50% em desktop
   },
   {
     key: 'tempo_estimado',
@@ -508,6 +525,7 @@ export const tarefasFormFields: FormField[] = [
     type: 'number',
     required: true,
     placeholder: 'Ex: 180',
+    width: 'half', // 50% em desktop
   },
   {
     key: 'planejador',
@@ -515,6 +533,7 @@ export const tarefasFormFields: FormField[] = [
     type: 'text',
     required: false,
     placeholder: 'Nome do planejador responsável',
+    width: 'half', // 50% em desktop
   },
   {
     key: 'responsavel',
@@ -522,6 +541,7 @@ export const tarefasFormFields: FormField[] = [
     type: 'text',
     required: false,
     placeholder: 'Nome do responsável pela execução',
+    width: 'half', // 50% em desktop
   },
 
   // Controle de execuções
@@ -531,6 +551,7 @@ export const tarefasFormFields: FormField[] = [
     type: 'datetime-local',
     required: true,
     placeholder: 'Data e hora da última execução',
+    width: 'half', // 50% em desktop
   },
   {
     key: 'numero_execucoes',
@@ -540,6 +561,7 @@ export const tarefasFormFields: FormField[] = [
     placeholder: 'Ex: 5',
     min: 0,
     defaultValue: 0,
+    width: 'half', // 50% em desktop
   },
 
   // Sub-tarefas

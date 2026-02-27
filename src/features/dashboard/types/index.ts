@@ -17,9 +17,10 @@ export interface OverviewData {
 }
 
 export interface ServiceSeverityData {
-  minor: number;
-  major: number;
-  critical: number;
+  baixa: number;
+  media: number;
+  alta: number;
+  critica: number;
 }
 
 export interface RiskLevelsData {
@@ -85,4 +86,69 @@ export interface LegendProps {
     value: string;
     color: string;
   }>;
+}
+
+// ========================================
+// API Response Types
+// ========================================
+
+export interface OverviewApiResponse {
+  total_equipamentos: number;
+  equipamentos_com_falhas: number;
+  equipamentos_parados: number;
+  os_abertas: number;
+  os_em_execucao: number;
+  os_finalizadas: number;
+}
+
+export interface WorkOrdersApiResponse {
+  os_abertas: number;
+  nota_qualidade: number;
+  os_atrasadas: number;
+  os_finalizadas: number;
+  indicador_carga_trabalho: number;
+}
+
+export interface TaskPriorityApiResponse {
+  tarefas: Array<{
+    id: number;
+    nome: string;
+    criticidade: number;
+    status: string;
+    equipamento_nome: string;
+    criado_em: string;
+  }>;
+  total_tarefas_ativas: number;
+  tarefas_criticidade_muito_alta: number;
+  tarefas_criticidade_alta: number;
+}
+
+export interface SeverityDistributionApiResponse {
+  baixa: number;
+  media: number;
+  alta: number;
+  critica: number;
+  total_anomalias: number;
+}
+
+export interface PlannedVsCompletedApiResponse {
+  meses: Array<{
+    mes: string;
+    mes_numero: number;
+    planejadas: number;
+    concluidas: number;
+    taxa_conclusao: number;
+  }>;
+  total_planejadas: number;
+  total_concluidas: number;
+  taxa_conclusao_media: number;
+}
+
+export interface SystemStatusApiResponse {
+  paradas_programadas: number;
+  equipamentos_status_critico: number;
+  equipamentos_classe_critica: number;
+  paradas_nao_programadas: number;
+  falhas_causando_danos: number;
+  sensores_danificados: number;
 }

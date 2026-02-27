@@ -51,17 +51,25 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
     },
     // 👥 GESTÃO DE PESSOAS
     {
-      path: '/usuarios',
+      path: '/cadastros/usuarios',
       label: 'Usuários',
     },
     // 🏭 INFRAESTRUTURA
     {
-      path: '/plantas',
+      path: '/cadastros/plantas',
       label: 'Plantas',
     },
     {
-      path: '/equipamentos',
+      path: '/cadastros/unidades',
+      label: 'Unidades',
+    },
+    {
+      path: '/cadastros/equipamentos',
       label: 'Equipamentos',
+    },
+    {
+      path: '/cadastros/concessionarias',
+      label: 'Concessionárias',
     },
     // 🔧 MANUTENÇÃO
     {

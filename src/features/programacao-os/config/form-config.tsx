@@ -38,7 +38,8 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'text',
     placeholder: 'Gerado automaticamente',
     disabled: true,
-    group: 'identificacao'
+    group: 'identificacao',
+    width: 'half' // 50% em desktop
   },
   {
     key: 'status',
@@ -55,6 +56,7 @@ export const programacaoOSFormFields: FormField[] = [
     ],
     group: 'identificacao',
     showOnlyOnMode: ['view', 'edit'],
+    width: 'half', // 50% em desktop
     render: (props: any) => {
       const { value } = props;
       const Icon = statusIcons[value as keyof typeof statusIcons];
@@ -82,6 +84,7 @@ export const programacaoOSFormFields: FormField[] = [
     required: true,
     placeholder: 'Descreva o serviço a ser executado',
     group: 'identificacao',
+    width: 'full', // 100% - campo de texto longo
     computeDisabled: (entity: any) => {
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
     }
@@ -165,6 +168,7 @@ export const programacaoOSFormFields: FormField[] = [
       { value: 'VISITA_TECNICA', label: 'Visita Técnica' }
     ],
     group: 'classificacao',
+    width: 'third', // 33.33% em desktop (3 campos na linha)
     computeDisabled: (entity: any) => {
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
     }
@@ -181,6 +185,7 @@ export const programacaoOSFormFields: FormField[] = [
       { value: 'URGENTE', label: 'Urgente' }
     ],
     group: 'classificacao',
+    width: 'third', // 33.33% em desktop (3 campos na linha)
     computeDisabled: (entity: any) => {
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
     }
@@ -195,6 +200,7 @@ export const programacaoOSFormFields: FormField[] = [
       { value: 'FUNCIONANDO', label: 'Funcionando' }
     ],
     group: 'classificacao',
+    width: 'third', // 33.33% em desktop (3 campos na linha)
     computeDisabled: (entity: any) => {
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
     }
@@ -208,24 +214,7 @@ export const programacaoOSFormFields: FormField[] = [
     required: true,
     placeholder: 'Ex: 6',
     group: 'planejamento',
-    computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
-    }
-  },
-  {
-    key: 'data_previsao_inicio',
-    label: 'Data e Hora Prevista Início',
-    type: 'datetime-local',
-    group: 'planejamento',
-    computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
-    }
-  },
-  {
-    key: 'data_previsao_fim',
-    label: 'Data e Hora Prevista Fim',
-    type: 'datetime-local',
-    group: 'planejamento',
+    width: 'half', // 50% em desktop
     computeDisabled: (entity: any) => {
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
     }
@@ -236,6 +225,27 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'number',
     placeholder: 'Ex: 1500.00',
     group: 'planejamento',
+    width: 'half', // 50% em desktop
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+  {
+    key: 'data_previsao_inicio',
+    label: 'Data e Hora Prevista Início',
+    type: 'datetime-local',
+    group: 'planejamento',
+    width: 'half', // 50% em desktop
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+  {
+    key: 'data_previsao_fim',
+    label: 'Data e Hora Prevista Fim',
+    type: 'datetime-local',
+    group: 'planejamento',
+    width: 'half', // 50% em desktop
     computeDisabled: (entity: any) => {
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
     }
@@ -401,6 +411,7 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Observações adicionais sobre a programação',
     group: 'observacoes',
+    width: 'full', // 100% - campo de texto longo
     computeDisabled: (entity: any) => {
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
     }
@@ -411,6 +422,7 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Justificativa para a execução desta OS',
     group: 'observacoes',
+    width: 'full', // 100% - campo de texto longo
     condition: (entity: any) => {
       // Mostrar justificativa apenas em modo view quando já foi preenchida
       // ou em modo create/edit quando ainda está em rascunho/pendente
@@ -437,6 +449,7 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Observações da análise',
     disabled: true,
     group: 'workflow',
+    width: 'full', // 100% - campo de texto longo
     condition: (entity: any) => {
       // Mostrar sempre que o status indica que passou pela análise
       return ['EM_ANALISE', 'APROVADA', 'REJEITADA'].includes(entity?.status);
@@ -451,6 +464,7 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Observações da aprovação',
     disabled: true,
     group: 'workflow',
+    width: 'full', // 100% - campo de texto longo
     condition: (entity: any) => {
       return entity?.status === 'APROVADA';
     }
@@ -463,6 +477,7 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Descreva o motivo da rejeição',
     disabled: true,
     group: 'workflow',
+    width: 'full', // 100% - campo de texto longo
     condition: (entity: any) => {
       return entity?.status === 'REJEITADA' && entity?.motivo_rejeicao;
     }
@@ -474,6 +489,7 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Sugestões para melhorar a programação (opcional)',
     disabled: true,
     group: 'workflow',
+    width: 'full', // 100% - campo de texto longo
     condition: (entity: any) => {
       return entity?.status === 'REJEITADA';
     }
@@ -487,6 +503,7 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Motivo do cancelamento',
     disabled: true,
     group: 'workflow',
+    width: 'full', // 100% - campo de texto longo
     condition: (entity: any) => {
       return entity?.status === 'CANCELADA';
     }
@@ -500,7 +517,8 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'text',
     disabled: true,
     showOnlyOnMode: ['view', 'edit'],
-    group: 'auditoria'
+    group: 'auditoria',
+    width: 'half' // 50% em desktop
   },
   {
     key: 'data_criacao',
@@ -508,7 +526,8 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'datetime-local',
     disabled: true,
     showOnlyOnMode: ['view'],
-    group: 'auditoria'
+    group: 'auditoria',
+    width: 'half' // 50% em desktop
   },
   {
     key: 'analisado_por',
@@ -517,6 +536,7 @@ export const programacaoOSFormFields: FormField[] = [
     disabled: true,
     showOnlyOnMode: ['view'],
     group: 'auditoria',
+    width: 'half', // 50% em desktop
     condition: (entity: any) => entity?.data_analise
   },
   {
@@ -526,6 +546,7 @@ export const programacaoOSFormFields: FormField[] = [
     disabled: true,
     showOnlyOnMode: ['view'],
     group: 'auditoria',
+    width: 'half', // 50% em desktop
     condition: (entity: any) => entity?.data_analise
   },
   {
@@ -535,6 +556,7 @@ export const programacaoOSFormFields: FormField[] = [
     disabled: true,
     showOnlyOnMode: ['view'],
     group: 'auditoria',
+    width: 'half', // 50% em desktop
     condition: (entity: any) => entity?.data_aprovacao
   },
   {
@@ -544,6 +566,7 @@ export const programacaoOSFormFields: FormField[] = [
     disabled: true,
     showOnlyOnMode: ['view'],
     group: 'auditoria',
+    width: 'half', // 50% em desktop
     condition: (entity: any) => entity?.data_aprovacao
   }
 ];

@@ -7,74 +7,61 @@ import { ServiceSeverityCharts } from '@/features/dashboard/components/service-s
 import { PlannedVsCompletedChart } from '@/features/dashboard/components/planned-vs-completed-chart';
 import { SystemStatusCards } from '@/features/dashboard/components/system-status-cards';
 import { WorkOrdersPanel } from '@/features/dashboard/components/work-orders-panel';
-import { DashboardData } from '@/features/dashboard/types';
-
-// Dados simulados - normalmente viriam de uma API ou hook personalizado
-const dashboardData: DashboardData = {
-  overview: {
-    totalAssets: 30,
-    assetsFaults: 5,
-    assetsDown: 2,
-    openWorker: 8,
-    workInProgress: 4,
-    completed: 12
-  },
-  taskPriorities: [
-    {
-      id: 1,
-      title: "Inspecionar conexões do inversor",
-      priority: "high",
-      status: "pending"
-    },
-    {
-      id: 2,
-      title: "Substituir módulo danificado",
-      priority: "urgent",
-      status: "pending"
-    },
-    {
-      id: 3,
-      title: "Verificar sistema de aterramento",
-      priority: "medium",
-      status: "pending"
-    }
-  ],
-  serviceSeverity: {
-    minor: 25,
-    major: 45,
-    critical: 30
-  },
-  riskLevels: {
-    low: 20,
-    medium: 30,
-    high: 50
-  },
-  plannedVsCompleted: [
-    { month: 'Fev', planejadas: 8, concluidas: 6 },
-    { month: 'Mar', planejadas: 12, concluidas: 10 },
-    { month: 'Abr', planejadas: 15, concluidas: 12 },
-    { month: 'Mai', planejadas: 18, concluidas: 16 },
-    { month: 'Jun', planejadas: 22, concluidas: 20 },
-    { month: 'Jul', planejadas: 25, concluidas: 23 }
-  ],
-  systemStatus: {
-    scheduledDowntime: 2,
-    assetStatus: 2,
-    assetClass: 3,
-    unscheduledDowntime: 5,
-    faultsCausingDamage: 3,
-    sensorsDamaged: 5
-  },
-  workOrders: {
-    openWorkOrders: 8,
-    workGrade: 75,
-    overdueWorkOrders: 1,
-    completedWorkOrders: 12,
-    workloadIndicator: 75
-  }
-};
+import { useDashboard } from '@/features/dashboard/hooks/useDashboard';
+import { RefreshCw, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function DashboardPage() {
+  const { data: dashboardData, isLoading, error, refetch } = useDashboard();
+
+  if (isLoading) {
+    return (
+      <Layout className='w-full'>
+        <Layout.Main className='w-full'>
+          <TitleCard
+            title="Dashboard"
+            description="Visão geral completa do sistema e operações"
+          />
+          <div className="flex items-center justify-center h-64">
+            <div className="flex flex-col items-center gap-4">
+              <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-muted-foreground">Carregando dashboard...</p>
+            </div>
+          </div>
+        </Layout.Main>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout className='w-full'>
+        <Layout.Main className='w-full'>
+          <TitleCard
+            title="Dashboard"
+            description="Visão geral completa do sistema e operações"
+          />
+          <div className="flex items-center justify-center h-64">
+            <div className="flex flex-col items-center gap-4">
+              <AlertCircle className="h-12 w-12 text-destructive" />
+              <p className="text-destructive font-medium">Erro ao carregar dashboard</p>
+              <p className="text-sm text-muted-foreground max-w-md text-center">
+                {error instanceof Error ? error.message : 'Ocorreu um erro ao buscar os dados. Tente novamente.'}
+              </p>
+              <Button onClick={() => refetch()} variant="outline" size="sm">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Tentar novamente
+              </Button>
+            </div>
+          </div>
+        </Layout.Main>
+      </Layout>
+    );
+  }
+
+  if (!dashboardData) {
+    return null;
+  }
   return (
     <Layout className='w-full'>
       <Layout.Main className='w-full'>

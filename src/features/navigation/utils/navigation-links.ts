@@ -65,6 +65,14 @@ export const navigationLinks: Array<NavigationLink> = [
     label: 'Dashboard',
     hint: 'Dashboard',
   },
+  {
+    key: 'dashboard-manutencao',
+    featureKey: 'Dashboard',
+    path: '/dashboard-manutencao',
+    icon: Wrench,
+    label: 'Dashboard de Manutenção',
+    hint: 'Dashboard de Manutenção e Ordens de Serviço',
+  },
 
   // 🏭 INFRAESTRUTURA
   {
@@ -79,7 +87,7 @@ export const navigationLinks: Array<NavigationLink> = [
       {
         key: 'usuarios',
         featureKey: 'Usuarios',
-        path: '/usuarios',
+        path: '/cadastros/usuarios',
         icon: Users,
         label: 'Usuários',
         hint: 'Usuários',
@@ -87,7 +95,7 @@ export const navigationLinks: Array<NavigationLink> = [
       {
         key: 'plantas',
         featureKey: 'Plantas',
-        path: '/plantas',
+        path: '/cadastros/plantas',
         icon: Factory,
         label: 'Plantas',
         hint: 'Plantas',
@@ -95,7 +103,7 @@ export const navigationLinks: Array<NavigationLink> = [
       {
         key: 'unidades',
         featureKey: 'Plantas',
-        path: '/unidades',
+        path: '/cadastros/unidades',
         icon: Building,
         label: 'Unidades',
         hint: 'Unidades',
@@ -103,7 +111,7 @@ export const navigationLinks: Array<NavigationLink> = [
       {
         key: 'equipamentos',
         featureKey: 'Equipamentos',
-        path: '/equipamentos',
+        path: '/cadastros/equipamentos',
         icon: Wrench,
         label: 'Equipamentos',
         hint: 'Equipamentos',
@@ -111,7 +119,7 @@ export const navigationLinks: Array<NavigationLink> = [
       {
         key: 'concessionarias',
         featureKey: 'Concessionarias',
-        path: '/concessionarias',
+        path: '/cadastros/concessionarias',
         icon: Zap,
         label: 'Concessionárias',
         hint: 'Concessionárias',

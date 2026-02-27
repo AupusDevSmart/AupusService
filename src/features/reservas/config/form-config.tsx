@@ -19,6 +19,7 @@ export const reservasFormFields: FormField[] = [
     label: 'Tipo de Solicitante',
     type: 'select',
     required: true,
+    colSpan: 1,
     options: [
       { label: 'Manual', value: 'manual' },
       { label: 'Ordem de Serviço', value: 'ordem_servico' },
@@ -30,13 +31,15 @@ export const reservasFormFields: FormField[] = [
     key: 'solicitanteId',
     label: 'ID do Solicitante',
     type: 'text',
-    placeholder: 'Ex: OS-2025-001, MANUAL-123'
+    placeholder: 'Ex: OS-2025-001, MANUAL-123',
+    colSpan: 1
   },
   {
     key: 'responsavel',
     label: 'Responsável',
     type: 'text',
     required: true,
+    colSpan: 1,
     validation: (value) => {
       if (!value || value.trim().length < 2) {
         return 'Nome do responsável deve ter pelo menos 2 caracteres';
@@ -49,6 +52,7 @@ export const reservasFormFields: FormField[] = [
     label: 'Finalidade',
     type: 'text',
     required: true,
+    colSpan: 1,
     validation: (value) => {
       if (!value || value.trim().length < 5) {
         return 'Finalidade deve ter pelo menos 5 caracteres';
@@ -57,10 +61,23 @@ export const reservasFormFields: FormField[] = [
     }
   },
   {
+    key: 'veiculoId',
+    label: 'Veículo',
+    type: 'custom',
+    required: true,
+    colSpan: 2,
+    render: () => {
+      // Este será renderizado pelo componente VeiculoSelector
+      // O BaseModal vai precisar ser ajustado para suportar este campo custom
+      return null;
+    }
+  },
+  {
     key: 'dataInicio',
     label: 'Data Início',
     type: 'date',
     required: true,
+    colSpan: 1,
     validation: (value) => {
       if (!value) return 'Data de início é obrigatória';
       const data = new Date(value);
@@ -76,30 +93,22 @@ export const reservasFormFields: FormField[] = [
     key: 'horaInicio',
     label: 'Hora Início',
     type: 'time',
-    required: true
+    required: true,
+    colSpan: 1
   },
   {
     key: 'dataFim',
     label: 'Data Fim',
     type: 'date',
-    required: true
+    required: true,
+    colSpan: 1
   },
   {
     key: 'horaFim',
     label: 'Hora Fim',
     type: 'time',
-    required: true
-  },
-  {
-    key: 'veiculoId',
-    label: 'Veículo',
-    type: 'custom',
     required: true,
-    render: () => {
-      // Este será renderizado pelo componente VeiculoSelector
-      // O BaseModal vai precisar ser ajustado para suportar este campo custom
-      return null;
-    }
+    colSpan: 1
   },
   {
     key: 'observacoes',

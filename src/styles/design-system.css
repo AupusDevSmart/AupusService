@@ -1,0 +1,176 @@
+/**
+ * DESIGN SYSTEM - AUPUS SERVICE
+ * Tema minimalista, profissional e discreto
+ *
+ * NOTA: As CSS variables e estilos base estão definidos em globals.css
+ * Este arquivo contém apenas components e utilities adicionais
+ */
+
+/* ===== CUSTOMIZAÇÕES PROFISSIONAIS ===== */
+
+/* Inputs mais finos e menos arredondados */
+@layer components {
+  /* Input padrão */
+  .input-minimal {
+    @apply h-9 rounded border border-input bg-background px-3 py-1 text-sm;
+    @apply ring-offset-background placeholder:text-muted-foreground;
+    @apply focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  /* Select mais fino */
+  .select-minimal {
+    @apply h-9 rounded border border-input bg-background px-3 py-1 text-sm;
+    @apply ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring;
+  }
+
+  /* Button profissional */
+  .button-minimal {
+    @apply inline-flex h-9 items-center justify-center rounded px-4 py-2;
+    @apply text-sm font-medium ring-offset-background;
+    @apply transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  /* Card discreto */
+  .card-minimal {
+    @apply rounded border border-border bg-card text-card-foreground;
+  }
+
+  /* Badge discreto */
+  .badge-minimal {
+    @apply inline-flex items-center rounded px-2 py-0.5 text-xs font-medium;
+    @apply border border-border bg-muted text-muted-foreground;
+  }
+
+  /* Table profissional */
+  .table-minimal {
+    @apply w-full border-collapse text-sm;
+  }
+
+  .table-minimal thead {
+    @apply border-b border-border;
+  }
+
+  .table-minimal th {
+    @apply h-10 px-4 text-left font-medium text-muted-foreground;
+  }
+
+  .table-minimal td {
+    @apply h-12 px-4 align-middle;
+  }
+
+  .table-minimal tbody tr {
+    @apply border-b border-border transition-colors;
+    @apply hover:bg-muted/50;
+  }
+
+  /* Sheet overlay sutil */
+  .sheet-overlay {
+    @apply fixed inset-0 z-50 bg-black/20 backdrop-blur-[2px];
+    @apply data-[state=open]:animate-in data-[state=closed]:animate-out;
+    @apply data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0;
+  }
+
+  /* Alert discreto */
+  .alert-minimal {
+    @apply relative w-full rounded border px-4 py-3 text-sm;
+  }
+
+  .alert-minimal.alert-info {
+    @apply border-info/20 bg-info/5 text-info-foreground;
+  }
+
+  .alert-minimal.alert-warning {
+    @apply border-warning/20 bg-warning/5 text-warning-foreground;
+  }
+
+  .alert-minimal.alert-success {
+    @apply border-success/20 bg-success/5 text-success-foreground;
+  }
+
+  .alert-minimal.alert-destructive {
+    @apply border-destructive/20 bg-destructive/5 text-destructive-foreground;
+  }
+}
+
+/* ===== ANIMAÇÕES SUTIS ===== */
+@layer utilities {
+  /* Transições profissionais */
+  .transition-minimal {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  /* Hover sutil */
+  .hover-lift {
+    @apply transition-transform duration-200 hover:-translate-y-0.5;
+  }
+
+  /* Focus sutil */
+  .focus-minimal {
+    @apply focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1;
+  }
+}
+
+/* ===== SCROLLBAR DISCRETA ===== */
+@layer utilities {
+  /* Scrollbar customizada */
+  .scrollbar-minimal::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/30;
+  }
+}
+
+/* ===== BOTÕES MINIMAIS ===== */
+@layer components {
+  /* Base para todos os botões */
+  .btn-minimal {
+    @apply inline-flex items-center justify-center rounded text-sm font-medium;
+    @apply transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  /* Botão Primary - Preenchido */
+  .btn-minimal-primary {
+    @apply btn-minimal bg-primary text-primary-foreground;
+    @apply hover:bg-primary/90;
+  }
+
+  /* Botão Outline - Borda */
+  .btn-minimal-outline {
+    @apply btn-minimal border border-input bg-background;
+    @apply hover:bg-accent hover:text-accent-foreground;
+  }
+
+  /* Botão Ghost - Sem borda */
+  .btn-minimal-ghost {
+    @apply btn-minimal hover:bg-accent hover:text-accent-foreground;
+  }
+
+  /* Botão Destructive */
+  .btn-minimal-destructive {
+    @apply btn-minimal bg-destructive text-destructive-foreground;
+    @apply hover:bg-destructive/90;
+  }
+}
+
+/* ===== TEXTAREA MINIMAL ===== */
+@layer components {
+  .textarea-minimal {
+    @apply min-h-[60px] rounded border border-input bg-background px-3 py-2 text-sm;
+    @apply ring-offset-background placeholder:text-muted-foreground;
+    @apply focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+}

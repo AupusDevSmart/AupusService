@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable } from '@/components/common/base-table/BaseTable';
-import { BaseFilters } from '@/components/common/base-filters/BaseFilters';
-import { BaseModal } from '@/components/common/base-modal/BaseModal';
+import { BaseTable } from '@nexon/components/common/base-table/BaseTable';
+import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
+import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
 import { Button } from '@/components/ui/button';
 import {
   Play,

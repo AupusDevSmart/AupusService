@@ -2,9 +2,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable, CustomAction } from '@/components/common/base-table/BaseTable';
-import { BaseFilters } from '@/components/common/base-filters/BaseFilters';
-import { BaseModal } from '@/components/common/base-modal/BaseModal';
+import { BaseTable, CustomAction } from '@nexon/components/common/base-table/BaseTable';
+import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
+import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
 import { ReservaModal } from './ReservaModal';
 import { Button } from '@/components/ui/button';
 import { Plus, Calendar, CheckCircle, XCircle, RefreshCw, Filter } from 'lucide-react';
@@ -361,12 +361,12 @@ export function ReservasPage() {
 
           {/* Erro de carregamento */}
           {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mb-4 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-center gap-2 text-red-800">
-                <XCircle className="h-5 w-5" />
-                <strong>Erro ao carregar reservas:</strong>
+                <XCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                <strong className="text-sm sm:text-base">Erro ao carregar reservas:</strong>
               </div>
-              <p className="text-red-700 mt-1">{error}</p>
+              <p className="text-red-700 mt-1 text-sm">{error}</p>
               <Button
                 variant="outline"
                 size="sm"
@@ -374,13 +374,13 @@ export function ReservasPage() {
                 className="mt-2"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Tentar novamente
+                <span className="text-xs sm:text-sm">Tentar novamente</span>
               </Button>
             </div>
           )}
 
           {/* Filtros e Ações */}
-          <div className="flex flex-col lg:flex-row gap-4 mb-6">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div className="flex-1">
               <BaseFilters
                 filters={filters}
@@ -389,39 +389,41 @@ export function ReservasPage() {
               />
             </div>
 
-            <div className="flex gap-2 shrink-0">
+            <div className="flex flex-col sm:flex-row gap-2 shrink-0">
               <Button
                 variant="outline"
                 onClick={handleRefresh}
                 disabled={loading}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 w-full sm:w-auto"
+                size="sm"
               >
                 <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                Atualizar
+                <span className="text-xs sm:text-sm">Atualizar</span>
               </Button>
 
               <Button
                 onClick={() => openModal('create')}
-                className="bg-primary hover:bg-primary/90"
+                className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
                 disabled={isSubmitting}
+                size="sm"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Nova Reserva
+                <span className="text-xs sm:text-sm">Nova Reserva</span>
               </Button>
             </div>
           </div>
 
           {/* Indicador de filtros ativos */}
           {hasActiveFilters && (
-            <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
-              <Filter className="h-4 w-4" />
+            <div className="flex items-center gap-2 mb-3 sm:mb-4 text-xs sm:text-sm text-muted-foreground">
+              <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Filtros aplicados</span>
             </div>
           )}
 
           {/* Status de carregamento dos veículos */}
           {veiculosError && (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+            <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs sm:text-sm text-yellow-800">
               ⚠️ Erro ao carregar veículos para o filtro: {veiculosError}
             </div>
           )}
@@ -484,7 +486,7 @@ export function ReservasPage() {
             setMotivoCancelamento(data.motivoCancelamento);
             await confirmarCancelamento();
           }}
-          width="w-[500px]"
+          width="w-full sm:w-[90vw] md:w-[500px] max-w-[500px]"
           loading={false}
           loadingText="Cancelando reserva..."
           closeOnBackdropClick={true}

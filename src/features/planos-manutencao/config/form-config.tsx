@@ -10,6 +10,7 @@ export const planosFormFields: FormField[] = [
     type: 'custom',
     required: true,
     group: 'informacoes_basicas',
+    width: 'full', // 100% - controlador customizado com múltiplos selects
     render: (props) => {
       console.log('🎯 RENDER: Props do controlador:', props);
       return (
@@ -46,15 +47,8 @@ export const planosFormFields: FormField[] = [
     type: 'text',
     required: true,
     group: 'informacoes_basicas',
+    width: 'half', // 50% em desktop
     placeholder: 'Ex: Motores Elétricos Trifásicos'
-  },
-  {
-    key: 'descricao',
-    label: 'Descrição',
-    type: 'textarea',
-    required: false,
-    group: 'informacoes_basicas',
-    placeholder: 'Descrição detalhada do plano de manutenção...'
   },
   {
     key: 'versao',
@@ -62,7 +56,17 @@ export const planosFormFields: FormField[] = [
     type: 'text',
     required: true,
     group: 'informacoes_basicas',
+    width: 'half', // 50% em desktop
     placeholder: 'Ex: 1.0, 2.1'
+  },
+  {
+    key: 'descricao',
+    label: 'Descrição',
+    type: 'textarea',
+    required: false,
+    group: 'informacoes_basicas',
+    width: 'full', // 100% - campo de texto longo
+    placeholder: 'Descrição detalhada do plano de manutenção...'
   },
   
   // Configurações
@@ -72,6 +76,7 @@ export const planosFormFields: FormField[] = [
     type: 'select',
     required: true,
     group: 'configuracoes',
+    width: 'half', // 50% em desktop
     options: [
       { value: 'ATIVO', label: 'Ativo' },
       { value: 'INATIVO', label: 'Inativo' },
@@ -84,29 +89,24 @@ export const planosFormFields: FormField[] = [
     label: 'Plano Ativo',
     type: 'checkbox',
     required: false,
-    group: 'configuracoes'
+    group: 'configuracoes',
+    width: 'half' // 50% em desktop
   },
   {
     key: 'data_vigencia_inicio',
     label: 'Data de Início da Vigência',
     type: 'date',
     required: false,
-    group: 'configuracoes'
+    group: 'configuracoes',
+    width: 'half' // 50% em desktop
   },
   {
     key: 'data_vigencia_fim',
-    label: 'Data de Fim da Vigência', 
+    label: 'Data de Fim da Vigência',
     type: 'date',
     required: false,
-    group: 'configuracoes'
-  },
-  {
-    key: 'observacoes',
-    label: 'Observações',
-    type: 'textarea',
-    required: false,
     group: 'configuracoes',
-    placeholder: 'Observações gerais sobre o plano...'
+    width: 'half' // 50% em desktop
   },
   {
     key: 'criado_por',
@@ -114,6 +114,16 @@ export const planosFormFields: FormField[] = [
     type: 'text',
     required: true,
     group: 'configuracoes',
+    width: 'half', // 50% em desktop
     placeholder: 'ID do usuário criador'
+  },
+  {
+    key: 'observacoes',
+    label: 'Observações',
+    type: 'textarea',
+    required: false,
+    group: 'configuracoes',
+    width: 'full', // 100% - campo de texto longo
+    placeholder: 'Observações gerais sobre o plano...'
   }
 ];

@@ -1,12 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { FeatureWrapper } from './components/common/FeatureWrapper';
 import { ConfiguracoesDiasUteisPage, FeriadosPage } from './features/agenda';
-// ✅ Páginas compartilhadas do NexOn (usam services/hooks do NexOn)
-import { ConcessionariasPage } from '@nexon/features/concessionarias/components/ConcessionariasPage';
-import { EquipamentosPage } from '@nexon/features/equipamentos/components/EquipamentosPage';
-import { PlantasPage } from '@nexon/features/plantas/components/PlantasPage';
-import { UnidadesPage } from '@nexon/features/unidades/components/UnidadesPage';
-import { UsuariosPage } from '@nexon/features/usuarios/components/UsuariosPage';
 // Páginas exclusivas do Service
 import { ExecucaoOSPage } from './features/execucao-os';
 import { FerramentasPage } from './features/ferramentas/components/FerramentasPage';
@@ -24,6 +19,35 @@ import { DashboardPage } from './pages/dashboard';
 import { Settings } from './pages/settings';
 import { LoginPage } from './pages/login/LoginPage';
 import { useUserStore } from './store/useUserStore';
+// ✅ Dashboard de Manutenção
+import { MaintenanceDashboard } from './features/maintenance-dashboard';
+
+// ✅ Lazy load para Cadastros (importando direto do NexOn)
+const CadastroUsuariosPage = lazy(() =>
+  import('@nexon/pages/cadastros/usuarios')
+);
+
+const CadastroPlantasPage = lazy(() =>
+  import('@nexon/features/plantas/components/PlantasPage').then((module) => ({
+    default: module.PlantasPage,
+  }))
+);
+
+const CadastroUnidadesPage = lazy(() =>
+  import('@nexon/pages/cadastros/unidades')
+);
+
+const CadastroEquipamentosPage = lazy(() =>
+  import('@nexon/features/equipamentos/components/EquipamentosPage').then((module) => ({
+    default: module.EquipamentosPage,
+  }))
+);
+
+const CadastroConcessionariasPage = lazy(() =>
+  import('@nexon/features/concessionarias/components/ConcessionariasPage').then((module) => ({
+    default: module.ConcessionariasPage,
+  }))
+);
 
 /**
  * Componente de rota protegida
@@ -69,6 +93,14 @@ export const appRoutes = createBrowserRouter([
         ),
       },
       {
+        path: 'dashboard-manutencao',
+        element: (
+          <FeatureWrapper feature="Dashboard">
+            <MaintenanceDashboard />
+          </FeatureWrapper>
+        ),
+      },
+      {
         path: 'configuracoes/perfil',
         index: true,
         element: (
@@ -77,48 +109,54 @@ export const appRoutes = createBrowserRouter([
           </FeatureWrapper>
         )
       },
-      // ✅ NOVA: Rota para usuários
+      // ✅ Rotas de Cadastros (mesmo padrão do NexOn)
       {
-        path: 'usuarios',
+        path: 'cadastros/usuarios',
         element: (
           <FeatureWrapper feature="Usuarios">
-            <UsuariosPage />
+            <Suspense fallback={<div>Carregando...</div>}>
+              <CadastroUsuariosPage />
+            </Suspense>
           </FeatureWrapper>
         ),
       },
-      // ✅ NOVA: Rota para plantas
       {
-        path: 'plantas',
+        path: 'cadastros/plantas',
         element: (
           <FeatureWrapper feature="Plantas">
-            <PlantasPage />
+            <Suspense fallback={<div>Carregando...</div>}>
+              <CadastroPlantasPage />
+            </Suspense>
           </FeatureWrapper>
         ),
       },
-      // ✅ NOVA: Rota para unidades
       {
-        path: 'unidades',
+        path: 'cadastros/unidades',
         element: (
           <FeatureWrapper feature="Unidades">
-            <UnidadesPage />
+            <Suspense fallback={<div>Carregando...</div>}>
+              <CadastroUnidadesPage />
+            </Suspense>
           </FeatureWrapper>
         ),
       },
-      // ✅ NOVA: Rota para equipamentos
       {
-        path: 'equipamentos',
+        path: 'cadastros/equipamentos',
         element: (
           <FeatureWrapper feature="Equipamentos">
-            <EquipamentosPage />
+            <Suspense fallback={<div>Carregando...</div>}>
+              <CadastroEquipamentosPage />
+            </Suspense>
           </FeatureWrapper>
         ),
       },
-      // ✅ NOVA: Rota para concessionarias
       {
-        path: 'concessionarias',
+        path: 'cadastros/concessionarias',
         element: (
           <FeatureWrapper feature="Concessionarias">
-            <ConcessionariasPage />
+            <Suspense fallback={<div>Carregando...</div>}>
+              <CadastroConcessionariasPage />
+            </Suspense>
           </FeatureWrapper>
         ),
       },

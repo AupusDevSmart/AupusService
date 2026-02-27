@@ -2,9 +2,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable, CustomAction } from '@/components/common/base-table/BaseTable';
-import { BaseFilters } from '@/components/common/base-filters/BaseFilters';
-import { BaseModal } from '@/components/common/base-modal/BaseModal';
+import { BaseTable, CustomAction } from '@nexon/components/common/base-table/BaseTable';
+import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
+import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
 import { Button } from '@/components/ui/button';
 import { Plus, Wrench, AlertTriangle, CheckCircle, Calendar, Settings, Package } from 'lucide-react';
 import { useGenericTable } from '@/hooks/useGenericTable';
