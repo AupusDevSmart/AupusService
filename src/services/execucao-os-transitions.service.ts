@@ -4,7 +4,7 @@
 import { api } from '@/config/api';
 
 export type StatusExecucaoOS =
-  | 'PLANEJADA'
+  // 'PLANEJADA' removido - OS começam como PROGRAMADA
   | 'PROGRAMADA'
   | 'EM_EXECUCAO'
   | 'PAUSADA'
@@ -98,8 +98,8 @@ export class ExecucaoOSTransitionsService {
   private readonly baseEndpoint = '/execucao-os';
 
   /**
-   * Transição: PLANEJADA → PROGRAMADA
-   * Define data/hora e confirma recursos para a OS
+   * Reprogramar OS (já não existe mais PLANEJADA)
+   * Atualiza data/hora e confirma recursos para a OS
    */
   async programar(id: string, data: ProgramarOSDto): Promise<{ message: string }> {
     console.log('📅 PROGRAMAR OS:', id, data);

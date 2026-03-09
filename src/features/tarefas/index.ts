@@ -21,13 +21,7 @@ export type {
   Pagination
 } from './types';
 
-// Exportar hook customizado
-export { useTarefas } from './hooks/useTarefas';
-
 // Exportar configurações
 export { tarefasTableColumns } from './config/table-config';
 export { tarefasFilterConfig } from './config/filter-config';
 export { tarefasFormFields } from './config/form-config';
-
-// Exportar dados mock
-export { mockTarefas } from './data/mock-data';

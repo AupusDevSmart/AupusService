@@ -205,12 +205,9 @@ export function usePlanosManutencaoApi(): UsePlanosManutencaoApiReturn {
       setLoading(true);
       setError(null);
       setLastParams(params);
-      
-      console.log('📋 HOOK: Listando planos com parâmetros:', params);
-      
+
       const response = await planosManutencaoApi.findAll(params);
-      console.log('✅ HOOK: Planos listados:', response);
-      
+
       setPlanos(response.data || []);
       setTotalPages(response.pagination?.pages || 0);
       setCurrentPage(response.pagination?.page || 1);

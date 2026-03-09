@@ -36,7 +36,7 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 export const api = axios.create({
-  baseURL: "http://localhost:3000/api/v1",
+  baseURL: "http://127.0.0.1:3000/api/v1", // ✅ Usar 127.0.0.1 em vez de localhost (evita DNS lookup)
   withCredentials: true,
   withXSRFToken: true,
 
@@ -86,14 +86,10 @@ api.interceptors.response.use(
   (response) => {
     // Log para debug de programacao-os
     if (response.config.url?.includes('programacao-os')) {
-      console.log('[API Interceptor] 📡 URL:', response.config.url);
-      console.log('[API Interceptor] 📦 response.data:', response.data);
-      console.log('[API Interceptor] 🚗 response.data.reserva_veiculo:', response.data?.reserva_veiculo);
     }
 
     // Desempacotar resposta padrão da API: { success: true, data: {...}, meta: {...} }
     if (response.data && response.data.success && response.data.data !== undefined) {
-      console.log('[API Interceptor] 🔄 Desempacotando resposta padrão');
       return { ...response, data: response.data.data };
     }
     return response;

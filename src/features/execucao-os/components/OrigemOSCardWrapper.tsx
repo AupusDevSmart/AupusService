@@ -1,18 +1,30 @@
 // src/features/execucao-os/components/OrigemOSCardWrapper.tsx
 import React, { useState, useEffect } from 'react';
-import { OrigemOSCard as ProgramacaoOrigemCard } from '@/features/programacao-os/components/OrigemOSCard';
+// Usar nosso novo OrigemOSCard minimalista em vez do componente da programacao-os
+import { OrigemOSCard } from './OrigemOSCard';
 import { programacaoOSApi } from '@/services/programacao-os.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, FileText } from 'lucide-react';
 
 interface OrigemOSCardWrapperProps {
   value?: {
     programacao_id?: string;
     programacaoOrigem?: any;
+    anomalia?: any;
+    plano_manutencao?: any;
+    origem?: string;
+    dados_origem?: any;
     [key: string]: any;
   };
   programacao_id?: string;
   programacaoOrigem?: any;
+  anomalia?: any;
+  plano_manutencao?: any;
+  origem?: string;
+  dados_origem?: any;
+  // Passar toda a entity da execução
+  formData?: any;
+  entity?: any;
 }
 
 /**
@@ -27,7 +39,17 @@ interface OrigemOSCardWrapperProps {
 export const OrigemOSCardWrapper: React.FC<OrigemOSCardWrapperProps> = (props) => {
   // Aceitar dados via 'value' (quando vem do BaseForm) ou props individuais
   const data = props.value || props;
-  const programacaoId = data.programacao_id || data.programacaoOrigem?.id;
+
+  // Priorizar dados diretos da execução (entity ou formData)
+  const execucaoData = props.entity || props.formData || data;
+
+  // Tentar pegar dados de origem diretamente da execução ANTES de buscar da programação
+  const anomaliaFromExecucao = execucaoData?.anomalia;
+  const planoManutencaoFromExecucao = execucaoData?.plano_manutencao;
+  const origemFromExecucao = execucaoData?.origem;
+  const dadosOrigemFromExecucao = execucaoData?.dados_origem;
+
+  const programacaoId = data.programacao_id || data.programacaoOrigem?.id || execucaoData?.programacao_id;
 
   const [programacao, setProgramacao] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -62,16 +84,16 @@ export const OrigemOSCardWrapper: React.FC<OrigemOSCardWrapperProps> = (props) =
   // Loading state
   if (loading) {
     return (
-      <Card className="border-2">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
-            Carregando origem da OS...
+      <Card className="border border-gray-200 dark:border-gray-700 shadow-sm">
+        <CardHeader className="pb-3 bg-gray-50 dark:bg-gray-800/50">
+          <CardTitle className="text-sm flex items-center gap-2 text-gray-700 dark:text-gray-300">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Origem da OS
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <div className="text-sm text-muted-foreground">
-            Buscando informações da programação...
+        <CardContent className="pt-4">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            Carregando informações...
           </div>
         </CardContent>
       </Card>
@@ -81,64 +103,100 @@ export const OrigemOSCardWrapper: React.FC<OrigemOSCardWrapperProps> = (props) =
   // Error state
   if (error) {
     return (
-      <Card className="border-2 border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/30">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2 text-red-700 dark:text-red-400">
+      <Card className="border border-gray-200 dark:border-gray-700 shadow-sm">
+        <CardHeader className="pb-3 bg-gray-50 dark:bg-gray-800/50">
+          <CardTitle className="text-sm flex items-center gap-2 text-gray-700 dark:text-gray-300">
             <AlertTriangle className="h-4 w-4" />
-            Erro ao Carregar Origem
+            Origem da OS
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <CardContent className="pt-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400">{error}</p>
         </CardContent>
       </Card>
     );
   }
 
-  // No programacao_id provided
-  if (!programacaoId) {
+  // Tentar usar dados diretos da execução primeiro
+  const hasDirectOrigemData = anomaliaFromExecucao || planoManutencaoFromExecucao || origemFromExecucao;
+
+  // Se temos dados diretos da execução, usar eles
+  if (hasDirectOrigemData) {
+    console.log('🎯 [OrigemOSCardWrapper] Usando dados diretos da execução:', {
+      anomalia: anomaliaFromExecucao,
+      plano_manutencao: planoManutencaoFromExecucao,
+      origem: origemFromExecucao,
+      dados_origem: dadosOrigemFromExecucao
+    });
+
+    // Determinar origem baseado nos dados disponíveis
+    let origem = origemFromExecucao || 'MANUAL';
+    if (anomaliaFromExecucao) {
+      origem = 'ANOMALIA';
+    } else if (planoManutencaoFromExecucao) {
+      origem = 'PLANO_MANUTENCAO';
+    }
+
     return (
-      <Card className="border-2">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Origem da OS</CardTitle>
+      <OrigemOSCard
+        origem={origem}
+        anomalia={anomaliaFromExecucao}
+        planoManutencao={planoManutencaoFromExecucao}
+        programacaoOrigem={execucaoData?.programacao}
+        tarefa={dadosOrigemFromExecucao?.tarefas?.[0]}
+      />
+    );
+  }
+
+  // Se não temos dados diretos e nem programação, mostrar vazio
+  if (!programacaoId && !programacao) {
+    return (
+      <Card className="border border-gray-200 dark:border-gray-700 shadow-sm">
+        <CardHeader className="pb-3 bg-gray-50 dark:bg-gray-800/50">
+          <CardTitle className="text-sm flex items-center gap-2 text-gray-700 dark:text-gray-300">
+            <FileText className="h-4 w-4" />
+            Origem da OS
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Nenhuma programação de origem vinculada
+        <CardContent className="pt-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+            Ordem criada manualmente
           </p>
         </CardContent>
       </Card>
     );
   }
 
-  // No programacao loaded yet
-  if (!programacao) {
+  // Se ainda está carregando a programação, aguardar
+  if (!programacao && programacaoId) {
     return null;
   }
 
-  // Extract origem data from programacao
-  const origem = programacao.origem || programacao.dados_origem?.tipo || 'MANUAL';
-  const dadosOrigem = programacao.dados_origem || {};
+  // Usar dados da programação se disponível
+  if (programacao) {
+    const origem = programacao.origem || programacao.dados_origem?.tipo || 'MANUAL';
+    const dadosOrigem = programacao.dados_origem || {};
 
-  console.log('🔍 [OrigemOSCardWrapper] Renderizando com dados:', {
-    origem,
-    dadosOrigem,
-    anomalia: programacao.anomalia,
-    tarefas: programacao.tarefas,
-    planoManutencao: programacao.plano_manutencao,
-    tarefasPorPlano: dadosOrigem.tarefasPorPlano
-  });
+    console.log('📋 [OrigemOSCardWrapper] Usando dados da programação:', {
+      origem,
+      dadosOrigem,
+      anomalia: programacao.anomalia,
+      tarefas: programacao.tarefas,
+      planoManutencao: programacao.plano_manutencao,
+      tarefasPorPlano: dadosOrigem.tarefasPorPlano
+    });
 
-  // Use the programacao's OrigemOSCard component
-  return (
-    <ProgramacaoOrigemCard
-      origem={origem}
-      dadosOrigem={dadosOrigem}
-      anomalia={programacao.anomalia}
-      tarefas={programacao.tarefas || []}
-      planoManutencao={programacao.plano_manutencao}
-      tarefasPorPlano={dadosOrigem.tarefasPorPlano}
-      planosSelecionados={dadosOrigem.planosSelecionados}
-    />
-  );
+    return (
+      <OrigemOSCard
+        origem={origem}
+        anomalia={programacao.anomalia}
+        planoManutencao={programacao.plano_manutencao}
+        programacaoOrigem={programacao}
+        tarefa={programacao.tarefas?.[0]}
+      />
+    );
+  }
+
+  // Fallback - não deveria chegar aqui
+  return null;
 };

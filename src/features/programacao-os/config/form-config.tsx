@@ -89,28 +89,30 @@ export const programacaoOSFormFields: FormField[] = [
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
     }
   },
-  // {
-  //   key: 'local',
-  //   label: 'Local',
-  //   type: 'text',
-  //   required: true,
-  //   placeholder: 'Local onde será executado o serviço',
-  //   group: 'identificacao',
-  //   computeDisabled: (entity: any) => {
-  //     return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
-  //   }
-  // },
-  // {
-  //   key: 'ativo',
-  //   label: 'Ativo',
-  //   type: 'text',
-  //   required: true,
-  //   placeholder: 'Equipamento ou ativo relacionado',
-  //   group: 'identificacao',
-  //   computeDisabled: (entity: any) => {
-  //     return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
-  //   }
-  // },
+  {
+    key: 'local',
+    label: 'Local',
+    type: 'text',
+    required: true,
+    placeholder: 'Local onde será executado o serviço',
+    group: 'identificacao',
+    width: 'half',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
+  {
+    key: 'ativo',
+    label: 'Ativo',
+    type: 'text',
+    required: true,
+    placeholder: 'Equipamento ou ativo relacionado',
+    group: 'identificacao',
+    width: 'half',
+    computeDisabled: (entity: any) => {
+      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+    }
+  },
 
   // Origem da OS - GRUPO: origem
   {
@@ -129,7 +131,8 @@ export const programacaoOSFormFields: FormField[] = [
       tarefasPorPlano: {}
     },
     group: 'origem',
-    showOnlyOnMode: 'create'
+    showOnlyOnMode: 'create',
+    colSpan: 2 // Ocupar largura total no sheet
   },
   {
     key: 'origemCard',
@@ -137,6 +140,7 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'custom',
     group: 'origem',
     showOnlyOnMode: ['view', 'edit'],
+    colSpan: 2, // Ocupar largura total no sheet
     render: (props: any) => {
       const { entity } = props;
       return (
@@ -304,6 +308,7 @@ export const programacaoOSFormFields: FormField[] = [
     key: 'necessita_veiculo',
     label: 'Necessita Veículo',
     type: 'checkbox',
+    defaultValue: false, // ✅ Sempre iniciar com false para evitar uncontrolled
     group: 'veiculo',
     computeDisabled: (entity: any) => {
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
@@ -323,6 +328,7 @@ export const programacaoOSFormFields: FormField[] = [
     },
     showOnlyOnMode: ['create', 'edit'],
     group: 'veiculo',
+    colSpan: 2, // Ocupar largura total no sheet
     computeDisabled: (entity: any) => {
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
     }
@@ -337,6 +343,7 @@ export const programacaoOSFormFields: FormField[] = [
     },
     showOnlyOnMode: 'view',
     group: 'veiculo',
+    colSpan: 2, // Ocupar largura total no sheet
     render: (props: any) => {
       const { entity } = props;
       return (
@@ -361,6 +368,7 @@ export const programacaoOSFormFields: FormField[] = [
     },
     defaultValue: [],
     group: 'recursos',
+    colSpan: 2, // Ocupar largura total no sheet
     computeDisabled: (entity: any) => {
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
     }
@@ -380,6 +388,7 @@ export const programacaoOSFormFields: FormField[] = [
     },
     defaultValue: [],
     group: 'recursos',
+    colSpan: 2, // Ocupar largura total no sheet
     computeDisabled: (entity: any) => {
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
     }
@@ -399,6 +408,7 @@ export const programacaoOSFormFields: FormField[] = [
     },
     defaultValue: [],
     group: 'recursos',
+    colSpan: 2, // Ocupar largura total no sheet
     computeDisabled: (entity: any) => {
       return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
     }
@@ -576,7 +586,7 @@ export const programacaoOSFormGroups = [
   {
     key: 'identificacao',
     title: 'Identificação da OS',
-    fields: ['numeroOS', 'status', 'descricao']
+    fields: ['numeroOS', 'status', 'descricao', 'local', 'ativo']
   },
   {
     key: 'origem',

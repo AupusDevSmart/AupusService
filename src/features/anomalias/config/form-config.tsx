@@ -32,6 +32,7 @@ export const anomaliasFormFields: FormField[] = [
     required: true,
     placeholder: 'Descreva detalhadamente a anomalia identificada...',
     group: 'informacoes_basicas',
+    colSpan: 2, // ✅ Ocupa 100% da largura (S maiúsculo!)
   },
 
   // Localização - ✅ CORRIGIDO: Usar função estável
@@ -42,13 +43,14 @@ export const anomaliasFormFields: FormField[] = [
     required: false,
     render: LocalizacaoRender, // ✅ Referência estável
     group: 'localizacao',
+    colSpan: 2, // ✅ Ocupa 100% da largura (S maiúsculo!)
   },
 
   // Classificação
   {
     key: 'status',
     label: 'Status',
-    type: 'select',
+    type: 'select', // Select com busca (combobox não implementado ainda no BaseForm)
     required: true,
     disabled: true, // Status é readonly, alterado automaticamente pelo sistema
     options: [
@@ -65,7 +67,7 @@ export const anomaliasFormFields: FormField[] = [
   {
     key: 'condicao',
     label: 'Condição',
-    type: 'select',
+    type: 'select', // Select com busca (combobox não implementado ainda no BaseForm)
     required: true,
     options: [
       { value: 'PARADO', label: 'Parado' },
@@ -78,7 +80,7 @@ export const anomaliasFormFields: FormField[] = [
   {
     key: 'origem',
     label: 'Origem',
-    type: 'select',
+    type: 'select', // Select com busca (combobox não implementado ainda no BaseForm)
     required: true,
     options: [
       { value: 'SCADA', label: 'SCADA' },
@@ -91,14 +93,14 @@ export const anomaliasFormFields: FormField[] = [
   {
     key: 'prioridade',
     label: 'Prioridade',
-    type: 'select',
+    type: 'select', // Select com busca (combobox não implementado ainda no BaseForm)
     defaultValue: 'MEDIA',
     required: true,
     options: [
-      { value: 'BAIXA', label: 'Baixa' },      // Valor em maiúscula
-      { value: 'MEDIA', label: 'Média' },      // Valor em maiúscula
-      { value: 'ALTA', label: 'Alta' },        // Valor em maiúscula
-      { value: 'CRITICA', label: 'Crítica' }   // Valor em maiúscula
+      { value: 'BAIXA', label: 'Baixa' },
+      { value: 'MEDIA', label: 'Média' },
+      { value: 'ALTA', label: 'Alta' },
+      { value: 'CRITICA', label: 'Crítica' }
     ],
     group: 'classificacao',
     width: 'half', // Layout 2x2 em telas maiores
@@ -112,6 +114,7 @@ export const anomaliasFormFields: FormField[] = [
     required: false,
     placeholder: 'Informações adicionais, contexto, detalhes técnicos...',
     group: 'observacoes',
+    colSpan: 2, // ✅ Ocupa 100% da largura (S maiúsculo!)
   },
 
   // ✅ NOVO: Observações da análise (só visível em modo view quando analisada)
@@ -124,6 +127,7 @@ export const anomaliasFormFields: FormField[] = [
     placeholder: 'Nenhuma observação registrada na análise',
     group: 'analise',
     visibleInModes: ['view'], // Só aparece no modo visualização
+    colSpan: 2, // ✅ Ocupa 100% da largura (S maiúsculo!)
     condition: (entity: any) => {
       // Só mostrar se tiver observações de análise
       return entity?.observacoes_analise && entity.observacoes_analise.trim() !== '';
@@ -138,5 +142,6 @@ export const anomaliasFormFields: FormField[] = [
     required: false,
     render: AnexosRender, // ✅ Referência estável
     group: 'anexos',
+    colSpan: 2, // ✅ Ocupa 100% da largura (S maiúsculo!)
   }
 ];

@@ -244,11 +244,11 @@
   }
 
   body {
-    @apply flex overflow-hidden bg-background text-foreground;
+    @apply flex overflow-hidden bg-background text-foreground h-screen w-screen;
   }
 
   #root {
-    @apply flex h-full overflow-hidden;
+    @apply flex h-screen w-screen overflow-hidden;
   }
 
   *::-webkit-scrollbar {

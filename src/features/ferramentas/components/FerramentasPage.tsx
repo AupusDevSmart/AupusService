@@ -13,7 +13,6 @@ import { Ferramenta, FerramentasFilters, StatusFerramenta } from '../types';
 import { ferramentasTableColumns } from '../config/table-config';
 import { ferramentasFilterConfig } from '../config/filter-config';
 import { ferramentasFormFields } from '../config/form-config';
-import { mockFerramentas } from '../data/mock-data';
 
 const initialFilters: FerramentasFilters = {
   search: '',
@@ -45,6 +44,9 @@ interface FerramentaFormShape {
 }
 
 export function FerramentasPage() {
+  // TODO: Integrar com API de ferramentas
+  const ferramentasData: Ferramenta[] = [];
+
   const {
     paginatedData: ferramentas,
     pagination,
@@ -54,7 +56,7 @@ export function FerramentasPage() {
     handleFilterChange,
     handlePageChange
   } = useGenericTable({
-    data: mockFerramentas,
+    data: ferramentasData,
     initialFilters,
     searchFields: ['nome', 'codigoPatrimonial', 'fabricante', 'modelo', 'numeroSerie', 'responsavel']
   });
@@ -78,22 +80,22 @@ export function FerramentasPage() {
 
   // Calcular estatísticas
   useEffect(() => {
-    const total = mockFerramentas.length;
-    const disponiveis = mockFerramentas.filter(f => f.status === 'disponivel').length;
-    const emUso = mockFerramentas.filter(f => f.status === 'em_uso').length;
-    const manutencao = mockFerramentas.filter(f => f.status === 'manutencao').length;
-    const necessitamCalibracao = mockFerramentas.filter(f => f.necessitaCalibracao).length;
-    
+    const total = ferramentasData.length;
+    const disponiveis = ferramentasData.filter(f => f.status === 'disponivel').length;
+    const emUso = ferramentasData.filter(f => f.status === 'em_uso').length;
+    const manutencao = ferramentasData.filter(f => f.status === 'manutencao').length;
+    const necessitamCalibracao = ferramentasData.filter(f => f.necessitaCalibracao).length;
+
     // Verificar calibrações vencidas/vencendo
     const hoje = new Date();
     let calibracaoVencida = 0;
     let calibracaoVencendo = 0;
-    
-    mockFerramentas.forEach(ferramenta => {
+
+    ferramentasData.forEach(ferramenta => {
       if (ferramenta.necessitaCalibracao && ferramenta.proximaDataCalibracao) {
         const proximaCalibracao = new Date(ferramenta.proximaDataCalibracao);
         const diasRestantes = Math.ceil((proximaCalibracao.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-        
+
         if (diasRestantes < 0) {
           calibracaoVencida++;
         } else if (diasRestantes <= 30) {
@@ -111,7 +113,7 @@ export function FerramentasPage() {
       calibracaoVencida,
       calibracaoVencendo
     });
-  }, []);
+  }, [ferramentasData]);
 
   const handleSuccess = async () => {
     setLoading(true);

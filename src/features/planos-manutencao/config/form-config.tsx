@@ -10,14 +10,12 @@ export const planosFormFields: FormField[] = [
     type: 'custom',
     required: true,
     group: 'informacoes_basicas',
-    width: 'full', // 100% - controlador customizado com múltiplos selects
+    colSpan: 2,
     render: (props) => {
-      console.log('🎯 RENDER: Props do controlador:', props);
       return (
         <PlantaEquipamentoController
           value={props.value}
           onChange={(newValue) => {
-            console.log('🎯 CONTROLLER: Mudança detectada:', newValue);
             props.onChange(newValue);
             // Também atualizar o campo equipamento_id diretamente
             if (props.onMultipleChange && newValue.equipamento_id) {
@@ -32,22 +30,13 @@ export const planosFormFields: FormField[] = [
       );
     }
   },
-  // Campos ocultos para manter compatibilidade com a API
-  {
-    key: 'equipamento_id',
-    label: 'Equipamento ID',
-    type: 'text',
-    required: true,
-    group: 'informacoes_basicas',
-    render: () => <div></div> // Campo oculto, será populado pelo controlador
-  },
   {
     key: 'nome',
     label: 'Nome do Plano',
     type: 'text',
     required: true,
     group: 'informacoes_basicas',
-    width: 'half', // 50% em desktop
+    colSpan: 2,
     placeholder: 'Ex: Motores Elétricos Trifásicos'
   },
   {
@@ -56,7 +45,7 @@ export const planosFormFields: FormField[] = [
     type: 'text',
     required: true,
     group: 'informacoes_basicas',
-    width: 'half', // 50% em desktop
+    colSpan: 2,
     placeholder: 'Ex: 1.0, 2.1'
   },
   {
@@ -65,7 +54,7 @@ export const planosFormFields: FormField[] = [
     type: 'textarea',
     required: false,
     group: 'informacoes_basicas',
-    width: 'full', // 100% - campo de texto longo
+    colSpan: 2,
     placeholder: 'Descrição detalhada do plano de manutenção...'
   },
   
@@ -76,7 +65,6 @@ export const planosFormFields: FormField[] = [
     type: 'select',
     required: true,
     group: 'configuracoes',
-    width: 'half', // 50% em desktop
     options: [
       { value: 'ATIVO', label: 'Ativo' },
       { value: 'INATIVO', label: 'Inativo' },
@@ -85,37 +73,18 @@ export const planosFormFields: FormField[] = [
     ]
   },
   {
-    key: 'ativo',
-    label: 'Plano Ativo',
-    type: 'checkbox',
-    required: false,
-    group: 'configuracoes',
-    width: 'half' // 50% em desktop
-  },
-  {
     key: 'data_vigencia_inicio',
     label: 'Data de Início da Vigência',
     type: 'date',
     required: false,
-    group: 'configuracoes',
-    width: 'half' // 50% em desktop
+    group: 'configuracoes'
   },
   {
     key: 'data_vigencia_fim',
     label: 'Data de Fim da Vigência',
     type: 'date',
     required: false,
-    group: 'configuracoes',
-    width: 'half' // 50% em desktop
-  },
-  {
-    key: 'criado_por',
-    label: 'Criado Por',
-    type: 'text',
-    required: true,
-    group: 'configuracoes',
-    width: 'half', // 50% em desktop
-    placeholder: 'ID do usuário criador'
+    group: 'configuracoes'
   },
   {
     key: 'observacoes',
@@ -123,7 +92,7 @@ export const planosFormFields: FormField[] = [
     type: 'textarea',
     required: false,
     group: 'configuracoes',
-    width: 'full', // 100% - campo de texto longo
+    colSpan: 2,
     placeholder: 'Observações gerais sobre o plano...'
   }
 ];

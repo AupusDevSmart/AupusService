@@ -115,9 +115,8 @@ export const tarefasTableColumns: TableColumn<TarefaApiResponse>[] = [
     label: 'Equipamento & Local',
     render: (tarefa) => (
       <EquipamentoPlantaCell
-        equipamentoId={tarefa.equipamento_id}
-        plantaId={tarefa.planta_id}
-        unidadeId={tarefa.unidade_id}
+        equipamentoNome={tarefa.equipamento?.nome}
+        plantaNome={tarefa.planta?.nome}
       />
     )
   },

@@ -94,10 +94,8 @@ export function useTarefasApi(): UseTarefasApiReturn {
       setLoading(true);
       setError(null);
       
-      console.log('HOOK: Criando tarefa com dados:', data);
       
       const response = await tarefasApi.create(data);
-      console.log('HOOK: Tarefa criada:', response);
       
       // Atualizar lista local
       setTarefas(prev => [response, ...prev]);
@@ -117,10 +115,8 @@ export function useTarefasApi(): UseTarefasApiReturn {
       setLoading(true);
       setError(null);
       
-      console.log('HOOK: Atualizando tarefa:', id, data);
       
       const response = await tarefasApi.update(id, data);
-      console.log('HOOK: Tarefa atualizada:', response);
       
       // Atualizar lista local
       setTarefas(prev => prev.map(tarefa => 
@@ -141,10 +137,8 @@ export function useTarefasApi(): UseTarefasApiReturn {
       setLoading(true);
       setError(null);
       
-      console.log('HOOK: Excluindo tarefa:', id);
       
       await tarefasApi.remove(id);
-      console.log('HOOK: Tarefa excluída com sucesso');
       
       // Remover da lista local
       setTarefas(prev => prev.filter(tarefa => tarefa.id !== id));
@@ -163,10 +157,8 @@ export function useTarefasApi(): UseTarefasApiReturn {
       setLoading(true);
       setError(null);
       
-      console.log('HOOK: Buscando tarefa:', id);
       
       const response = await tarefasApi.findOne(id);
-      console.log('HOOK: Tarefa encontrada:', response);
       
       return response;
     } catch (err) {
@@ -186,17 +178,14 @@ export function useTarefasApi(): UseTarefasApiReturn {
       setLoading(true);
       setError(null);
       setLastParams(params);
-      
-      console.log('HOOK: Listando tarefas com parâmetros:', params);
-      
+
       const response = await tarefasApi.findAll(params);
-      console.log('HOOK: Tarefas listadas:', response);
-      
+
       setTarefas(response.data || []);
       setTotalPages(response.pagination?.pages || 0);
       setCurrentPage(response.pagination?.page || 1);
       setTotal(response.pagination?.total || 0);
-      
+
       return response;
     } catch (err) {
       handleError(err, 'fetchTarefas');
@@ -216,10 +205,8 @@ export function useTarefasApi(): UseTarefasApiReturn {
       setLoading(true);
       setError(null);
       
-      console.log('HOOK: Buscando tarefas por plano:', planoId);
       
       const response = await tarefasApi.findByPlano(planoId, params);
-      console.log('HOOK: Tarefas do plano encontradas:', response);
       
       return response;
     } catch (err) {
@@ -235,10 +222,8 @@ export function useTarefasApi(): UseTarefasApiReturn {
       setLoading(true);
       setError(null);
       
-      console.log('HOOK: Buscando tarefas por equipamento:', equipamentoId);
       
       const response = await tarefasApi.findByEquipamento(equipamentoId, params);
-      console.log('HOOK: Tarefas do equipamento encontradas:', response);
       
       return response;
     } catch (err) {
@@ -258,10 +243,8 @@ export function useTarefasApi(): UseTarefasApiReturn {
       setLoading(true);
       setError(null);
       
-      console.log('HOOK: Atualizando status da tarefa:', id, data);
       
       const response = await tarefasApi.updateStatus(id, data);
-      console.log('HOOK: Status atualizado:', response);
       
       // Atualizar lista local
       setTarefas(prev => prev.map(tarefa => 
@@ -282,10 +265,8 @@ export function useTarefasApi(): UseTarefasApiReturn {
       setLoading(true);
       setError(null);
       
-      console.log('HOOK: Reordenando tarefa:', id, data);
       
       const response = await tarefasApi.reordenar(id, data);
-      console.log('HOOK: Tarefa reordenada:', response);
       
       // Atualizar lista local
       setTarefas(prev => prev.map(tarefa => 
@@ -306,10 +287,8 @@ export function useTarefasApi(): UseTarefasApiReturn {
       setLoading(true);
       setError(null);
       
-      console.log('HOOK: Obtendo dashboard das tarefas');
       
       const response = await tarefasApi.getDashboard();
-      console.log('HOOK: Dashboard obtido:', response);
       
       return response;
     } catch (err) {
@@ -329,10 +308,8 @@ export function useTarefasApi(): UseTarefasApiReturn {
       setLoading(true);
       setError(null);
       
-      console.log('HOOK: Obtendo anexos da tarefa:', tarefaId);
       
       const response = await tarefasApi.getAnexos(tarefaId);
-      console.log('HOOK: Anexos obtidos:', response);
       
       return response;
     } catch (err) {
@@ -353,10 +330,8 @@ export function useTarefasApi(): UseTarefasApiReturn {
       setLoading(true);
       setError(null);
       
-      console.log('HOOK: Fazendo upload de anexo para tarefa:', tarefaId);
       
       const response = await tarefasApi.uploadAnexo(tarefaId, file, descricao, usuarioId);
-      console.log('HOOK: Anexo enviado:', response);
       
       return response;
     } catch (err) {
@@ -372,10 +347,8 @@ export function useTarefasApi(): UseTarefasApiReturn {
       setLoading(true);
       setError(null);
       
-      console.log('HOOK: Fazendo download de anexo:', anexoId);
       
       const response = await tarefasApi.downloadAnexo(tarefaId, anexoId);
-      console.log('HOOK: Download concluído');
       
       return response;
     } catch (err) {
@@ -391,10 +364,8 @@ export function useTarefasApi(): UseTarefasApiReturn {
       setLoading(true);
       setError(null);
       
-      console.log('HOOK: Excluindo anexo:', anexoId);
       
       await tarefasApi.deleteAnexo(tarefaId, anexoId);
-      console.log('HOOK: Anexo excluído com sucesso');
       
     } catch (err) {
       handleError(err, 'deleteAnexo');

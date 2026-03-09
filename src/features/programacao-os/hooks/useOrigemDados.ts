@@ -263,7 +263,7 @@ export const useOrigemDados = () => {
     try {
       console.log('🔍 [useOrigemDados] Buscando plano na API:', id);
 
-      // ✅ CORRIGIDO: Usar API real em vez de dados mockados
+      // Usar API real
       const { planosManutencaoApi } = await import('@/services/planos-manutencao.services');
 
       const plano = await planosManutencaoApi.findOne(id.trim(), true); // incluirTarefas = true
@@ -296,7 +296,7 @@ export const useOrigemDados = () => {
     }
   }, [planosDisponiveis]);
 
-  // ✅ ATUALIZADO: Buscar tarefas reais da API em vez de gerar dados mockados
+  // Buscar tarefas reais da API
   const gerarTarefasDoPlano = useCallback(async (planoId: string, equipamentosIds?: string[]) => {
     try {
       console.log('🔧 [useOrigemDados] INÍCIO buscarTarefasDoPlano da API:', {
@@ -305,7 +305,7 @@ export const useOrigemDados = () => {
         timestamp: new Date().toISOString()
       });
 
-      // ✅ CORRIGIDO: Usar API real em vez de dados mockados
+      // Usar API real
       const { tarefasApi } = await import('@/services/tarefas.services');
 
       // Buscar tarefas reais do plano na API
@@ -321,29 +321,7 @@ export const useOrigemDados = () => {
       });
 
       // Formatar tarefas da API para o formato esperado pelo frontend
-      const tarefasFormatadas = tarefasDoPlano.map((tarefa, index) => {
-        // ✅ RASTREAMENTO AVANÇADO: Log detalhado de cada tarefa
-        console.log(`🔍 [useOrigemDados] Formatando tarefa ${index + 1}:`, {
-          id: tarefa.id,
-          tipoId: typeof tarefa.id,
-          tamanhoId: tarefa.id?.length,
-          contemCmg: tarefa.id?.includes?.('cmg'),
-          tag: tarefa.tag,
-          nome: tarefa.nome,
-          planoId: planoId
-        });
-
-        // ❌ ALERTA CRÍTICO: Detectar IDs mockados
-        if (tarefa.id && typeof tarefa.id === 'string' && tarefa.id.includes('cmg')) {
-          console.error('🚨 [useOrigemDados] CRÍTICO - ID MOCKADO DETECTADO NA API:', {
-            tarefaId: tarefa.id,
-            tarefaNome: tarefa.nome,
-            tarefaTag: tarefa.tag,
-            planoId: planoId,
-            stack: new Error().stack?.split('\n').slice(0, 5)
-          });
-        }
-
+      const tarefasFormatadas = tarefasDoPlano.map((tarefa) => {
         return {
           id: tarefa.id, // ✅ ID real da API (UUID/CUID)
           templateId: tarefa.id,
@@ -382,20 +360,8 @@ export const useOrigemDados = () => {
 
       console.log('✅ [useOrigemDados] Tarefas formatadas:', {
         quantidadeTarefasFormatadas: tarefasFormatadas.length,
-        primeiraFormatada: tarefasFormatadas[0] || null,
-        idsValidados: tarefasFormatadas.map(t => ({ id: t.id, válido: !t.id?.includes?.('cmg') }))
+        primeiraFormatada: tarefasFormatadas[0] || null
       });
-
-      // ❌ VALIDAÇÃO FINAL: Bloquear retorno se houver IDs mockados
-      const tarefasMockadas = tarefasFormatadas.filter(t => t.id?.includes?.('cmg'));
-      if (tarefasMockadas.length > 0) {
-        console.error('🚨 [useOrigemDados] OPERAÇÃO BLOQUEADA - Tarefas mockadas detectadas:', {
-          quantidade: tarefasMockadas.length,
-          planoId,
-          tarefasMockadas: tarefasMockadas.map(t => ({ id: t.id, nome: t.nome }))
-        });
-        throw new Error(`CRÍTICO: ${tarefasMockadas.length} tarefa(s) mockada(s) detectada(s). Operação cancelada para evitar dados incorretos.`);
-      }
 
       return tarefasFormatadas;
 

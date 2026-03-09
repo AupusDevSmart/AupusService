@@ -1,13 +1,15 @@
 // src/features/planos-manutencao/components/AssociacaoEquipamentosPage.tsx - USANDO API REAL
 
-import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Combobox } from '@nexon/components/ui/combobox';
 import { useEquipamentos } from '@nexon/features/equipamentos/hooks/useEquipamentos';
 import { useGenericModal } from '@/hooks/useGenericModal';
+import { getUnidadesByPlanta } from '@/services/unidades.services';
+import { PlantasService, PlantaResponse } from '@/services/plantas.services';
 import { CreatePlanoManutencaoApiData, PlanoManutencaoApiResponse } from '@/services/planos-manutencao.services';
 import {
     AlertTriangle,
@@ -25,14 +27,18 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { planosFormFields } from '../config/form-config';
+import { useUserStore } from '@/store/useUserStore';
+import { usePlanosFilters } from '../hooks/usePlanosFilters';
 import { usePlanosManutencaoApi } from '../hooks/usePlanosManutencaoApi';
+import { PlanosModal } from './PlanosModal';
 
 interface EquipamentoSelecionado {
   equipamentoId: string; // Mudado para string (CUID)
   equipamentoNome: string;
   plantaId: number;
   plantaNome: string;
+  unidadeId: string;
+  unidadeNome: string;
 }
 
 interface AssociacaoRapida {
@@ -46,48 +52,37 @@ export function AssociacaoEquipamentosPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const planoIdInicial = searchParams.get('planoId');
-  
-  const { equipamentos } = useEquipamentos();
+  const { user } = useUserStore();
 
-  // Funções utilitárias para trabalhar com equipamentos
-  const getEquipamentosUCByPlanta = (plantaId: number) => {
-    return equipamentos.filter(eq =>
-      eq.plantaId === plantaId.toString() && eq.classificacao === 'UC'
-    );
-  };
-
-  const getPlantaById = (plantaId: number) => {
-    // Simular busca de planta - você pode implementar um hook específico se necessário
-    const plantasUnicas = equipamentos
-      .filter(eq => eq.planta?.id === plantaId.toString())
-      .map(eq => eq.planta)
-      .filter(Boolean);
-    return plantasUnicas[0] || null;
-  };
-
-  const plantas = equipamentos
-    .filter((eq, index, arr) => eq.planta && arr.findIndex(e => e.planta?.id === eq.planta?.id) === index)
-    .map(eq => eq.planta!)
-    .filter(Boolean);
+  const { equipamentos, fetchEquipamentos } = useEquipamentos();
 
   // 🔧 USANDO API REAL
-  const { 
-    planos, 
+  const {
+    planos,
     loading,
-    createPlano, 
-    duplicarPlano, 
-    fetchPlanos 
+    createPlano,
+    duplicarPlano,
+    fetchPlanos,
+    clonarLote
   } = usePlanosManutencaoApi();
-  
+
+  // Hook de filtros para form fields
+  const { formFields } = usePlanosFilters({});
+
   // Modal para criar/duplicar planos
   const {
     modalState,
     openModal,
     closeModal
   } = useGenericModal<PlanoManutencaoApiResponse>();
-  
+
   const [plantaSelecionada, setPlantaSelecionada] = useState<string>('');
+  const [unidadeSelecionada, setUnidadeSelecionada] = useState<string>('');
   const [equipamentoSelecionado, setEquipamentoSelecionado] = useState<string>('');
+  const [plantas, setPlantas] = useState<PlantaResponse[]>([]);
+  const [unidades, setUnidades] = useState<any[]>([]);
+  const [loadingPlantas, setLoadingPlantas] = useState(false);
+  const [loadingUnidades, setLoadingUnidades] = useState(false);
   const [associacao, setAssociacao] = useState<AssociacaoRapida>({
     equipamentos: [],
     planoSelecionado: planoIdInicial || '',
@@ -100,8 +95,63 @@ export function AssociacaoEquipamentosPage() {
   const [planoParaDuplicar, setPlanoParaDuplicar] = useState<string>('');
   const [associandoEquipamentos, setAssociandoEquipamentos] = useState(false);
 
-  const equipamentosDisponiveis = plantaSelecionada ? 
-    getEquipamentosUCByPlanta(Number(plantaSelecionada)) : [];
+  // Carregar equipamentos ao montar o componente
+  useEffect(() => {
+    const carregarEquipamentos = async () => {
+      try {
+        await fetchEquipamentos({ limit: 100 });
+      } catch (error) {
+        console.error('Erro ao carregar equipamentos:', error);
+      }
+    };
+
+    carregarEquipamentos();
+  }, [fetchEquipamentos]);
+
+  // Carregar plantas da API
+  useEffect(() => {
+    const carregarPlantas = async () => {
+      try {
+        setLoadingPlantas(true);
+        const response = await PlantasService.getAllPlantas({ limit: 100 });
+        setPlantas(response.data);
+      } catch (error) {
+        console.error('Erro ao carregar plantas:', error);
+        setPlantas([]);
+      } finally {
+        setLoadingPlantas(false);
+      }
+    };
+
+    carregarPlantas();
+  }, []);
+
+  // Buscar unidades quando a planta for selecionada
+  useEffect(() => {
+    const buscarUnidades = async () => {
+      if (!plantaSelecionada) {
+        setUnidades([]);
+        return;
+      }
+
+      try {
+        setLoadingUnidades(true);
+        const unidadesDaPlanta = await getUnidadesByPlanta(plantaSelecionada);
+        setUnidades(unidadesDaPlanta);
+      } catch (error) {
+        console.error('Erro ao buscar unidades:', error);
+        setUnidades([]);
+      } finally {
+        setLoadingUnidades(false);
+      }
+    };
+
+    buscarUnidades();
+  }, [plantaSelecionada]);
+
+  // Filtrar equipamentos por unidade selecionada
+  const equipamentosDisponiveis = unidadeSelecionada ?
+    equipamentos.filter(eq => eq.unidadeId === unidadeSelecionada && eq.classificacao === 'UC') : [];
 
   // 🔧 CARREGAR PLANOS DA API NO INÍCIO
   useEffect(() => {
@@ -112,7 +162,7 @@ export function AssociacaoEquipamentosPage() {
         console.error('Erro ao carregar planos:', error);
       }
     };
-    
+
     carregarDados();
   }, []);
 
@@ -137,12 +187,16 @@ export function AssociacaoEquipamentosPage() {
   }, [associacao, planos]);
 
   const adicionarEquipamento = () => {
-    if (!plantaSelecionada || !equipamentoSelecionado) return;
+    if (!plantaSelecionada || !unidadeSelecionada || !equipamentoSelecionado) return;
 
-    const equipamento = equipamentosDisponiveis.find((eq: any) => eq.id === Number(equipamentoSelecionado));
-    const planta = getPlantaById(Number(plantaSelecionada));
-    
-    if (!equipamento || !planta) return;
+    const equipamento = equipamentosDisponiveis.find((eq: any) => eq.id === equipamentoSelecionado);
+    const planta = plantas.find(p => p.id === plantaSelecionada);
+    const unidade = unidades.find(u => u.id === unidadeSelecionada);
+
+    if (!equipamento || !planta || !unidade) {
+      console.error('Dados não encontrados:', { equipamento, planta, unidade });
+      return;
+    }
 
     // 🔧 VERIFICAR SE EQUIPAMENTO JÁ FOI ADICIONADO (comparando como string)
     if (associacao.equipamentos.some(eq => eq.equipamentoId === equipamento.id.toString())) {
@@ -151,10 +205,12 @@ export function AssociacaoEquipamentosPage() {
     }
 
     const novoEquipamento: EquipamentoSelecionado = {
-      equipamentoId: equipamento.id.toString(), // Converter para string
+      equipamentoId: equipamento.id.toString(),
       equipamentoNome: equipamento.nome,
       plantaId: parseInt(planta.id.toString()),
-      plantaNome: planta.nome
+      plantaNome: planta.nome,
+      unidadeId: unidade.id,
+      unidadeNome: unidade.nome
     };
 
     setAssociacao(prev => ({
@@ -244,7 +300,7 @@ export function AssociacaoEquipamentosPage() {
     }
   };
 
-  // 🔧 TODO: IMPLEMENTAR ASSOCIAÇÃO REAL COM A API
+  // 🔧 IMPLEMENTAÇÃO REAL: Associação usando endpoint de clonagem em lote
   const handleAssociar = async () => {
     if (associacao.equipamentos.length === 0 || !associacao.planoSelecionado) {
       alert('Selecione ao menos um equipamento e um plano.');
@@ -253,24 +309,55 @@ export function AssociacaoEquipamentosPage() {
 
     try {
       setAssociandoEquipamentos(true);
-      
-      // TODO: Implementar endpoint de associação na API
-      console.log('📋 Dados para associação:', {
+
+      const equipamentosIds = associacao.equipamentos.map(eq => eq.equipamentoId);
+
+      console.log('📋 Iniciando associação em lote:', {
         planoManutencaoId: associacao.planoSelecionado,
-        equipamentosIds: associacao.equipamentos.map(eq => eq.equipamentoId),
-        responsavelPadrao: associacao.responsavelPadrao || undefined,
-        observacoesPadrao: associacao.observacoesPadrao || undefined
+        equipamentosIds,
+        total: equipamentosIds.length
       });
 
-      // Por enquanto, simular sucesso
-      alert(`Sucesso! ${associacao.equipamentos.length} associação(ões) serão criadas. As tarefas serão geradas automaticamente.`);
-      
-      // Navegar para as tarefas geradas
-      navigate(`/tarefas?planoId=${associacao.planoSelecionado}`);
-      
-    } catch (error) {
-      console.error('Erro ao associar:', error);
-      alert('Erro ao criar associações. Tente novamente.');
+      // Chamar API de clonagem em lote
+      const resultado = await clonarLote(associacao.planoSelecionado, {
+        equipamentos_destino_ids: equipamentosIds,
+        manter_nome_original: false, // Adicionar nome do equipamento ao plano
+        criado_por: user?.id || 'usuario-atual'
+      });
+
+      console.log('✅ Resultado da associação:', resultado);
+
+      // Mostrar resultado detalhado
+      const mensagemSucesso = `
+✅ Associação concluída!
+
+📊 Resumo:
+- Planos criados: ${resultado.planos_criados}
+- Falhas: ${resultado.planos_com_erro}
+
+${resultado.detalhes.map(det =>
+  det.sucesso
+    ? `✅ ${det.equipamento_nome}: ${det.total_tarefas} tarefas criadas`
+    : `❌ ${det.equipamento_nome}: ${det.erro}`
+).join('\n')}
+      `.trim();
+
+      alert(mensagemSucesso);
+
+      // Se houve sucesso, limpar seleções e recarregar planos
+      if (resultado.planos_criados > 0) {
+        setAssociacao(prev => ({
+          ...prev,
+          equipamentos: [],
+          planoSelecionado: planoIdInicial || ''
+        }));
+        await fetchPlanos({ limit: 100 });
+      }
+
+    } catch (error: any) {
+      console.error('❌ Erro ao associar:', error);
+      const mensagemErro = error?.response?.data?.message || error?.message || 'Erro desconhecido';
+      alert(`Erro ao criar associações:\n\n${mensagemErro}\n\nVerifique o console para mais detalhes.`);
     } finally {
       setAssociandoEquipamentos(false);
     }
@@ -278,46 +365,6 @@ export function AssociacaoEquipamentosPage() {
 
   // 🔧 USANDO PLANO DA API
   const planoSelecionadoDetalhes = planos.find(p => p.id === associacao.planoSelecionado);
-
-  const getModalTitle = () => {
-    if (mostrandoOpcaoPlano === 'criar') {
-      return 'Criar Novo Plano de Manutenção';
-    } else if (mostrandoOpcaoPlano === 'duplicar') {
-      return 'Duplicar Plano de Manutenção';
-    }
-    return 'Plano de Manutenção';
-  };
-
-  const getModalEntity = () => {
-    if (mostrandoOpcaoPlano === 'criar') {
-      return {
-        id: '',
-        equipamento_id: '',
-        nome: '',
-        descricao: '',
-        versao: '1.0',
-        status: 'ATIVO',
-        ativo: true,
-        data_vigencia_inicio: '',
-        data_vigencia_fim: '',
-        observacoes: '',
-        criado_por: ''
-      };
-    }
-    return modalState.entity || {
-      id: '',
-      equipamento_id: '',
-      nome: '',
-      descricao: '',
-      versao: '1.0',
-      status: 'ATIVO',
-      ativo: true,
-      data_vigencia_inicio: '',
-      data_vigencia_fim: '',
-      observacoes: '',
-      criado_por: ''
-    };
-  };
 
   return (
     <Layout>
@@ -444,21 +491,43 @@ export function AssociacaoEquipamentosPage() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Planta/Local
                   </label>
-                  <select
+                  <Combobox
+                    options={plantas.map((planta: any) => ({
+                      value: planta.id.toString(),
+                      label: planta.nome
+                    }))}
                     value={plantaSelecionada}
-                    onChange={(e) => {
-                      setPlantaSelecionada(e.target.value);
+                    onValueChange={(value) => {
+                      setPlantaSelecionada(value);
+                      setUnidadeSelecionada('');
                       setEquipamentoSelecionado('');
                     }}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  >
-                    <option value="">Selecione a planta...</option>
-                    {plantas.map((planta: any) => (
-                      <option key={planta.id} value={planta.id.toString()}>
-                        {planta.nome}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder={loadingPlantas ? "Carregando plantas..." : "Selecione a planta..."}
+                    searchPlaceholder="Buscar planta..."
+                    emptyText="Nenhuma planta encontrada"
+                    disabled={loadingPlantas}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Unidade Consumidora
+                  </label>
+                  <Combobox
+                    options={unidades.map((unidade: any) => ({
+                      value: unidade.id.toString(),
+                      label: unidade.nome
+                    }))}
+                    value={unidadeSelecionada}
+                    onValueChange={(value) => {
+                      setUnidadeSelecionada(value);
+                      setEquipamentoSelecionado('');
+                    }}
+                    placeholder={loadingUnidades ? "Carregando unidades..." : plantaSelecionada ? "Selecione a unidade..." : "Primeiro selecione uma planta"}
+                    searchPlaceholder="Buscar unidade..."
+                    emptyText="Nenhuma unidade encontrada"
+                    disabled={!plantaSelecionada || loadingUnidades}
+                  />
                 </div>
 
                 <div>
@@ -466,25 +535,23 @@ export function AssociacaoEquipamentosPage() {
                     Equipamento
                   </label>
                   <div className="flex gap-2">
-                    <select
+                    <Combobox
+                      options={equipamentosDisponiveis.map((equipamento: any) => ({
+                        value: equipamento.id.toString(),
+                        label: `${equipamento.nome}`
+                      }))}
                       value={equipamentoSelecionado}
-                      onChange={(e) => setEquipamentoSelecionado(e.target.value)}
-                      disabled={!plantaSelecionada}
-                      className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    >
-                      <option value="">
-                        {plantaSelecionada ? "Selecione o equipamento..." : "Primeiro selecione uma planta"}
-                      </option>
-                      {equipamentosDisponiveis.map((equipamento: any) => (
-                        <option key={equipamento.id} value={equipamento.id.toString()}>
-                          {equipamento.nome} - {equipamento.tipo}
-                        </option>
-                      ))}
-                    </select>
-                    <Button 
+                      onValueChange={(value) => setEquipamentoSelecionado(value)}
+                      placeholder={unidadeSelecionada ? "Selecione o equipamento..." : "Primeiro selecione uma unidade"}
+                      searchPlaceholder="Buscar equipamento..."
+                      emptyText="Nenhum equipamento encontrado"
+                      disabled={!unidadeSelecionada}
+                      className="flex-1"
+                    />
+                    <Button
                       onClick={adicionarEquipamento}
-                      disabled={!plantaSelecionada || !equipamentoSelecionado}
-                      className="px-4"
+                      disabled={!plantaSelecionada || !unidadeSelecionada || !equipamentoSelecionado}
+                      className="px-4 h-9"
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -514,9 +581,13 @@ export function AssociacaoEquipamentosPage() {
                       <div key={eq.equipamentoId} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
                         <div>
                           <div className="font-medium text-gray-900 dark:text-gray-100">{eq.equipamentoNome}</div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                            <Building className="h-3 w-3" />
-                            {eq.plantaNome}
+                          <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                            <span className="flex items-center gap-1">
+                              <Building className="h-3 w-3" />
+                              {eq.plantaNome}
+                            </span>
+                            <span>•</span>
+                            <span>{eq.unidadeNome}</span>
                           </div>
                         </div>
                         <Button
@@ -558,6 +629,7 @@ export function AssociacaoEquipamentosPage() {
                       size="sm"
                       onClick={() => setMostrandoOpcaoPlano('selecionar')}
                       disabled={loading}
+                      className="btn-minimal"
                     >
                       <Layers className="h-4 w-4 mr-1" />
                       Usar Existente
@@ -566,6 +638,7 @@ export function AssociacaoEquipamentosPage() {
                       variant={mostrandoOpcaoPlano === 'criar' ? 'default' : 'outline'}
                       size="sm"
                       onClick={handleCriarNovoPlano}
+                      className="btn-minimal"
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Criar Novo
@@ -575,6 +648,7 @@ export function AssociacaoEquipamentosPage() {
                       size="sm"
                       onClick={() => setMostrandoOpcaoPlano('duplicar')}
                       disabled={planos.length === 0}
+                      className="btn-minimal"
                     >
                       <Copy className="h-4 w-4 mr-1" />
                       Duplicar Existente
@@ -589,19 +663,19 @@ export function AssociacaoEquipamentosPage() {
                       Plano para Duplicar
                     </label>
                     <div className="flex gap-2">
-                      <select
+                      <Combobox
+                        options={planos.map(plano => ({
+                          value: plano.id,
+                          label: `${plano.nome} (v${plano.versao})`
+                        }))}
                         value={planoParaDuplicar}
-                        onChange={(e) => setPlanoParaDuplicar(e.target.value)}
-                        className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      >
-                        <option value="">Selecione um plano para duplicar...</option>
-                        {planos.map(plano => (
-                          <option key={plano.id} value={plano.id}>
-                            {plano.nome} (v{plano.versao})
-                          </option>
-                        ))}
-                      </select>
-                      <Button onClick={handleDuplicarPlano}>
+                        onValueChange={(value) => setPlanoParaDuplicar(value)}
+                        placeholder="Selecione um plano para duplicar..."
+                        searchPlaceholder="Buscar plano..."
+                        emptyText="Nenhum plano encontrado"
+                        className="flex-1"
+                      />
+                      <Button onClick={handleDuplicarPlano} className="h-9">
                         <Copy className="h-4 w-4" />
                       </Button>
                     </div>
@@ -613,21 +687,18 @@ export function AssociacaoEquipamentosPage() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Plano de Manutenção
                     </label>
-                    <select
+                    <Combobox
+                      options={planos.filter(p => p.ativo).map(plano => ({
+                        value: plano.id,
+                        label: `${plano.nome} (v${plano.versao}) - ${plano.status}`
+                      }))}
                       value={associacao.planoSelecionado}
-                      onChange={(e) => setAssociacao(prev => ({ ...prev, planoSelecionado: e.target.value }))}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      onValueChange={(value) => setAssociacao(prev => ({ ...prev, planoSelecionado: value }))}
+                      placeholder={loading ? "Carregando planos..." : "Selecione um plano..."}
+                      searchPlaceholder="Buscar plano..."
+                      emptyText="Nenhum plano encontrado"
                       disabled={loading}
-                    >
-                      <option value="">
-                        {loading ? "Carregando planos..." : "Selecione um plano..."}
-                      </option>
-                      {planos.filter(p => p.ativo).map(plano => (
-                        <option key={plano.id} value={plano.id}>
-                          {plano.nome} (v{plano.versao}) - {plano.status}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
                 )}
 
@@ -639,6 +710,7 @@ export function AssociacaoEquipamentosPage() {
                     placeholder="Nome do responsável..."
                     value={associacao.responsavelPadrao}
                     onChange={(e) => setAssociacao(prev => ({ ...prev, responsavelPadrao: e.target.value }))}
+                    className="!rounded-sm"
                   />
                 </div>
 
@@ -650,6 +722,7 @@ export function AssociacaoEquipamentosPage() {
                     placeholder="Observações para todas as tarefas..."
                     value={associacao.observacoesPadrao}
                     onChange={(e) => setAssociacao(prev => ({ ...prev, observacoesPadrao: e.target.value }))}
+                    className="!rounded-sm"
                   />
                 </div>
               </div>
@@ -731,24 +804,18 @@ export function AssociacaoEquipamentosPage() {
         </div>
 
         {/* Modal para Criar/Duplicar Planos */}
-        <BaseModal
+        <PlanosModal
           isOpen={modalState.isOpen}
           mode="create"
-          entity={getModalEntity()}
-          title={getModalTitle()}
-          icon={<Layers className="h-5 w-5 text-blue-600" />}
-          formFields={planosFormFields}
+          entity={modalState.entity}
+          formFields={formFields}
+          tarefas={[]}
+          carregandoTarefas={false}
           onClose={() => {
             closeModal();
             setMostrandoOpcaoPlano('selecionar');
           }}
           onSubmit={handleSubmitPlano}
-          width="w-[1000px]"
-          groups={[
-            { key: 'informacoes_basicas', title: 'Informações Básicas' },
-            { key: 'configuracoes', title: 'Configurações' },
-            { key: 'tarefas_template', title: 'Templates de Tarefas' }
-          ]}
         />
       </Layout.Main>
     </Layout>

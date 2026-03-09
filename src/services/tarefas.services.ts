@@ -190,9 +190,10 @@ export interface DashboardTarefasDto {
   total_tarefas: number;
   tarefas_ativas: number;
   tarefas_inativas: number;
+  tarefas_atrasadas: number;
   tarefas_em_revisao: number;
   tarefas_arquivadas: number;
-  
+
   // Por criticidade
   criticidade_muito_alta: number;  // Nível 5
   criticidade_alta: number;        // Nível 4
@@ -241,6 +242,7 @@ export interface QueryTarefasApiParams {
   tipo_manutencao?: TipoManutencao; // Filtrar por tipo de manutenção
   frequencia?: FrequenciaTarefa;    // Filtrar por frequência
   criticidade?: number;             // Filtrar por nível de criticidade (1-5)
+  status_atrasada?: boolean;        // Filtrar por tarefas atrasadas
   page?: number;                    // Número da página (padrão: 1)
   limit?: number;                   // Itens por página (1-100, padrão: 10)
   sort_by?: string;                 // Campo de ordenação (padrão: 'created_at')
@@ -283,33 +285,63 @@ export class TarefasApiService {
   }
 
   async findAll(params?: QueryTarefasApiParams): Promise<TarefasListApiResponse> {
-    // console.log('🔍 TAREFAS API: Listando tarefas com parâmetros:', params);
-    
+    console.log('🔵 [FRONTEND] tarefasApi.findAll chamado com params:', params);
+
     try {
+      // Limpar parâmetros undefined/null antes de enviar
+      const cleanParams: any = {
+        page: params?.page || 1,
+        limit: params?.limit || 10
+      };
+
+      // Adicionar apenas parâmetros com valores válidos
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          // Pular page e limit que já foram adicionados
+          if (key === 'page' || key === 'limit') {
+            return;
+          }
+
+          // Só adicionar se tiver valor válido (não undefined, null)
+          if (value !== undefined && value !== null) {
+            // Para booleanos, só adicionar se for true
+            if (typeof value === 'boolean') {
+              if (value === true) {
+                cleanParams[key] = value;
+              }
+            } else if (value !== '') {
+              // Não adicionar strings vazias
+              cleanParams[key] = value;
+            }
+          }
+        });
+      }
+
+      console.log('🔵 [FRONTEND] Parâmetros limpos antes de enviar:', cleanParams);
+
       const response = await api.get<TarefasListApiResponse>(this.baseEndpoint, {
-        params: {
-          page: params?.page || 1,
-          limit: params?.limit || 10,
-          ...params
-        }
+        params: cleanParams
       });
-      // console.log('✅ TAREFAS API: Tarefas listadas:', response.data.pagination);
+      console.log('🔵 [FRONTEND] Resposta da API:', response.data.pagination);
       return response.data;
     } catch (error: any) {
-      // console.error('💥 TAREFAS API: Erro ao listar tarefas:', error);
+      console.error('💥 [FRONTEND] Erro ao listar tarefas:', error);
       throw error;
     }
   }
 
   async findOne(id: string): Promise<TarefaApiResponse> {
-    // console.log('🔍 TAREFAS API: Buscando tarefa por ID:', id);
-    
+    console.log('⏱️ [FRONTEND API] Iniciando busca da tarefa:', id);
+    const inicio = performance.now();
+
     try {
       const response = await api.get<TarefaApiResponse>(`${this.baseEndpoint}/${id}`);
-      // console.log('✅ TAREFAS API: Tarefa encontrada:', response.data);
+      const tempo = performance.now() - inicio;
+      console.log(`⏱️ [FRONTEND API] Busca concluída em ${tempo.toFixed(2)}ms`);
+      console.log('✅ [FRONTEND API] Tarefa encontrada:', response.data);
       return response.data;
     } catch (error: any) {
-      // console.error('💥 TAREFAS API: Erro ao buscar tarefa:', error);
+      console.error('💥 [FRONTEND API] Erro ao buscar tarefa:', error);
       throw error;
     }
   }

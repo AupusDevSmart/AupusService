@@ -5,22 +5,12 @@ export const planosFilterConfig: FilterConfig[] = [
   {
     key: 'search',
     type: 'search',
-    placeholder: 'Buscar planos por nome ou descrição...',
-    className: 'lg:min-w-80'
-  },
-  {
-    key: 'equipamento_id',
-    type: 'select',
-    label: 'Equipamento',
-    placeholder: 'Todos os equipamentos',
-    options: [
-      { value: 'all', label: 'Todos os equipamentos' }
-    ],
-    className: 'min-w-48'
+    placeholder: 'Buscar por nome, descrição ou equipamento...',
+    className: 'w-full'
   },
   {
     key: 'status',
-    type: 'select',
+    type: 'combobox',
     label: 'Status',
     placeholder: 'Todos os status',
     options: [
@@ -30,30 +20,18 @@ export const planosFilterConfig: FilterConfig[] = [
       { value: 'EM_REVISAO', label: 'Em Revisão' },
       { value: 'SUSPENSO', label: 'Suspenso' }
     ],
-    className: 'min-w-36'
+    className: 'w-full'
   },
   {
     key: 'ativo',
-    type: 'select',
-    label: 'Ativo/Inativo',
+    type: 'combobox',
+    label: 'Situação',
     placeholder: 'Todos',
     options: [
       { value: 'all', label: 'Todos' },
       { value: 'true', label: 'Ativos' },
       { value: 'false', label: 'Inativos' }
     ],
-    className: 'min-w-36'
-  },
-  {
-    key: 'publico',
-    type: 'select',
-    label: 'Visibilidade',
-    placeholder: 'Todas',
-    options: [
-      { value: 'all', label: 'Todas' },
-      { value: 'true', label: 'Públicos' },
-      { value: 'false', label: 'Privados' }
-    ],
-    className: 'min-w-36'
+    className: 'w-full'
   }
 ];

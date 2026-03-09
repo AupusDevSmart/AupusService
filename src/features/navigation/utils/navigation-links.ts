@@ -62,16 +62,8 @@ export const navigationLinks: Array<NavigationLink> = [
     featureKey: 'Dashboard',
     path: '/dashboard',
     icon: LayoutDashboard,
-    label: 'Dashboard',
-    hint: 'Dashboard',
-  },
-  {
-    key: 'dashboard-manutencao',
-    featureKey: 'Dashboard',
-    path: '/dashboard-manutencao',
-    icon: Wrench,
-    label: 'Dashboard de Manutenção',
-    hint: 'Dashboard de Manutenção e Ordens de Serviço',
+    label: 'Dashboard Operacional',
+    hint: 'Dashboard Operacional Unificado',
   },
 
   // 🏭 INFRAESTRUTURA

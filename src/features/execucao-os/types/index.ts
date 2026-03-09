@@ -353,6 +353,7 @@ export interface ExecucaoOSFilters extends BaseFiltersType {
   data_inicio?: string;
   data_fim?: string;
   programacao_id?: string;
+  atrasadas?: boolean; // Filtro para OS em atraso
 }
 
 // ========================================

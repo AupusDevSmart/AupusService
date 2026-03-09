@@ -19,8 +19,6 @@ import { DashboardPage } from './pages/dashboard';
 import { Settings } from './pages/settings';
 import { LoginPage } from './pages/login/LoginPage';
 import { useUserStore } from './store/useUserStore';
-// ✅ Dashboard de Manutenção
-import { MaintenanceDashboard } from './features/maintenance-dashboard';
 
 // ✅ Lazy load para Cadastros (importando direto do NexOn)
 const CadastroUsuariosPage = lazy(() =>
@@ -89,14 +87,6 @@ export const appRoutes = createBrowserRouter([
         element: (
           <FeatureWrapper feature="Dashboard">
             <DashboardPage />
-          </FeatureWrapper>
-        ),
-      },
-      {
-        path: 'dashboard-manutencao',
-        element: (
-          <FeatureWrapper feature="Dashboard">
-            <MaintenanceDashboard />
           </FeatureWrapper>
         ),
       },

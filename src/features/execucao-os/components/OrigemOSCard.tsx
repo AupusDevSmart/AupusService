@@ -1,23 +1,23 @@
 // src/features/execucao-os/components/OrigemOSCard.tsx
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Calendar, MapPin } from 'lucide-react';
+import { FileText, AlertTriangle, Wrench, Calendar } from 'lucide-react';
 
 interface OrigemOSCardProps {
   value?: {
     origem?: string;
-    planoManutencao?: string;
-    programacaoOrigem?: string;
-    anomalia?: { id: string; descricao: string } | string;
-    tarefa?: { id: string; descricao: string } | string;
+    planoManutencao?: any;
+    programacaoOrigem?: any;
+    anomalia?: any;
+    tarefa?: any;
     _dadosCompletos?: any;
   };
   // Props individuais para compatibilidade (deprecated)
   origem?: string;
-  planoManutencao?: string;
-  programacaoOrigem?: string;
-  anomalia?: { id: string; descricao: string } | string;
-  tarefa?: { id: string; descricao: string } | string;
+  planoManutencao?: any;
+  programacaoOrigem?: any;
+  anomalia?: any;
+  tarefa?: any;
   _dadosCompletos?: any;
 }
 
@@ -26,7 +26,7 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = (props) => {
   const data = props.value || props;
 
   const {
-    origem = 'PLANEJAMENTO',
+    origem = 'MANUAL',
     planoManutencao,
     programacaoOrigem,
     anomalia,
@@ -43,159 +43,124 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = (props) => {
 
   const anomaliaDesc = getDescricao(anomalia);
   const tarefaDesc = getDescricao(tarefa);
+
   const getOrigemLabel = (origem: string): string => {
     const labels: Record<string, string> = {
+      'MANUAL': 'Manual',
       'PLANEJAMENTO': 'Planejamento',
       'EMERGENCIA': 'Emergência',
       'CORRETIVA': 'Corretiva',
       'PREVENTIVA': 'Preventiva',
-      'PREDITIVA': 'Preditiva'
+      'PREDITIVA': 'Preditiva',
+      'ANOMALIA': 'Anomalia',
+      'PLANO_MANUTENCAO': 'Plano de Manutenção'
     };
     return labels[origem] || origem;
   };
 
-  const getOrigemColor = (origem: string): string => {
-    const colors: Record<string, string> = {
-      'PLANEJAMENTO': 'bg-blue-100 text-blue-800 border-blue-200',
-      'EMERGENCIA': 'bg-red-100 text-red-800 border-red-200',
-      'CORRETIVA': 'bg-orange-100 text-orange-800 border-orange-200',
-      'PREVENTIVA': 'bg-green-100 text-green-800 border-green-200',
-      'PREDITIVA': 'bg-purple-100 text-purple-800 border-purple-200'
-    };
-    return colors[origem] || 'bg-gray-100 text-gray-800 border-gray-200';
+  const getOrigemIcon = (origem: string) => {
+    if (origem === 'ANOMALIA' || origem === 'EMERGENCIA') return AlertTriangle;
+    if (origem === 'PLANO_MANUTENCAO' || origem === 'PREVENTIVA') return Calendar;
+    if (origem === 'CORRETIVA' || origem === 'PREDITIVA') return Wrench;
+    return FileText;
   };
 
+  const OrigemIcon = getOrigemIcon(origem);
+
   return (
-    <Card className="border-2">
-      {/* ✅ RESPONSIVO: Header */}
-      <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-4 md:px-6 py-2 sm:py-3">
-        <CardTitle className="text-sm sm:text-base flex items-center gap-1.5 sm:gap-2">
-          <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
-          <span className="truncate">Origem da Ordem de Serviço</span>
+    <Card className="border border-gray-200 dark:border-gray-700 shadow-sm">
+      <CardHeader className="pb-3 bg-gray-50 dark:bg-gray-800/50">
+        <CardTitle className="text-sm flex items-center gap-2 text-gray-700 dark:text-gray-300">
+          <FileText className="h-4 w-4" />
+          Origem da OS
         </CardTitle>
       </CardHeader>
-      {/* ✅ RESPONSIVO: Content */}
-      <CardContent className="space-y-2 sm:space-y-3 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
-        <div className="grid grid-cols-1 gap-2 sm:gap-3">
-          {/* ✅ RESPONSIVO: Origem */}
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground">
-              Tipo de Origem
+      <CardContent className="pt-4 space-y-3">
+        {/* Tipo de Origem - Design minimalista */}
+        <div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Tipo</div>
+          <div className="flex items-center gap-2">
+            <OrigemIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <span className="font-medium text-gray-900 dark:text-gray-100">
+              {getOrigemLabel(origem)}
             </span>
-            <div className={`inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium border w-fit ${getOrigemColor(origem)}`}>
-              <FileText className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
-              <span className="truncate">{getOrigemLabel(origem)}</span>
-            </div>
           </div>
-
-          {/* ✅ RESPONSIVO: Plano de Manutenção */}
-          {planoManutencao && (
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <Calendar className="h-3 w-3 shrink-0" />
-                <span className="truncate">Plano de Manutenção</span>
-              </span>
-              <div className="flex flex-col gap-0.5 text-green-700 bg-green-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded border border-green-200">
-                {typeof planoManutencao === 'object' && planoManutencao.nome ? (
-                  <>
-                    <span className="text-xs sm:text-sm font-medium break-words">
-                      {planoManutencao.nome}
-                    </span>
-                    {planoManutencao.descricao && (
-                      <span className="text-xs break-words">
-                        {planoManutencao.descricao}
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <span className="text-xs sm:text-sm font-medium break-words">
-                    {typeof planoManutencao === 'string' ? planoManutencao : planoManutencao.nome || 'N/A'}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ✅ RESPONSIVO: Programação de Origem */}
-          {programacaoOrigem && (
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <FileText className="h-3 w-3 shrink-0" />
-                <span className="truncate">Programação de Origem</span>
-              </span>
-              <div className="flex flex-col gap-0.5 text-purple-700 bg-purple-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded border border-purple-200">
-                {typeof programacaoOrigem === 'object' && (programacaoOrigem.codigo || programacaoOrigem.numero_programacao) ? (
-                  <>
-                    <span className="text-xs sm:text-sm font-medium font-mono break-words">
-                      {programacaoOrigem.codigo || programacaoOrigem.numero_programacao}
-                    </span>
-                    {programacaoOrigem.descricao && (
-                      <span className="text-xs break-words">
-                        {programacaoOrigem.descricao}
-                      </span>
-                    )}
-                  </>
-                ) : typeof programacaoOrigem === 'string' ? (
-                  <span className="text-xs sm:text-sm font-medium font-mono break-words">
-                    {programacaoOrigem}
-                  </span>
-                ) : (
-                  <span className="text-xs sm:text-sm font-medium">
-                    N/A
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ✅ RESPONSIVO: Anomalia de Origem */}
-          {anomaliaDesc && (
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <FileText className="h-3 w-3 shrink-0" />
-                <span className="truncate">Anomalia de Origem</span>
-              </span>
-              <div className="flex flex-col gap-0.5 text-orange-700 bg-orange-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded border border-orange-200">
-                <span className="text-xs sm:text-sm font-medium break-words">
-                  {anomaliaDesc}
-                </span>
-                {typeof anomalia === 'object' && anomalia.prioridade && (
-                  <span className="text-xs break-words">
-                    Prioridade: {anomalia.prioridade} | Status: {anomalia.status || 'N/A'}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ✅ RESPONSIVO: Tarefa de Origem */}
-          {tarefaDesc && (
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <FileText className="h-3 w-3 shrink-0" />
-                <span className="truncate">Tarefa de Origem</span>
-              </span>
-              <div className="flex flex-col gap-0.5 text-blue-700 bg-blue-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded border border-blue-200">
-                <span className="text-xs sm:text-sm font-medium break-words">
-                  {tarefaDesc}
-                </span>
-                {typeof tarefa === 'object' && tarefa.tarefa && (
-                  <span className="text-xs break-words">
-                    {tarefa.tarefa.categoria && `Categoria: ${tarefa.tarefa.categoria}`}
-                    {tarefa.tarefa.tipo_manutencao && ` | Tipo: ${tarefa.tarefa.tipo_manutencao}`}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Mensagem quando não há informações adicionais */}
-          {!planoManutencao && !programacaoOrigem && !anomaliaDesc && !tarefaDesc && (
-            <div className="text-xs text-muted-foreground italic">
-              Sem informações adicionais de origem
-            </div>
-          )}
         </div>
+
+        {/* Anomalia - Se existir */}
+        {anomaliaDesc && (
+          <div className="border-t pt-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Anomalia</div>
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              {anomaliaDesc}
+            </div>
+            {typeof anomalia === 'object' && anomalia.prioridade && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Prioridade: {anomalia.prioridade}
+                {anomalia.status && ` • Status: ${anomalia.status}`}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Plano de Manutenção - Se existir */}
+        {planoManutencao && (
+          <div className="border-t pt-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Plano de Manutenção</div>
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              {typeof planoManutencao === 'object' && planoManutencao.nome
+                ? planoManutencao.nome
+                : typeof planoManutencao === 'string'
+                  ? planoManutencao
+                  : 'N/A'}
+            </div>
+            {typeof planoManutencao === 'object' && planoManutencao.descricao && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {planoManutencao.descricao}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Programação de Origem - Se existir */}
+        {programacaoOrigem && (
+          <div className="border-t pt-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Programação</div>
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              {typeof programacaoOrigem === 'object'
+                ? (programacaoOrigem.codigo || programacaoOrigem.numero_programacao || 'N/A')
+                : programacaoOrigem}
+            </div>
+            {typeof programacaoOrigem === 'object' && programacaoOrigem.descricao && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {programacaoOrigem.descricao}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tarefa - Se existir */}
+        {tarefaDesc && (
+          <div className="border-t pt-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Tarefa</div>
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              {tarefaDesc}
+            </div>
+            {typeof tarefa === 'object' && tarefa.tarefa && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {tarefa.tarefa.categoria && `${tarefa.tarefa.categoria}`}
+                {tarefa.tarefa.tipo_manutencao && ` • ${tarefa.tarefa.tipo_manutencao}`}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mensagem quando não há informações adicionais */}
+        {!planoManutencao && !programacaoOrigem && !anomaliaDesc && !tarefaDesc && origem === 'MANUAL' && (
+          <div className="text-xs text-gray-500 dark:text-gray-400 italic">
+            Ordem criada manualmente
+          </div>
+        )}
       </CardContent>
     </Card>
   );

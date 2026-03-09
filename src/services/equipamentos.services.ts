@@ -224,19 +224,10 @@ export class EquipamentosApiService {
   }
 
   async findOne(id: string): Promise<EquipamentoApiResponse> {
-    console.log('🌐 [API SERVICE] findOne chamado para ID:', id);
     const response = await api.get<{ success: boolean; data: EquipamentoApiResponse; meta?: any }>(`${this.baseEndpoint}/${id}`);
-    console.log('🌐 [API SERVICE] Resposta completa (response):', response);
-    console.log('🌐 [API SERVICE] response.data:', response.data);
-    console.log('🌐 [API SERVICE] response.data.data (os dados reais):', response.data.data);
 
     // ✅ CORRIGIDO: A API retorna { success, data, meta }, precisamos retornar apenas o "data" interno
     const equipamento = response.data.data || response.data;
-    console.log('✅ [API SERVICE] Equipamento extraído:', equipamento);
-    console.log('✅ [API SERVICE] equipamento.id:', equipamento?.id);
-    console.log('✅ [API SERVICE] equipamento.nome:', equipamento?.nome);
-    console.log('✅ [API SERVICE] equipamento.tipo_equipamento:', equipamento?.tipo_equipamento);
-    console.log('✅ [API SERVICE] equipamento.dados_tecnicos:', equipamento?.dados_tecnicos);
 
     return equipamento;
   }

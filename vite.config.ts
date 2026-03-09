@@ -7,6 +7,12 @@ function contextualAliasPlugin(): Plugin {
   const nexonPath = path.resolve(__dirname, '../../AupusNexOn')
   const servicePath = path.resolve(__dirname, './src')
 
+  // Módulos compartilhados: imports do NexOn que devem usar a versão do Service
+  // Garante uma única instância de estado (store) no bundle
+  const sharedModules = [
+    'store/useUserStore',
+  ]
+
   return {
     name: 'contextual-alias',
     async resolveId(source, importer, options) {
@@ -16,6 +22,17 @@ function contextualAliasPlugin(): Plugin {
         // ✅ FORÇAR: Se o importador vem do NexOn OU se o arquivo já foi resolvido no NexOn, resolver @ para NexOn
         // Isso garante que TODA a árvore de imports do NexOn continue no NexOn
         if (importer && (importer.includes('AupusNexOn') || importer.includes(nexonPath.replace(/\\/g, '/')))) {
+          // Módulos compartilhados: usar SEMPRE a versão do Service
+          // Ex: useUserStore deve ser único para manter o estado de login
+          if (sharedModules.some(mod => cleanPath.startsWith(mod))) {
+            const basePath = path.resolve(servicePath, cleanPath)
+            const resolved = await this.resolve(basePath, importer, { skipSelf: true, ...options })
+            if (resolved) {
+              console.log(`🔗 [ALIAS] ${source} → Service (shared module, from ${importer?.substring(importer.lastIndexOf('/') + 1)})`)
+              return resolved
+            }
+          }
+
           const basePath = path.resolve(nexonPath, 'src', cleanPath)
           // Deixar Vite resolver extensões (.ts, .tsx, .js, etc.)
           const resolved = await this.resolve(basePath, importer, { skipSelf: true, ...options })

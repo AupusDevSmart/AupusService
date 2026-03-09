@@ -1,4 +1,4 @@
-// src/features/execucao-os/config/form-config.tsx - CORRIGIDA COM MAPEAMENTO DE GRUPOS
+// src/features/execucao-os/config/form-config.tsx - CORRIGIDA COM MAPEAMENTO DE GRUPOS E COLSPAN
 import type { FormField } from '@/types/base';
 import { ProgramacaoSelector } from '../components/ProgramacaoSelector';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
@@ -6,6 +6,7 @@ import { FerramentasCardManager } from '@/components/common/cards/FerramentasCar
 import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManager';
 import { OrigemOSCardWrapper } from '../components/OrigemOSCardWrapper';
 import { ReservaVeiculoCard } from '../components/ReservaVeiculoCard';
+import { StatusTransitionHelper } from '../components/StatusTransitionHelper';
 
 export const execucaoOSFormFields: FormField[] = [
   // Seleção da Programação - GRUPO: selecao
@@ -65,21 +66,21 @@ export const execucaoOSFormFields: FormField[] = [
   // Origem da OS - GRUPO: origem
   {
     key: 'origemCard',
-    label: 'Origem da OS',
+    label: '', // Remover label duplicada - o card já tem título interno
     type: 'custom',
     component: OrigemOSCardWrapper,
     group: 'origem',
-    width: 'full'
+    colSpan: 2 // ✅ Ocupa 2 colunas (largura total)
   },
 
   // Reserva de Veículo - GRUPO: reserva
   {
     key: 'reservaCard',
-    label: 'Reserva de Veículo',
+    label: '', // Remover label duplicada - o card já tem título interno
     type: 'custom',
     component: ReservaVeiculoCard,
     group: 'reserva',
-    width: 'full'
+    colSpan: 2 // ✅ Ocupa 2 colunas (largura total)
   },
 
   // Dados de Execução da Reserva - GRUPO: reserva
@@ -136,7 +137,7 @@ export const execucaoOSFormFields: FormField[] = [
     required: true,
     disabled: true, // ✅ Status não pode ser mudado manualmente - usar botões de ação
     options: [
-      { value: 'PLANEJADA', label: 'Planejada' },
+      // PLANEJADA removido - OS começam como PROGRAMADA
       { value: 'PROGRAMADA', label: 'Programada' },
       { value: 'EM_EXECUCAO', label: 'Em Execução' },
       { value: 'PAUSADA', label: 'Pausada' },
@@ -145,6 +146,19 @@ export const execucaoOSFormFields: FormField[] = [
     ],
     group: 'controle',
     width: 'half'
+  },
+  {
+    key: 'statusHelper',
+    label: '',
+    type: 'custom',
+    component: (props: any) => {
+      const status = props.value || props.entity?.statusExecucao || 'PROGRAMADA'; // Default: PROGRAMADA
+      return <StatusTransitionHelper currentStatus={status} />;
+    },
+    group: 'controle',
+    colSpan: 2,
+    showOnlyOnMode: ['view'],
+    startNewRow: true
   },
   {
     key: 'tempoTotalExecucao',
@@ -213,7 +227,7 @@ export const execucaoOSFormFields: FormField[] = [
   // Técnicos da Execução - GRUPO: equipe
   {
     key: 'tecnicos',
-    label: 'Equipe de Execução',
+    label: '', // Remover label duplicada - o card já tem título interno
     type: 'custom',
     component: TecnicosCardManager,
     componentProps: {
@@ -221,12 +235,11 @@ export const execucaoOSFormFields: FormField[] = [
       showCustos: true,
       showStatus: true,
       showHorasReais: true,
-      title: 'Equipe Presente'
+      title: 'Equipe de Execução'
     },
     defaultValue: [],
     group: 'equipe',
-    width: 'full',
-    startNewRow: true,
+    colSpan: 2, // ✅ Ocupa 2 colunas (largura total)
     condition: () => true // ✅ Sempre mostrar
   },
 
@@ -282,25 +295,25 @@ export const execucaoOSFormFields: FormField[] = [
   // Recursos Consumidos - Materiais - GRUPO: recursos
   {
     key: 'materiaisConsumidos',
-    label: 'Materiais Consumidos',
+    label: '', // Remover label duplicada - o card já tem título interno
     type: 'custom',
     component: MateriaisCardManager,
     componentProps: {
       mode: 'execucao',
       showCustos: true,
       showStatus: true,
-      title: 'Materiais Efetivamente Utilizados'
+      title: 'Materiais Consumidos'
     },
     defaultValue: [],
     group: 'recursos',
-    width: 'full',
+    colSpan: 2, // ✅ Ocupa 2 colunas (largura total)
     condition: () => true // ✅ Sempre mostrar
   },
 
   // Recursos Utilizados - Ferramentas - GRUPO: recursos
   {
     key: 'ferramentasUtilizadas',
-    label: 'Ferramentas Utilizadas',
+    label: '', // Remover label duplicada - o card já tem título interno
     type: 'custom',
     component: FerramentasCardManager,
     componentProps: {
@@ -308,12 +321,11 @@ export const execucaoOSFormFields: FormField[] = [
       showStatus: true,
       showCondicao: true,
       showCalibracao: true,
-      title: 'Ferramentas Efetivamente Utilizadas'
+      title: 'Ferramentas Utilizadas'
     },
     defaultValue: [],
     group: 'recursos',
-    width: 'full',
-    startNewRow: true,
+    colSpan: 2, // ✅ Ocupa 2 colunas (largura total) - linha separada
     condition: () => true // ✅ Sempre mostrar
   },
 
@@ -490,7 +502,7 @@ export const execucaoOSFormFields: FormField[] = [
     placeholder: 'Descreva o motivo do cancelamento',
     required: true,
     condition: (entity, formData) => {
-      return formData?.statusExecucao === 'CANCELADA' || 
+      return formData?.statusExecucao === 'CANCELADA' ||
              (entity && entity.statusExecucao === 'CANCELADA');
     },
     group: 'observacoes'
@@ -577,7 +589,7 @@ export const execucaoOSFormGroups = [
   {
     key: 'controle',
     title: 'Controle de Execução',
-    fields: ['statusExecucao', 'dataHoraInicioReal', 'dataHoraFimReal', 'tempoTotalExecucao'] // ✅ ADICIONADO: mapping explícito
+    fields: ['statusExecucao', 'statusHelper', 'dataHoraInicioReal', 'dataHoraFimReal', 'tempoTotalExecucao'] // ✅ ADICIONADO: mapping explícito
   },
   {
     key: 'equipe',

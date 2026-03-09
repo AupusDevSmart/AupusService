@@ -74,6 +74,14 @@ export interface EquipamentoResumoDto {
     id: string;
     nome: string;
   };
+  unidade?: {
+    id: string;
+    nome: string;
+    planta?: {
+      id: string;
+      nome: string;
+    };
+  };
 }
 
 export interface UsuarioResumoDto {

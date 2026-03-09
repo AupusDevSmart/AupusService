@@ -12,6 +12,7 @@ import { useGenericModal } from '@/hooks/useGenericModal';
 import { programacaoOSTableColumns } from '../config/table-config';
 import { programacaoOSFilterConfig } from '../config/filter-config';
 import { programacaoOSFormFields, programacaoOSFormGroups } from '../config/form-config';
+import { createProgramacaoOSTableActions } from '../config/actions-config';
 import { useProgramacaoOS } from '../hooks/useProgramacaoOS';
 import { WorkflowModal } from './WorkflowModal';
 import { processarMateriaisComCustos, processarTecnicosComCustos } from '@/utils/recursos.utils';
@@ -226,8 +227,8 @@ export function ProgramacaoOSPage() {
         dados_origem: data.origem || null,
 
         // Planejamento - campos atualizados para snake_case
-        tempo_estimado: parseFloat(data.tempo_estimado || data.tempoEstimado) || 0,
-        duracao_estimada: parseFloat(data.duracao_estimada || data.duracaoEstimada) || 0,
+        tempo_estimado: parseFloat(data.tempo_estimado || data.tempoEstimado) || 4,
+        duracao_estimada: parseFloat(data.duracao_estimada || data.duracaoEstimada) || 6,
         data_previsao_inicio: data.data_previsao_inicio || data.dataPrevisaoInicio ?
           new Date(data.data_previsao_inicio || data.dataPrevisaoInicio).toISOString() : null,
         data_previsao_fim: data.data_previsao_fim || data.dataPrevisaoFim ?
@@ -263,29 +264,8 @@ export function ProgramacaoOSPage() {
 
         // Tarefas relacionadas (só para create, em update pode ser separado)
         ...(modalState.mode === 'create' && {
-          // ✅ INVESTIGAÇÃO: Rastrear origem dos IDs das tarefas
-          tarefas_ids: (() => {
-            const tarefasSelecionadas = data.origem?.tarefasSelecionadas || [];
-
-            console.log('🔍 [TAREFAS DEBUG] tarefasSelecionadas originais:', tarefasSelecionadas);
-            console.log('🔍 [TAREFAS DEBUG] data.origem completo:', data.origem);
-
-            const filteredIds = tarefasSelecionadas.filter((id: string) => {
-              // Rejeitar IDs mockados que começam com "tarefa-" seguido de timestamp
-              const isMockId = typeof id === 'string' && id.startsWith('tarefa-') && id.includes('-');
-
-              if (isMockId) {
-                console.warn('⚠️ [TAREFAS DEBUG] ID mockado detectado e removido:', id);
-              } else {
-                console.log('✅ [TAREFAS DEBUG] ID válido mantido:', id);
-              }
-
-              return !isMockId;
-            });
-
-            console.log('🔍 [TAREFAS DEBUG] IDs finais após filtragem:', filteredIds);
-            return filteredIds;
-          })()
+          // IDs das tarefas selecionadas
+          tarefas_ids: data.origem?.tarefasSelecionadas || []
         }),
 
         // Arrays de recursos - Apenas campos aceitos pelo backend
@@ -345,32 +325,23 @@ export function ProgramacaoOSPage() {
 
   // Handlers para ações da tabela
   const handleView = async (programacao: ProgramacaoResponse) => {
-    try {
-      console.log('🔍 [ProgramacaoOSPage] Carregando dados completos para visualização:', programacao.id);
+    // ✅ OTIMIZAÇÃO: Abrir modal instantaneamente com dados básicos
+    openModal('view', programacao);
 
-      // Carregar dados completos com materiais, ferramentas e técnicos
+    // Carregar dados completos em segundo plano
+    try {
+      console.log('🔍 [ProgramacaoOSPage] Carregando dados completos em segundo plano:', programacao.id);
       const dadosCompletos = await buscarProgramacao(programacao.id);
 
-      console.log('📦 [ProgramacaoOSPage] Dados completos recebidos da API:', {
-        id: dadosCompletos.id,
-        status: dadosCompletos.status,
-        origem: dadosCompletos.origem,
-        dados_origem: dadosCompletos.dados_origem,
-        tarefas_ids: dadosCompletos.tarefas_ids,
-        materiais: dadosCompletos.materiais?.length || 0,
-        tecnicos: dadosCompletos.tecnicos?.length || 0,
-        ferramentas: dadosCompletos.ferramentas?.length || 0,
-        observacoes_analise: dadosCompletos.observacoes_analise,
-        motivo_rejeicao: dadosCompletos.motivo_rejeicao,
-        motivo_cancelamento: dadosCompletos.motivo_cancelamento
-      });
+      console.log('📦 [ProgramacaoOSPage] Dados completos carregados, atualizando modal...');
 
-      console.log('🔧 [ProgramacaoOSPage] Abrindo modal com dados processados...');
-      openModal('view', dadosCompletos);
+      // Atualizar modal com dados completos (só se ainda estiver aberto)
+      if (modalState.isOpen && modalState.entity?.id === programacao.id) {
+        openModal('view', dadosCompletos);
+      }
     } catch (error) {
       console.error('❌ [ProgramacaoOSPage] Erro ao carregar dados completos:', error);
-      // Fallback: usar dados básicos
-      openModal('view', programacao);
+      // Modal já está aberto com dados básicos, não precisa fazer nada
     }
   };
 
@@ -381,14 +352,20 @@ export function ProgramacaoOSPage() {
       return;
     }
 
+    // ✅ OTIMIZAÇÃO: Abrir modal instantaneamente com dados básicos
+    openModal('edit', programacao);
+
+    // Carregar dados completos em segundo plano
     try {
-      // Carregar dados completos com materiais, ferramentas e técnicos
       const dadosCompletos = await buscarProgramacao(programacao.id);
-      openModal('edit', dadosCompletos);
+
+      // Atualizar modal com dados completos (só se ainda estiver aberto)
+      if (modalState.isOpen && modalState.entity?.id === programacao.id) {
+        openModal('edit', dadosCompletos);
+      }
     } catch (error) {
       console.error('Erro ao carregar dados completos:', error);
-      // Fallback: usar dados básicos
-      openModal('edit', programacao);
+      // Modal já está aberto com dados básicos, não precisa fazer nada
     }
   };
 
@@ -571,6 +548,12 @@ export function ProgramacaoOSPage() {
     }
   };
 
+  const handleIrParaExecucao = (programacao: ProgramacaoResponse) => {
+    if (programacao.ordem_servico?.id) {
+      navigate(`/execucao-os?execucaoId=${programacao.ordem_servico.id}`);
+    }
+  };
+
   const handleExportar = async () => {
     try {
       const blob = await exportarOS(filters);
@@ -616,6 +599,18 @@ export function ProgramacaoOSPage() {
     }
   };
 
+  // Criar ações da tabela (sem useMemo para evitar problemas de referência)
+  const tableActions = createProgramacaoOSTableActions({
+    onView: handleView,
+    onEdit: handleEdit,
+    onAnalisar: handleAnalisar,
+    onAprovar: handleAprovar,
+    onRejeitar: handleRejeitar,
+    onCancelar: handleCancelar,
+    onDelete: handleDeletar,
+    onIrParaExecucao: handleIrParaExecucao,
+  });
+
   const getModalTitle = useMemo(() => {
     const titles = {
       create: 'Nova Programação de Ordem de Serviço',
@@ -628,6 +623,10 @@ export function ProgramacaoOSPage() {
   const getModalEntity = useMemo(() => {
     if (modalState.mode === 'create') {
       const baseEntity = {
+        // ✅ Campos obrigatórios
+        descricao: '',
+        local: '',
+        ativo: '',
         condicoes: 'PARADO',
         tipo: 'PREVENTIVA',
         prioridade: 'MEDIA',
@@ -828,64 +827,44 @@ export function ProgramacaoOSPage() {
           />
           
           {/* Dashboard de Estatísticas */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Clock className="h-6 w-6 text-gray-600 dark:text-gray-400" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.pendentes}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Pendentes</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+            <div className="bg-card border rounded-sm p-4 hover:border-gray-400 dark:hover:border-gray-600 transition-colors">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2">Pendentes</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.pendentes}</p>
                 </div>
+                <Clock className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
               </div>
             </div>
-            
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.em_analise}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Em Análise</div>
+
+            <div className="bg-card border rounded-sm p-4 hover:border-gray-400 dark:hover:border-gray-600 transition-colors">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2">Em Análise</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.em_analise}</p>
                 </div>
+                <AlertTriangle className="h-5 w-5 text-blue-600 dark:text-blue-500 flex-shrink-0" />
               </div>
             </div>
-            
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.aprovadas}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Aprovadas</div>
+
+            <div className="bg-card border rounded-sm p-4 hover:border-gray-400 dark:hover:border-gray-600 transition-colors">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2">Aprovadas</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.aprovadas}</p>
                 </div>
+                <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-500 flex-shrink-0" />
               </div>
             </div>
-            
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.rejeitadas}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Rejeitadas</div>
+
+            <div className="bg-card border rounded-sm p-4 hover:border-gray-400 dark:hover:border-gray-600 transition-colors">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2">Total</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{pagination.total}</p>
                 </div>
-              </div>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <XCircle className="h-6 w-6 text-gray-600 dark:text-gray-400" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.canceladas}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Canceladas</div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{pagination.total}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Total</div>
-                </div>
+                <FileText className="h-5 w-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
               </div>
             </div>
           </div>
@@ -899,18 +878,13 @@ export function ProgramacaoOSPage() {
                 onFilterChange={handleFilterChange}
               />
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleExportar} disabled={loading}>
-                <Download className="mr-1 h-4 w-4" />
-                <span className="hidden sm:inline">Exportar</span>
-              </Button>
-              
-              <Button onClick={() => openModal('create')} className="shrink-0">
-                <Plus className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Nova Programação</span>
-                <span className="sm:hidden">Nova</span>
-              </Button>
-            </div>
+            <button
+              onClick={() => openModal('create')}
+              className="btn-minimal-primary"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Programação
+            </button>
           </div>
 
           {/* Tabela */}
@@ -921,8 +895,14 @@ export function ProgramacaoOSPage() {
               pagination={pagination}
               loading={loading}
               onPageChange={handlePageChange}
-              onView={handleView}
-              onEdit={handleEdit}
+              customActions={tableActions.map((action: any) => ({
+                key: action.label.toLowerCase().replace(/\s+/g, ''),
+                label: action.label,
+                handler: action.onClick,
+                condition: action.condition,
+                icon: action.icon ? <action.icon className="h-4 w-4" /> : undefined,
+                variant: action.variant,
+              }))}
               emptyMessage="Nenhuma programação de OS encontrada."
               emptyIcon={<FileText className="h-8 w-8 text-gray-400" />}
             />

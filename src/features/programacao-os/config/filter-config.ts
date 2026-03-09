@@ -2,31 +2,23 @@
 import { FilterConfig } from '@/types/base';
 
 /**
- * ✅ FILTROS ESSENCIAIS SIMPLIFICADOS
+ * Filtros principais de Programação de OS
+ * Segue o padrão do FEATURE_REFACTORING_GUIDE.md
  *
- * Mantidos apenas os filtros mais importantes e funcionais:
- * - search: Busca geral por múltiplos campos
- * - status: Principal métrica de workflow (PENDENTE, EM_ANALISE, APROVADA, etc.)
- * - tipo: Classificação da OS (PREVENTIVA, CORRETIVA, etc.)
- * - prioridade: Nível de urgência (CRITICA, ALTA, MEDIA, BAIXA)
- * - origem: Fonte da OS (ANOMALIA, PLANO_MANUTENCAO, MANUAL)
- *
- * ❌ REMOVIDOS (mock data sem integração com API):
- * - planta: Dados mockados, sem conexão real
- * - responsavel: Dados mockados, sem conexão real
- * - periodo: Dados mockados, funcionalidade duplicada
+ * - 1 filtro de busca (texto)
+ * - 3 filtros principais (combobox)
  */
 
 export const programacaoOSFilterConfig: FilterConfig[] = [
   {
     key: 'search',
     type: 'search',
-    placeholder: 'Buscar por Nº OS, descrição, local ou ativo...',
+    placeholder: 'Buscar por código, descrição, local...',
     className: 'lg:min-w-80'
   },
   {
     key: 'status',
-    type: 'select',
+    type: 'combobox',
     label: 'Status',
     placeholder: 'Todos os status',
     options: [
@@ -42,7 +34,7 @@ export const programacaoOSFilterConfig: FilterConfig[] = [
   },
   {
     key: 'tipo',
-    type: 'select',
+    type: 'combobox',
     label: 'Tipo',
     placeholder: 'Todos os tipos',
     options: [
@@ -50,36 +42,22 @@ export const programacaoOSFilterConfig: FilterConfig[] = [
       { value: 'PREVENTIVA', label: 'Preventiva' },
       { value: 'PREDITIVA', label: 'Preditiva' },
       { value: 'CORRETIVA', label: 'Corretiva' },
-      { value: 'INSPECAO', label: 'Inspeção' },
-      { value: 'VISITA_TECNICA', label: 'Visita Técnica' }
+      { value: 'INSPECAO', label: 'Inspeção' }
     ],
     className: 'min-w-40'
   },
   {
     key: 'prioridade',
-    type: 'select',
+    type: 'combobox',
     label: 'Prioridade',
     placeholder: 'Todas as prioridades',
     options: [
-      { value: 'all', label: 'Todas' },
+      { value: 'all', label: 'Todas as prioridades' },
       { value: 'CRITICA', label: 'Crítica' },
       { value: 'ALTA', label: 'Alta' },
       { value: 'MEDIA', label: 'Média' },
       { value: 'BAIXA', label: 'Baixa' }
     ],
     className: 'min-w-36'
-  },
-  {
-    key: 'origem',
-    type: 'select',
-    label: 'Origem',
-    placeholder: 'Todas as origens',
-    options: [
-      { value: 'all', label: 'Todas' },
-      { value: 'ANOMALIA', label: 'Anomalia' },
-      { value: 'PLANO_MANUTENCAO', label: 'Plano Manutenção' },
-      { value: 'MANUAL', label: 'Manual' }
-    ],
-    className: 'min-w-48'
   }
 ];

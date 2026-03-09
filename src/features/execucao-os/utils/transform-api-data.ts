@@ -165,6 +165,26 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     plano_manutencao: apiData.plano_manutencao,
     reserva_veiculo: apiData.reserva_veiculo,
 
+    // ✅ Dados transformados para o ReservaVeiculoCard
+    reservaCard: apiData.reserva_veiculo ? {
+      veiculo: apiData.reserva_veiculo.veiculo?.placa || apiData.reserva_veiculo.veiculo?.modelo || '',
+      kmInicial: apiData.reserva_veiculo.km_inicial,
+      dataInicioReserva: apiData.reserva_veiculo.data_inicio,
+      horaInicioReserva: apiData.reserva_veiculo.hora_inicio,
+      dataFimReserva: apiData.reserva_veiculo.data_fim,
+      horaFimReserva: apiData.reserva_veiculo.hora_fim,
+      finalidadeReserva: apiData.reserva_veiculo.finalidade,
+    } : undefined,
+
+    // ✅ Dados transformados para o OrigemOSCard
+    origemCard: {
+      programacao_id: apiData.programacao_id,
+      anomalia: apiData.anomalia,
+      plano_manutencao: apiData.plano_manutencao,
+      origem: apiData.origem,
+      dados_origem: apiData.dados_origem,
+    },
+
     // Campos computados
     tempoTotalExecucao: calcularTempoExecucao(),
     tempo_execucao_minutos: calcularTempoExecucao(),

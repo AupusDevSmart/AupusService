@@ -13,7 +13,6 @@ import { Fornecedor, FornecedoresFilters } from '../types';
 import { fornecedoresTableColumns } from '../config/table-config';
 import { fornecedoresFilterConfig } from '../config/filter-config';
 import { getFornecedoresFormFields, fornecedoresFormFields } from '../config/form-config';
-import { mockFornecedores } from '../data/mock-data';
 
 const initialFilters: FornecedoresFilters = {
   search: '',
@@ -95,7 +94,7 @@ export function FornecedoresPage() {
     handleFilterChange,
     handlePageChange
   } = useGenericTable({
-    data: mockFornecedores,
+    data: [], // TODO: Integrar com API de fornecedores
     initialFilters,
     searchFields: ['email', 'telefone']
   });

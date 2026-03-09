@@ -31,7 +31,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-background relative">
+    <div className="h-screen w-screen bg-background relative overflow-hidden">
       {/* Botão de toggle de tema - canto superior direito */}
       <Button
         variant="ghost"
@@ -47,7 +47,7 @@ export function LoginPage() {
         )}
       </Button>
       {/* Layout Mobile - Centralizado */}
-      <div className="w-full lg:hidden min-h-screen flex flex-col items-center justify-center p-6">
+      <div className="w-full lg:hidden h-screen flex flex-col items-center justify-center p-6 overflow-y-auto">
         {/* Logo e Branding */}
         <div className="flex flex-col items-center mb-8 space-y-4">
           <div className="w-32 h-32 sm:w-40 sm:h-40 mb-2">
@@ -81,7 +81,7 @@ export function LoginPage() {
       </div>
 
       {/* Layout Desktop - Duas Colunas */}
-      <div className="hidden lg:grid lg:grid-cols-2 w-full min-h-screen">
+      <div className="hidden lg:grid lg:grid-cols-2 w-full h-screen">
         {/* Coluna Esquerda - Logo e Branding */}
         <div className="bg-[#0f0e1f] flex flex-col items-center justify-center p-12 border-r border-border/20">
           <div className="flex flex-col items-center space-y-8 max-w-lg">

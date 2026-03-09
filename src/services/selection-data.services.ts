@@ -170,45 +170,24 @@ export class SelectionDataService {
   }
 
   // ============================================================================
-  // HIERARQUIA - MOCK (mantido como estava)
+  // HIERARQUIA - TODO: Integrar com API
   // ============================================================================
   async getHierarquiaNivel(nivel: string, parentId?: string): Promise<any[]> {
-    // console.warn(`⚠️ [SELECTION] Usando hierarquia mock para ${nivel}`);
-    
-    const mockData: Record<string, any[]> = {
-      'area': [
-        { id: '1', nome: 'Produção', parent_id: parentId },
-        { id: '2', nome: 'Logística', parent_id: parentId },
-        { id: '3', nome: 'Administrativo', parent_id: parentId },
-        { id: '4', nome: 'Manutenção', parent_id: parentId }
-      ],
-      'subarea': [
-        { id: '1', nome: 'Linha A', parent_id: parentId },
-        { id: '2', nome: 'Linha B', parent_id: parentId },
-        { id: '3', nome: 'Expedição', parent_id: parentId },
-        { id: '4', nome: 'Recebimento', parent_id: parentId }
-      ],
-      'linha': [
-        { id: '1', nome: 'Montagem Principal', parent_id: parentId },
-        { id: '2', nome: 'Montagem Secundária', parent_id: parentId },
-        { id: '3', nome: 'Linha de Embalagem', parent_id: parentId }
-      ],
-      'conjunto': [
-        { id: '1', nome: 'Conjunto Motor Principal', parent_id: parentId },
-        { id: '2', nome: 'Conjunto Hidráulico', parent_id: parentId },
-        { id: '3', nome: 'Conjunto Pneumático', parent_id: parentId }
-      ],
-      'maquina': [
-        { id: '1', nome: 'Motor Elétrico 01', parent_id: parentId },
-        { id: '2', nome: 'Bomba Hidráulica Principal', parent_id: parentId },
-        { id: '3', nome: 'Compressor de Ar', parent_id: parentId }
-      ]
-    };
-    
-    return (mockData[nivel] || []).map(item => ({
-      ...item,
-      label: item.nome
-    }));
+    try {
+      // TODO: Implementar chamada para API real de hierarquia
+      const response = await api.get(`/hierarquia/${nivel}`, {
+        params: { parent_id: parentId }
+      });
+
+      return (response.data || []).map((item: any) => ({
+        ...item,
+        label: item.nome
+      }));
+    } catch (error) {
+      console.error(`❌ [SELECTION] Erro ao carregar hierarquia ${nivel}:`, error);
+      // Retornar array vazio em caso de erro
+      return [];
+    }
   }
 
   // ============================================================================

@@ -95,7 +95,7 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
         // ESTRATÉGIA 2: Se nenhuma tarefa foi encontrada individualmente,
         // tentar carregar planos e usar suas tarefas
         if (tarefasCarregadas.length === 0) {
-          console.log('🔄 [PlanosViewer] ESTRATÉGIA 2: Tarefas mockadas detectadas, carregando tarefas reais via planos...');
+          console.log('🔄 [PlanosViewer] ESTRATÉGIA 2: Tarefas não encontradas, carregando via planos...');
 
           // Combinar com planos explicitamente fornecidos
           const todosPlansIds = [...new Set(planosIds)];
@@ -131,7 +131,7 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
             console.log('✅ [PlanosViewer] Tarefas extraídas dos planos:', todasTarefasDoPlano.length);
             setTarefas(todasTarefasDoPlano);
           } else {
-            console.log('❌ [PlanosViewer] Não há IDs de planos para carregar - tarefas têm IDs mockados');
+            console.log('❌ [PlanosViewer] Não há IDs de planos para carregar');
             // Definir estado para mostrar mensagem informativa
             setTarefas([]);
             setPlanos([]);
@@ -265,7 +265,7 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
     );
   }
 
-  // Estado para quando há tarefas mas são mockadas e não há planos
+  // Estado para quando há tarefas mas não são encontradas e não há planos
   if (!loading && tarefas.length === 0 && planos.length === 0) {
     return (
       <Card className={className}>
@@ -281,7 +281,7 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
             <p className="text-orange-600 dark:text-orange-400 font-medium mb-2">Tarefas com referências inválidas</p>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
               Esta programação possui tarefas com IDs que não existem na base de dados.
-              As tarefas podem ter sido criadas com dados mockados ou removidas posteriormente.
+              As tarefas podem ter sido removidas ou os IDs estão incorretos.
             </p>
             <Badge variant="outline" className="mt-3 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700">
               {tarefasIds.length} tarefa{tarefasIds.length !== 1 ? 's' : ''} com problema{tarefasIds.length !== 1 ? 's' : ''}

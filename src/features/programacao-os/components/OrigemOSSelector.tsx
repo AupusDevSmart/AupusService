@@ -106,33 +106,8 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
         try {
           const tarefas = await gerarTarefasDoPlano(planoId, equipamentosSelecionados.map(String));
 
-          // ✅ VALIDAÇÃO EM TEMPO REAL - Detectar IDs mockados imediatamente
-          const tarefasValidadas = (tarefas || []).map(tarefa => {
-            const tarefaId = tarefa.id?.toString().trim() || '';
-
-            // Validar se o ID é um CUID válido (26 caracteres)
-            if (tarefaId.length !== 26) {
-              console.warn('⚠️ [OrigemOSSelector] ID de tarefa com comprimento inválido:', {
-                tarefaId,
-                comprimento: tarefaId.length,
-                esperado: 26,
-                descricao: tarefa.descricao
-              });
-            }
-
-            // Detectar IDs mockados (padrão cmg...)
-            if (tarefaId.includes('cmg')) {
-              console.error('❌ [OrigemOSSelector] DETECTADO ID MOCKADO:', {
-                tarefaId,
-                descricao: tarefa.descricao,
-                planoId
-              });
-            }
-
-            return tarefa;
-          });
-
-          setTarefasDoPlano(tarefasValidadas);
+          // Usar as tarefas retornadas diretamente da API
+          setTarefasDoPlano(tarefas || []);
         } catch (error) {
           console.error('Erro ao carregar tarefas:', error);
           setTarefasDoPlano([]);
@@ -284,29 +259,6 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
   const handleTarefaToggle = (tarefaId: string, checked: boolean) => {
     const tarefaIdTrimmed = tarefaId.trim();
 
-    // ✅ VALIDAÇÃO EM TEMPO REAL - Prevenir seleção de IDs inválidos
-    if (checked) {
-      // Validar comprimento do CUID
-      if (tarefaIdTrimmed.length !== 26) {
-        console.error('❌ [OrigemOSSelector] Tentativa de selecionar tarefa com ID inválido (comprimento):', {
-          tarefaId: tarefaIdTrimmed,
-          comprimento: tarefaIdTrimmed.length,
-          esperado: 26
-        });
-        // Não permitir seleção de IDs inválidos
-        return;
-      }
-
-      // Validar padrão mockado
-      if (tarefaIdTrimmed.includes('cmg')) {
-        console.error('❌ [OrigemOSSelector] Tentativa de selecionar tarefa com ID MOCKADO:', {
-          tarefaId: tarefaIdTrimmed
-        });
-        // Não permitir seleção de IDs mockados
-        return;
-      }
-    }
-
     const novasTarefas = checked
       ? [...tarefasSelecionadas, tarefaIdTrimmed]
       : tarefasSelecionadas.filter(id => id !== tarefaIdTrimmed);
@@ -348,32 +300,17 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
   };
 
   const handleSelectAllTarefas = () => {
-    // ✅ VALIDAÇÃO EM TEMPO REAL - Filtrar apenas IDs válidos ao selecionar todas
-    const todasTarefasValidas = tarefasDoPlano
+    const todasTarefas = tarefasDoPlano
       .map(t => t.id?.toString().trim() || '')
-      .filter(id => {
-        // Validar comprimento e padrão
-        const isValidLength = id.length === 26;
-        const isNotMocked = !id.includes('cmg');
-
-        if (!isValidLength || !isNotMocked) {
-          console.warn('⚠️ [OrigemOSSelector] Tarefa excluída ao selecionar todas (ID inválido):', {
-            tarefaId: id,
-            comprimento: id.length,
-            mockado: id.includes('cmg')
-          });
-        }
-
-        return isValidLength && isNotMocked;
-      });
+      .filter(id => id !== ''); // Apenas filtrar IDs vazios
 
     const novoValor = {
       ...value,
-      tarefasSelecionadas: todasTarefasValidas
+      tarefasSelecionadas: todasTarefas
     };
 
     onChange(novoValor);
-    updateLocalAtivoFromTarefas(todasTarefasValidas);
+    updateLocalAtivoFromTarefas(todasTarefas);
   };
 
   const handleDeselectAllTarefas = () => {
@@ -411,10 +348,15 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
 
     return (
       <div className="space-y-4">
-        <Label className="text-sm font-medium text-foreground flex items-center gap-2">
-          <MapPin className="h-4 w-4" />
-          1. Selecione a Planta
-        </Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" />
+            Passo 1: Selecione a Planta
+          </Label>
+          {!plantaSelecionada && (
+            <span className="text-xs text-muted-foreground">Obrigatório</span>
+          )}
+        </div>
 
         {/* ✅ Se já selecionou, mostrar apenas a selecionada com botão para trocar */}
         {plantaSelecionada ? (
@@ -489,10 +431,15 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
 
     return (
       <div className="space-y-4">
-        <Label className="text-sm font-medium text-foreground flex items-center gap-2">
-          <Building2 className="h-4 w-4" />
-          2. Selecione a Unidade
-        </Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-primary" />
+            Passo 2: Selecione a Unidade
+          </Label>
+          {!unidadeSelecionada && (
+            <span className="text-xs text-muted-foreground">Obrigatório</span>
+          )}
+        </div>
 
         {/* ✅ Se já selecionou, mostrar apenas a selecionada com botão para trocar */}
         {unidadeSelecionada ? (
@@ -558,34 +505,49 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
         <Button
           type="button"
           variant={tipo === 'ANOMALIA' ? 'default' : 'outline'}
-          className="h-20 flex-col gap-2"
+          className={`h-24 flex-col gap-2 relative transition-all duration-200 ${
+            tipo === 'ANOMALIA'
+              ? 'ring-2 ring-primary ring-offset-2 bg-primary hover:bg-primary/90'
+              : 'hover:border-primary/50 hover:bg-primary/5'
+          }`}
           onClick={() => handleTipoChange('ANOMALIA')}
           disabled={disabled}
         >
-          <AlertTriangle className="h-5 w-5" />
-          <span className="text-xs">Anomalia</span>
+          <AlertTriangle className={`h-6 w-6 ${tipo === 'ANOMALIA' ? 'text-primary-foreground' : 'text-destructive'}`} />
+          <span className="text-xs font-medium">Anomalia</span>
+          <span className="text-[10px] opacity-70">Problema detectado</span>
         </Button>
 
         <Button
           type="button"
           variant={tipo === 'PLANO_MANUTENCAO' ? 'default' : 'outline'}
-          className="h-20 flex-col gap-2"
+          className={`h-24 flex-col gap-2 relative transition-all duration-200 ${
+            tipo === 'PLANO_MANUTENCAO'
+              ? 'ring-2 ring-primary ring-offset-2 bg-primary hover:bg-primary/90'
+              : 'hover:border-primary/50 hover:bg-primary/5'
+          }`}
           onClick={() => handleTipoChange('PLANO_MANUTENCAO')}
           disabled={disabled}
         >
-          <Settings className="h-5 w-5" />
-          <span className="text-xs">Plano Manutenção</span>
+          <Settings className={`h-6 w-6 ${tipo === 'PLANO_MANUTENCAO' ? 'text-primary-foreground' : 'text-green-600'}`} />
+          <span className="text-xs font-medium">Plano Manutenção</span>
+          <span className="text-[10px] opacity-70">Preventiva/Preditiva</span>
         </Button>
 
         <Button
           type="button"
           variant={tipo === 'MANUAL' ? 'default' : 'outline'}
-          className="h-20 flex-col gap-2"
+          className={`h-24 flex-col gap-2 relative transition-all duration-200 ${
+            tipo === 'MANUAL'
+              ? 'ring-2 ring-primary ring-offset-2 bg-primary hover:bg-primary/90'
+              : 'hover:border-primary/50 hover:bg-primary/5'
+          }`}
           onClick={() => handleTipoChange('MANUAL')}
           disabled={disabled}
         >
-          <FileText className="h-5 w-5" />
-          <span className="text-xs">Manual</span>
+          <FileText className={`h-6 w-6 ${tipo === 'MANUAL' ? 'text-primary-foreground' : 'text-blue-600'}`} />
+          <span className="text-xs font-medium">Manual</span>
+          <span className="text-[10px] opacity-70">Criação direta</span>
         </Button>
       </div>
     </div>
@@ -606,10 +568,17 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
 
     return (
       <div className="space-y-4">
-        <Label className="text-sm font-medium text-foreground flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" />
-          3. Selecione a Anomalia
-        </Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            Passo 3: Selecione a Anomalia
+          </Label>
+          {!anomaliaSelecionada && (
+            <span className="text-xs text-muted-foreground">
+              {anomaliasDisponiveis.length} disponíveis
+            </span>
+          )}
+        </div>
 
         {/* ✅ Se já selecionou, mostrar apenas a selecionada com botão para trocar */}
         {anomaliaSelecionada ? (
@@ -942,41 +911,139 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
 
   return (
     <div className="space-y-6">
-      {renderTipoSelector()}
+      {/* Seletor de Tipo com melhor descrição */}
+      <div className="space-y-4">
+        <Label className="text-sm font-medium text-foreground">Origem da Ordem de Serviço</Label>
+        <p className="text-xs text-muted-foreground -mt-2">
+          Selecione a origem que irá gerar esta programação
+        </p>
+        {renderTipoSelector()}
+      </div>
 
-      {/* ✅ HIERARQUIA: Tipo → Planta → Unidade → Anomalia */}
+      {/* ✅ HIERARQUIA COM BREADCRUMB VISUAL */}
+      {tipo === 'ANOMALIA' && (
+        <>
+          {/* Breadcrumb de progresso */}
+          <div className="flex items-center justify-center gap-2 py-2">
+            <div className="flex items-center gap-2">
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-colors ${
+                plantaId ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+              }`}>
+                1
+              </div>
+              <span className={`text-xs font-medium ${plantaId ? 'text-foreground' : 'text-muted-foreground'}`}>
+                Planta
+              </span>
+            </div>
 
-      {/* Passo 1: Selecionar Planta (apenas para ANOMALIA) */}
-      {tipo === 'ANOMALIA' && renderPlantaSelector()}
+            <div className={`w-8 h-0.5 transition-colors ${
+              plantaId ? 'bg-primary' : 'bg-muted'
+            }`} />
 
-      {/* Passo 2: Selecionar Unidade (apenas para ANOMALIA) */}
-      {tipo === 'ANOMALIA' && renderUnidadeSelector()}
+            <div className="flex items-center gap-2">
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-colors ${
+                unidadeId ? 'bg-primary text-primary-foreground' : plantaId ? 'bg-muted text-muted-foreground' : 'bg-muted/50 text-muted-foreground/50'
+              }`}>
+                2
+              </div>
+              <span className={`text-xs font-medium ${
+                unidadeId ? 'text-foreground' : plantaId ? 'text-muted-foreground' : 'text-muted-foreground/50'
+              }`}>
+                Unidade
+              </span>
+            </div>
 
-      {/* Passo 3a: Selecionar Anomalia (se tipo for ANOMALIA) */}
-      {tipo === 'ANOMALIA' && renderAnomaliaSelector()}
+            <div className={`w-8 h-0.5 transition-colors ${
+              unidadeId ? 'bg-primary' : 'bg-muted'
+            }`} />
+
+            <div className="flex items-center gap-2">
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-colors ${
+                anomaliaId ? 'bg-primary text-primary-foreground' : unidadeId ? 'bg-muted text-muted-foreground' : 'bg-muted/50 text-muted-foreground/50'
+              }`}>
+                3
+              </div>
+              <span className={`text-xs font-medium ${
+                anomaliaId ? 'text-foreground' : unidadeId ? 'text-muted-foreground' : 'text-muted-foreground/50'
+              }`}>
+                Anomalia
+              </span>
+            </div>
+          </div>
+
+          {/* Containers com visual melhorado */}
+          <div className="space-y-4">
+            {/* Passo 1: Selecionar Planta */}
+            <div className={`rounded-lg border-2 transition-all duration-200 ${
+              !plantaId ? 'border-primary bg-primary/5' : 'border-border bg-background'
+            }`}>
+              <div className="p-4">
+                {renderPlantaSelector()}
+              </div>
+            </div>
+
+            {/* Passo 2: Selecionar Unidade */}
+            {plantaId && (
+              <div className={`rounded-lg border-2 transition-all duration-200 ${
+                plantaId && !unidadeId ? 'border-primary bg-primary/5' : 'border-border bg-background'
+              }`}>
+                <div className="p-4">
+                  {renderUnidadeSelector()}
+                </div>
+              </div>
+            )}
+
+            {/* Passo 3: Selecionar Anomalia */}
+            {plantaId && unidadeId && (
+              <div className={`rounded-lg border-2 transition-all duration-200 ${
+                unidadeId && !anomaliaId ? 'border-primary bg-primary/5' : 'border-border bg-background'
+              }`}>
+                <div className="p-4">
+                  {renderAnomaliaSelector()}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Status da seleção */}
+          {anomaliaId && (
+            <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <p className="text-sm text-primary font-medium">
+                  Anomalia selecionada com sucesso
+                </p>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Passo 3b: Selecionar Planos (se tipo for PLANO_MANUTENCAO) */}
       {tipo === 'PLANO_MANUTENCAO' && (
-        <MultiplePlanosSelector
-          value={{
-            tipo: 'PLANO_MANUTENCAO',
-            plantaId: value.plantaId,
-            planosSelecionados: value.planosSelecionados || [],
-            tarefasSelecionadas: tarefasSelecionadas,
-            tarefasPorPlano: value.tarefasPorPlano || {}
-          }}
-          onChange={onChange}
-          onLocalAtivoChange={onLocalAtivoChange}
-          disabled={disabled}
-        />
+        <div className="rounded-lg border-2 border-primary bg-primary/5 p-4">
+          <MultiplePlanosSelector
+            value={{
+              tipo: 'PLANO_MANUTENCAO',
+              plantaId: value.plantaId,
+              unidadeId: value.unidadeId,
+              planosSelecionados: value.planosSelecionados || [],
+              tarefasSelecionadas: tarefasSelecionadas,
+              tarefasPorPlano: value.tarefasPorPlano || {}
+            }}
+            onChange={onChange}
+            onLocalAtivoChange={onLocalAtivoChange}
+            disabled={disabled}
+          />
+        </div>
       )}
 
       {/* Tipo MANUAL: Sem seleção necessária */}
       {tipo === 'MANUAL' && (
-        <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg bg-muted/30">
-          <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>Ordem de Serviço criada manualmente</p>
-          <p className="text-xs">Não requer seleção de origem específica</p>
+        <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-primary/30 rounded-lg bg-primary/5">
+          <FileText className="h-8 w-8 mx-auto mb-2 text-primary opacity-70" />
+          <p className="font-medium text-foreground">Ordem de Serviço Manual</p>
+          <p className="text-xs mt-1">Preencha os campos necessários manualmente</p>
         </div>
       )}
     </div>
