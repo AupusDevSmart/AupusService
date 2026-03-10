@@ -6,6 +6,7 @@ import { BaseTable, CustomAction } from '@nexon/components/common/base-table/Bas
 import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
 import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
 import { ReservaModal } from './ReservaModal';
+import { Button } from '@/components/ui/button';
 import { Plus, Calendar, CheckCircle, XCircle, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { useReservas } from '../hooks/useReservas';
@@ -33,15 +34,18 @@ const initialFilters: LocalReservasFilters = {
 };
 
 export function ReservasPage() {
+  // Ref para evitar loops infinitos
   const fetchingRef = useRef(false);
   const initialLoadRef = useRef(false);
 
+  // Estados locais
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [filters, setFilters] = useState<LocalReservasFilters>(initialFilters);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [reservaParaCancelar, setReservaParaCancelar] = useState<ReservaResponse | null>(null);
   const [motivoCancelamento, setMotivoCancelamento] = useState('');
 
+  // Hooks da API
   const {
     reservas,
     totalReservas,
@@ -54,8 +58,10 @@ export function ReservasPage() {
     error
   } = useReservas({ autoFetch: false });
 
+  // Hook para veículos (para filtros)
   const { veiculos, loading: loadingVeiculos, error: veiculosError } = useVeiculos();
 
+  // Configuração dinâmica dos filtros
   const filterConfig = useMemo(() => {
     if (loadingVeiculos || veiculosError) {
       return [
@@ -70,11 +76,18 @@ export function ReservasPage() {
     return createReservasFilterConfig(veiculos);
   }, [veiculos, loadingVeiculos, veiculosError]);
 
+  // Modal state
   const { modalState, openModal, closeModal } = useGenericModal<ReservaResponse>();
 
+  // Função de busca otimizada
   const fetchReservasWithFilters = useCallback(async (filtersToUse: LocalReservasFilters) => {
-    if (fetchingRef.current) return;
+    // Evitar múltiplas chamadas simultâneas
+    if (fetchingRef.current) {
+      console.log('🚫 [RESERVAS PAGE] Já está buscando, ignorando...');
+      return;
+    }
 
+    console.log('🔍 [RESERVAS PAGE] Iniciando busca com filtros:', filtersToUse);
     fetchingRef.current = true;
 
     try {
@@ -96,10 +109,12 @@ export function ReservasPage() {
         orderDirection: 'desc' as const
       };
 
+      console.log('📡 [RESERVAS PAGE] Enviando params para API:', params);
       await fetchReservas(params);
+      console.log('✅ [RESERVAS PAGE] Busca concluída com sucesso');
 
     } catch (error) {
-      console.error('Erro ao buscar reservas:', error);
+      console.error('❌ [RESERVAS PAGE] Erro ao buscar reservas:', error);
       toast({
         title: "Erro ao carregar reservas",
         description: "Não foi possível carregar as reservas. Tente novamente.",
@@ -110,22 +125,28 @@ export function ReservasPage() {
     }
   }, [fetchReservas, clearError]);
 
+  // Carregamento inicial - executar apenas uma vez
   useEffect(() => {
     if (!initialLoadRef.current) {
+      console.log('🚀 [RESERVAS PAGE] Carregamento inicial');
       initialLoadRef.current = true;
       fetchReservasWithFilters(initialFilters);
     }
-  }, []);
+  }, []); // Dependências vazias propositalmente
 
+  // Handler: Mudança de filtros - debounced
   const handleFilterChange = useCallback((newFilters: Partial<LocalReservasFilters>) => {
+    console.log('🔄 [RESERVAS PAGE] Filtros alterados:', newFilters);
+
     const updatedFilters = {
       ...filters,
       ...newFilters,
-      page: newFilters.page !== undefined ? newFilters.page : 1
+      page: newFilters.page !== undefined ? newFilters.page : 1 // Reset página se não especificado
     };
 
     setFilters(updatedFilters);
 
+    // Pequeno delay para evitar múltiplas chamadas
     const timeoutId = setTimeout(() => {
       fetchReservasWithFilters(updatedFilters);
     }, 300);
@@ -133,17 +154,23 @@ export function ReservasPage() {
     return () => clearTimeout(timeoutId);
   }, [filters, fetchReservasWithFilters]);
 
+  // Handler: Mudança de página
   const handlePageChange = useCallback((newPage: number) => {
+    console.log('📄 [RESERVAS PAGE] Mudança de página:', newPage);
     const updatedFilters = { ...filters, page: newPage };
     setFilters(updatedFilters);
     fetchReservasWithFilters(updatedFilters);
   }, [filters, fetchReservasWithFilters]);
 
+  // Handler: Refresh manual
   const handleRefresh = useCallback(() => {
+    console.log('🔄 [RESERVAS PAGE] Refresh manual');
     fetchReservasWithFilters(filters);
   }, [fetchReservasWithFilters, filters]);
 
+  // Handler: Submissão do formulário
   const handleSubmit = async (data: CreateReservaRequest) => {
+    console.log('💾 [RESERVAS PAGE] Iniciando submissão:', data);
     setIsSubmitting(true);
 
     try {
@@ -167,13 +194,14 @@ export function ReservasPage() {
       }
 
       closeModal();
-
+      
+      // Atualizar lista após sucesso
       setTimeout(() => {
         fetchReservasWithFilters(filters);
       }, 500);
 
     } catch (error: any) {
-      console.error('Erro ao salvar reserva:', error);
+      console.error('❌ [RESERVAS PAGE] Erro ao salvar reserva:', error);
 
       toast({
         title: modalState.mode === 'create' ? "Erro ao criar reserva" : "Erro ao atualizar reserva",
@@ -185,12 +213,14 @@ export function ReservasPage() {
     }
   };
 
+  // Handler: Cancelar reserva
   const handleCancelarReserva = useCallback((reserva: ReservaResponse) => {
     setReservaParaCancelar(reserva);
     setMotivoCancelamento('');
     setCancelModalOpen(true);
   }, []);
 
+  // Handler: Confirmar cancelamento
   const confirmarCancelamento = async () => {
     if (!reservaParaCancelar || !motivoCancelamento.trim()) return;
 
@@ -207,6 +237,7 @@ export function ReservasPage() {
       setReservaParaCancelar(null);
       setMotivoCancelamento('');
 
+      // Atualizar lista
       setTimeout(() => {
         fetchReservasWithFilters(filters);
       }, 500);
@@ -222,6 +253,7 @@ export function ReservasPage() {
     }
   };
 
+  // Handler: Finalizar reserva
   const handleFinalizarReserva = async (reserva: ReservaResponse) => {
     try {
       await updateStatus(reserva.id, 'finalizada');
@@ -232,6 +264,7 @@ export function ReservasPage() {
         variant: "default",
       });
 
+      // Atualizar lista
       setTimeout(() => {
         fetchReservasWithFilters(filters);
       }, 500);
@@ -247,6 +280,7 @@ export function ReservasPage() {
     }
   };
 
+  // Preparar entidade para o modal
   const getModalEntity = () => {
     const entity = modalState.entity;
 
@@ -268,6 +302,7 @@ export function ReservasPage() {
     return entity || {};
   };
 
+  // Calcular paginação
   const pagination = {
     page: filters.page || 1,
     limit: filters.limit || 10,
@@ -275,6 +310,7 @@ export function ReservasPage() {
     totalPages: Math.ceil(totalReservas / (filters.limit || 10))
   };
 
+  // Ações customizadas
   const customActions: CustomAction<ReservaResponse>[] = useMemo(() => [
     {
       key: 'finalizar',
@@ -292,23 +328,38 @@ export function ReservasPage() {
       condition: (reserva) => reserva.status === 'ativa',
       handler: (reserva) => handleCancelarReserva(reserva)
     }
-  ], []);
+  ], [handleFinalizarReserva, handleCancelarReserva]);
 
+  // Mostrar indicador se há filtros ativos
   const hasActiveFilters = useMemo(() => {
     return Object.entries(filters).some(([key, value]) =>
       key !== 'page' && key !== 'limit' && value !== 'all' && value !== ''
     );
   }, [filters]);
 
+  // Debug info
+  useEffect(() => {
+    console.log('🐛 [RESERVAS PAGE] Estado atual:', {
+      loading,
+      error,
+      reservasCount: reservas.length,
+      totalReservas,
+      filters,
+      fetchingRef: fetchingRef.current
+    });
+  }, [loading, error, reservas.length, totalReservas, filters]);
+
   return (
     <Layout>
       <Layout.Main>
         <div className="flex flex-col h-full w-full">
+          {/* Header */}
           <TitleCard
             title="Reservas de Veículos"
             description="Gerencie as reservas de viaturas da empresa"
           />
 
+          {/* Erro de carregamento */}
           {error && (
             <div className="mb-4 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-center gap-2 text-red-800">
@@ -316,16 +367,19 @@ export function ReservasPage() {
                 <strong className="text-sm sm:text-base">Erro ao carregar reservas:</strong>
               </div>
               <p className="text-red-700 mt-1 text-sm">{error}</p>
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleRefresh}
-                className="btn-minimal-outline mt-2 flex items-center gap-2"
+                className="mt-2"
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className="h-4 w-4 mr-2" />
                 <span className="text-xs sm:text-sm">Tentar novamente</span>
-              </button>
+              </Button>
             </div>
           )}
 
+          {/* Filtros e Ações */}
           <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div className="flex-1">
               <BaseFilters
@@ -336,26 +390,30 @@ export function ReservasPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 shrink-0">
-              <button
+              <Button
+                variant="outline"
                 onClick={handleRefresh}
                 disabled={loading}
-                className="btn-minimal flex items-center justify-center gap-2 w-full sm:w-auto"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 w-full sm:w-auto"
+                size="sm"
               >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 <span className="text-xs sm:text-sm">Atualizar</span>
-              </button>
+              </Button>
 
-              <button
+              <Button
                 onClick={() => openModal('create')}
+                className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
                 disabled={isSubmitting}
-                className="btn-minimal-primary flex items-center justify-center gap-2 w-full sm:w-auto"
+                size="sm"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="mr-2 h-4 w-4" />
                 <span className="text-xs sm:text-sm">Nova Reserva</span>
-              </button>
+              </Button>
             </div>
           </div>
 
+          {/* Indicador de filtros ativos */}
           {hasActiveFilters && (
             <div className="flex items-center gap-2 mb-3 sm:mb-4 text-xs sm:text-sm text-muted-foreground">
               <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -363,12 +421,14 @@ export function ReservasPage() {
             </div>
           )}
 
+          {/* Status de carregamento dos veículos */}
           {veiculosError && (
             <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs sm:text-sm text-yellow-800">
               ⚠️ Erro ao carregar veículos para o filtro: {veiculosError}
             </div>
           )}
 
+          {/* Tabela */}
           <div className="flex-1 min-h-0">
             <BaseTable
               data={reservas}
@@ -385,18 +445,23 @@ export function ReservasPage() {
           </div>
         </div>
 
+        {/* Modal integrado de reservas */}
+        {/* @ts-ignore - Legacy component needs refactoring */}
         <ReservaModal
-          isOpen={modalState.isOpen}
-          mode={modalState.mode as 'create' | 'edit' | 'view'}
-          entity={getModalEntity()}
-          onClose={closeModal}
-          onSubmit={handleSubmit}
-          veiculos={veiculos}
-          reservas={reservas}
-          reservaId={modalState.entity?.id}
-          loading={isSubmitting}
+          {...{
+            isOpen: modalState.isOpen,
+            mode: modalState.mode,
+            entity: getModalEntity(),
+            onClose: closeModal,
+            onSubmit: handleSubmit,
+            veiculos: veiculos,
+            reservas: reservas,
+            reservaId: modalState.entity?.id,
+            loading: isSubmitting
+          } as any}
         />
 
+        {/* Modal de cancelamento */}
         <BaseModal
           isOpen={cancelModalOpen}
           mode="edit"

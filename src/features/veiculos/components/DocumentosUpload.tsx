@@ -1,7 +1,6 @@
 // src/features/veiculos/components/DocumentosUpload.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FormFieldProps } from '@/types/base';
-import { Button } from '@/components/ui/button';
 import {
   Upload,
   X,
@@ -269,15 +268,13 @@ export const DocumentosUpload = ({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
                   onClick={() => handleDownloadDocumento(documento.id, documento.nome_original)}
-                  className="h-8 w-8 p-0"
+                  className="btn-minimal-ghost p-2"
                 >
                   <Download className="h-4 w-4" />
-                </Button>
+                </button>
               </div>
             </div>
           ))}
@@ -298,105 +295,108 @@ export const DocumentosUpload = ({
 
       {/* Botão para adicionar documento */}
       {!showUploadForm && (
-        <Button
+        <button
           type="button"
-          variant="outline"
           onClick={() => setShowUploadForm(true)}
           disabled={disabled}
-          className="w-full"
+          className="btn-minimal-outline w-full flex items-center justify-center gap-2"
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-4 w-4" />
           Adicionar Documento
-        </Button>
+        </button>
       )}
 
       {/* Formulário de upload */}
       {showUploadForm && (
         <div className="border border-gray-300 rounded-lg p-4 space-y-4 bg-gray-50 dark:bg-gray-800">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Novo Documento</h4>
-            <Button
+            <h4 className="text-sm font-medium">Novo Documento</h4>
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
               onClick={() => {
                 setShowUploadForm(false);
                 setNovoDocumento({});
               }}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              className="btn-minimal-ghost p-1"
             >
               <X className="h-4 w-4" />
-            </Button>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Categoria</label>
+              <label className="block text-sm font-medium mb-2">Categoria</label>
               <select
                 value={novoDocumento.categoria || ''}
                 onChange={(e) => setNovoDocumento({ ...novoDocumento, categoria: e.target.value as TipoDocumento })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                className="select-minimal w-full"
               >
-                <option value="" className="text-gray-500 dark:text-gray-400">Selecione uma categoria</option>
+                <option value="">Selecione uma categoria</option>
                 {Object.entries(CATEGORIAS_DOCUMENTOS).map(([key, label]) => (
-                  <option key={key} value={key} className="text-gray-900 bg-white dark:text-gray-100 dark:bg-gray-700">{label}</option>
+                  <option key={key} value={key}>{label}</option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Arquivo</label>
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                onChange={handleFileChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-              />
+              <label className="block text-sm font-medium mb-2">Arquivo</label>
+              <div className="relative">
+                <label className="btn-minimal w-full cursor-pointer flex items-center justify-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  {novoDocumento.file ? novoDocumento.file.name : 'Escolher arquivo'}
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Descrição (opcional)</label>
+              <label className="block text-sm font-medium mb-2">Descrição (opcional)</label>
               <input
                 type="text"
                 value={novoDocumento.descricao || ''}
                 onChange={(e) => setNovoDocumento({ ...novoDocumento, descricao: e.target.value })}
                 placeholder="Descrição do documento..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
+                className="input-minimal w-full"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Data de Vencimento</label>
+              <label className="block text-sm font-medium mb-2">Data de Vencimento</label>
               <input
                 type="date"
                 value={novoDocumento.dataVencimento || ''}
                 onChange={(e) => setNovoDocumento({ ...novoDocumento, dataVencimento: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                className="input-minimal w-full"
               />
             </div>
           </div>
 
           <div className="flex gap-2">
-            <Button
+            <button
               type="button"
               onClick={adicionarDocumento}
               disabled={!novoDocumento.file || !novoDocumento.categoria || uploading}
-              className="flex-1"
+              className="btn-minimal-primary flex-1 flex items-center justify-center gap-2"
             >
               {uploading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Enviando... {uploadProgress}%
                 </>
               ) : (
                 <>
-                  <Upload className="h-4 w-4 mr-2" />
+                  <Upload className="h-4 w-4" />
                   Adicionar
                 </>
               )}
-            </Button>
+            </button>
           </div>
         </div>
       )}
@@ -431,15 +431,13 @@ export const DocumentosUpload = ({
                   </div>
                 </div>
                 {!disabled && (
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
                     onClick={() => removerDocumentoNovo(index)}
-                    className="hover:bg-red-50 hover:text-red-600"
+                    className="btn-minimal-ghost p-2 hover:bg-red-50 hover:text-red-600"
                   >
                     <X className="h-4 w-4" />
-                  </Button>
+                  </button>
                 )}
               </div>
             ))}
@@ -474,25 +472,21 @@ export const DocumentosUpload = ({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
                     onClick={() => handleDownloadDocumento(documento.id, documento.nome_original)}
-                    className="h-8 w-8 p-0"
+                    className="btn-minimal-ghost p-2"
                   >
                     <Download className="h-4 w-4" />
-                  </Button>
+                  </button>
                   {!disabled && (
-                    <Button
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="sm"
                       onClick={() => handleRemoverDocumentoExistente(documento.id)}
-                      className="hover:bg-red-50 hover:text-red-600 h-8 w-8 p-0"
+                      className="btn-minimal-ghost p-2 hover:bg-red-50 hover:text-red-600"
                     >
                       <X className="h-4 w-4" />
-                    </Button>
+                    </button>
                   )}
                 </div>
               </div>

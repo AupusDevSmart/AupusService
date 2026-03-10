@@ -2,18 +2,23 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable } from '@nexon/components/common/base-table/BaseTable';
+import { BaseTable, CustomAction } from '@nexon/components/common/base-table/BaseTable';
 import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
 import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
-import { Plus, Car, RefreshCw, Filter } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Plus, Car, Wrench, Calendar, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { useVeiculos } from '../hooks/useVeiculos';
-import { useDocumentosVeiculos } from '../hooks/useDocumentosVeiculos';
 import { veiculosFilterConfig } from '../config/filter-config';
 import { veiculosFormFields } from '../config/form-config';
 import { veiculosTableColumns } from '../config/table-config';
 import { toast } from '@/hooks/use-toast';
-import { VeiculoResponse, CreateVeiculoRequest, VeiculosFilters } from '../types';
+import {
+  VeiculoResponse,
+  CreateVeiculoRequest,
+  VeiculosFilters
+} from '../types';
+import { useDocumentosVeiculos } from '../hooks/useDocumentosVeiculos';
 
 const initialFilters: VeiculosFilters = {
   search: '',
@@ -27,9 +32,11 @@ const initialFilters: VeiculosFilters = {
 };
 
 export function VeiculosPage() {
+  // Estados locais
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [filters, setFilters] = useState<VeiculosFilters>(initialFilters);
 
+  // Hook da API
   const {
     veiculos,
     totalVeiculos,
@@ -44,7 +51,7 @@ export function VeiculosPage() {
   const { modalState, openModal, closeModal } = useGenericModal<any>();
   const { uploadDocumento } = useDocumentosVeiculos();
 
-  // Buscar veículos com filtros
+  // Buscar veículos quando filtros mudarem
   const fetchVeiculosWithFilters = useCallback(async (currentFilters: VeiculosFilters) => {
     try {
       clearError();
@@ -68,44 +75,61 @@ export function VeiculosPage() {
     }
   }, [fetchVeiculos, clearError]);
 
+  // Efeito inicial
   useEffect(() => {
     fetchVeiculosWithFilters(initialFilters);
   }, []);
 
-  // Handlers de filtros e paginação
+  // Handler: Mudança de filtros
   const handleFilterChange = useCallback((newFilters: Partial<VeiculosFilters>) => {
-    const updatedFilters = { ...filters, ...newFilters, page: newFilters.page || 1 };
+    console.log('🔄 [VEICULOS PAGE] Filtros alterados:', newFilters);
+
+    const updatedFilters = {
+      ...filters,
+      ...newFilters,
+      page: newFilters.page || 1
+    };
+
     setFilters(updatedFilters);
     fetchVeiculosWithFilters(updatedFilters);
   }, [filters, fetchVeiculosWithFilters]);
 
+  // Handler: Mudança de página
   const handlePageChange = useCallback((newPage: number) => {
+    console.log('📄 [VEICULOS PAGE] Mudança de página:', newPage);
     handleFilterChange({ page: newPage });
   }, [handleFilterChange]);
 
+  // Handler: Refresh manual
   const handleRefresh = useCallback(() => {
+    console.log('🔄 [VEICULOS PAGE] Refresh manual');
     fetchVeiculosWithFilters(filters);
   }, [fetchVeiculosWithFilters, filters]);
 
-  // Handler de submissão do formulário
+  // Handler: Submissão do formulário - VERSÃO CORRIGIDA
   const handleSubmit = async (data: CreateVeiculoRequest) => {
+    console.log('💾 [VEICULOS PAGE] Iniciando submissão:', data);
     setIsSubmitting(true);
 
     try {
+      // ⭐ CONVERSÃO: Transformar dados do form para formato da API
       const apiData: CreateVeiculoRequest = {
+        // Campos obrigatórios mapeados corretamente
         nome: data.nome,
         placa: data.placa,
         marca: data.marca,
         modelo: data.modelo,
-        ano: data.ano,
+        ano: data.ano, // API espera 'ano' diretamente
         status: data.status || 'disponivel',
         tipo: data.tipo,
         tipoCombustivel: data.tipoCombustivel,
         capacidadePassageiros: data.capacidadePassageiros,
         capacidadeCarga: data.capacidadeCarga,
         localizacaoAtual: data.localizacaoAtual,
+
+        // Campos opcionais
         ...(data.cor && { cor: data.cor }),
-        ...(data.kmAtual !== undefined && { kmAtual: data.kmAtual }),
+        ...(data.kmAtual !== undefined && { kmAtual: data.kmAtual }), // API espera 'kmAtual'
         ...(data.proximaRevisao && { proximaRevisao: data.proximaRevisao }),
         ...(data.responsavelManutencao && { responsavelManutencao: data.responsavelManutencao }),
         ...(data.observacoes && { observacoes: data.observacoes }),
@@ -114,15 +138,18 @@ export function VeiculosPage() {
         ...(data.seguradora && { seguradora: data.seguradora })
       };
 
+      console.log('🔄 [VEICULOS PAGE] Dados convertidos para API:', apiData);
+
       if (modalState.mode === 'create') {
         const novoVeiculo = await createVeiculo(apiData);
 
-        // Upload dos documentos
+        // Upload dos documentos selecionados
         let documentosUploadados = 0;
         let totalDocumentos = 0;
 
         if (data.documentos && Array.isArray(data.documentos) && data.documentos.length > 0) {
           totalDocumentos = data.documentos.length;
+          console.log('📄 [VEICULOS PAGE] Fazendo upload de documentos:', totalDocumentos);
 
           for (const documento of data.documentos) {
             try {
@@ -134,7 +161,7 @@ export function VeiculosPage() {
               });
               documentosUploadados++;
             } catch (docError) {
-              console.error('Erro ao fazer upload do documento:', documento.file.name, docError);
+              console.error('❌ Erro ao fazer upload do documento:', documento.file.name, docError);
             }
           }
         }
@@ -150,6 +177,7 @@ export function VeiculosPage() {
         });
 
       } else if (modalState.mode === 'edit' && modalState.entity) {
+        // 🔧 FIX: Para update, criar payload específico apenas com campos editáveis
         const updateData: Partial<any> = {
           nome: data.nome,
           placa: data.placa,
@@ -159,6 +187,8 @@ export function VeiculosPage() {
           capacidadePassageiros: data.capacidadePassageiros,
           capacidadeCarga: data.capacidadeCarga,
           localizacaoAtual: data.localizacaoAtual,
+
+          // Campos opcionais editáveis
           ...(data.cor && { cor: data.cor }),
           ...(data.proximaRevisao && { proximaRevisao: data.proximaRevisao }),
           ...(data.responsavelManutencao && { responsavelManutencao: data.responsavelManutencao }),
@@ -167,6 +197,8 @@ export function VeiculosPage() {
           ...(data.renavam && { renavam: data.renavam }),
           ...(data.seguradora && { seguradora: data.seguradora })
         };
+
+        console.log('🔄 [VEICULOS PAGE] Dados de update (apenas campos editáveis):', updateData);
 
         await updateVeiculo(modalState.entity.id, updateData);
 
@@ -178,9 +210,8 @@ export function VeiculosPage() {
       }
 
       closeModal();
-      fetchVeiculosWithFilters(filters);
     } catch (error: any) {
-      console.error('Erro ao salvar veículo:', error);
+      console.error('❌ [VEICULOS PAGE] Erro ao salvar veículo:', error);
 
       toast({
         title: modalState.mode === 'create' ? "Erro ao criar veículo" : "Erro ao atualizar veículo",
@@ -192,7 +223,7 @@ export function VeiculosPage() {
     }
   };
 
-  // Mapeamento de entidade para o modal
+  // Mapeamento completo baseado na documentação da API
   const getModalEntity = () => {
     const entity = modalState.entity;
 
@@ -203,14 +234,14 @@ export function VeiculosPage() {
         placa: '',
         marca: '',
         modelo: '',
-        ano: new Date().getFullYear(),
+        ano: new Date().getFullYear(), // Para o form
         cor: '',
         status: 'disponivel' as const,
         tipo: 'carro' as const,
         tipoCombustivel: 'gasolina' as const,
         capacidadePassageiros: 5,
         capacidadeCarga: 0,
-        kmAtual: 0,
+        kmAtual: 0, // Para o form
         proximaRevisao: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         responsavelManutencao: '',
         localizacaoAtual: 'Garagem Principal',
@@ -222,37 +253,60 @@ export function VeiculosPage() {
       };
     }
 
+    // Para edit/view - mapear da API para o form
     if (entity) {
+      console.log('🔍 [VEICULOS PAGE] Entity da API:', entity);
+      console.log('🔍 [VEICULOS PAGE] Fields check:', {
+        kmAtual: entity.kmAtual,
+        quilometragem: entity.quilometragem,
+        proximaRevisao: entity.proximaRevisao,
+        ano: entity.ano,
+        proximaRevisaoType: typeof entity.proximaRevisao,
+        allEntityKeys: Object.keys(entity).sort()
+      });
+
       return {
         id: entity.id,
         nome: entity.nome || '',
         placa: entity.placa || '',
         marca: entity.marca || '',
         modelo: entity.modelo || '',
+        
+        // ⭐ CAMPO PRINCIPAL: ano (form) ← ano (API)
         ano: entity.ano || new Date().getFullYear(),
+
         cor: entity.cor || '',
         status: entity.status || 'disponivel',
         tipo: entity.tipo || 'carro',
         tipoCombustivel: entity.tipoCombustivel || 'gasolina',
         capacidadePassageiros: entity.capacidadePassageiros || 5,
         capacidadeCarga: entity.capacidadeCarga || 0,
+
+        // ⭐ CAMPO PRINCIPAL: kmAtual (form) ← multiple possible API fields
         kmAtual: entity.kmAtual || entity.quilometragem || 0,
+
+        // Data fields - API pode retornar ISO com timestamp (2026-04-23 00:00:00.000)
         proximaRevisao: entity.proximaRevisao ?
           new Date(entity.proximaRevisao).toISOString().split('T')[0] : '',
+
+        // Mapeamento de outros campos da API
         responsavelManutencao: entity.responsavelManutencao || '',
         localizacaoAtual: entity.localizacaoAtual || 'Garagem Principal',
         observacoes: entity.observacoes || '',
+        
+        // Campos de documentação
         chassi: entity.chassi || '',
         renavam: entity.renavam || '',
         seguradora: entity.seguradora || '',
+
+        // Documentos vazios (carregados pelo componente)
         documentos: []
       };
     }
 
     return {};
   };
-
-  // Paginação
+  // Calcular paginação
   const pagination = {
     page: filters.page || 1,
     limit: filters.limit || 10,
@@ -260,15 +314,95 @@ export function VeiculosPage() {
     totalPages: Math.ceil(totalVeiculos / (filters.limit || 10))
   };
 
+  // Handler: Enviar para manutenção
+  const handleEnviarManutencao = async (veiculo: VeiculoResponse) => {
+    try {
+      await updateStatus(veiculo.id, 'manutencao');
+
+      toast({
+        title: "Veículo em manutenção",
+        description: `${veiculo.nome} foi enviado para manutenção.`,
+        variant: "default",
+      });
+    } catch (error: any) {
+      console.error('Erro ao enviar para manutenção:', error);
+
+      toast({
+        title: "Erro ao enviar para manutenção",
+        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handler: Retornar da manutenção
+  const handleRetornarManutencao = async (veiculo: VeiculoResponse) => {
+    try {
+      await updateStatus(veiculo.id, 'disponivel');
+
+      toast({
+        title: "Veículo disponível",
+        description: `${veiculo.nome} retornou da manutenção e está disponível.`,
+        variant: "default",
+      });
+    } catch (error: any) {
+      console.error('Erro ao retornar da manutenção:', error);
+
+      toast({
+        title: "Erro ao retornar da manutenção",
+        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handler: Agendar revisão
+  const handleAgendarRevisao = useCallback((veiculo: VeiculoResponse) => {
+    // Aqui você poderia abrir um modal de agendamento
+    toast({
+      title: "Funcionalidade em desenvolvimento",
+      description: `Agendamento de revisão para ${veiculo.nome} será implementado em breve.`,
+      variant: "default",
+    });
+  }, []);
+
+  // Ações customizadas
+  const customActions: CustomAction<VeiculoResponse>[] = useMemo(() => [
+    {
+      key: 'manutencao',
+      label: 'Manutenção',
+      icon: <Wrench className="h-4 w-4" />,
+      variant: 'secondary',
+      condition: (veiculo) => veiculo.status === 'disponivel',
+      handler: (veiculo) => handleEnviarManutencao(veiculo)
+    },
+    {
+      key: 'retornar',
+      label: 'Retornar',
+      icon: <Car className="h-4 w-4" />,
+      variant: 'default',
+      condition: (veiculo) => veiculo.status === 'manutencao',
+      handler: (veiculo) => handleRetornarManutencao(veiculo)
+    },
+    {
+      key: 'revisao',
+      label: 'Agendar Revisão',
+      icon: <Calendar className="h-4 w-4" />,
+      variant: 'outline',
+      condition: (veiculo) => veiculo.status === 'disponivel',
+      handler: (veiculo) => handleAgendarRevisao(veiculo)
+    }
+  ], [handleAgendarRevisao]);
+
   return (
     <Layout>
       <Layout.Main>
         <div className="flex flex-col h-full w-full">
-          <TitleCard
-            title="Veículos da Frota"
-            description="Gerencie os veículos e viaturas da empresa"
+          <TitleCard 
+            title="Veículos da Frota" 
+            description="Gerencie os veículos e viaturas da empresa" 
           />
-
+          
           {/* Filtros e Ações */}
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="flex-1">
@@ -279,24 +413,25 @@ export function VeiculosPage() {
               />
             </div>
 
-            <div className="flex gap-2 flex-col sm:flex-row shrink-0">
-              <button
+            <div className="flex gap-2 shrink-0">
+              <Button
+                variant="outline"
                 onClick={handleRefresh}
                 disabled={loading}
-                className="btn-minimal flex items-center justify-center gap-2"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
               >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 Atualizar
-              </button>
+              </Button>
 
-              <button
+              <Button
                 onClick={() => openModal('create')}
+                className="bg-primary hover:bg-primary/90"
                 disabled={isSubmitting}
-                className="btn-minimal-primary flex items-center justify-center gap-2"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="mr-2 h-4 w-4" />
                 Novo Veículo
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -320,6 +455,7 @@ export function VeiculosPage() {
               onPageChange={handlePageChange}
               onView={(v: any) => openModal('view', v)}
               onEdit={(v: any) => openModal('edit', v)}
+              customActions={customActions as any}
               emptyMessage="Nenhum veículo encontrado"
               emptyIcon={<Car className="h-8 w-8 text-muted-foreground/50" />}
             />

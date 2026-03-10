@@ -1,20 +1,15 @@
 // src/features/reservas/components/ReservaModal.tsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { VeiculoSelector } from './VeiculoSelector';
 import { Car, X } from 'lucide-react';
 import { ReservaVeiculo, ReservaFormData, Veiculo } from '../types';
-import { 
-  formatDateForInput, 
-  formatDateForAPI, 
+import {
+  formatDateForInput,
+  formatDateForAPI,
   getCurrentDate,
   isDateInPast,
-  isEndDateAfterStartDate 
+  isEndDateAfterStartDate
 } from '../utils/date-utils';
 
 interface ReservaModalProps {
@@ -26,13 +21,8 @@ interface ReservaModalProps {
   veiculos: Veiculo[];
   reservas: ReservaVeiculo[];
   reservaId?: string;
+  loading?: boolean;
 }
-
-// Função para converter data ISO para formato de input date (YYYY-MM-DD) - REMOVIDA
-// Agora usando a função do utils
-
-// Função para obter data atual no formato YYYY-MM-DD - REMOVIDA
-// Agora usando a função do utils
 
 export function ReservaModal({
   isOpen,
@@ -42,17 +32,14 @@ export function ReservaModal({
   onSubmit,
   veiculos,
   reservas,
-  reservaId
+  reservaId,
+  loading = false
 }: ReservaModalProps) {
   const [formData, setFormData] = useState<Partial<ReservaFormData>>({});
   const [veiculoSelecionado, setVeiculoSelecionado] = useState<string | undefined>();
-  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Inicializa o formulário
   useEffect(() => {
-    console.log('🔧 [RESERVA MODAL] Inicializando modal:', { mode, entity, isOpen });
-    
     if (isOpen) {
       if (mode === 'create') {
         const initialData = {
@@ -62,11 +49,9 @@ export function ReservaModal({
           horaInicio: '08:00',
           horaFim: '18:00'
         };
-        console.log('➕ [RESERVA MODAL] Dados iniciais para criação:', initialData);
         setFormData(initialData);
         setVeiculoSelecionado(undefined);
       } else if (entity) {
-        // Processar dados existentes com formatação correta
         const processedData = {
           tipoSolicitante: entity.tipoSolicitante,
           solicitanteId: entity.solicitanteId,
@@ -78,49 +63,25 @@ export function ReservaModal({
           horaFim: entity.horaFim || '18:00',
           observacoes: entity.observacoes
         };
-        
-        console.log('✏️ [RESERVA MODAL] Dados originais da entidade:', {
-          dataInicio: entity.dataInicio,
-          dataFim: entity.dataFim,
-          horaInicio: entity.horaInicio,
-          horaFim: entity.horaFim,
-          veiculoId: entity.veiculoId,
-          veiculoIdType: typeof entity.veiculoId
-        });
-        
-        console.log('🔄 [RESERVA MODAL] Dados processados:', processedData);
-        
+
         setFormData(processedData);
-        // Manter o tipo original do veiculoId
         setVeiculoSelecionado(entity.veiculoId);
       }
       setErrors({});
     }
   }, [isOpen, mode, entity]);
 
-  const filtrosDisponibilidade = useMemo(() => {
-    const filtros = {
-      dataInicio: formData.dataInicio || '',
-      dataFim: formData.dataFim || '',
-      horaInicio: formData.horaInicio,
-      horaFim: formData.horaFim,
-      excluirReservaId: mode === 'edit' ? reservaId : undefined
-    };
-    
-    console.log('🔍 [RESERVA MODAL] Filtros de disponibilidade:', filtros);
-    return filtros;
-  }, [formData.dataInicio, formData.dataFim, formData.horaInicio, formData.horaFim, mode, reservaId]);
+  const filtrosDisponibilidade = useMemo(() => ({
+    dataInicio: formData.dataInicio || '',
+    dataFim: formData.dataFim || '',
+    horaInicio: formData.horaInicio,
+    horaFim: formData.horaFim,
+    excluirReservaId: mode === 'edit' ? reservaId : undefined
+  }), [formData.dataInicio, formData.dataFim, formData.horaInicio, formData.horaFim, mode, reservaId]);
 
   const handleInputChange = (key: string, value: any) => {
-    console.log(`📝 [RESERVA MODAL] Campo alterado: ${key} =`, value);
-    
-    setFormData(prev => {
-      const updated = { ...prev, [key]: value };
-      console.log('📋 [RESERVA MODAL] FormData atualizado:', updated);
-      return updated;
-    });
-    
-    // Limpa erro do campo quando usuário digita
+    setFormData(prev => ({ ...prev, [key]: value }));
+
     if (errors[key]) {
       setErrors(prev => ({ ...prev, [key]: '' }));
     }
@@ -166,7 +127,6 @@ export function ReservaModal({
     if (!formData.horaFim) {
       newErrors.horaFim = 'Hora de fim é obrigatória';
     } else if (formData.horaInicio && formData.horaFim && formData.dataInicio === formData.dataFim) {
-      // Validar horários apenas se for o mesmo dia
       if (formData.horaFim <= formData.horaInicio) {
         newErrors.horaFim = 'Hora de fim deve ser posterior à hora de início';
       }
@@ -182,293 +142,247 @@ export function ReservaModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    console.log('💾 [RESERVA MODAL] Tentando submeter form com dados:', formData);
-    console.log('🚗 [RESERVA MODAL] Veículo selecionado:', veiculoSelecionado);
-    
-    if (!validateForm()) {
-      console.log('❌ [RESERVA MODAL] Validação falhou, erros:', errors);
-      return;
-    }
 
-    setLoading(true);
+    if (!validateForm()) return;
+
     try {
-      // Preparar dados para envio
       const dadosCompletos = {
         ...formData as ReservaFormData,
-        veiculoId: veiculoSelecionado!, // Agora é string
-        // Configurar formato das datas baseado no que a API espera
+        veiculoId: veiculoSelecionado!,
         dataInicio: formatDateForAPI(formData.dataInicio!, false),
         dataFim: formatDateForAPI(formData.dataFim!, false),
       };
 
-      console.log('🚀 [RESERVA MODAL] Enviando dados completos:', dadosCompletos);
       await onSubmit(dadosCompletos);
-      console.log('✅ [RESERVA MODAL] Sucesso na submissão');
     } catch (error) {
-      console.error('❌ [RESERVA MODAL] Erro ao salvar:', error);
-    } finally {
-      setLoading(false);
+      console.error('Erro ao salvar reserva:', error);
     }
   };
 
   const isReadOnly = mode === 'view';
 
-  // Debug do estado atual
-  useEffect(() => {
-    console.log('🐛 [RESERVA MODAL] Estado atual:', {
-      isOpen,
-      mode,
-      formData,
-      veiculoSelecionado,
-      hasEntity: !!entity,
-      errors
-    });
-  }, [isOpen, mode, formData, veiculoSelecionado, entity, errors]);
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent side="right" className="w-full md:w-[50vw] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
             <Car className="h-5 w-5 text-blue-600" />
             {mode === 'create' ? 'Nova' : mode === 'edit' ? 'Editar' : 'Visualizar'} Reserva
-          </DialogTitle>
-        </DialogHeader>
+          </SheetTitle>
+        </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Debug info - apenas em desenvolvimento */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 rounded text-xs">
-              <strong className="text-gray-900 dark:text-gray-100">Debug:</strong> 
-              <div className="text-gray-700 dark:text-gray-300 mt-1 space-y-1">
-                <div>Dados Originais: {entity?.dataInicio} | {entity?.dataFim}</div>
-                <div>Dados Formatados: {formData.dataInicio} | {formData.dataFim}</div>
-                <div>Veículo: {veiculoSelecionado}</div>
-              </div>
-            </div>
-          )}
-
-          {/* Grid de campos principais */}
+        <form onSubmit={handleSubmit} className="space-y-6 mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Tipo de Solicitante */}
             <div className="space-y-2">
-              <Label htmlFor="tipoSolicitante">
+              <label className="block text-sm font-medium">
                 Tipo de Solicitante <span className="text-red-500">*</span>
-              </Label>
-              <Select
+              </label>
+              <select
                 value={formData.tipoSolicitante || ''}
-                onValueChange={(value) => handleInputChange('tipoSolicitante', value)}
+                onChange={(e) => handleInputChange('tipoSolicitante', e.target.value)}
                 disabled={isReadOnly}
+                className="select-minimal w-full"
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="manual">Manual</SelectItem>
-                  <SelectItem value="ordem_servico">Ordem de Serviço</SelectItem>
-                  <SelectItem value="viagem">Viagem</SelectItem>
-                  <SelectItem value="manutencao">Manutenção</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="">Selecione o tipo</option>
+                <option value="manual">Manual</option>
+                <option value="ordem_servico">Ordem de Serviço</option>
+                <option value="viagem">Viagem</option>
+                <option value="manutencao">Manutenção</option>
+              </select>
               {errors.tipoSolicitante && (
-                <p className="text-sm text-red-500 dark:text-red-400">{errors.tipoSolicitante}</p>
+                <p className="text-sm text-red-500">{errors.tipoSolicitante}</p>
               )}
             </div>
 
             {/* ID do Solicitante */}
             <div className="space-y-2">
-              <Label htmlFor="solicitanteId">ID do Solicitante</Label>
-              <Input
-                id="solicitanteId"
+              <label className="block text-sm font-medium">ID do Solicitante</label>
+              <input
+                type="text"
                 value={formData.solicitanteId || ''}
                 onChange={(e) => handleInputChange('solicitanteId', e.target.value)}
                 placeholder="Ex: OS-2025-001, MANUAL-123"
                 disabled={isReadOnly}
+                className="input-minimal w-full"
               />
             </div>
 
             {/* Responsável */}
             <div className="space-y-2">
-              <Label htmlFor="responsavel">
+              <label className="block text-sm font-medium">
                 Responsável <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="responsavel"
+              </label>
+              <input
+                type="text"
                 value={formData.responsavel || ''}
                 onChange={(e) => handleInputChange('responsavel', e.target.value)}
                 placeholder="Nome do responsável"
                 disabled={isReadOnly}
+                className="input-minimal w-full"
               />
               {errors.responsavel && (
-                <p className="text-sm text-red-500 dark:text-red-400">{errors.responsavel}</p>
+                <p className="text-sm text-red-500">{errors.responsavel}</p>
               )}
             </div>
 
             {/* Finalidade */}
             <div className="space-y-2">
-              <Label htmlFor="finalidade">
+              <label className="block text-sm font-medium">
                 Finalidade <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="finalidade"
+              </label>
+              <input
+                type="text"
                 value={formData.finalidade || ''}
                 onChange={(e) => handleInputChange('finalidade', e.target.value)}
                 placeholder="Finalidade da reserva"
                 disabled={isReadOnly}
+                className="input-minimal w-full"
               />
               {errors.finalidade && (
-                <p className="text-sm text-red-500 dark:text-red-400">{errors.finalidade}</p>
+                <p className="text-sm text-red-500">{errors.finalidade}</p>
               )}
             </div>
 
             {/* Data Início */}
             <div className="space-y-2">
-              <Label htmlFor="dataInicio">
+              <label className="block text-sm font-medium">
                 Data Início <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="dataInicio"
+              </label>
+              <input
                 type="date"
                 value={formData.dataInicio || ''}
                 onChange={(e) => handleInputChange('dataInicio', e.target.value)}
                 disabled={isReadOnly}
-                className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+                className="input-minimal w-full"
               />
               {errors.dataInicio && (
-                <p className="text-sm text-red-500 dark:text-red-400">{errors.dataInicio}</p>
+                <p className="text-sm text-red-500">{errors.dataInicio}</p>
               )}
             </div>
 
             {/* Hora Início */}
             <div className="space-y-2">
-              <Label htmlFor="horaInicio">
+              <label className="block text-sm font-medium">
                 Hora Início <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="horaInicio"
+              </label>
+              <input
                 type="time"
                 value={formData.horaInicio || ''}
                 onChange={(e) => handleInputChange('horaInicio', e.target.value)}
                 disabled={isReadOnly}
-                className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+                className="input-minimal w-full"
               />
               {errors.horaInicio && (
-                <p className="text-sm text-red-500 dark:text-red-400">{errors.horaInicio}</p>
+                <p className="text-sm text-red-500">{errors.horaInicio}</p>
               )}
             </div>
 
             {/* Data Fim */}
             <div className="space-y-2">
-              <Label htmlFor="dataFim">
+              <label className="block text-sm font-medium">
                 Data Fim <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="dataFim"
+              </label>
+              <input
                 type="date"
                 value={formData.dataFim || ''}
                 onChange={(e) => handleInputChange('dataFim', e.target.value)}
                 disabled={isReadOnly}
-                className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+                className="input-minimal w-full"
               />
               {errors.dataFim && (
-                <p className="text-sm text-red-500 dark:text-red-400">{errors.dataFim}</p>
+                <p className="text-sm text-red-500">{errors.dataFim}</p>
               )}
             </div>
 
             {/* Hora Fim */}
             <div className="space-y-2">
-              <Label htmlFor="horaFim">
+              <label className="block text-sm font-medium">
                 Hora Fim <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="horaFim"
+              </label>
+              <input
                 type="time"
                 value={formData.horaFim || ''}
                 onChange={(e) => handleInputChange('horaFim', e.target.value)}
                 disabled={isReadOnly}
-                className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+                className="input-minimal w-full"
               />
               {errors.horaFim && (
-                <p className="text-sm text-red-500 dark:text-red-400">{errors.horaFim}</p>
+                <p className="text-sm text-red-500">{errors.horaFim}</p>
               )}
             </div>
           </div>
 
           {/* Observações */}
           <div className="space-y-2">
-            <Label htmlFor="observacoes" className="text-gray-900 dark:text-gray-100">Observações</Label>
-            <Textarea
-              id="observacoes"
+            <label className="block text-sm font-medium">Observações</label>
+            <textarea
               value={formData.observacoes || ''}
               onChange={(e) => handleInputChange('observacoes', e.target.value)}
               placeholder="Informações adicionais sobre a reserva..."
               disabled={isReadOnly}
               rows={3}
-              className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
+              className="input-minimal w-full"
             />
           </div>
 
-            {/* Seletor de Veículo */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-              <div className="mb-4">
-                <Label className="text-base font-medium text-gray-900 dark:text-gray-100">
-                  Selecionar Veículo <span className="text-red-500">*</span>
-                </Label>
-                {(!formData.dataInicio || !formData.dataFim) && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Configure as datas acima para ver os veículos disponíveis
-                  </p>
-                )}
-              </div>
-              
-              <VeiculoSelector
-                veiculos={veiculos}
-                reservas={reservas}
-                filtrosDisponibilidade={filtrosDisponibilidade}
-                veiculoSelecionado={veiculoSelecionado}
-                onVeiculoChange={(veiculoId) => {
-                  console.log('🔄 [RESERVA MODAL] VeiculoSelector onChange chamado com:', veiculoId);
-                  setVeiculoSelecionado(veiculoId);
-                  
-                  // Limpar erro de validação se havia
-                  if (errors.veiculo) {
-                    setErrors(prev => ({ ...prev, veiculo: '' }));
-                  }
-                }}
-                disabled={isReadOnly}
-              />
-              
-              {errors.veiculo && (
-                <p className="text-sm text-red-500 dark:text-red-400 mt-2">{errors.veiculo}</p>
+          {/* Seletor de Veículo */}
+          <div className="border-t pt-6">
+            <div className="mb-4">
+              <label className="block text-base font-medium">
+                Selecionar Veículo <span className="text-red-500">*</span>
+              </label>
+              {(!formData.dataInicio || !formData.dataFim) && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Configure as datas acima para ver os veículos disponíveis
+                </p>
               )}
             </div>
 
-            {/* Botões */}
-            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
+            <VeiculoSelector
+              veiculos={veiculos}
+              reservas={reservas}
+              filtrosDisponibilidade={filtrosDisponibilidade}
+              veiculoSelecionado={veiculoSelecionado}
+              onVeiculoChange={(veiculoId) => {
+                setVeiculoSelecionado(veiculoId);
+
+                if (errors.veiculo) {
+                  setErrors(prev => ({ ...prev, veiculo: '' }));
+                }
+              }}
+              disabled={isReadOnly}
+            />
+
+            {errors.veiculo && (
+              <p className="text-sm text-red-500 mt-2">{errors.veiculo}</p>
+            )}
+          </div>
+
+          {/* Botões */}
+          <div className="flex justify-end gap-3 pt-6 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="btn-minimal-outline"
+            >
+              <X className="w-4 h-4 mr-2" />
+              {isReadOnly ? 'Fechar' : 'Cancelar'}
+            </button>
+
+            {!isReadOnly && (
+              <button
+                type="submit"
                 disabled={loading}
-                className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="btn-minimal-primary"
               >
-                <X className="w-4 h-4 mr-2" />
-                {isReadOnly ? 'Fechar' : 'Cancelar'}
-              </Button>
-              
-              {!isReadOnly && (
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-white"
-                >
-                  {loading ? 'Salvando...' : mode === 'create' ? 'Criar Reserva' : 'Salvar Alterações'}
-                </Button>
-              )}
-            </div>
+                {loading ? 'Salvando...' : mode === 'create' ? 'Criar Reserva' : 'Salvar Alterações'}
+              </button>
+            )}
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

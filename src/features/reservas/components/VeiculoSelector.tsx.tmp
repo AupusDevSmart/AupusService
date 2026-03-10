@@ -115,7 +115,7 @@ export function VeiculoSelector({
 
   if (!filtrosDisponibilidade.dataInicio || !filtrosDisponibilidade.dataFim) {
     return (
-      <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded">
+      <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
         <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
           <AlertTriangle className="w-4 h-4" />
           <span className="text-sm">Selecione as datas para verificar disponibilidade dos veículos</span>
@@ -127,7 +127,7 @@ export function VeiculoSelector({
   return (
     <div className="space-y-4">
       {/* Resumo da disponibilidade */}
-      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="text-sm text-gray-600 dark:text-gray-300">
           Período: {filtrosDisponibilidade.dataInicio} a {filtrosDisponibilidade.dataFim}
           {filtrosDisponibilidade.horaInicio && filtrosDisponibilidade.horaFim && (
@@ -154,7 +154,7 @@ export function VeiculoSelector({
               key={veiculo.id}
               type="button"
               className={`
-                p-4 border rounded text-left transition-all relative
+                p-4 border-2 rounded-lg text-left transition-all relative
                 ${veiculo.disponivel
                   ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20'
                   : 'border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed opacity-75'
