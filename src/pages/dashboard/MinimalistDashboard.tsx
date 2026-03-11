@@ -4,6 +4,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
+import 'react-circular-progressbar/dist/styles.css';
 import {
   Select,
   SelectContent,
@@ -190,6 +192,42 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+// Componente de gráfico circular moderno
+const CircularMetric = ({
+  value,
+  maxValue = 100,
+  label,
+  color,
+  size = 160
+}: {
+  value: number;
+  maxValue?: number;
+  label: string;
+  color: string;
+  size?: number;
+}) => {
+  return (
+    <div className="flex flex-col items-center">
+      <div style={{ width: size, height: size }}>
+        <CircularProgressbar
+          value={value}
+          maxValue={maxValue}
+          text={`${Math.round(value)}%`}
+          styles={buildStyles({
+            textSize: '24px',
+            pathTransitionDuration: 0.5,
+            pathColor: color,
+            textColor: 'currentColor',
+            trailColor: '#e5e7eb',
+            backgroundColor: '#f3f4f6',
+          })}
+        />
+      </div>
+      <p className="text-xs text-gray-600 dark:text-gray-400 mt-3 font-medium">{label}</p>
+    </div>
+  );
+};
+
 /**
  * Dashboard Minimalista Avançado
  * Design clean, cores sutis, animações suaves
@@ -213,14 +251,22 @@ export function MinimalistDashboard() {
     proprietarioId: user?.proprietarioId
   });
 
-  // Score visual com gradiente
+  // DEBUG: Log dos dados recebidos
+  useEffect(() => {
+    if (data) {
+      console.log('🔍 [FRONTEND] Dashboard data received:', {
+        anomalias: data.anomalias,
+        isLoading,
+        error
+      });
+    }
+  }, [data, isLoading, error]);
+
+  // Score visual com gradiente - tonalidades de cinza e azul escuro
   const scoreGradient = useMemo(() => {
-    if (!data || !data.metrics) return 'from-gray-500 to-gray-600';
-    const score = data.metrics.saudeOperacional;
-    if (score >= 80) return 'from-green-500 to-green-600';
-    if (score >= 60) return 'from-yellow-500 to-yellow-600';
-    if (score >= 40) return 'from-orange-500 to-orange-600';
-    return 'from-red-500 to-red-600';
+    if (!data || !data.metrics) return 'from-slate-600 to-slate-700';
+    // Sempre usar tons de cinza e azul escuro para manter aspecto profissional
+    return 'from-slate-700 to-blue-900';
   }, [data]);
 
   // Dados para gráficos
@@ -314,7 +360,7 @@ export function MinimalistDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="h-screen overflow-y-auto bg-gray-50 dark:bg-gray-900">
       {/* Header Minimalista */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-50">
         <div className="px-6 py-4">
@@ -365,38 +411,38 @@ export function MinimalistDashboard() {
         </div>
       </header>
 
-      {/* Score Executivo */}
+      {/* Score Executivo - Compacto */}
       <AnimatePresence>
         {data && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="px-6 py-6"
+            className="px-6 py-3"
           >
             <div className={cn(
-              "bg-gradient-to-r p-6 rounded-2xl text-white shadow-lg",
+              "bg-gradient-to-r p-4 rounded-xl text-white shadow-lg",
               scoreGradient
             )}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white/80 text-sm mb-2">Score Operacional</p>
-                  <div className="flex items-baseline gap-4">
-                    <h2 className="text-5xl font-bold">{Math.round(data?.metrics?.saudeOperacional || 0)}</h2>
-                    <div className="flex items-center gap-2">
+                  <p className="text-white/80 text-xs mb-1">Score Operacional</p>
+                  <div className="flex items-baseline gap-3">
+                    <h2 className="text-3xl font-bold">{Math.round(data?.metrics?.saudeOperacional || 0)}</h2>
+                    <div className="flex items-center gap-1.5">
                       {(data?.metrics?.saudeOperacional || 0) > 70 ? (
                         <>
-                          <TrendingUp className="h-5 w-5" />
-                          <span className="text-sm">Melhorando</span>
+                          <TrendingUp className="h-4 w-4" />
+                          <span className="text-xs">Melhorando</span>
                         </>
                       ) : (data?.metrics?.saudeOperacional || 0) < 50 ? (
                         <>
-                          <TrendingDown className="h-5 w-5" />
-                          <span className="text-sm">Atenção</span>
+                          <TrendingDown className="h-4 w-4" />
+                          <span className="text-xs">Atenção</span>
                         </>
                       ) : (
                         <>
-                          <Minus className="h-5 w-5" />
-                          <span className="text-sm">Estável</span>
+                          <Minus className="h-4 w-4" />
+                          <span className="text-xs">Estável</span>
                         </>
                       )}
                     </div>
@@ -406,11 +452,11 @@ export function MinimalistDashboard() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-right">
                     <p className="text-white/80 text-xs">Anomalias Abertas</p>
-                    <p className="text-2xl font-bold">{data?.anomalias?.abertas || 0}</p>
+                    <p className="text-xl font-bold">{data?.anomalias?.abertas || 0}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-white/80 text-xs">OS Pendentes</p>
-                    <p className="text-2xl font-bold">{data?.ordensServico?.abertas || 0}</p>
+                    <p className="text-xl font-bold">{data?.ordensServico?.abertas || 0}</p>
                   </div>
                 </div>
               </div>
@@ -424,7 +470,11 @@ export function MinimalistDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
           <MetricCard
             title="Anomalias Ativas"
-            value={data?.anomalias?.total || 0}
+            value={(() => {
+              const val = data?.anomalias?.total || 0;
+              console.log('🔍 [FRONTEND] Anomalias card value:', val, 'data:', data?.anomalias);
+              return val;
+            })()}
             trend={{
               value: data?.anomalias?.abertas || 0,
               direction: (data?.anomalias?.abertas || 0) > 0 ? 'up' : 'stable'
@@ -480,82 +530,28 @@ export function MinimalistDashboard() {
 
         {/* Gráficos Principais */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-          {/* Taxa de Resolução Radial */}
+          {/* Taxa de Resolução - Gráfico Circular Moderno */}
           <ChartCard title="Taxa de Resolução" loading={isLoading}>
-            <ResponsiveContainer width="100%" height={200}>
-              <RadialBarChart
-                cx="50%"
-                cy="50%"
-                innerRadius="60%"
-                outerRadius="90%"
-                data={taxaResolucaoRadialData}
-                startAngle={180}
-                endAngle={0}
-              >
-                <PolarGrid stroke={colors.darkBorder} className="dark:opacity-30" />
-                <RadialBar
-                  dataKey="value"
-                  cornerRadius={10}
-                />
-                <text
-                  x="50%"
-                  y="50%"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="text-3xl font-bold fill-gray-900 dark:fill-gray-100"
-                >
-                  {Math.round(data?.metrics?.taxaResolucao || 0)}%
-                </text>
-                <text
-                  x="50%"
-                  y="50%"
-                  dy={20}
-                  textAnchor="middle"
-                  className="text-xs fill-gray-500 dark:fill-gray-400"
-                >
-                  Anomalias
-                </text>
-              </RadialBarChart>
-            </ResponsiveContainer>
+            <div className="flex justify-center py-4">
+              <CircularMetric
+                value={data?.metrics?.taxaResolucao || 0}
+                label="Anomalias Resolvidas"
+                color="#10b981"
+                size={140}
+              />
+            </div>
           </ChartCard>
 
-          {/* Eficiência de Manutenção Radial */}
+          {/* Eficiência de Manutenção - Gráfico Circular Moderno */}
           <ChartCard title="Eficiência Manutenção" loading={isLoading}>
-            <ResponsiveContainer width="100%" height={200}>
-              <RadialBarChart
-                cx="50%"
-                cy="50%"
-                innerRadius="60%"
-                outerRadius="90%"
-                data={eficienciaManutencaoRadialData}
-                startAngle={180}
-                endAngle={0}
-              >
-                <PolarGrid stroke={colors.darkBorder} className="dark:opacity-30" />
-                <RadialBar
-                  dataKey="value"
-                  cornerRadius={10}
-                />
-                <text
-                  x="50%"
-                  y="50%"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="text-3xl font-bold fill-gray-900 dark:fill-gray-100"
-                >
-                  {Math.round(data?.metrics?.eficienciaManutencao || 0)}%
-                </text>
-                <text
-                  x="50%"
-                  y="50%"
-                  dy={20}
-                  textAnchor="middle"
-                  className="text-xs fill-gray-500 dark:fill-gray-400"
-                >
-                  Eficiente
-                </text>
-              </RadialBarChart>
-            </ResponsiveContainer>
+            <div className="flex justify-center py-4">
+              <CircularMetric
+                value={data?.metrics?.eficienciaManutencao || 0}
+                label="Tarefas Eficientes"
+                color="#3b82f6"
+                size={140}
+              />
+            </div>
           </ChartCard>
 
           {/* Status OS - Donut Chart */}
@@ -592,44 +588,16 @@ export function MinimalistDashboard() {
             </div>
           </ChartCard>
 
-          {/* Disponibilidade Radial */}
+          {/* Disponibilidade de Equipamentos - Gráfico Circular Moderno */}
           <ChartCard title="Disponibilidade de Equipamentos" loading={isLoading}>
-            <ResponsiveContainer width="100%" height={200}>
-              <RadialBarChart
-                cx="50%"
-                cy="50%"
-                innerRadius="60%"
-                outerRadius="90%"
-                data={equipamentosRadialData}
-                startAngle={180}
-                endAngle={0}
-              >
-                <PolarGrid stroke={colors.darkBorder} className="dark:opacity-30" />
-                <RadialBar
-                  dataKey="value"
-                  fill={colors.success}
-                  cornerRadius={10}
-                />
-                <text
-                  x="50%"
-                  y="50%"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="text-3xl font-bold fill-gray-900 dark:fill-gray-100"
-                >
-                  {Math.round(data?.metrics?.disponibilidade || 0)}%
-                </text>
-                <text
-                  x="50%"
-                  y="50%"
-                  dy={20}
-                  textAnchor="middle"
-                  className="text-xs fill-gray-500 dark:fill-gray-400"
-                >
-                  Disponível
-                </text>
-              </RadialBarChart>
-            </ResponsiveContainer>
+            <div className="flex justify-center py-4">
+              <CircularMetric
+                value={data?.metrics?.disponibilidade || 0}
+                label="Equipamentos Disponíveis"
+                color="#10b981"
+                size={140}
+              />
+            </div>
           </ChartCard>
         </div>
 

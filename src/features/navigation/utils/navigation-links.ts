@@ -188,14 +188,14 @@ export const navigationLinks: Array<NavigationLink> = [
         label: 'Veículos',
         hint: 'Veículos',
       },
-      {
-        key: 'ferramentas',
-        featureKey: 'Equipamentos',
-        path: '/ferramentas',
-        icon: Hammer,
-        label: 'Ferramentas',
-        hint: 'Ferramentas',
-      },
+      // {
+      //   key: 'ferramentas',
+      //   featureKey: 'Equipamentos',
+      //   path: '/ferramentas',
+      //   icon: Hammer,
+      //   label: 'Ferramentas',
+      //   hint: 'Ferramentas',
+      // },
       {
         key: 'reservas',
         featureKey: 'Equipamentos',
@@ -208,14 +208,14 @@ export const navigationLinks: Array<NavigationLink> = [
   },
 
   // 🤝 FORNECEDORES
-  {
-    key: 'fornecedores',
-    featureKey: 'Equipamentos',
-    path: '/fornecedores',
-    icon: Handshake,
-    label: 'Fornecedores',
-    hint: 'Fornecedores',
-  },
+  // {
+  //   key: 'fornecedores',
+  //   featureKey: 'Equipamentos',
+  //   path: '/fornecedores',
+  //   icon: Handshake,
+  //   label: 'Fornecedores',
+  //   hint: 'Fornecedores',
+  // },
 
   // 📅 AGENDA
   {

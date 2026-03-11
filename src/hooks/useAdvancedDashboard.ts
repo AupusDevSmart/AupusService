@@ -143,7 +143,7 @@ export const useAdvancedDashboard = (
           proprietarioId: user?.proprietarioId || filters?.proprietarioId,
         };
 
-        const { data } = await axios.get<DashboardAdvancedData>(
+        const { data } = await axios.get<{ success: boolean; data: DashboardAdvancedData }>(
           `${API_BASE_URL}/dashboard/advanced`,
           {
             params: enhancedFilters,
@@ -153,7 +153,10 @@ export const useAdvancedDashboard = (
           }
         );
 
-        return data;
+        console.log('🔍 [HOOK] Raw axios response:', data);
+
+        // Backend retorna { success: true, data: {...} }, então precisamos acessar data.data
+        return data.data;
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast.error('Erro ao carregar dados do dashboard');
