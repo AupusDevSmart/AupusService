@@ -5,7 +5,6 @@ import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@nexon/components/common/base-table/BaseTable';
 import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
 import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
-import { Button } from '@/components/ui/button';
 import { Plus, Clock, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { toast } from '@/hooks/use-toast';
@@ -85,18 +84,10 @@ export function ConfiguracoesDiasUteisPage() {
         orderDirection: 'asc'
       };
 
-      console.log('🔍 [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Buscando configurações com filtros:', params);
-
       const response = await agendaService.getConfiguracoesDiasUteis(params);
 
       setConfiguracoes(response.data);
       setTotalConfiguracoes(response.pagination.total);
-
-      console.log('✅ [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Configurações carregadas:', {
-        total: response.pagination.total,
-        count: response.data.length,
-        page: response.pagination.page
-      });
 
     } catch (error: any) {
       console.error('❌ [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Erro ao carregar configurações:', error);
@@ -119,8 +110,6 @@ export function ConfiguracoesDiasUteisPage() {
 
   // Handler: Mudança de filtros
   const handleFilterChange = (newFilters: Partial<ConfiguracoesDiasUteisFilters>) => {
-    console.log('🔄 [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Filtros alterados:', newFilters);
-
     const updatedFilters = {
       ...filters,
       ...newFilters,
@@ -133,13 +122,11 @@ export function ConfiguracoesDiasUteisPage() {
 
   // Handler: Mudança de página
   const handlePageChange = (newPage: number) => {
-    console.log('📄 [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Mudança de página:', newPage);
     handleFilterChange({ page: newPage });
   };
 
   // Handler: Refresh manual
   const handleRefresh = () => {
-    console.log('🔄 [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Refresh manual');
     fetchConfiguracoes(filters);
   };
 
@@ -160,7 +147,6 @@ export function ConfiguracoesDiasUteisPage() {
 
   // Handler: Visualizar configuração
   const handleView = async (configuracao: ConfiguracaoDiasUteisResponse) => {
-    console.log('👁️ [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Visualizando configuração:', configuracao.id);
     const detailedConfiguracao = await fetchConfiguracaoDetails(configuracao.id);
     if (detailedConfiguracao) {
       openModal('view', detailedConfiguracao);
@@ -169,7 +155,6 @@ export function ConfiguracoesDiasUteisPage() {
 
   // Handler: Editar configuração
   const handleEdit = async (configuracao: ConfiguracaoDiasUteisResponse) => {
-    console.log('✏️ [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Editando configuração:', configuracao.id);
     const detailedConfiguracao = await fetchConfiguracaoDetails(configuracao.id);
     if (detailedConfiguracao) {
       openModal('edit', detailedConfiguracao);
@@ -178,7 +163,6 @@ export function ConfiguracoesDiasUteisPage() {
 
   // Handler: Submissão do formulário
   const handleSubmit = async (data: any) => {
-    console.log('💾 [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Iniciando submissão:', data);
     setIsSubmitting(true);
 
     try {
@@ -302,25 +286,24 @@ export function ConfiguracoesDiasUteisPage() {
               />
             </div>
 
-            <div className="flex gap-2 shrink-0">
-              <Button
-                variant="outline"
+            <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+              <button
                 onClick={handleRefresh}
                 disabled={loading}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                className="btn-minimal flex items-center justify-center gap-2 w-full sm:w-auto"
               >
-                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                Atualizar
-              </Button>
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <span>Atualizar</span>
+              </button>
 
-              <Button
+              <button
                 onClick={() => openModal('create')}
-                className="bg-primary hover:bg-primary/90"
                 disabled={isSubmitting}
+                className="btn-minimal-primary flex items-center justify-center gap-2 w-full sm:w-auto"
               >
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Configuração
-              </Button>
+                <Plus className="h-4 w-4" />
+                <span>Nova Configuração</span>
+              </button>
             </div>
           </div>
 

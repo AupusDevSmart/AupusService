@@ -73,7 +73,7 @@ export const LocalizacaoController = ({
         // Sempre criar mock da planta com o nome que já temos
         setPlantaEspecifica({
           id: '',
-          nome: value.local || 'Planta não especificada',
+          nome: value?.local || 'Planta não especificada',
           cnpj: '',
           localizacao: '',
           horarioFuncionamento: '',

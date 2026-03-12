@@ -5,7 +5,6 @@ import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@nexon/components/common/base-table/BaseTable';
 import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
 import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
-import { Button } from '@/components/ui/button';
 import { Plus, Calendar, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { toast } from '@/hooks/use-toast';
@@ -89,18 +88,10 @@ export function FeriadosPage() {
         orderDirection: 'desc'
       };
 
-      console.log('🔍 [FERIADOS PAGE] Buscando feriados com filtros:', params);
-
       const response = await agendaService.getFeriados(params);
 
       setFeriados(response.data);
       setTotalFeriados(response.pagination.total);
-
-      console.log('✅ [FERIADOS PAGE] Feriados carregados:', {
-        total: response.pagination.total,
-        count: response.data.length,
-        page: response.pagination.page
-      });
 
     } catch (error: any) {
       console.error('❌ [FERIADOS PAGE] Erro ao carregar feriados:', error);
@@ -123,8 +114,6 @@ export function FeriadosPage() {
 
   // Handler: Mudança de filtros
   const handleFilterChange = (newFilters: Partial<FeriadosFilters>) => {
-    console.log('🔄 [FERIADOS PAGE] Filtros alterados:', newFilters);
-
     const updatedFilters = {
       ...filters,
       ...newFilters,
@@ -137,13 +126,11 @@ export function FeriadosPage() {
 
   // Handler: Mudança de página
   const handlePageChange = (newPage: number) => {
-    console.log('📄 [FERIADOS PAGE] Mudança de página:', newPage);
     handleFilterChange({ page: newPage });
   };
 
   // Handler: Refresh manual
   const handleRefresh = () => {
-    console.log('🔄 [FERIADOS PAGE] Refresh manual');
     fetchFeriados(filters);
   };
 
@@ -164,7 +151,6 @@ export function FeriadosPage() {
 
   // Handler: Visualizar feriado
   const handleView = async (feriado: FeriadoResponse) => {
-    console.log('👁️ [FERIADOS PAGE] Visualizando feriado:', feriado.id);
     const detailedFeriado = await fetchFeriadoDetails(feriado.id);
     if (detailedFeriado) {
       openModal('view', detailedFeriado);
@@ -173,7 +159,6 @@ export function FeriadosPage() {
 
   // Handler: Editar feriado
   const handleEdit = async (feriado: FeriadoResponse) => {
-    console.log('✏️ [FERIADOS PAGE] Editando feriado:', feriado.id);
     const detailedFeriado = await fetchFeriadoDetails(feriado.id);
     if (detailedFeriado) {
       openModal('edit', detailedFeriado);
@@ -182,7 +167,6 @@ export function FeriadosPage() {
 
   // Handler: Submissão do formulário
   const handleSubmit = async (data: any) => {
-    console.log('💾 [FERIADOS PAGE] Iniciando submissão:', data);
     setIsSubmitting(true);
 
     try {
@@ -281,25 +265,24 @@ export function FeriadosPage() {
               />
             </div>
 
-            <div className="flex gap-2 shrink-0">
-              <Button
-                variant="outline"
+            <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+              <button
                 onClick={handleRefresh}
                 disabled={loading}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                className="btn-minimal flex items-center justify-center gap-2 w-full sm:w-auto"
               >
-                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                Atualizar
-              </Button>
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <span>Atualizar</span>
+              </button>
 
-              <Button
+              <button
                 onClick={() => openModal('create')}
-                className="bg-primary hover:bg-primary/90"
                 disabled={isSubmitting}
+                className="btn-minimal-primary flex items-center justify-center gap-2 w-full sm:w-auto"
               >
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Feriado
-              </Button>
+                <Plus className="h-4 w-4" />
+                <span>Novo Feriado</span>
+              </button>
             </div>
           </div>
 

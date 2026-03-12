@@ -54,7 +54,7 @@ export function AssociacaoEquipamentosPage() {
   const planoIdInicial = searchParams.get('planoId');
   const { user } = useUserStore();
 
-  const { equipamentos, fetchEquipamentos } = useEquipamentos();
+  const { fetchEquipamentos } = useEquipamentos();
 
   // 🔧 USANDO API REAL
   const {
@@ -81,8 +81,10 @@ export function AssociacaoEquipamentosPage() {
   const [equipamentoSelecionado, setEquipamentoSelecionado] = useState<string>('');
   const [plantas, setPlantas] = useState<PlantaResponse[]>([]);
   const [unidades, setUnidades] = useState<any[]>([]);
+  const [equipamentosUnidade, setEquipamentosUnidade] = useState<any[]>([]);
   const [loadingPlantas, setLoadingPlantas] = useState(false);
   const [loadingUnidades, setLoadingUnidades] = useState(false);
+  const [loadingEquipamentos, setLoadingEquipamentos] = useState(false);
   const [associacao, setAssociacao] = useState<AssociacaoRapida>({
     equipamentos: [],
     planoSelecionado: planoIdInicial || '',
@@ -95,18 +97,35 @@ export function AssociacaoEquipamentosPage() {
   const [planoParaDuplicar, setPlanoParaDuplicar] = useState<string>('');
   const [associandoEquipamentos, setAssociandoEquipamentos] = useState(false);
 
-  // Carregar equipamentos ao montar o componente
+  // Buscar equipamentos quando a unidade for selecionada
   useEffect(() => {
-    const carregarEquipamentos = async () => {
+    const buscarEquipamentos = async () => {
+      if (!unidadeSelecionada) {
+        setEquipamentosUnidade([]);
+        return;
+      }
+
       try {
-        await fetchEquipamentos({ limit: 100 });
+        setLoadingEquipamentos(true);
+        const equipamentosData = await fetchEquipamentos({
+          proprietarioId: 'all',
+          plantaId: 'all',
+          unidadeId: unidadeSelecionada,
+          criticidade: 'all',
+          classificacao: 'UC',
+          limit: 100
+        });
+        setEquipamentosUnidade(equipamentosData);
       } catch (error) {
-        console.error('Erro ao carregar equipamentos:', error);
+        console.error('Erro ao buscar equipamentos:', error);
+        setEquipamentosUnidade([]);
+      } finally {
+        setLoadingEquipamentos(false);
       }
     };
 
-    carregarEquipamentos();
-  }, [fetchEquipamentos]);
+    buscarEquipamentos();
+  }, [unidadeSelecionada, fetchEquipamentos]);
 
   // Carregar plantas da API
   useEffect(() => {
@@ -149,9 +168,8 @@ export function AssociacaoEquipamentosPage() {
     buscarUnidades();
   }, [plantaSelecionada]);
 
-  // Filtrar equipamentos por unidade selecionada
-  const equipamentosDisponiveis = unidadeSelecionada ?
-    equipamentos.filter(eq => eq.unidadeId === unidadeSelecionada && eq.classificacao === 'UC') : [];
+  // Equipamentos disponíveis vêm do estado local carregado por unidade
+  const equipamentosDisponiveis = equipamentosUnidade;
 
   // 🔧 CARREGAR PLANOS DA API NO INÍCIO
   useEffect(() => {
@@ -542,10 +560,14 @@ ${resultado.detalhes.map(det =>
                       }))}
                       value={equipamentoSelecionado}
                       onValueChange={(value) => setEquipamentoSelecionado(value)}
-                      placeholder={unidadeSelecionada ? "Selecione o equipamento..." : "Primeiro selecione uma unidade"}
+                      placeholder={
+                        loadingEquipamentos ? "Carregando equipamentos..." :
+                        unidadeSelecionada ? "Selecione o equipamento..." :
+                        "Primeiro selecione uma unidade"
+                      }
                       searchPlaceholder="Buscar equipamento..."
                       emptyText="Nenhum equipamento encontrado"
-                      disabled={!unidadeSelecionada}
+                      disabled={!unidadeSelecionada || loadingEquipamentos}
                       className="flex-1"
                     />
                     <Button

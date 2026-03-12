@@ -77,6 +77,8 @@ export const feriadosFormFields: FormField[] = [
     required: false,
     placeholder: 'Informações adicionais sobre o feriado...',
     group: 'descricao',
+    colSpan: 2,
+    width: 'full',
   },
 
   // Plantas (condicional)
@@ -87,6 +89,8 @@ export const feriadosFormFields: FormField[] = [
     required: false,
     render: PlantasSelectorRender,
     group: 'plantas',
+    colSpan: 2,
+    width: 'full',
   }
 ];
 
@@ -127,6 +131,8 @@ export const configuracoesDiasUteisFormFields: FormField[] = [
     required: true,
     placeholder: 'Ex: Padrão Industrial, Escritório, 24h...',
     group: 'informacoes_basicas',
+    colSpan: 2,
+    width: 'full',
   },
   {
     key: 'descricao',
@@ -135,6 +141,8 @@ export const configuracoesDiasUteisFormFields: FormField[] = [
     required: false,
     placeholder: 'Descreva esta configuração de dias úteis...',
     group: 'informacoes_basicas',
+    colSpan: 2,
+    width: 'full',
   },
 
   // Configuração Geral
@@ -155,6 +163,8 @@ export const configuracoesDiasUteisFormFields: FormField[] = [
     required: true,
     render: DiasUteisSelectorRender,
     group: 'dias_uteis',
+    colSpan: 2,
+    width: 'full',
   },
 
   // Plantas (condicional)
@@ -165,6 +175,8 @@ export const configuracoesDiasUteisFormFields: FormField[] = [
     required: false,
     render: PlantasSelectorConfigRender,
     group: 'plantas',
+    colSpan: 2,
+    width: 'full',
   }
 ];
 

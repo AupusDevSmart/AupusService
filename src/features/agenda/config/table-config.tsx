@@ -21,11 +21,12 @@ export const feriadosTableColumns: TableColumn<FeriadoResponse>[] = [
     key: 'dados_principais',
     label: 'Feriado',
     sortable: true,
+    className: 'min-w-[200px] max-w-[280px]',
     render: (feriado) => (
       <div className="space-y-1">
         <div className="flex items-center gap-2 font-medium text-foreground">
-          <Calendar className="h-4 w-4 text-blue-600" />
-          <span className="truncate max-w-48" title={feriado.nome}>
+          <Calendar className="h-4 w-4 text-blue-600 shrink-0" />
+          <span className="truncate" title={feriado.nome}>
             {feriado.nome}
           </span>
         </div>
@@ -38,12 +39,13 @@ export const feriadosTableColumns: TableColumn<FeriadoResponse>[] = [
   {
     key: 'tipo',
     label: 'Tipo',
+    className: 'min-w-[120px] max-w-[140px]',
     render: (feriado) => {
       const typeConfig = getTipoConfig(feriado.tipo);
       return (
         <div className="flex items-center gap-2">
-          <Badge className={`h-3 w-3 ${typeConfig.color}`} />
-          <span className="text-sm">{typeConfig.label}</span>
+          <Badge className={`h-3 w-3 shrink-0 ${typeConfig.color}`} />
+          <span className="text-sm truncate">{typeConfig.label}</span>
         </div>
       );
     }
@@ -51,16 +53,17 @@ export const feriadosTableColumns: TableColumn<FeriadoResponse>[] = [
   {
     key: 'configuracoes',
     label: 'Configurações',
+    className: 'min-w-[140px] max-w-[180px]',
     render: (feriado) => (
-      <div className="flex gap-2">
+      <div className="flex gap-1 flex-wrap">
         {feriado.geral && (
-          <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs">
+          <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded text-xs">
             <Globe className="h-3 w-3" />
             <span>Geral</span>
           </div>
         )}
         {feriado.recorrente && (
-          <div className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-xs">
+          <div className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded text-xs">
             <Repeat className="h-3 w-3" />
             <span>Recorrente</span>
           </div>
@@ -71,11 +74,12 @@ export const feriadosTableColumns: TableColumn<FeriadoResponse>[] = [
   {
     key: 'plantas',
     label: 'Plantas',
+    className: 'min-w-[140px] max-w-[160px]',
     hideOnMobile: true,
     render: (feriado) => (
       <div className="flex items-center gap-2">
-        <Building2 className="h-3 w-3 text-muted-foreground" />
-        <span className="text-sm">
+        <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
+        <span className="text-sm truncate">
           {feriado.geral ? 'Todas as plantas' : `${feriado.total_plantas || 0} plantas`}
         </span>
       </div>
@@ -84,18 +88,19 @@ export const feriadosTableColumns: TableColumn<FeriadoResponse>[] = [
   {
     key: 'status',
     label: 'Status',
+    className: 'min-w-[100px] max-w-[120px]',
     hideOnMobile: true,
     render: (feriado) => (
       <div className="flex items-center gap-2">
         {feriado.ativo ? (
           <>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <span className="text-sm text-green-700">Ativo</span>
+            <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+            <span className="text-sm text-green-700 dark:text-green-400">Ativo</span>
           </>
         ) : (
           <>
-            <XCircle className="h-4 w-4 text-red-600" />
-            <span className="text-sm text-red-700">Inativo</span>
+            <XCircle className="h-4 w-4 text-red-600 shrink-0" />
+            <span className="text-sm text-red-700 dark:text-red-400">Inativo</span>
           </>
         )}
       </div>
@@ -104,19 +109,20 @@ export const feriadosTableColumns: TableColumn<FeriadoResponse>[] = [
   {
     key: 'informacoes_cadastro',
     label: 'Cadastro',
+    className: 'min-w-[120px] max-w-[140px]',
     hideOnTablet: true,
     render: (feriado) => (
       <div className="space-y-1">
         {feriado.created_at && (
           <div className="flex items-center gap-2">
-            <Calendar className="h-3 w-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
+            <span className="text-xs text-muted-foreground truncate">
               {formatDate(feriado.created_at)}
             </span>
           </div>
         )}
         {feriado.updated_at && feriado.updated_at !== feriado.created_at && (
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground truncate">
             Atualizado: {formatDate(feriado.updated_at)}
           </div>
         )}
@@ -134,16 +140,17 @@ export const configuracoesDiasUteisTableColumns: TableColumn<ConfiguracaoDiasUte
     key: 'dados_principais',
     label: 'Configuração',
     sortable: true,
+    className: 'min-w-[180px] max-w-[240px]',
     render: (config) => (
       <div className="space-y-1">
         <div className="flex items-center gap-2 font-medium text-foreground">
-          <Clock className="h-4 w-4 text-purple-600" />
-          <span className="truncate max-w-48" title={config.nome}>
+          <Clock className="h-4 w-4 text-purple-600 shrink-0" />
+          <span className="truncate" title={config.nome}>
             {config.nome}
           </span>
         </div>
         {config.descricao && (
-          <div className="text-xs text-muted-foreground truncate max-w-48" title={config.descricao}>
+          <div className="text-xs text-muted-foreground truncate" title={config.descricao}>
             {config.descricao}
           </div>
         )}
@@ -153,10 +160,11 @@ export const configuracoesDiasUteisTableColumns: TableColumn<ConfiguracaoDiasUte
   {
     key: 'dias_uteis',
     label: 'Dias Úteis',
+    className: 'min-w-[160px] max-w-[200px]',
     render: (config) => (
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <Calendar className="h-3 w-3 text-muted-foreground" />
+          <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
           <span className="text-sm font-medium">
             {config.total_dias_uteis} {config.total_dias_uteis === 1 ? 'dia' : 'dias'}
           </span>
@@ -165,7 +173,7 @@ export const configuracoesDiasUteisTableColumns: TableColumn<ConfiguracaoDiasUte
           {config.dias_uteis_semana.map((dia) => (
             <span
               key={dia}
-              className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs"
+              className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded text-xs"
             >
               {getDiaAbreviado(dia)}
             </span>
@@ -177,17 +185,18 @@ export const configuracoesDiasUteisTableColumns: TableColumn<ConfiguracaoDiasUte
   {
     key: 'fim_de_semana',
     label: 'Fim de Semana',
+    className: 'min-w-[140px] max-w-[160px]',
     hideOnMobile: true,
     render: (config) => (
       <div className="space-y-1">
-        <div className="flex gap-2">
+        <div className="flex gap-1 flex-wrap">
           {config.sabado && (
-            <div className="flex items-center gap-1 px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs">
+            <div className="flex items-center gap-1 px-2 py-1 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 rounded text-xs">
               <span>Sáb</span>
             </div>
           )}
           {config.domingo && (
-            <div className="flex items-center gap-1 px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs">
+            <div className="flex items-center gap-1 px-2 py-1 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 rounded text-xs">
               <span>Dom</span>
             </div>
           )}
@@ -201,18 +210,19 @@ export const configuracoesDiasUteisTableColumns: TableColumn<ConfiguracaoDiasUte
   {
     key: 'abrangencia',
     label: 'Abrangência',
+    className: 'min-w-[120px] max-w-[140px]',
     hideOnMobile: true,
     render: (config) => (
       <div className="flex items-center gap-2">
         {config.geral ? (
           <>
-            <Globe className="h-3 w-3 text-blue-600" />
-            <span className="text-sm">Geral</span>
+            <Globe className="h-3 w-3 text-blue-600 shrink-0" />
+            <span className="text-sm truncate">Geral</span>
           </>
         ) : (
           <>
-            <Building2 className="h-3 w-3 text-muted-foreground" />
-            <span className="text-sm">{config.total_plantas || 0} plantas</span>
+            <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
+            <span className="text-sm truncate">{config.total_plantas || 0} plantas</span>
           </>
         )}
       </div>
@@ -221,18 +231,19 @@ export const configuracoesDiasUteisTableColumns: TableColumn<ConfiguracaoDiasUte
   {
     key: 'status',
     label: 'Status',
-    hideOnMobile: true,
+    className: 'min-w-[100px] max-w-[120px]',
+    hideOnTablet: true,
     render: (config) => (
       <div className="flex items-center gap-2">
         {config.ativo ? (
           <>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <span className="text-sm text-green-700">Ativo</span>
+            <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+            <span className="text-sm text-green-700 dark:text-green-400">Ativo</span>
           </>
         ) : (
           <>
-            <XCircle className="h-4 w-4 text-red-600" />
-            <span className="text-sm text-red-700">Inativo</span>
+            <XCircle className="h-4 w-4 text-red-600 shrink-0" />
+            <span className="text-sm text-red-700 dark:text-red-400">Inativo</span>
           </>
         )}
       </div>
@@ -241,19 +252,20 @@ export const configuracoesDiasUteisTableColumns: TableColumn<ConfiguracaoDiasUte
   {
     key: 'informacoes_cadastro',
     label: 'Cadastro',
+    className: 'min-w-[120px] max-w-[140px]',
     hideOnTablet: true,
     render: (config) => (
       <div className="space-y-1">
         {config.created_at && (
           <div className="flex items-center gap-2">
-            <Calendar className="h-3 w-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
+            <span className="text-xs text-muted-foreground truncate">
               {formatDate(config.created_at)}
             </span>
           </div>
         )}
         {config.updated_at && config.updated_at !== config.created_at && (
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground truncate">
             Atualizado: {formatDate(config.updated_at)}
           </div>
         )}

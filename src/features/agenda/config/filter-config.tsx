@@ -49,13 +49,13 @@ export function createFeriadosFilterConfig(plantas: PlantaResponse[]): FilterCon
       key: 'search',
       type: 'search',
       placeholder: 'Buscar por nome ou descrição...',
-      className: 'lg:min-w-80'
+      className: 'w-full lg:w-auto lg:min-w-[320px]'
     },
     {
       key: 'tipo',
       type: 'select',
-      label: 'Tipo',
-      className: 'min-w-40',
+      placeholder: 'Tipo',
+      className: 'w-full sm:w-auto sm:min-w-[160px]',
       options: [
         { value: 'all', label: 'Todos os tipos' },
         ...TIPOS_FERIADO.map(tipo => ({
@@ -67,8 +67,8 @@ export function createFeriadosFilterConfig(plantas: PlantaResponse[]): FilterCon
     {
       key: 'plantaId',
       type: 'select',
-      label: 'Planta',
-      className: 'min-w-48',
+      placeholder: 'Planta',
+      className: 'w-full sm:w-auto sm:min-w-[200px]',
       options: [
         { value: 'all', label: 'Todas as plantas' },
         ...plantas.map(planta => ({
@@ -80,10 +80,10 @@ export function createFeriadosFilterConfig(plantas: PlantaResponse[]): FilterCon
     {
       key: 'ano',
       type: 'select',
-      label: 'Ano',
-      className: 'min-w-32',
+      placeholder: 'Ano',
+      className: 'w-full sm:w-auto sm:min-w-[120px]',
       options: [
-        { value: 'all', label: 'Todos' },
+        { value: 'all', label: 'Todos os anos' },
         ...years.map(year => ({
           value: year.toString(),
           label: year.toString()
@@ -93,8 +93,8 @@ export function createFeriadosFilterConfig(plantas: PlantaResponse[]): FilterCon
     {
       key: 'mes',
       type: 'select',
-      label: 'Mês',
-      className: 'min-w-36',
+      placeholder: 'Mês',
+      className: 'w-full sm:w-auto sm:min-w-[150px]',
       options: [
         { value: 'all', label: 'Todos os meses' },
         ...MESES
@@ -103,10 +103,10 @@ export function createFeriadosFilterConfig(plantas: PlantaResponse[]): FilterCon
     {
       key: 'geral',
       type: 'select',
-      label: 'Abrangência',
-      className: 'min-w-36',
+      placeholder: 'Abrangência',
+      className: 'w-full sm:w-auto sm:min-w-[150px]',
       options: [
-        { value: 'all', label: 'Todas' },
+        { value: 'all', label: 'Todas as abrangências' },
         { value: 'true', label: 'Geral' },
         { value: 'false', label: 'Específica' }
       ]
@@ -114,10 +114,10 @@ export function createFeriadosFilterConfig(plantas: PlantaResponse[]): FilterCon
     {
       key: 'recorrente',
       type: 'select',
-      label: 'Recorrência',
-      className: 'min-w-36',
+      placeholder: 'Recorrência',
+      className: 'w-full sm:w-auto sm:min-w-[150px]',
       options: [
-        { value: 'all', label: 'Todas' },
+        { value: 'all', label: 'Todas as recorrências' },
         { value: 'true', label: 'Recorrente' },
         { value: 'false', label: 'Única' }
       ]
@@ -135,13 +135,13 @@ export function createConfiguracoesDiasUteisFilterConfig(plantas: PlantaResponse
       key: 'search',
       type: 'search',
       placeholder: 'Buscar por nome ou descrição...',
-      className: 'lg:min-w-80'
+      className: 'w-full lg:w-auto lg:min-w-[320px]'
     },
     {
       key: 'plantaId',
       type: 'select',
-      label: 'Planta',
-      className: 'min-w-48',
+      placeholder: 'Planta',
+      className: 'w-full sm:w-auto sm:min-w-[200px]',
       options: [
         { value: 'all', label: 'Todas as plantas' },
         ...plantas.map(planta => ({
@@ -153,10 +153,10 @@ export function createConfiguracoesDiasUteisFilterConfig(plantas: PlantaResponse
     {
       key: 'geral',
       type: 'select',
-      label: 'Abrangência',
-      className: 'min-w-36',
+      placeholder: 'Abrangência',
+      className: 'w-full sm:w-auto sm:min-w-[150px]',
       options: [
-        { value: 'all', label: 'Todas' },
+        { value: 'all', label: 'Todas as abrangências' },
         { value: 'true', label: 'Geral' },
         { value: 'false', label: 'Específica' }
       ]
@@ -164,23 +164,23 @@ export function createConfiguracoesDiasUteisFilterConfig(plantas: PlantaResponse
     {
       key: 'sabado',
       type: 'select',
-      label: 'Sábado',
-      className: 'min-w-32',
+      placeholder: 'Sábado',
+      className: 'w-full sm:w-auto sm:min-w-[130px]',
       options: [
-        { value: 'all', label: 'Todos' },
-        { value: 'true', label: 'Inclui' },
-        { value: 'false', label: 'Exclui' }
+        { value: 'all', label: 'Sábado: Todos' },
+        { value: 'true', label: 'Inclui sábado' },
+        { value: 'false', label: 'Exclui sábado' }
       ]
     },
     {
       key: 'domingo',
       type: 'select',
-      label: 'Domingo',
-      className: 'min-w-32',
+      placeholder: 'Domingo',
+      className: 'w-full sm:w-auto sm:min-w-[130px]',
       options: [
-        { value: 'all', label: 'Todos' },
-        { value: 'true', label: 'Inclui' },
-        { value: 'false', label: 'Exclui' }
+        { value: 'all', label: 'Domingo: Todos' },
+        { value: 'true', label: 'Inclui domingo' },
+        { value: 'false', label: 'Exclui domingo' }
       ]
     }
   ];

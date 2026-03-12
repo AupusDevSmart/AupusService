@@ -26,13 +26,13 @@ export const reservasTableColumns: TableColumn<ReservaResponse>[] = [
     key: 'id',
     label: 'Reserva',
     sortable: true,
-    className: 'w-48', // Largura fixa para consistência
+    className: 'min-w-[160px] max-w-[180px]',
     render: (reserva) => (
       <div className="py-1">
-        <div className="font-medium text-gray-900 dark:text-gray-100">
+        <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">
           #{reserva.id.slice(0, 8)}
         </div>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
           {reserva.solicitanteId || 'N/A'}
         </div>
         <div className="text-xs text-gray-400 dark:text-gray-500 capitalize">
@@ -44,17 +44,17 @@ export const reservasTableColumns: TableColumn<ReservaResponse>[] = [
   {
     key: 'veiculo',
     label: 'Veículo',
-    className: 'w-56', // Largura adequada para veículo
+    className: 'min-w-[180px] max-w-[220px]',
     render: (reserva) => (
-      <div className="flex items-start gap-3 py-1">
+      <div className="flex items-start gap-2 py-1">
         <div className="flex-shrink-0 mt-0.5">
           <Car className="w-4 h-4 text-gray-400 dark:text-gray-500" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
+          <div className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">
             {reserva.veiculo?.nome || `Veículo #${reserva.veiculoId}`}
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
             {reserva.veiculo?.placa || `ID: ${reserva.veiculoId}`}
           </div>
         </div>
@@ -65,17 +65,17 @@ export const reservasTableColumns: TableColumn<ReservaResponse>[] = [
     key: 'responsavel',
     label: 'Responsável',
     sortable: true,
-    className: 'w-64', // Espaço extra para nomes e finalidades
+    className: 'min-w-[200px] max-w-[280px]',
     render: (reserva) => (
-      <div className="flex items-start gap-3 py-1">
+      <div className="flex items-start gap-2 py-1">
         <div className="flex-shrink-0 mt-0.5">
           <User className="w-4 h-4 text-gray-400 dark:text-gray-500" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
+          <div className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">
             {reserva.responsavel}
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400 truncate" title={reserva.finalidade}>
+          <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={reserva.finalidade}>
             {reserva.finalidade}
           </div>
         </div>
@@ -86,17 +86,18 @@ export const reservasTableColumns: TableColumn<ReservaResponse>[] = [
     key: 'dataInicio',
     label: 'Período',
     sortable: true,
-    className: 'w-48',
+    className: 'min-w-[160px] max-w-[180px]',
+    hideOnMobile: true,
     render: (reserva) => (
-      <div className="flex items-start gap-3 py-1">
+      <div className="flex items-start gap-2 py-1">
         <div className="flex-shrink-0 mt-0.5">
           <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
         </div>
-        <div className="flex-1">
-          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
             {reservasUtils.formatDateRange(reserva.dataInicio, reserva.dataFim)}
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
             {reservasUtils.formatTimeRange(reserva.horaInicio, reserva.horaFim)}
           </div>
         </div>
@@ -107,7 +108,7 @@ export const reservasTableColumns: TableColumn<ReservaResponse>[] = [
     key: 'status',
     label: 'Status',
     sortable: true,
-    className: 'w-32 text-center',
+    className: 'min-w-[120px] max-w-[140px] text-center',
     render: (reserva) => (
       <div className="flex justify-center">
         <StatusBadge status={reserva.status} />
@@ -118,7 +119,8 @@ export const reservasTableColumns: TableColumn<ReservaResponse>[] = [
     key: 'duracao',
     label: 'Duração',
     sortable: false,
-    className: 'w-24 text-right',
+    className: 'min-w-[100px] max-w-[120px] text-right',
+    hideOnTablet: true,
     render: (reserva) => (
       <div className="text-right py-1">
         <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
