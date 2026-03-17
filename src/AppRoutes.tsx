@@ -15,6 +15,7 @@ import { TarefasPage } from './features/tarefas/components/TarefasPage';
 import { VeiculosPage } from './features/veiculos/components/VeiculosPage';
 import { AppTemplate } from './pages/AppTemplate';
 import { AnomaliaPage } from './pages/anomalias';
+import SolicitacoesServicoPage from './pages/solicitacoes-servico';
 import { DashboardPage } from './pages/dashboard';
 import { Settings } from './pages/settings';
 import { LoginPage } from './pages/login/LoginPage';
@@ -179,6 +180,14 @@ export const appRoutes = createBrowserRouter([
         element: (
           <FeatureWrapper feature="Equipamentos">
             <AnomaliaPage />
+          </FeatureWrapper>
+        ),
+      },
+      {
+        path: 'solicitacoes-servico',
+        element: (
+          <FeatureWrapper feature="Equipamentos">
+            <SolicitacoesServicoPage />
           </FeatureWrapper>
         ),
       },

@@ -27,10 +27,26 @@ interface PlanoDisponivel {
   plantaId?: string;
 }
 
+interface SolicitacaoDisponivel {
+  id: string;
+  numero: string;
+  titulo: string;
+  descricao: string;
+  tipo: string;
+  prioridade: string;
+  status: string;
+  local: string;
+  plantaId: string;
+  equipamentoId?: string;
+  solicitanteNome: string;
+  dataSolicitacao: string;
+}
+
 export const useOrigemDados = () => {
   const [loading, setLoading] = useState(false);
   const [anomaliasDisponiveis, setAnomaliasDisponiveis] = useState<AnomaliaDisponivel[]>([]);
   const [planosDisponiveis, setPlanosDisponiveis] = useState<PlanoDisponivel[]>([]);
+  const [solicitacoesDisponiveis, setSolicitacoesDisponiveis] = useState<SolicitacaoDisponivel[]>([]);
 
   // Carregar anomalias disponíveis (apenas pendentes/em análise)
   const carregarAnomalias = useCallback(async (plantaId?: string, unidadeId?: string) => {
@@ -228,6 +244,51 @@ export const useOrigemDados = () => {
     }
   }, []);
 
+  // Carregar solicitações de serviço disponíveis (apenas aprovadas)
+  const carregarSolicitacoes = useCallback(async (plantaId?: string, unidadeId?: string) => {
+    console.log('🔍 [useOrigemDados] Carregando solicitações de serviço disponíveis...', { plantaId, unidadeId });
+
+    setLoading(true);
+    try {
+      // Importar o serviço de solicitações
+      const { solicitacoesServicoService } = await import('@/services/solicitacoes-servico.service');
+
+      // Buscar solicitações aprovadas (prontas para gerar programação)
+      const response = await solicitacoesServicoService.findAll({
+        page: 1,
+        limit: 100,
+        status: 'APROVADA', // Apenas aprovadas
+        plantaId: plantaId || undefined
+      });
+
+      console.log('📊 [useOrigemDados] Total de solicitações:', response.data.length);
+
+      const solicitacoesFormatadas = response.data.map(solicitacao => ({
+        id: solicitacao.id,
+        numero: solicitacao.numero,
+        titulo: solicitacao.titulo,
+        descricao: solicitacao.descricao,
+        tipo: solicitacao.tipo,
+        prioridade: solicitacao.prioridade,
+        status: solicitacao.status,
+        local: solicitacao.local,
+        plantaId: solicitacao.planta_id,
+        equipamentoId: solicitacao.equipamento_id,
+        solicitanteNome: solicitacao.solicitante_nome,
+        dataSolicitacao: solicitacao.data_solicitacao || solicitacao.created_at
+      }));
+
+      console.log('✅ [useOrigemDados] Solicitações carregadas:', solicitacoesFormatadas.length);
+      setSolicitacoesDisponiveis(solicitacoesFormatadas);
+
+    } catch (error) {
+      console.error('❌ [useOrigemDados] Erro ao carregar solicitações:', error);
+      setSolicitacoesDisponiveis([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Buscar anomalia específica por ID
   const obterAnomalia = useCallback(async (id: string): Promise<AnomaliaDisponivel | null> => {
     try {
@@ -381,14 +442,49 @@ export const useOrigemDados = () => {
     return plano.ativo && plano.totalEquipamentos > 0;
   }, []);
 
+  // Buscar solicitação específica por ID
+  const obterSolicitacao = useCallback(async (id: string): Promise<SolicitacaoDisponivel | null> => {
+    try {
+      console.log('🔍 [useOrigemDados] Buscando solicitação:', id);
+
+      const { solicitacoesServicoService } = await import('@/services/solicitacoes-servico.service');
+      const solicitacao = await solicitacoesServicoService.findOne(id);
+
+      const solicitacaoFormatada: SolicitacaoDisponivel = {
+        id: solicitacao.id,
+        numero: solicitacao.numero,
+        titulo: solicitacao.titulo,
+        descricao: solicitacao.descricao,
+        tipo: solicitacao.tipo,
+        prioridade: solicitacao.prioridade,
+        status: solicitacao.status,
+        local: solicitacao.local,
+        plantaId: solicitacao.planta_id,
+        equipamentoId: solicitacao.equipamento_id,
+        solicitanteNome: solicitacao.solicitante_nome,
+        dataSolicitacao: solicitacao.data_solicitacao || solicitacao.created_at
+      };
+
+      console.log('✅ [useOrigemDados] Solicitação encontrada:', solicitacaoFormatada);
+      return solicitacaoFormatada;
+
+    } catch (error) {
+      console.error('❌ [useOrigemDados] Erro ao buscar solicitação:', error);
+      return null;
+    }
+  }, []);
+
   return {
     loading,
     anomaliasDisponiveis,
     planosDisponiveis,
+    solicitacoesDisponiveis,
     carregarAnomalias,
     carregarPlanos,
+    carregarSolicitacoes,
     obterAnomalia,
     obterPlano,
+    obterSolicitacao,
     gerarTarefasDoPlano,
     podeAnomaliaGerarOS,
     planoDisponivel

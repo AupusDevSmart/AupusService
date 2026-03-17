@@ -1,7 +1,7 @@
 // src/features/execucao-os/components/OrigemOSCard.tsx
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, AlertTriangle, Wrench, Calendar } from 'lucide-react';
+import { FileText, AlertTriangle, Wrench, Calendar, FilePenLine } from 'lucide-react';
 
 interface OrigemOSCardProps {
   value?: {
@@ -10,6 +10,7 @@ interface OrigemOSCardProps {
     programacaoOrigem?: any;
     anomalia?: any;
     tarefa?: any;
+    solicitacaoServico?: any;
     _dadosCompletos?: any;
   };
   // Props individuais para compatibilidade (deprecated)
@@ -18,6 +19,7 @@ interface OrigemOSCardProps {
   programacaoOrigem?: any;
   anomalia?: any;
   tarefa?: any;
+  solicitacaoServico?: any;
   _dadosCompletos?: any;
 }
 
@@ -31,10 +33,11 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = (props) => {
     programacaoOrigem,
     anomalia,
     tarefa,
+    solicitacaoServico,
     _dadosCompletos
   } = data;
 
-  // Helper para extrair descrição de anomalia/tarefa
+  // Helper para extrair descrição de anomalia/tarefa/solicitação
   const getDescricao = (obj: any): string => {
     if (!obj) return '';
     if (typeof obj === 'string') return obj;
@@ -43,6 +46,7 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = (props) => {
 
   const anomaliaDesc = getDescricao(anomalia);
   const tarefaDesc = getDescricao(tarefa);
+  const solicitacaoDesc = getDescricao(solicitacaoServico);
 
   const getOrigemLabel = (origem: string): string => {
     const labels: Record<string, string> = {
@@ -53,7 +57,8 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = (props) => {
       'PREVENTIVA': 'Preventiva',
       'PREDITIVA': 'Preditiva',
       'ANOMALIA': 'Anomalia',
-      'PLANO_MANUTENCAO': 'Plano de Manutenção'
+      'PLANO_MANUTENCAO': 'Plano de Manutenção',
+      'SOLICITACAO_SERVICO': 'Solicitação de Serviço'
     };
     return labels[origem] || origem;
   };
@@ -61,6 +66,7 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = (props) => {
   const getOrigemIcon = (origem: string) => {
     if (origem === 'ANOMALIA' || origem === 'EMERGENCIA') return AlertTriangle;
     if (origem === 'PLANO_MANUTENCAO' || origem === 'PREVENTIVA') return Calendar;
+    if (origem === 'SOLICITACAO_SERVICO') return FilePenLine;
     if (origem === 'CORRETIVA' || origem === 'PREDITIVA') return Wrench;
     return FileText;
   };
@@ -155,8 +161,29 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = (props) => {
           </div>
         )}
 
+        {/* Solicitação de Serviço - Se existir */}
+        {solicitacaoDesc && (
+          <div className="border-t pt-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Solicitação de Serviço</div>
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              {solicitacaoDesc}
+            </div>
+            {typeof solicitacaoServico === 'object' && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {solicitacaoServico.numero && `Nº ${solicitacaoServico.numero}`}
+                {solicitacaoServico.prioridade && ` • Prioridade: ${solicitacaoServico.prioridade}`}
+                {solicitacaoServico.solicitanteNome && (
+                  <div className="mt-1">
+                    Solicitante: {solicitacaoServico.solicitanteNome}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Mensagem quando não há informações adicionais */}
-        {!planoManutencao && !programacaoOrigem && !anomaliaDesc && !tarefaDesc && origem === 'MANUAL' && (
+        {!planoManutencao && !programacaoOrigem && !anomaliaDesc && !tarefaDesc && !solicitacaoDesc && origem === 'MANUAL' && (
           <div className="text-xs text-gray-500 dark:text-gray-400 italic">
             Ordem criada manualmente
           </div>

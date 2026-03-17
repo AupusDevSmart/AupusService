@@ -18,7 +18,7 @@ export function TeamSwitcher() {
     navigate('/');
   };
 
-  const logoSrc = theme === 'dark' ? 'logoaupus.png' : 'logoaupus-blue.jpg';
+  const logoSrc = theme === 'dark' ? 'logoaupus.svg' : 'logo-aupus-blue.png';
   const textColorClass = theme === 'dark' ? 'text-white' : 'text-black';
 
   return (

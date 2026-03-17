@@ -39,7 +39,8 @@ import {
   CircleUserRound,
   OctagonAlert,
   CalendarDays,
-  Clock
+  Clock,
+  FilePenLine
 } from 'lucide-react';
 
 import { FileUser } from '@/components/icons/FileUser';
@@ -167,6 +168,14 @@ export const navigationLinks: Array<NavigationLink> = [
         icon: AlertTriangle,
         label: 'Anomalias',
         hint: 'Anomalias',
+      },
+      {
+        key: 'solicitacoes-servico',
+        featureKey: 'Equipamentos',
+        path: '/solicitacoes-servico',
+        icon: FilePenLine,
+        label: 'Solicitações de Serviço',
+        hint: 'Solicitações de Serviço',
       }
     ]
   },
