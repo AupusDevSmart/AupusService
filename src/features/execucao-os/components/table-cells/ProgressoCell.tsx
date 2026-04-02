@@ -29,25 +29,29 @@ export function ProgressoCell({ item }: ProgressoCellProps) {
   let progressLabel = '';
 
   switch (status) {
-    case 'PLANEJADA':
+    case 'PENDENTE':
       progressPercent = 0;
-      progressLabel = 'Planejada';
-      break;
-    case 'PROGRAMADA':
-      progressPercent = 10;
-      progressLabel = 'Programada';
+      progressLabel = 'Pendente';
       break;
     case 'EM_EXECUCAO':
-      progressPercent = 50;
+      progressPercent = 40;
       progressLabel = 'Em andamento';
       break;
     case 'PAUSADA':
-      progressPercent = 50;
+      progressPercent = 40;
       progressLabel = 'Pausada';
+      break;
+    case 'EXECUTADA':
+      progressPercent = 70;
+      progressLabel = 'Executada';
+      break;
+    case 'AUDITADA':
+      progressPercent = 90;
+      progressLabel = 'Auditada';
       break;
     case 'FINALIZADA':
       progressPercent = 100;
-      progressLabel = 'Concluída';
+      progressLabel = 'Finalizada';
       break;
     case 'CANCELADA':
       progressPercent = 0;
@@ -72,7 +76,7 @@ export function ProgressoCell({ item }: ProgressoCellProps) {
       </div>
 
       {/* Tempo de execução - simplificado */}
-      {(status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA') && (
+      {(status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'EXECUTADA' || status === 'AUDITADA' || status === 'FINALIZADA') && (
         <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
           {dataInicio && (
             <div className="flex items-center gap-1">

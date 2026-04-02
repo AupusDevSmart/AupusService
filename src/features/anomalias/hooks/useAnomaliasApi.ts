@@ -75,34 +75,6 @@ export function useAnomaliasApi() {
     }
   }, []);
 
-  const gerarProgramacaoOS = useCallback(async (anomaliaId: string) => {
-    try {
-      setLoading(true);
-      // TODO: Implementar endpoint no backend para criar programação-os a partir de anomalia
-      // Por enquanto, vamos simular redirecionamento para página de programação
-      const response = await anomaliasService.gerarOS(anomaliaId);
-      return response;
-    } catch (error) {
-      console.error('Erro ao gerar programação de OS:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const cancelar = useCallback(async (anomaliaId: string, motivo?: string) => {
-    try {
-      setLoading(true);
-      const response = await anomaliasService.cancelar(anomaliaId, motivo);
-      return response;
-    } catch (error) {
-      console.error('Erro ao cancelar anomalia:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   return {
     anomalias,
     loading,
@@ -114,7 +86,5 @@ export function useAnomaliasApi() {
     updateAnomalia,
     deleteAnomalia,
     getStats,
-    gerarProgramacaoOS,
-    cancelar,
   };
 }

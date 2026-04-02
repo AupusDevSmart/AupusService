@@ -169,10 +169,10 @@ export const AnomaliaSelector: React.FC<AnomaliaSelectorProps> = ({
                 <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p className="font-medium">Nenhuma anomalia disponível</p>
                 <p className="text-xs mt-2">
-                  Não há anomalias pendentes (AGUARDANDO ou EM_ANALISE) para esta unidade.
+                  Não há anomalias registradas para esta unidade.
                 </p>
                 <p className="text-xs mt-1">
-                  Anomalias já resolvidas ou com OS gerada não aparecem aqui.
+                  Apenas anomalias com status REGISTRADA aparecem aqui.
                 </p>
               </div>
             )}

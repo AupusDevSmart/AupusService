@@ -2,29 +2,36 @@
 import { FormField } from '@/types/base';
 import { SubTarefasController } from '../components/form/SubTarefasController';
 import { RecursosController } from '../components/form/RecursosController';
-import { OrigemPlanoInfo } from '../components/form/OrigemPlanoInfo';
+import { InstrucaoOrigemField } from '../components/form/InstrucaoOrigemField';
 
 export const tarefasFormFields: FormField[] = [
-  // NOVO: Informações do Plano (apenas para visualização)
-  {
-    key: 'origem_plano_info',
-    label: '',
-    type: 'custom',
-    required: false,
-    render: ({ entity }) => <OrigemPlanoInfo entity={entity} />,
-    condition: (entity) => !!entity?.plano_manutencao, // Só aparece se veio de plano
-    excludeFromSubmit: true, // ✅ Excluir este campo do envio à API
-    colSpan: 2 // ✅ CORRIGIDO: Ocupa 2 colunas (100% da largura)
-  } as any,
-
-  // Informações Básicas
+  // Plano de Manutenção (obrigatório)
   {
     key: 'plano_manutencao_id',
     label: 'Plano de Manutenção',
-    type: 'select',
+    type: 'combobox',
     required: true,
+    placeholder: 'Selecione ou busque um plano de manutenção',
     options: [], // Será carregado dinamicamente
-    colSpan: 1 // ✅ Ocupa 1 coluna (50%)
+    colSpan: 2,
+  } as any,
+
+  // Instrução de Origem (preenche campos automaticamente)
+  {
+    key: 'instrucao_id',
+    label: '',
+    type: 'custom',
+    colSpan: 2,
+    render: (props: any) => (
+      <InstrucaoOrigemField
+        value={props.value}
+        onChange={props.onChange}
+        onMultipleChange={props.onMultipleChange}
+        disabled={props.disabled}
+        options={props.field?.options || []}
+        onAnexosCopied={props.field?.onAnexosCopied}
+      />
+    ),
   } as any,
   {
     key: 'tag',
@@ -48,7 +55,7 @@ export const tarefasFormFields: FormField[] = [
     type: 'textarea',
     required: true,
     placeholder: 'Descreva detalhadamente a tarefa a ser executada...',
-    colSpan: 1 // ✅ Ocupa 1 coluna (50%)
+    colSpan: 2,
   } as any,
 
   // Localização (campos read-only - apenas informativos)
@@ -178,7 +185,7 @@ export const tarefasFormFields: FormField[] = [
     key: 'frequencia',
     label: 'Frequência',
     type: 'select',
-    required: true,
+    required: false,
     options: [
       { value: 'DIARIA', label: 'Diária' },
       { value: 'SEMANAL', label: 'Semanal' },
@@ -212,16 +219,8 @@ export const tarefasFormFields: FormField[] = [
     label: 'Duração Estimada (horas)',
     type: 'number',
     required: true,
-    placeholder: 'Ex: 3',
-    width: 'half', // 50% em desktop
-  },
-  {
-    key: 'tempo_estimado',
-    label: 'Tempo Estimado (minutos)',
-    type: 'number',
-    required: true,
-    placeholder: 'Ex: 180',
-    width: 'half', // 50% em desktop
+    placeholder: 'Ex: 2.5',
+    colSpan: 2,
   },
   {
     key: 'planejador',
@@ -297,6 +296,7 @@ export const tarefasFormFields: FormField[] = [
     type: 'textarea',
     required: false,
     placeholder: 'Observações adicionais sobre a tarefa...',
+    colSpan: 2,
   },
   {
     key: 'status',
@@ -309,5 +309,6 @@ export const tarefasFormFields: FormField[] = [
       { value: 'EM_REVISAO', label: 'Em Revisão' },
       { value: 'ARQUIVADA', label: 'Arquivada' }
     ],
+    colSpan: 2,
   }
 ];

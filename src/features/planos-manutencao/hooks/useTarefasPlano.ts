@@ -5,6 +5,7 @@ import { usePlanosManutencaoApi } from './usePlanosManutencaoApi';
 export function useTarefasPlano() {
   const [tarefas, setTarefas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const { getPlano } = usePlanosManutencaoApi();
 
   const carregarTarefas = useCallback(async (planoId: string) => {
@@ -17,9 +18,11 @@ export function useTarefasPlano() {
       } else {
         setTarefas([]);
       }
+      setLoaded(true);
     } catch (error) {
       console.error('Erro ao carregar tarefas do plano:', error);
       setTarefas([]);
+      setLoaded(true);
     } finally {
       setLoading(false);
     }
@@ -28,11 +31,13 @@ export function useTarefasPlano() {
   const limparTarefas = useCallback(() => {
     setTarefas([]);
     setLoading(false);
+    setLoaded(false);
   }, []);
 
   return {
     tarefas,
     loading,
+    loaded,
     carregarTarefas,
     limparTarefas
   };

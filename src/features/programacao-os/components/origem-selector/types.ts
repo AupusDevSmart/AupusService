@@ -3,7 +3,7 @@
 /**
  * Tipo de origem da ordem de serviço
  */
-export type TipoOrigem = 'ANOMALIA' | 'PLANO_MANUTENCAO' | 'SOLICITACAO_SERVICO' | 'MANUAL';
+export type TipoOrigem = 'ANOMALIA' | 'PLANO_MANUTENCAO' | 'SOLICITACAO_SERVICO';
 
 /**
  * Valor completo da seleção de origem

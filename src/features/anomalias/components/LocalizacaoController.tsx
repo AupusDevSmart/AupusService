@@ -1,14 +1,14 @@
-// src/features/anomalias/components/LocalizacaoController.tsx - VERSÃO FINAL LIMPA
-import { useEquipamentos } from '@nexon/features/equipamentos/hooks/useEquipamentos';
-import { PlantaResponse, PlantasService } from '@/services/plantas.services';
+// src/features/anomalias/components/LocalizacaoController.tsx
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { ComboboxField, ComboboxOption } from '@/components/ui/combobox-field';
+import { PlantasService } from '@/services/plantas.services';
 import { getUnidadesByPlanta } from '@/services/unidades.services';
-import { Loader2 } from 'lucide-react';
-import React from 'react';
+import { useEquipamentos } from '@nexon/features/equipamentos/hooks/useEquipamentos';
 
 interface LocalizacaoValue {
-  plantaId?: string | number; // Pode ser CUID (string) ou número
-  unidadeId?: string | number; // NOVO: Unidade do equipamento
-  equipamentoId?: string | number; // Pode ser CUID (string) ou número
+  plantaId?: string | number;
+  unidadeId?: string | number;
+  equipamentoId?: string | number;
   local?: string;
   ativo?: string;
 }
@@ -18,255 +18,183 @@ interface LocalizacaoControllerProps {
   onChange: (value: any) => void;
   disabled?: boolean;
   mode?: 'create' | 'edit' | 'view';
+  entity?: any;
 }
 
-export const LocalizacaoController = ({ 
-  value, 
-  onChange, 
-  disabled, 
-  mode = 'create' 
+export const LocalizacaoController = ({
+  value,
+  onChange,
+  disabled,
+  mode = 'create',
+  entity
 }: LocalizacaoControllerProps) => {
-  // Estados
-  const [plantas, setPlantas] = React.useState<PlantaResponse[]>([]);
-  const [plantaEspecifica, setPlantaEspecifica] = React.useState<PlantaResponse | null>(null);
-  const [unidades, setUnidades] = React.useState<any[]>([]); // NOVO: Estado para unidades
-  const [unidadeEspecifica, setUnidadeEspecifica] = React.useState<any | null>(null); // NOVO: Unidade específica para VIEW/EDIT
-  const [loadingPlantas, setLoadingPlantas] = React.useState(false);
-  const [loadingPlantaEspecifica, setLoadingPlantaEspecifica] = React.useState(false);
-  const [loadingUnidades, setLoadingUnidades] = React.useState(false); // NOVO: Loading state para unidades
-  const [hasLoaded, setHasLoaded] = React.useState(false);
+  const [plantasOptions, setPlantasOptions] = useState<ComboboxOption[]>([]);
+  const [unidadesOptions, setUnidadesOptions] = useState<ComboboxOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingUnidades, setLoadingUnidades] = useState(false);
+  const initializedRef = useRef(false);
 
-  const { equipamentos, fetchEquipamentos, fetchEquipamentosByPlanta, loading: loadingEquipamentos } = useEquipamentos();
+  const { equipamentos, fetchEquipamentos, loading: loadingEquipamentos } = useEquipamentos();
 
-  const isCreateMode = mode === 'create';
   const isViewMode = mode === 'view';
 
-  // ✅ USAR VALUE DIRETAMENTE - Sem estados internos que conflitam
-  const plantaId = value?.plantaId?.toString().trim() || '';
-  const unidadeId = value?.unidadeId?.toString().trim() || '';
-  const equipamentoId = value?.equipamentoId?.toString().trim() || '';
+  // Extrair IDs do value OU do entity (para view/edit)
+  // Cadeia: equipamento → unidade → planta (quando planta_id direto é null)
+  const plantaId = value?.plantaId?.toString().trim()
+    || entity?.planta_id?.toString().trim()
+    || entity?.equipamento?.unidade?.planta_id?.toString().trim()
+    || entity?.equipamento?.unidade?.planta?.id?.toString().trim()
+    || '';
+  const unidadeId = value?.unidadeId?.toString().trim()
+    || entity?.equipamento?.unidade_id?.toString().trim()
+    || entity?.equipamento?.unidade?.id?.toString().trim()
+    || '';
+  const equipamentoId = value?.equipamentoId?.toString().trim()
+    || entity?.equipamento_id?.toString().trim()
+    || '';
 
-
-
-  // Inicialização otimizada por modo
-  React.useEffect(() => {
-    const initialize = async () => {
-      if (hasLoaded) return;
-      setHasLoaded(true);
-
-      if (isCreateMode) {
-        // MODO CREATE: Carregar lista completa de plantas
-        setLoadingPlantas(true);
-        try {
-          const response = await PlantasService.getAllPlantas({ limit: 100 });
-          setPlantas(response.data);
-        } catch (error) {
-          setPlantas([]);
-        } finally {
-          setLoadingPlantas(false);
-        }
-
-      } else {
-        // MODO VIEW/EDIT: Apenas criar mock e buscar unidade se tiver ID
-        setLoadingPlantaEspecifica(true);
-
-        // Sempre criar mock da planta com o nome que já temos
-        setPlantaEspecifica({
-          id: '',
-          nome: value?.local || 'Planta não especificada',
-          cnpj: '',
-          localizacao: '',
-          horarioFuncionamento: '',
-          proprietarioId: '',
-          endereco: { logradouro: '', bairro: '', cidade: '', uf: '', cep: '' },
-          criadoEm: '',
-          atualizadoEm: ''
-        });
-
-        // Se tiver unidadeId, buscar em todas as plantas até encontrar
-        if (value?.unidadeId) {
-          const loadUnidade = async () => {
-            try {
-              const response = await PlantasService.getAllPlantas({ limit: 100 });
-              const todasPlantas = response.data;
-
-              for (const planta of todasPlantas) {
-                try {
-                  const unidadesData = await getUnidadesByPlanta(planta.id.toString());
-                  const unidadeEncontrada = unidadesData?.find(
-                    (u: any) => u.id?.toString().trim() === value.unidadeId.toString().trim()
-                  );
-
-                  if (unidadeEncontrada) {
-                    setUnidadeEspecifica(unidadeEncontrada);
-                    break;
-                  }
-                } catch (error) {
-                  // Planta sem acesso, continuar
-                }
-              }
-            } catch (error) {
-              console.error('❌ [LocalizacaoController] Erro ao buscar unidade:', error);
-            }
-          };
-
-          loadUnidade();
-        }
-
-        setLoadingPlantaEspecifica(false);
+  // Carregar plantas
+  useEffect(() => {
+    const loadPlantas = async () => {
+      try {
+        const response = await PlantasService.getAllPlantas({ limit: 100 });
+        const plantasData = Array.isArray(response.data) ? response.data : (response as any).data?.data || [];
+        const options = plantasData.map((p: any) => ({
+          value: p.id.toString().trim(),
+          label: p.nome,
+        }));
+        setPlantasOptions(options);
+      } catch (error) {
+        console.error('Erro ao carregar plantas:', error);
+        setPlantasOptions([]);
+      } finally {
+        setLoading(false);
       }
     };
-
-    initialize();
+    loadPlantas();
   }, []);
 
-  // NOVO: Carregar unidades quando planta mudar (modo create)
-  React.useEffect(() => {
-    const loadUnidades = async () => {
-      if (!plantaId || !isCreateMode) {
-        setUnidades([]);
-        return;
-      }
+  // Carregar unidades quando planta mudar
+  useEffect(() => {
+    if (!plantaId) {
+      setUnidadesOptions([]);
+      return;
+    }
 
+    const loadUnidades = async () => {
       setLoadingUnidades(true);
       try {
         const response = await getUnidadesByPlanta(plantaId);
-        setUnidades(response || []);
+        const options = (response || []).map((u: any) => ({
+          value: u.id.toString().trim(),
+          label: u.nome,
+        }));
+        setUnidadesOptions(options);
       } catch (error) {
         console.error('Erro ao carregar unidades:', error);
-        setUnidades([]);
+        setUnidadesOptions([]);
       } finally {
         setLoadingUnidades(false);
       }
     };
-
     loadUnidades();
-  }, [plantaId, isCreateMode]);
+  }, [plantaId]);
 
-  // NOVO: Carregar unidade específica quando tiver unidadeId no modo VIEW/EDIT
-  React.useEffect(() => {
-    const loadUnidadeEspecifica = async () => {
-      if (isCreateMode || !value?.unidadeId) {
-        return;
-      }
+  // Carregar equipamentos quando unidade mudar
+  useEffect(() => {
+    if (!unidadeId || !plantaId) return;
 
-      try {
-        const response = await PlantasService.getAllPlantas({ limit: 100 });
-        const todasPlantas = response.data;
+    fetchEquipamentos({
+      proprietarioId: 'all',
+      plantaId,
+      unidadeId,
+      classificacao: 'UC',
+      criticidade: 'all',
+      limit: 100
+    }).catch(err => console.error('Erro ao carregar equipamentos:', err));
+  }, [unidadeId, plantaId]);
 
-        for (const planta of todasPlantas) {
-          try {
-            const unidadesData = await getUnidadesByPlanta(planta.id.toString());
-            const unidadeEncontrada = unidadesData?.find(
-              (u: any) => u.id?.toString().trim() === value.unidadeId.toString().trim()
-            );
+  // Inicializar value a partir do entity em view/edit (uma vez)
+  useEffect(() => {
+    if (initializedRef.current) return;
+    if (!entity || mode === 'create') return;
+    if (value?.plantaId) return; // Já tem valor
 
-            if (unidadeEncontrada) {
-              setUnidadeEspecifica(unidadeEncontrada);
-              return;
-            }
-          } catch (error) {
-            // Planta sem acesso, continuar
-          }
-        }
-      } catch (error) {
-        console.error('❌ [LocalizacaoController] Erro ao buscar unidade:', error);
-      }
-    };
+    const entPlantaId = entity.planta_id?.toString().trim()
+      || entity.equipamento?.unidade?.planta_id?.toString().trim()
+      || entity.equipamento?.unidade?.planta?.id?.toString().trim()
+      || '';
+    const entUnidadeId = entity.equipamento?.unidade_id?.toString().trim()
+      || entity.equipamento?.unidade?.id?.toString().trim()
+      || '';
+    const entEquipId = entity.equipamento_id?.toString().trim() || '';
 
-    loadUnidadeEspecifica();
-  }, [value?.unidadeId, isCreateMode]);
+    if (entPlantaId || entEquipId) {
+      initializedRef.current = true;
+      onChange({
+        plantaId: entPlantaId || undefined,
+        unidadeId: entUnidadeId || undefined,
+        equipamentoId: entEquipId || undefined,
+        local: entity.local || entity.planta?.nome || entity.equipamento?.unidade?.planta?.nome || '',
+        ativo: entity.ativo || entity.equipamento?.nome || ''
+      } as LocalizacaoValue);
+    }
+  }, [entity, mode, value?.plantaId, onChange]);
+
+  const equipamentosOptions = useMemo<ComboboxOption[]>(() => {
+    return equipamentos
+      .filter(eq => {
+        const eqUnidadeId = (eq.unidadeId || (eq as any).unidade_id || eq.unidade?.id)?.toString().trim();
+        return eq.classificacao === 'UC' && (unidadeId ? eqUnidadeId === unidadeId.trim() : true);
+      })
+      .map(eq => ({
+        value: eq.id.toString().trim(),
+        label: eq.nome,
+      }));
+  }, [equipamentos, unidadeId]);
 
   // Handlers
-  const handlePlantaChange = async (newPlantaId: string) => {
-    if (!isCreateMode) return;
-
-    const plantaIdTrimmed = newPlantaId.trim();
-    const plantaSelecionada = plantas.find(p => p.id.toString().trim() === plantaIdTrimmed);
-
-    const novoValue: LocalizacaoValue = {
-      plantaId: plantaIdTrimmed || undefined,
-      unidadeId: undefined, // Resetar quando planta muda
-      equipamentoId: undefined, // Resetar quando planta muda
-      local: plantaSelecionada?.nome || '',
+  const handlePlantaChange = useCallback((newPlantaId: string) => {
+    const plantaSelecionada = plantasOptions.find(p => p.value === newPlantaId);
+    onChange({
+      plantaId: newPlantaId || undefined,
+      unidadeId: undefined,
+      equipamentoId: undefined,
+      local: plantaSelecionada?.label || '',
       ativo: ''
-    };
+    } as LocalizacaoValue);
+  }, [plantasOptions, onChange]);
 
-    onChange(novoValue);
-  };
-
-  // Handler para mudança de unidade
-  const handleUnidadeChange = async (newUnidadeId: string) => {
-    if (!isCreateMode) return;
-
-    const unidadeIdTrimmed = newUnidadeId.trim();
-    const plantaSelecionada = plantas.find(p => p.id.toString().trim() === plantaId.trim());
-
-    const novoValue: LocalizacaoValue = {
+  const handleUnidadeChange = useCallback((newUnidadeId: string) => {
+    const plantaSelecionada = plantasOptions.find(p => p.value === plantaId);
+    onChange({
       plantaId: plantaId || undefined,
-      unidadeId: unidadeIdTrimmed || undefined,
-      equipamentoId: undefined, // Resetar quando unidade muda
-      local: plantaSelecionada?.nome || '',
+      unidadeId: newUnidadeId || undefined,
+      equipamentoId: undefined,
+      local: plantaSelecionada?.label || '',
       ativo: ''
-    };
+    } as LocalizacaoValue);
+  }, [plantaId, plantasOptions, onChange]);
 
-    onChange(novoValue);
-
-    // Carregar equipamentos da unidade
-    if (unidadeIdTrimmed) {
-      try {
-        await fetchEquipamentos({
-          proprietarioId: 'all',
-          plantaId: plantaId,
-          unidadeId: unidadeIdTrimmed,
-          classificacao: 'UC',
-          criticidade: 'all',
-          limit: 100
-        });
-      } catch (error) {
-        console.error('❌ [LocalizacaoController] Erro ao carregar equipamentos da unidade:', error);
-      }
-    }
-  };
-
-  const handleEquipamentoChange = (newEquipamentoId: string) => {
-    if (isViewMode) return;
-
-    const equipamentoSelecionado = equipamentos.find(
-      eq => eq.id.toString().trim() === newEquipamentoId.trim()
-    );
-    const plantaSelecionada = plantas.find(p => p.id.toString().trim() === plantaId.trim());
-
-    const novoValue: LocalizacaoValue = {
+  const handleEquipamentoChange = useCallback((newEquipamentoId: string) => {
+    const plantaSelecionada = plantasOptions.find(p => p.value === plantaId);
+    const equipamentoSelecionado = equipamentosOptions.find(e => e.value === newEquipamentoId);
+    onChange({
       plantaId: plantaId || undefined,
       unidadeId: unidadeId || undefined,
-      equipamentoId: newEquipamentoId.trim() || undefined,
-      local: plantaSelecionada?.nome || '',
-      ativo: equipamentoSelecionado?.nome || ''
-    };
+      equipamentoId: newEquipamentoId || undefined,
+      local: plantaSelecionada?.label || '',
+      ativo: equipamentoSelecionado?.label || ''
+    } as LocalizacaoValue);
+  }, [plantaId, unidadeId, plantasOptions, equipamentosOptions, onChange]);
 
-    onChange(novoValue);
-  };
-
-  // Equipamentos disponíveis - filtrar por unidade ao invés de planta
-  const equipamentosDisponiveis = React.useMemo(() => {
-    return equipamentos.filter(eq => {
-      const eqUnidadeId = (eq.unidadeId || eq.unidade_id || eq.unidade?.id)?.toString().trim();
-      const matchClassificacao = eq.classificacao === 'UC';
-      const matchUnidade = unidadeId ? eqUnidadeId === unidadeId.trim() : eq.unidade?.plantaId?.toString().trim() === plantaId.trim();
-      return matchClassificacao && matchUnidade;
-    });
-  }, [equipamentos, unidadeId, plantaId]);
-
-  // Loading state
-  if (!hasLoaded || (isCreateMode && loadingPlantas) || (!isCreateMode && loadingPlantaEspecifica)) {
+  if (loading) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>
-            {isCreateMode ? 'Carregando plantas...' : 'Carregando localização...'}
-          </span>
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-muted rounded"></div>
+          <div className="h-10 bg-muted rounded"></div>
+          <div className="h-10 bg-muted rounded"></div>
         </div>
       </div>
     );
@@ -274,134 +202,57 @@ export const LocalizacaoController = ({
 
   return (
     <div className="space-y-4">
-      {/* SELECT DE PLANTAS */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">
-          Planta/Local <span className="text-red-500">*</span>
-        </label>
+      <ComboboxField
+        label="Planta/Local"
+        placeholder="Selecione a planta..."
+        searchPlaceholder="Buscar planta..."
+        emptyText="Nenhuma planta encontrada"
+        options={plantasOptions}
+        value={plantaId}
+        onChange={handlePlantaChange}
+        disabled={disabled || isViewMode}
+        required
+      />
 
-        {isCreateMode ? (
-          // MODO CREATE: Select com lista completa
-          <select
-            value={plantaId}
-            onChange={(e) => handlePlantaChange(e.target.value)}
-            disabled={disabled}
-            className="w-full p-2 border rounded-md bg-background text-foreground"
-            required
-          >
-            <option value="">Selecione a planta...</option>
-            {plantas.map((planta) => (
-              <option key={planta.id} value={planta.id}>
-                {planta.nome}
-              </option>
-            ))}
-          </select>
-        ) : (
-          // MODO VIEW/EDIT: Input readonly com nome da planta específica
-          <input
-            type="text"
-            value={plantaEspecifica?.nome || value?.local || 'Planta não encontrada'}
-            disabled
-            className="w-full p-2 border rounded-md bg-muted text-foreground opacity-60 cursor-not-allowed"
-          />
-        )}
-      </div>
+      {plantaId && (
+        <ComboboxField
+          label="Unidade"
+          placeholder={
+            loadingUnidades
+              ? "Carregando unidades..."
+              : unidadesOptions.length === 0
+                ? "Nenhuma unidade disponivel"
+                : "Selecione a unidade..."
+          }
+          searchPlaceholder="Buscar unidade..."
+          emptyText="Nenhuma unidade encontrada"
+          options={unidadesOptions}
+          value={unidadeId}
+          onChange={handleUnidadeChange}
+          disabled={disabled || isViewMode || loadingUnidades || unidadesOptions.length === 0}
+          required
+        />
+      )}
 
-      {/* NOVO: SELECT DE UNIDADES */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">
-          Unidade <span className="text-red-500">*</span>
-        </label>
-
-        {isCreateMode ? (
-          <>
-            {loadingUnidades && plantaId && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Carregando unidades...</span>
-              </div>
-            )}
-            <select
-              value={unidadeId}
-              onChange={(e) => handleUnidadeChange(e.target.value)}
-              disabled={disabled || !plantaId || loadingUnidades}
-              className="w-full p-2 border rounded-md bg-background text-foreground"
-              required
-            >
-              <option value="">
-                {!plantaId
-                  ? "Primeiro selecione uma planta"
-                  : loadingUnidades
-                    ? "Carregando unidades..."
-                    : "Selecione a unidade..."
-                }
-              </option>
-              {unidades.map((unidade) => (
-                <option key={unidade.id} value={unidade.id}>
-                  {unidade.nome}
-                </option>
-              ))}
-            </select>
-          </>
-        ) : (
-          // MODO VIEW/EDIT: Input readonly
-          <input
-            type="text"
-            value={unidadeEspecifica?.nome || 'Unidade não especificada'}
-            disabled
-            className="w-full p-2 border rounded-md bg-muted text-foreground opacity-60 cursor-not-allowed"
-          />
-        )}
-      </div>
-
-      {/* SELECT/INPUT DE EQUIPAMENTOS */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">
-          Equipamento <span className="text-red-500">*</span>
-        </label>
-        
-        {isCreateMode ? (
-          <>
-            {loadingEquipamentos && plantaId && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Carregando equipamentos...</span>
-              </div>
-            )}
-            <select
-              value={equipamentoId}
-              onChange={(e) => handleEquipamentoChange(e.target.value)}
-              disabled={disabled || !unidadeId || loadingEquipamentos}
-              className="w-full p-2 border rounded-md bg-background text-foreground"
-              required
-            >
-              <option value="">
-                {!unidadeId
-                  ? "Primeiro selecione uma unidade"
-                  : loadingEquipamentos
-                    ? "Carregando equipamentos..."
-                    : "Selecione o equipamento..."
-                }
-              </option>
-              {equipamentosDisponiveis.map((equipamento) => (
-                <option key={equipamento.id} value={equipamento.id.toString().trim()}>
-                  {equipamento.nome}
-                </option>
-              ))}
-            </select>
-          </>
-        ) : (
-          // MODO VIEW: Input readonly
-          <input
-            type="text"
-            value={value?.ativo || 'Equipamento não especificado'}
-            disabled
-            className="w-full p-2 border rounded-md bg-muted text-foreground opacity-60 cursor-not-allowed"
-          />
-        )}
-      </div>
-
-
+      {plantaId && unidadeId && (
+        <ComboboxField
+          label="Equipamento"
+          placeholder={
+            loadingEquipamentos
+              ? "Carregando equipamentos..."
+              : equipamentosOptions.length === 0
+                ? "Nenhum equipamento disponivel"
+                : "Selecione o equipamento..."
+          }
+          searchPlaceholder="Buscar equipamento..."
+          emptyText="Nenhum equipamento encontrado"
+          options={equipamentosOptions}
+          value={equipamentoId}
+          onChange={handleEquipamentoChange}
+          disabled={disabled || isViewMode || loadingEquipamentos || equipamentosOptions.length === 0}
+          required
+        />
+      )}
     </div>
   );
 };

@@ -1,116 +1,107 @@
 // src/features/execucao-os/config/actions-config.tsx
+
 import {
-  Eye,
-  Edit,
   Play,
   Pause,
   CheckCircle,
-  X,
-  Camera,
-  FileText
+  CheckCircle2,
+  Shield,
+  RotateCcw,
+  Ban,
 } from 'lucide-react';
 import type { TableAction } from '@nexon/components/common/base-table/types';
 import type { ExecucaoOS } from '../types';
 
 interface CreateExecucaoOSActionsProps {
-  // onView e onEdit são passados direto no BaseTable
   onIniciar: (item: ExecucaoOS) => void;
   onPausar: (item: ExecucaoOS) => void;
   onRetomar: (item: ExecucaoOS) => void;
+  onExecutar: (item: ExecucaoOS) => void;
+  onAuditar: (item: ExecucaoOS) => void;
   onFinalizar: (item: ExecucaoOS) => void;
   onCancelar: (item: ExecucaoOS) => void;
-  // onAnexos e onRelatorio removidos por enquanto
-}
-
-/**
- * Determina quais ações estão disponíveis com base no status da execução
- */
-function getAvailableActionsByStatus(status: string): string[] {
-  const statusMap: Record<string, string[]> = {
-    // PLANEJADA removido - OS já começam como PROGRAMADA
-    // view/edit passados direto no BaseTable, anexos/relatorio removidos
-    'PROGRAMADA': ['iniciar', 'cancelar'],
-    'EM_EXECUCAO': ['pausar', 'finalizar', 'cancelar'],
-    'PAUSADA': ['retomar', 'finalizar', 'cancelar'],
-    'FINALIZADA': [],
-    'CANCELADA': []
-  };
-
-  return statusMap[status] || [];
 }
 
 /**
  * Cria as ações da tabela de Execução de OS baseadas no status
+ *
+ * Fluxo:
+ *   PENDENTE -> iniciar -> EM_EXECUCAO
+ *   EM_EXECUCAO <-> pausar/retomar <-> PAUSADA
+ *   EM_EXECUCAO/PAUSADA -> executar -> EXECUTADA
+ *   EXECUTADA -> auditar -> AUDITADA
+ *   AUDITADA -> finalizar -> FINALIZADA
+ *   Any (exceto FINALIZADA/CANCELADA) -> cancelar -> CANCELADA
  */
 export function createExecucaoOSTableActions({
   onIniciar,
   onPausar,
   onRetomar,
+  onExecutar,
+  onAuditar,
   onFinalizar,
   onCancelar,
 }: CreateExecucaoOSActionsProps): TableAction<ExecucaoOS>[] {
+  const getStatus = (item: ExecucaoOS) =>
+    (item.statusExecucao || item.status || item.os?.status)?.toUpperCase();
+
   const allActions: Record<string, TableAction<ExecucaoOS>> = {
-    // view e edit são passados como onView/onEdit direto no BaseTable
-    // anexos e relatorio removidos por enquanto
     iniciar: {
       label: 'Iniciar',
       icon: Play,
       onClick: onIniciar,
       variant: 'default',
-      condition: (item) => {
-        const status = item.statusExecucao || item.status || item.os?.status;
-        const statusUpperCase = status?.toUpperCase();
-        return statusUpperCase === 'PROGRAMADA';
-      },
+      condition: (item) => getStatus(item) === 'PENDENTE',
     },
     pausar: {
       label: 'Pausar',
       icon: Pause,
       onClick: onPausar,
       variant: 'default',
-      condition: (item) => {
-        const status = item.statusExecucao || item.status || item.os?.status;
-        const statusUpperCase = status?.toUpperCase();
-        return statusUpperCase === 'EM_EXECUCAO';
-      },
+      condition: (item) => getStatus(item) === 'EM_EXECUCAO',
     },
     retomar: {
       label: 'Retomar',
-      icon: Play,
-      onClick: onRetomar, // Agora usa handler dedicado
+      icon: RotateCcw,
+      onClick: onRetomar,
+      variant: 'default',
+      condition: (item) => getStatus(item) === 'PAUSADA',
+    },
+    executar: {
+      label: 'Executar',
+      icon: CheckCircle,
+      onClick: onExecutar,
       variant: 'default',
       condition: (item) => {
-        const status = item.statusExecucao || item.status || item.os?.status;
-        const statusUpperCase = status?.toUpperCase();
-        return statusUpperCase === 'PAUSADA';
+        const s = getStatus(item);
+        return s === 'EM_EXECUCAO' || s === 'PAUSADA';
       },
+    },
+    auditar: {
+      label: 'Auditar',
+      icon: Shield,
+      onClick: onAuditar,
+      variant: 'default',
+      condition: (item) => getStatus(item) === 'EXECUTADA',
     },
     finalizar: {
       label: 'Finalizar',
-      icon: CheckCircle,
+      icon: CheckCircle2,
       onClick: onFinalizar,
       variant: 'default',
-      condition: (item) => {
-        const status = item.statusExecucao || item.status || item.os?.status;
-        const statusUpperCase = status?.toUpperCase();
-        return statusUpperCase === 'EM_EXECUCAO' || statusUpperCase === 'PAUSADA';
-      },
+      condition: (item) => getStatus(item) === 'AUDITADA',
     },
     cancelar: {
       label: 'Cancelar',
-      icon: X,
+      icon: Ban,
       onClick: onCancelar,
       variant: 'destructive',
-      requiresConfirmation: true,
-      confirmationMessage: 'Tem certeza que deseja cancelar esta execução de OS?',
       condition: (item) => {
-        const status = item.statusExecucao || item.status || item.os?.status;
-        const statusUpperCase = status?.toUpperCase();
-        return statusUpperCase !== 'FINALIZADA' && statusUpperCase !== 'CANCELADA' && statusUpperCase !== undefined;
+        const s = getStatus(item);
+        return s !== 'FINALIZADA' && s !== 'CANCELADA' && s !== undefined;
       },
     },
   };
 
-  // Retornar todas as ações (o BaseTable filtrará com base nas conditions)
   return Object.values(allActions);
 }

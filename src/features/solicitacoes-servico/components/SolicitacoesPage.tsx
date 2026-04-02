@@ -5,7 +5,7 @@ import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@nexon/components/common/base-table/BaseTable';
 import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
 import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
-import { Plus, FilePenLine } from 'lucide-react';
+import { Plus, FilePenLine, RotateCcw } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { SolicitacaoServico, SolicitacaoServicoFormData } from '../types';
 import { solicitacoesTableColumns } from '../config/table-config';
@@ -13,6 +13,7 @@ import { createSolicitacoesTableActions } from '../config/actions-config';
 import { useSolicitacoesApi } from '../hooks/useSolicitacoesApi';
 import { useSolicitacoesFilters } from '../hooks/useSolicitacoesFilters';
 import { useSolicitacoesActions } from '../hooks/useSolicitacoesActions';
+import { ActionConfirmPanel } from './ActionConfirmPanel';
 import { SolicitacoesDashboard } from './SolicitacoesDashboard';
 import { SolicitacoesStats } from '@/services/solicitacoes-servico.service';
 
@@ -24,18 +25,11 @@ const initialFilters = {
 
 const initialStats: SolicitacoesStats = {
   total: 0,
-  rascunhos: 0,
-  aguardando: 0,
-  emAnalise: 0,
-  aprovadas: 0,
-  rejeitadas: 0,
-  emExecucao: 0,
-  concluidas: 0,
-  canceladas: 0,
-  urgentes: 0,
+  registradas: 0,
+  programadas: 0,
+  finalizadas: 0,
   porTipo: {},
   porPrioridade: {},
-  taxaAprovacao: 0,
 };
 
 export function SolicitacoesPage() {
@@ -53,12 +47,6 @@ export function SolicitacoesPage() {
     updateSolicitacao,
     deleteSolicitacao,
     getStats,
-    enviar,
-    analisar,
-    aprovar,
-    rejeitar,
-    cancelar,
-    concluir,
   } = useSolicitacoesApi();
 
   const { filterConfigs, formFields, loadFilterOptions } = useSolicitacoesFilters(filters);
@@ -71,13 +59,8 @@ export function SolicitacoesPage() {
 
   const solicitacoesActions = useSolicitacoesActions({
     openModal,
+    closeModal,
     deleteItem: deleteSolicitacao,
-    enviar,
-    analisar,
-    aprovar,
-    rejeitar,
-    cancelar,
-    concluir,
     onSuccess: reloadData,
   });
 
@@ -86,12 +69,6 @@ export function SolicitacoesPage() {
       onView: solicitacoesActions.handleView,
       onEdit: solicitacoesActions.handleEdit,
       onDelete: solicitacoesActions.handleDelete,
-      onEnviar: solicitacoesActions.handleEnviar,
-      onAnalisar: solicitacoesActions.handleAnalisar,
-      onAprovar: solicitacoesActions.handleAprovar,
-      onRejeitar: solicitacoesActions.handleRejeitar,
-      onCancelar: solicitacoesActions.handleCancelar,
-      onConcluir: solicitacoesActions.handleConcluir,
     });
 
     return tableActions
@@ -109,6 +86,7 @@ export function SolicitacoesPage() {
       });
   }, [solicitacoesActions]);
 
+
   useEffect(() => {
     loadFilterOptions();
     loadData();
@@ -123,7 +101,7 @@ export function SolicitacoesPage() {
     try {
       await fetchSolicitacoes(filters);
     } catch (error) {
-      console.error('Erro ao carregar solicitações:', error);
+      console.error('Erro ao carregar solicitacoes:', error);
     }
   };
 
@@ -145,26 +123,53 @@ export function SolicitacoesPage() {
       }
 
       closeModal();
+      solicitacoesActions.clearPendingAction();
       await reloadData();
     } catch (error) {
-      console.error('Erro ao salvar solicitação:', error);
+      console.error('Erro ao salvar solicitacao:', error);
       throw error;
     }
   };
 
+  const handleClose = () => {
+    closeModal();
+    solicitacoesActions.clearPendingAction();
+  };
+
   const handleFilterChange = async (newFilters: any) => {
     const cleanedFilters = { ...newFilters };
+
     Object.keys(cleanedFilters).forEach((key) => {
-      if (cleanedFilters[key] === 'all') {
+      if (cleanedFilters[key] === 'all' || cleanedFilters[key] === '') {
         cleanedFilters[key] = undefined;
       }
     });
 
-    setFilters((prev) => ({ ...prev, ...cleanedFilters, page: 1 }));
+    setFilters((prev) => {
+      const updated = { ...prev, ...cleanedFilters, page: 1 };
+      Object.keys(updated).forEach(key => {
+        if (updated[key] === undefined && key !== 'page' && key !== 'limit' && key !== 'search') {
+          delete updated[key];
+        }
+      });
+      return updated;
+    });
   };
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
+  };
+
+  const handleClearFilters = () => {
+    setFilters(initialFilters);
+  };
+
+  // Titulo do modal muda se tem acao pendente
+  const getModalTitle = () => {
+    if (modalState.mode === 'create') return 'Nova Solicitacao';
+    if (modalState.mode === 'edit') return 'Editar Solicitacao';
+    if (solicitacoesActions.pendingAction === 'excluir') return 'Excluir Solicitacao';
+    return 'Visualizar Solicitacao';
   };
 
   return (
@@ -172,8 +177,8 @@ export function SolicitacoesPage() {
       <Layout.Main>
         <div className="flex flex-col h-full w-full">
           <TitleCard
-            title="Solicitações de Serviço"
-            description="Gerencie e monitore solicitações de serviço"
+            title="Solicitacoes de Servico"
+            description="Gerencie e monitore solicitacoes de servico"
           />
 
           <SolicitacoesDashboard data={stats} />
@@ -187,13 +192,23 @@ export function SolicitacoesPage() {
                   onFilterChange={handleFilterChange}
                 />
               </div>
-              <button
-                onClick={() => openModal('create')}
-                className="btn-minimal-primary w-full sm:w-auto whitespace-nowrap flex-shrink-0 justify-center"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                <span>Nova Solicitação</span>
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleClearFilters}
+                  className="btn-minimal-primary w-full sm:w-auto whitespace-nowrap flex-shrink-0 justify-center"
+                  title="Limpar filtros"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  <span>Limpar Filtros</span>
+                </button>
+                <button
+                  onClick={() => openModal('create')}
+                  className="btn-minimal-primary w-full sm:w-auto whitespace-nowrap flex-shrink-0 justify-center"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span>Nova Solicitacao</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -211,7 +226,7 @@ export function SolicitacoesPage() {
               onPageChange={handlePageChange}
               onView={solicitacoesActions.handleView}
               onEdit={solicitacoesActions.handleEdit}
-              emptyMessage="Nenhuma solicitação encontrada."
+              emptyMessage="Nenhuma solicitacao encontrada."
               emptyIcon={<FilePenLine className="h-8 w-8 text-muted-foreground/50" />}
               customActions={customActions}
             />
@@ -223,19 +238,21 @@ export function SolicitacoesPage() {
             isOpen={modalState.isOpen}
             mode={modalState.mode}
             entity={modalState.entity as any}
-            title={
-              modalState.mode === 'create'
-                ? 'Nova Solicitação'
-                : modalState.mode === 'edit'
-                ? 'Editar Solicitação'
-                : 'Visualizar Solicitação'
-            }
+            title={getModalTitle()}
             icon={<FilePenLine className="h-4 w-4 md:h-5 md:w-5 text-primary" />}
             formFields={formFields}
-            onClose={closeModal}
+            onClose={handleClose}
             onSubmit={handleSubmit}
             width="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[800px]"
-          />
+          >
+            {/* Painel de confirmacao de acao - aparece no final do form em modo view */}
+            {solicitacoesActions.pendingAction && modalState.mode === 'view' && (
+              <ActionConfirmPanel
+                action={solicitacoesActions.pendingAction}
+                onConfirm={solicitacoesActions.confirmAction}
+              />
+            )}
+          </BaseModal>
         )}
       </Layout.Main>
     </Layout>

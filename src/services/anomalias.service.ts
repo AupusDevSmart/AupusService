@@ -18,11 +18,9 @@ export interface AnomaliasResponse {
 
 export interface AnomaliasStats {
   total: number;
-  aguardando: number;
-  emAnalise: number;
-  osGerada: number;
-  resolvida: number;
-  cancelada: number;
+  registradas: number;
+  programadas: number;
+  finalizadas: number;
   criticas: number;
 }
 
@@ -37,6 +35,7 @@ export interface CreateAnomaliaDto {
   origem: string;
   prioridade: string;
   observacoes?: string;
+  instrucoes_ids?: string[];
 }
 
 export interface UpdateAnomaliaDto extends Partial<Omit<CreateAnomaliaDto, 'localizacao'>> {
@@ -45,14 +44,7 @@ export interface UpdateAnomaliaDto extends Partial<Omit<CreateAnomaliaDto, 'loca
     local?: string;
     ativo?: string;
   };
-}
-
-export interface ResolverAnomaliaDto {
-  observacoes?: string;
-}
-
-export interface CancelarAnomaliaDto {
-  motivo?: string;
+  instrucoes_ids?: string[];
 }
 
 class AnomaliasApiService {
@@ -112,7 +104,8 @@ class AnomaliasApiService {
       condicao: data.condicao,
       origem: data.origem,
       prioridade: data.prioridade,
-      observacoes: data.observacoes
+      observacoes: data.observacoes,
+      instrucoes_ids: data.instrucoes_ids,
     };
 
     const response = await api.post(this.baseUrl, createDto);
@@ -171,7 +164,8 @@ class AnomaliasApiService {
       condicao: data.condicao,
       origem: data.origem,
       prioridade: data.prioridade,
-      observacoes: data.observacoes
+      observacoes: data.observacoes,
+      instrucoes_ids: data.instrucoes_ids,
     };
     
     // Se há dados de localização, estruturar corretamente
@@ -220,42 +214,7 @@ class AnomaliasApiService {
   }
 
   // ==========================================
-  // 🔧 3. AÇÕES ESPECÍFICAS
-  // ==========================================
-
-  async gerarOS(anomaliaId: string): Promise<Anomalia> {
-    // // console.log('🔧 [AnomaliasService] Gerando OS para anomalia:', anomaliaId);
-    
-    const response = await api.post(`${this.baseUrl}/${anomaliaId}/gerar-os`);
-    // // console.log('✅ [AnomaliasService] OS gerada:', response.data);
-    
-    return response.data;
-  }
-
-  async resolver(anomaliaId: string, observacoes?: string): Promise<Anomalia> {
-    // // console.log('✅ [AnomaliasService] Resolvendo anomalia:', anomaliaId, observacoes);
-    
-    const dto: ResolverAnomaliaDto = { observacoes };
-    
-    const response = await api.post(`${this.baseUrl}/${anomaliaId}/resolver`, dto);
-    // // console.log('✅ [AnomaliasService] Anomalia resolvida:', response.data);
-    
-    return response.data;
-  }
-
-  async cancelar(anomaliaId: string, motivo?: string): Promise<Anomalia> {
-    // // console.log('❌ [AnomaliasService] Cancelando anomalia:', anomaliaId, motivo);
-    
-    const dto: CancelarAnomaliaDto = { motivo };
-    
-    const response = await api.post(`${this.baseUrl}/${anomaliaId}/cancelar`, dto);
-    // // console.log('❌ [AnomaliasService] Anomalia cancelada:', response.data);
-    
-    return response.data;
-  }
-
-  // ==========================================
-  // 🔧 4. UTILITÁRIOS
+  // 🔧 3. UTILITÁRIOS
   // ==========================================
 
   async testConnection(): Promise<boolean> {

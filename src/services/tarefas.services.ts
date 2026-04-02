@@ -32,7 +32,7 @@ export interface CreateRecursoTarefaApiData {
 }
 
 export interface CreateTarefaApiData {
-  plano_manutencao_id: string;        // Obrigatório: ID do plano de manutenção
+  plano_manutencao_id?: string;        // Agora opcional: ID do plano de manutenção
   tag?: string;                       // Opcional: Auto-gerado se não fornecido
   nome: string;                       // Obrigatório: Nome da tarefa (máx 200 chars)
   descricao: string;                  // Obrigatório: Descrição da tarefa
@@ -429,7 +429,7 @@ export class TarefasApiService {
 
   async findByEquipamento(equipamentoId: string, params?: Partial<QueryTarefasApiParams>): Promise<TarefaApiResponse[]> {
     // console.log('🔍 TAREFAS API: Buscando tarefas por equipamento:', equipamentoId);
-    
+
     try {
       const response = await api.get<TarefaApiResponse[]>(`${this.baseEndpoint}/equipamento/${equipamentoId}`, {
         params
@@ -438,6 +438,21 @@ export class TarefasApiService {
       return response.data;
     } catch (error: any) {
       // console.error('💥 TAREFAS API: Erro ao buscar tarefas do equipamento:', error);
+      throw error;
+    }
+  }
+
+  async findSemPlano(params?: QueryTarefasApiParams): Promise<TarefasListApiResponse> {
+    console.log('🔍 TAREFAS API: Buscando tarefas sem plano');
+
+    try {
+      const response = await api.get<TarefasListApiResponse>(`${this.baseEndpoint}/sem-plano`, {
+        params: params || {}
+      });
+      console.log('✅ TAREFAS API: Tarefas sem plano encontradas:', response.data.data.length);
+      return response.data;
+    } catch (error: any) {
+      console.error('💥 TAREFAS API: Erro ao buscar tarefas sem plano:', error);
       throw error;
     }
   }

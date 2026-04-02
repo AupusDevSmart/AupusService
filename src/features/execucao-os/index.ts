@@ -5,8 +5,7 @@ export { default as ExecucaoOSPage } from './components/ExecucaoOSPage';
 
 // Exportar componentes
 export { ExecucaoOSDashboard } from './components/ExecucaoOSDashboard';
-export { IniciarExecucaoModal } from './components/IniciarExecucaoModal';
-export { FinalizarExecucaoModal } from './components/FinalizarExecucaoModal';
+export { ActionConfirmPanel } from './components/ActionConfirmPanel';
 
 // Exportar células customizadas
 export { OSInfoCell } from './components/table-cells/OSInfoCell';
@@ -33,13 +32,9 @@ export type {
   AnexoOS,
 } from './types';
 
-// Exportar hooks customizados REFATORADOS
+// Exportar hooks customizados
 export { useExecucaoOSApi } from './hooks/useExecucaoOSApi';
 export { useExecucaoOSFilters } from './hooks/useExecucaoOSFilters';
-export { useExecucaoOSActions } from './hooks/useExecucaoOSActions';
-
-// Manter export do hook antigo para compatibilidade (deprecated)
-export { useExecucaoOS } from './hooks/useExecucaoOS';
 
 // Exportar configurações
 export { execucaoOSTableColumns } from './config/table-config';

@@ -2,7 +2,7 @@
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
 
 // Enums para os campos de seleção
-export type StatusAnomalia = 'AGUARDANDO' | 'EM_ANALISE' | 'OS_GERADA' | 'CANCELADA' | 'RESOLVIDA';
+export type StatusAnomalia = 'REGISTRADA' | 'PROGRAMADA' | 'FINALIZADA';
 export type PrioridadeAnomalia = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA';
 export type CondicaoAnomalia = 'PARADO' | 'FUNCIONANDO' | 'RISCO_ACIDENTE';
 export type OrigemAnomalia = 'SCADA' | 'OPERADOR' | 'FALHA';
@@ -18,9 +18,6 @@ export interface Anomalia extends BaseEntity {
   status: StatusAnomalia;
   prioridade: PrioridadeAnomalia;
   observacoes?: string;
-  observacoes_analise?: string; // ✅ NOVO: Observações da análise
-  analisado_por?: string; // ✅ NOVO: Quem analisou
-  data_analise?: string; // ✅ NOVO: Quando foi analisada
   criadoPor?: string;
   atualizadoEm?: string;
   ordemServicoId?: string;
@@ -47,6 +44,9 @@ export interface Anomalia extends BaseEntity {
   
   // Histórico da anomalia
   historico?: HistoricoAnomalia[];
+
+  // Instruções vinculadas
+  anomalias_instrucoes?: any[];
 }
 
 // Interface para histórico da anomalia
@@ -73,6 +73,7 @@ export interface AnomaliaFormData {
   unidadeId?: number | string; // NOVO: Equipamentos agora pertencem a Unidades
   equipamentoId?: number | string;
   anexos?: File[];
+  instrucoes_ids?: string[];
   // Support for nested localizacao object from form
   localizacao?: {
     plantaId?: number | string;

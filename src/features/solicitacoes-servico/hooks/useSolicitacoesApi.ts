@@ -8,11 +8,6 @@ import {
 import {
   SolicitacaoServico,
   SolicitacaoServicoFormData,
-  AnalisarSolicitacaoDto,
-  AprovarSolicitacaoDto,
-  RejeitarSolicitacaoDto,
-  CancelarSolicitacaoDto,
-  ConcluirSolicitacaoDto,
   AdicionarComentarioDto,
 } from '../types';
 
@@ -91,85 +86,6 @@ export function useSolicitacoesApi() {
     }
   }, []);
 
-  // Ações de workflow
-  const enviar = useCallback(async (id: string, observacoes?: string) => {
-    try {
-      setLoading(true);
-      const response = await solicitacoesServicoService.enviar(id, { observacoes });
-      return response;
-    } catch (error) {
-      console.error('Erro ao enviar solicitação:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const analisar = useCallback(async (id: string, dto: AnalisarSolicitacaoDto) => {
-    try {
-      setLoading(true);
-      const response = await solicitacoesServicoService.analisar(id, dto);
-      return response;
-    } catch (error) {
-      console.error('Erro ao analisar solicitação:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const aprovar = useCallback(async (id: string, dto?: AprovarSolicitacaoDto) => {
-    try {
-      setLoading(true);
-      const response = await solicitacoesServicoService.aprovar(id, dto);
-      return response;
-    } catch (error) {
-      console.error('Erro ao aprovar solicitação:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const rejeitar = useCallback(async (id: string, dto: RejeitarSolicitacaoDto) => {
-    try {
-      setLoading(true);
-      const response = await solicitacoesServicoService.rejeitar(id, dto);
-      return response;
-    } catch (error) {
-      console.error('Erro ao rejeitar solicitação:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const cancelar = useCallback(async (id: string, dto: CancelarSolicitacaoDto) => {
-    try {
-      setLoading(true);
-      const response = await solicitacoesServicoService.cancelar(id, dto);
-      return response;
-    } catch (error) {
-      console.error('Erro ao cancelar solicitação:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const concluir = useCallback(async (id: string, dto?: ConcluirSolicitacaoDto) => {
-    try {
-      setLoading(true);
-      const response = await solicitacoesServicoService.concluir(id, dto);
-      return response;
-    } catch (error) {
-      console.error('Erro ao concluir solicitação:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   const getComentarios = useCallback(async (id: string) => {
     try {
       const comentarios = await solicitacoesServicoService.getComentarios(id);
@@ -211,12 +127,6 @@ export function useSolicitacoesApi() {
     updateSolicitacao,
     deleteSolicitacao,
     getStats,
-    enviar,
-    analisar,
-    aprovar,
-    rejeitar,
-    cancelar,
-    concluir,
     getComentarios,
     adicionarComentario,
     getHistorico,

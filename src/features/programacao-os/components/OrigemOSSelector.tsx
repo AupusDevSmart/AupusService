@@ -40,7 +40,7 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
   disabled = false
 }) => {
   // ✅ DERIVAR VALORES DIRETAMENTE DAS PROPS
-  const tipo = value.tipo || 'MANUAL';
+  const tipo = value.tipo || 'ANOMALIA';
   const plantaId = value.plantaId?.toString().trim() || '';
   const unidadeId = value.unidadeId?.toString().trim() || '';
   const anomaliaId = value.anomaliaId?.toString().trim() || '';
@@ -390,17 +390,6 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
         </div>
       )}
 
-      {/* MANUAL Flow - Sem componentes adicionais */}
-      {tipo === 'MANUAL' && (
-        <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg bg-muted/30">
-          <p className="text-sm">
-            Ordem de serviço criada manualmente.
-          </p>
-          <p className="text-xs mt-2">
-            Preencha os demais campos do formulário.
-          </p>
-        </div>
-      )}
     </div>
   );
 };

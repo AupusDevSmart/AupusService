@@ -145,8 +145,9 @@ export const OrigemOSController: React.FC<OrigemOSControllerProps> = ({
   // Componente para status badge
   const StatusBadge = ({ status }: { status: string }) => {
     const config = {
-      'AGUARDANDO': { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 border-blue-200 dark:border-blue-800', label: 'Aguardando' },
-      'EM_ANALISE': { color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200 border-purple-200 dark:border-purple-800', label: 'Em Análise' }
+      'REGISTRADA': { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 border-blue-200 dark:border-blue-800', label: 'Registrada' },
+      'PROGRAMADA': { color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200 border-purple-200 dark:border-purple-800', label: 'Programada' },
+      'FINALIZADA': { color: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200 border-green-200 dark:border-green-800', label: 'Finalizada' }
     };
     
     const { color, label } = config[status as keyof typeof config] || { color: 'bg-muted text-muted-foreground border-border', label: formatarStatus(status) };

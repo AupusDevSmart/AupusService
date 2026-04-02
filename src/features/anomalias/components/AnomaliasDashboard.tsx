@@ -1,9 +1,9 @@
 // src/features/anomalias/components/AnomaliasDashboard.tsx
 import {
   BarChart3,
-  Clock,
-  Settings,
-  AlertTriangle,
+  ClipboardList,
+  Calendar,
+  CheckCircle2,
 } from 'lucide-react';
 import { AnomaliasStats } from '@/services/anomalias.service';
 
@@ -21,30 +21,30 @@ export function AnomaliasDashboard({ data }: AnomaliasDashboardProps) {
       iconColor: 'text-primary',
     },
     {
-      icon: Clock,
-      value: data.aguardando,
-      label: 'Aguardando',
+      icon: ClipboardList,
+      value: data.registradas,
+      label: 'Registradas',
       bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
       iconColor: 'text-yellow-600 dark:text-yellow-500',
     },
     {
-      icon: Settings,
-      value: data.emAnalise,
-      label: 'Em Análise',
+      icon: Calendar,
+      value: data.programadas,
+      label: 'Programadas',
       bgColor: 'bg-blue-100 dark:bg-blue-900/30',
       iconColor: 'text-blue-600 dark:text-blue-500',
     },
     {
-      icon: AlertTriangle,
-      value: data.criticas,
-      label: 'Críticas',
-      bgColor: 'bg-red-100 dark:bg-red-900/30',
-      iconColor: 'text-red-600 dark:text-red-500',
+      icon: CheckCircle2,
+      value: data.finalizadas,
+      label: 'Finalizadas',
+      bgColor: 'bg-green-100 dark:bg-green-900/30',
+      iconColor: 'text-green-600 dark:text-green-500',
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
       {stats.map((stat) => {
         const Icon = stat.icon;
         return (

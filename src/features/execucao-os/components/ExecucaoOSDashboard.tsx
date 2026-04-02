@@ -3,78 +3,27 @@ import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   FileText,
-  Calendar,
   Play,
-  Pause,
-  CheckCircle,
   Clock,
   AlertTriangle,
   Filter,
 } from 'lucide-react';
-import type { ExecucaoOS } from '../types';
 
 interface ExecucaoOSDashboardProps {
-  items: ExecucaoOS[];
+  total: number;
+  apiStats: Record<string, number>;
   loading: boolean;
   onFilterAtrasadas?: () => void;
   onFilterCriticas?: () => void;
 }
 
-interface DashboardStats {
-  total: number;
-  programadas: number;
-  emExecucao: number;
-  pausadas: number;
-  finalizadas: number;
-  atrasadas: number;
-  criticas: number;
-}
-
-export function ExecucaoOSDashboard({ items, loading, onFilterAtrasadas, onFilterCriticas }: ExecucaoOSDashboardProps) {
-  // Calcular estatísticas
-  const stats: DashboardStats = useMemo(() => {
-    if (!items || items.length === 0) {
-      return {
-        total: 0,
-        programadas: 0,
-        emExecucao: 0,
-        pausadas: 0,
-        finalizadas: 0,
-        atrasadas: 0,
-        criticas: 0,
-      };
-    }
-
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-
-    return {
-      total: items.length,
-      programadas: items.filter(exec => exec.statusExecucao === 'PROGRAMADA' || exec.status === 'PROGRAMADA').length,
-      emExecucao: items.filter(exec => exec.statusExecucao === 'EM_EXECUCAO' || exec.status === 'EM_EXECUCAO').length,
-      pausadas: items.filter(exec => exec.statusExecucao === 'PAUSADA' || exec.status === 'PAUSADA').length,
-      finalizadas: items.filter(exec => exec.statusExecucao === 'FINALIZADA' || exec.status === 'FINALIZADA').length,
-      atrasadas: items.filter(exec => {
-        const status = exec.statusExecucao || exec.status;
-        // Match backend logic: exclude FINALIZADA and CANCELADA
-        if (status === 'FINALIZADA' || status === 'CANCELADA') {
-          return false;
-        }
-        // Check if data_hora_programada is before today
-        const dataProgramada = exec.os?.dataProgramada || exec.dataProgramada;
-        if (dataProgramada) {
-          const dataOs = new Date(dataProgramada);
-          dataOs.setHours(0, 0, 0, 0);
-          return dataOs < hoje;
-        }
-        return false;
-      }).length,
-      criticas: items.filter(exec => {
-        const prioridade = exec.prioridade || exec.os?.prioridade;
-        return prioridade === 'CRITICA' || prioridade === 'URGENTE';
-      }).length,
-    };
-  }, [items]);
+export function ExecucaoOSDashboard({ total, apiStats, loading, onFilterAtrasadas, onFilterCriticas }: ExecucaoOSDashboardProps) {
+  const stats = useMemo(() => ({
+    total,
+    emExecucao: (apiStats.em_execucao || 0) + (apiStats.pausadas || 0),
+    atrasadas: apiStats.atrasadas || 0,
+    criticas: apiStats.criticas || 0,
+  }), [total, apiStats]);
 
   // Apenas os 4 cards mais importantes e acionáveis (seguindo guia 5.6)
   const cards = [

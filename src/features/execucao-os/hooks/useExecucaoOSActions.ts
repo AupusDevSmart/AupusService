@@ -8,6 +8,9 @@ interface UseExecucaoOSActionsProps {
   onIniciar?: (item: ExecucaoOS) => Promise<void>;
   onPausar?: (item: ExecucaoOS) => Promise<void>;
   onRetomar?: (item: ExecucaoOS) => Promise<void>;
+  onExecutar?: (item: ExecucaoOS) => Promise<void>;
+  onAuditar?: (item: ExecucaoOS) => Promise<void>;
+  onReabrir?: (item: ExecucaoOS) => Promise<void>;
   onFinalizar?: (item: ExecucaoOS) => Promise<void>;
   onCancelar?: (item: ExecucaoOS) => Promise<void>;
 }
@@ -22,6 +25,9 @@ export function useExecucaoOSActions({
   onIniciar,
   onPausar,
   onRetomar,
+  onExecutar,
+  onAuditar,
+  onReabrir,
   onFinalizar,
   onCancelar,
 }: UseExecucaoOSActionsProps) {
@@ -144,6 +150,57 @@ export function useExecucaoOSActions({
   }, [onCancelar, onSuccess]);
 
   /**
+   * Handler para registrar execução (EM_EXECUCAO/PAUSADA -> EXECUTADA)
+   */
+  const handleExecutar = useCallback(async (execucao: ExecucaoOS) => {
+    if (!onExecutar) return;
+
+    try {
+      setLoading(true);
+      await onExecutar(execucao);
+    } catch (error) {
+      console.error('Erro ao registrar execução:', error);
+      alert('Erro ao registrar execução. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  }, [onExecutar]);
+
+  /**
+   * Handler para auditar execução (EXECUTADA -> AUDITADA)
+   */
+  const handleAuditar = useCallback(async (execucao: ExecucaoOS) => {
+    if (!onAuditar) return;
+
+    try {
+      setLoading(true);
+      await onAuditar(execucao);
+    } catch (error) {
+      console.error('Erro ao auditar execução:', error);
+      alert('Erro ao auditar execução. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  }, [onAuditar]);
+
+  /**
+   * Handler para reabrir execução (AUDITADA -> EM_EXECUCAO)
+   */
+  const handleReabrir = useCallback(async (execucao: ExecucaoOS) => {
+    if (!onReabrir) return;
+
+    try {
+      setLoading(true);
+      await onReabrir(execucao);
+    } catch (error) {
+      console.error('Erro ao reabrir execução:', error);
+      alert('Erro ao reabrir execução. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  }, [onReabrir]);
+
+  /**
    * Handler para gerenciar anexos
    */
   const handleAnexos = useCallback((execucao: ExecucaoOS) => {
@@ -166,6 +223,9 @@ export function useExecucaoOSActions({
     handleIniciar,
     handlePausar,
     handleRetomar,
+    handleExecutar,
+    handleAuditar,
+    handleReabrir,
     handleFinalizar,
     handleCancelar,
     handleAnexos,

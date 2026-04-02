@@ -6,18 +6,18 @@ import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@nexon/components/common/base-table/BaseTable';
 import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
 import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
-import { Button } from '@/components/ui/button';
-import { Plus, FileText, Calendar, Play, CheckCircle, XCircle, Download, Clock, AlertTriangle, Trash2 } from 'lucide-react';
+import { Plus, FileText, Calendar, CheckCircle, Clock } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { programacaoOSTableColumns } from '../config/table-config';
 import { programacaoOSFilterConfig } from '../config/filter-config';
 import { programacaoOSFormFields, programacaoOSFormGroups } from '../config/form-config';
 import { createProgramacaoOSTableActions } from '../config/actions-config';
 import { useProgramacaoOS } from '../hooks/useProgramacaoOS';
-import { WorkflowModal } from './WorkflowModal';
+import { ActionConfirmPanel, type PendingAction } from './ActionConfirmPanel';
 import { processarMateriaisComCustos, processarTecnicosComCustos } from '@/utils/recursos.utils';
 import type { ProgramacaoResponse, ProgramacaoDetalhesResponse, ProgramacaoFiltersDto, CreateProgramacaoDto } from '@/services/programacao-os.service';
 import { useUserStore } from '@/store/useUserStore';
+import { toast } from '@/hooks/use-toast';
 
 // Função utilitária para converter datas para o formato datetime-local
 const formatToDateTimeLocal = (dateValue: any): string => {
@@ -87,25 +87,19 @@ export function ProgramacaoOSPage() {
     totalPages: 0
   });
   const [stats, setStats] = useState<{
-    rascunho: number;
     pendentes: number;
-    em_analise: number;
     aprovadas: number;
-    rejeitadas: number;
+    finalizadas: number;
     canceladas: number;
   }>({
-    rascunho: 0,
     pendentes: 0,
-    em_analise: 0,
     aprovadas: 0,
-    rejeitadas: 0,
+    finalizadas: 0,
     canceladas: 0
   });
 
-  // Estados para workflow modal
-  const [showWorkflowModal, setShowWorkflowModal] = useState(false);
-  const [workflowAction, setWorkflowAction] = useState<'analisar' | 'aprovar' | 'rejeitar' | 'cancelar' | null>(null);
-  const [programacaoWorkflow, setProgramacaoWorkflow] = useState<ProgramacaoResponse | null>(null);
+  // Estado para ação pendente (view-first pattern)
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
   const {
     modalState,
@@ -118,9 +112,7 @@ export function ProgramacaoOSPage() {
     listarProgramacoes,
     criarProgramacao,
     atualizarProgramacao,
-    analisarProgramacao,
     aprovarProgramacao,
-    rejeitarProgramacao,
     cancelarProgramacao,
     deletarProgramacao,
     iniciarExecucao,
@@ -140,11 +132,9 @@ export function ProgramacaoOSPage() {
         totalPages: 0
       });
       setStats(response.stats || {
-        rascunho: 0,
         pendentes: 0,
-        em_analise: 0,
         aprovadas: 0,
-        rejeitadas: 0,
+        finalizadas: 0,
         canceladas: 0
       });
     } catch (error) {
@@ -158,11 +148,9 @@ export function ProgramacaoOSPage() {
         totalPages: 0
       });
       setStats({
-        rascunho: 0,
         pendentes: 0,
-        em_analise: 0,
         aprovadas: 0,
-        rejeitadas: 0,
+        finalizadas: 0,
         canceladas: 0
       });
     }
@@ -210,12 +198,10 @@ export function ProgramacaoOSPage() {
       const preparedData = {
         // Campos básicos
         descricao: data.descricao,
-        local: data.local,
-        ativo: data.ativo,
         condicoes: data.condicoes,
         tipo: data.tipo,
         prioridade: data.prioridade,
-        origem: data.origem?.tipo || 'MANUAL',
+        origem: data.origem?.tipo || 'ANOMALIA',
 
         // Relacionamentos de origem (só incluir se existirem)
         ...(data.origem?.plantaId && { planta_id: data.origem.plantaId }),
@@ -325,214 +311,100 @@ export function ProgramacaoOSPage() {
 
   // Handlers para ações da tabela
   const handleView = async (programacao: ProgramacaoResponse) => {
-    // ✅ OTIMIZAÇÃO: Abrir modal instantaneamente com dados básicos
-    openModal('view', programacao);
-
-    // Carregar dados completos em segundo plano
+    setPendingAction(null);
     try {
-      console.log('🔍 [ProgramacaoOSPage] Carregando dados completos em segundo plano:', programacao.id);
       const dadosCompletos = await buscarProgramacao(programacao.id);
-
-      console.log('📦 [ProgramacaoOSPage] Dados completos carregados, atualizando modal...');
-
-      // Atualizar modal com dados completos (só se ainda estiver aberto)
-      if (modalState.isOpen && modalState.entity?.id === programacao.id) {
-        openModal('view', dadosCompletos);
-      }
+      openModal('view', dadosCompletos);
     } catch (error) {
-      console.error('❌ [ProgramacaoOSPage] Erro ao carregar dados completos:', error);
-      // Modal já está aberto com dados básicos, não precisa fazer nada
+      console.error('Erro ao carregar dados completos:', error);
+      openModal('view', programacao);
     }
   };
 
   const handleEdit = async (programacao: ProgramacaoResponse) => {
-    // Verificar se pode ser editada
-    if (!['RASCUNHO', 'PENDENTE'].includes(programacao.status)) {
-      alert('Apenas programações em rascunho ou pendentes podem ser editadas');
+    if (programacao.status !== 'PENDENTE') {
+      alert('Apenas programacoes pendentes podem ser editadas');
       return;
     }
 
-    // ✅ OTIMIZAÇÃO: Abrir modal instantaneamente com dados básicos
-    openModal('edit', programacao);
-
-    // Carregar dados completos em segundo plano
     try {
       const dadosCompletos = await buscarProgramacao(programacao.id);
-
-      // Atualizar modal com dados completos (só se ainda estiver aberto)
-      if (modalState.isOpen && modalState.entity?.id === programacao.id) {
-        openModal('edit', dadosCompletos);
-      }
+      openModal('edit', dadosCompletos);
     } catch (error) {
       console.error('Erro ao carregar dados completos:', error);
-      // Modal já está aberto com dados básicos, não precisa fazer nada
+      openModal('edit', programacao);
     }
   };
 
   // ============================
-  // AÇÕES ESPECÍFICAS DO WORKFLOW
+  // AÇÕES ESPECÍFICAS DO WORKFLOW (view-first pattern)
   // ============================
 
-  // PENDENTE → EM_ANALISE
-  const handleAnalisar = async (programacao: ProgramacaoResponse, dadosAnalise?: any) => {
-    if (programacao.status !== 'PENDENTE') {
-      alert('Apenas programações pendentes podem ser analisadas');
-      return;
-    }
-
-    // Se não há dados, abrir modal
-    if (!dadosAnalise) {
-      setProgramacaoWorkflow(programacao);
-      setWorkflowAction('analisar');
-      setShowWorkflowModal(true);
-      return;
-    }
-
+  // Abrir view modal com ação pendente
+  const openViewWithAction = async (programacao: ProgramacaoResponse, action: PendingAction) => {
     try {
-      console.log('🔍 [DEBUG] Chamando analisarProgramacao:', {
-        id: programacao.id,
-        observacoes: dadosAnalise.observacoes_analise || '',
-        programacaoCompleta: programacao
-      });
-
-      await analisarProgramacao(programacao.id, dadosAnalise.observacoes_analise || '');
-      await carregarDados();
-      setShowWorkflowModal(false);
-
-      // Atualizar modal com dados mais recentes se estiver aberto
-      if (modalState.isOpen && modalState.entity?.id === programacao.id) {
-        const dadosAtualizados = await buscarProgramacao(programacao.id);
-        openModal(modalState.mode, dadosAtualizados);
-      }
-
-      alert('✅ Programação enviada para análise com sucesso!');
+      const dadosCompletos = await buscarProgramacao(programacao.id);
+      setPendingAction(action);
+      openModal('view', dadosCompletos);
     } catch (error) {
-      console.error('Erro ao analisar:', error);
-      alert('❌ Erro ao iniciar análise. Tente novamente.');
+      console.error('Erro ao buscar programacao completa:', error);
+      setPendingAction(action);
+      openModal('view', programacao);
     }
   };
 
-  // EM_ANALISE → APROVADA
-  const handleAprovar = async (programacao: ProgramacaoResponse, dadosAprovacao?: any) => {
-    if (programacao.status !== 'EM_ANALISE') {
-      alert('Apenas programações em análise podem ser aprovadas');
-      return;
-    }
-
-    // Se não há dados, abrir modal
-    if (!dadosAprovacao) {
-      setProgramacaoWorkflow(programacao);
-      setWorkflowAction('aprovar');
-      setShowWorkflowModal(true);
-      return;
-    }
-
-    try {
-      await aprovarProgramacao(
-        programacao.id,
-        dadosAprovacao.observacoes_aprovacao || '',
-        {
-          ajustes_orcamento: dadosAprovacao.ajustes_orcamento || null,
-          data_programada_sugerida: dadosAprovacao.data_programada_sugerida || null,
-          hora_programada_sugerida: dadosAprovacao.hora_programada_sugerida || null
-        }
-      );
-
-      await carregarDados();
-      setShowWorkflowModal(false);
-
-      // Atualizar modal com dados mais recentes se estiver aberto
-      if (modalState.isOpen && modalState.entity?.id === programacao.id) {
-        const dadosAtualizados = await buscarProgramacao(programacao.id);
-        openModal(modalState.mode, dadosAtualizados);
-      }
-
-      alert('✅ Programação aprovada! Uma ordem de serviço foi gerada automaticamente.');
-    } catch (error) {
-      console.error('Erro ao aprovar:', error);
-      alert('❌ Erro ao aprovar programação. Tente novamente.');
-    }
+  const handleAprovar = (programacao: ProgramacaoResponse) => {
+    openViewWithAction(programacao, 'aprovar');
   };
 
-  // EM_ANALISE → REJEITADA
-  const handleRejeitar = async (programacao: ProgramacaoResponse, dadosRejeicao?: any) => {
-    if (programacao.status !== 'EM_ANALISE') {
-      alert('Apenas programações em análise podem ser rejeitadas');
-      return;
-    }
-
-    // Se não há dados, abrir modal
-    if (!dadosRejeicao) {
-      setProgramacaoWorkflow(programacao);
-      setWorkflowAction('rejeitar');
-      setShowWorkflowModal(true);
-      return;
-    }
-
-    try {
-      if (!dadosRejeicao.motivo_rejeicao?.trim()) {
-        alert('⚠️ O motivo da rejeição é obrigatório');
-        return;
-      }
-
-      await rejeitarProgramacao(programacao.id, dadosRejeicao.motivo_rejeicao, dadosRejeicao.sugestoes_melhoria);
-      await carregarDados();
-      setShowWorkflowModal(false);
-
-      // Atualizar modal com dados mais recentes se estiver aberto
-      if (modalState.isOpen && modalState.entity?.id === programacao.id) {
-        const dadosAtualizados = await buscarProgramacao(programacao.id);
-        openModal(modalState.mode, dadosAtualizados);
-      }
-
-      alert('✅ Programação rejeitada com sucesso!');
-    } catch (error) {
-      console.error('Erro ao rejeitar:', error);
-      alert('❌ Erro ao rejeitar programação. Tente novamente.');
-    }
+  const handleCancelar = (programacao: ProgramacaoResponse) => {
+    openViewWithAction(programacao, 'cancelar');
   };
 
-  // QUALQUER_STATUS → CANCELADA (exceto APROVADA e CANCELADA)
-  const handleCancelar = async (programacao: ProgramacaoResponse, dadosCancelamento?: any) => {
-    if (['CANCELADA', 'APROVADA'].includes(programacao.status)) {
-      alert('⚠️ Esta programação não pode ser cancelada');
-      return;
-    }
+  // Confirmar ação pendente
+  const handleConfirmAction = async (observacoes?: string) => {
+    if (!pendingAction || !modalState.entity) return;
 
-    // Se não há dados, abrir modal
-    if (!dadosCancelamento) {
-      setProgramacaoWorkflow(programacao);
-      setWorkflowAction('cancelar');
-      setShowWorkflowModal(true);
-      return;
-    }
+    const entity = modalState.entity;
 
     try {
-      if (!dadosCancelamento.motivo_cancelamento?.trim()) {
-        alert('⚠️ O motivo do cancelamento é obrigatório');
-        return;
+      switch (pendingAction) {
+        case 'aprovar':
+          await aprovarProgramacao(entity.id, observacoes || '');
+          toast({
+            title: 'Programacao aprovada',
+            description: 'OS gerada automaticamente. Acesse Execucao de OS para acompanhar.',
+            action: (
+              <button
+                className="text-xs underline"
+                onClick={() => navigate('/execucao-os')}
+              >
+                Ir para Execucoes
+              </button>
+            ),
+          });
+          break;
+        case 'cancelar':
+          if (!observacoes?.trim()) {
+            alert('O motivo do cancelamento e obrigatorio');
+            return;
+          }
+          await cancelarProgramacao(entity.id, observacoes);
+          toast({ title: 'Programacao cancelada' });
+          break;
       }
 
-      await cancelarProgramacao(programacao.id, dadosCancelamento.motivo_cancelamento);
+      closeModal();
+      setPendingAction(null);
       await carregarDados();
-      setShowWorkflowModal(false);
-
-      // Atualizar modal com dados mais recentes se estiver aberto
-      if (modalState.isOpen && modalState.entity?.id === programacao.id) {
-        const dadosAtualizados = await buscarProgramacao(programacao.id);
-        openModal(modalState.mode, dadosAtualizados);
-      }
-
-      alert('✅ Programação cancelada com sucesso!');
     } catch (error) {
-      console.error('Erro ao cancelar:', error);
-      alert('❌ Erro ao cancelar programação. Tente novamente.');
+      console.error(`Erro ao ${pendingAction}:`, error);
     }
   };
 
   const handleDeletar = async (programacao: ProgramacaoResponse) => {
-    if (programacao.status === 'APROVADA') {
-      alert('Programações aprovadas não podem ser deletadas');
+    if (programacao.status !== 'PENDENTE') {
+      alert('Apenas programacoes pendentes podem ser deletadas');
       return;
     }
 
@@ -545,12 +417,6 @@ export function ProgramacaoOSPage() {
     } catch (error) {
       // console.error('Erro ao deletar:', error);
       alert('Erro ao deletar programação. Tente novamente.');
-    }
-  };
-
-  const handleIrParaExecucao = (programacao: ProgramacaoResponse) => {
-    if (programacao.ordem_servico?.id) {
-      navigate(`/execucao-os?execucaoId=${programacao.ordem_servico.id}`);
     }
   };
 
@@ -572,43 +438,13 @@ export function ProgramacaoOSPage() {
     }
   };
 
-  // Fechar workflow modal
-  const handleCloseWorkflowModal = () => {
-    setShowWorkflowModal(false);
-    setWorkflowAction(null);
-    setProgramacaoWorkflow(null);
-  };
-
-  // Confirmar ação do workflow modal
-  const handleConfirmWorkflowAction = async (data: any) => {
-    if (!programacaoWorkflow || !workflowAction) return;
-
-    switch (workflowAction) {
-      case 'analisar':
-        await handleAnalisar(programacaoWorkflow, data);
-        break;
-      case 'aprovar':
-        await handleAprovar(programacaoWorkflow, data);
-        break;
-      case 'rejeitar':
-        await handleRejeitar(programacaoWorkflow, data);
-        break;
-      case 'cancelar':
-        await handleCancelar(programacaoWorkflow, data);
-        break;
-    }
-  };
-
-  // Criar ações da tabela (sem useMemo para evitar problemas de referência)
+  // Criar ações da tabela
   const tableActions = createProgramacaoOSTableActions({
     onView: handleView,
     onEdit: handleEdit,
-    onAnalisar: handleAnalisar,
     onAprovar: handleAprovar,
-    onRejeitar: handleRejeitar,
     onCancelar: handleCancelar,
     onDelete: handleDeletar,
-    onIrParaExecucao: handleIrParaExecucao,
   });
 
   const getModalTitle = useMemo(() => {
@@ -623,15 +459,12 @@ export function ProgramacaoOSPage() {
   const getModalEntity = useMemo(() => {
     if (modalState.mode === 'create') {
       const baseEntity = {
-        // ✅ Campos obrigatórios
         descricao: '',
-        local: '',
-        ativo: '',
         condicoes: 'PARADO',
         tipo: 'PREVENTIVA',
         prioridade: 'MEDIA',
         origem: {
-          tipo: 'MANUAL',
+          tipo: 'ANOMALIA',
           anomaliaId: undefined,
           planoId: undefined,
           dados: {},
@@ -665,8 +498,6 @@ export function ProgramacaoOSPage() {
       codigo: entity.codigo,
       numeroOS: entity.codigo, // Alias para numeroOS
       descricao: entity.descricao,
-      local: entity.local,
-      ativo: entity.ativo,
 
       // Status e classificação
       status: entity.status,
@@ -743,15 +574,14 @@ export function ProgramacaoOSPage() {
       // Campos de auditoria
       criado_por: entity.criado_por,
       criado_por_id: entity.criado_por_id,
-      criadoPor: entity.criado_por, // Alias para formulário
+      data_criacao: formatToDateTimeLocal(entity.criado_em),
       analisado_por: entity.analisado_por,
-      analisadoPor: entity.analisado_por, // Alias para formulário
-      data_analise: entity.data_analise,
-      dataAnalise: entity.data_analise, // Alias para formulário
+      data_analise: formatToDateTimeLocal(entity.data_analise),
       aprovado_por: entity.aprovado_por,
-      aprovadoPor: entity.aprovado_por, // Alias para formulário
-      data_aprovacao: entity.data_aprovacao,
-      dataAprovacao: entity.data_aprovacao, // Alias para formulário
+      data_aprovacao: formatToDateTimeLocal(entity.data_aprovacao),
+      finalizado_por: entity.finalizado_por,
+      data_finalizacao: formatToDateTimeLocal(entity.data_finalizacao),
+      observacoes_finalizacao: entity.observacoes_finalizacao,
 
       // Mapear recursos da API para o formato do formulário COM cálculos
       materiais: processarMateriaisComCustos(
@@ -841,10 +671,10 @@ export function ProgramacaoOSPage() {
             <div className="bg-card border rounded-sm p-4 hover:border-gray-400 dark:hover:border-gray-600 transition-colors">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2">Em Análise</p>
-                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.em_analise}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2">Finalizadas</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.finalizadas}</p>
                 </div>
-                <AlertTriangle className="h-5 w-5 text-blue-600 dark:text-blue-500 flex-shrink-0" />
+                <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-500 flex-shrink-0" />
               </div>
             </div>
 
@@ -923,118 +753,14 @@ export function ProgramacaoOSPage() {
           width="w-[1200px]"
           loading={loading}
         >
-          {/* Botões de Ação no Modal */}
-          {modalState.mode !== 'create' && modalState.entity && (
-            <div className="border-t pt-4 mt-6">
-              <div className="flex flex-wrap gap-2">
-                {/* Analisar */}
-                {modalState.entity.status === 'PENDENTE' && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleAnalisar(modalState.entity!)}
-                    className="flex items-center gap-2"
-                  >
-                    <AlertTriangle className="h-4 w-4" />
-                    Analisar
-                  </Button>
-                )}
-
-                {/* Aprovar */}
-                {modalState.entity.status === 'EM_ANALISE' && (
-                  <Button
-                    type="button"
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleAprovar(modalState.entity!)}
-                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    Aprovar
-                  </Button>
-                )}
-
-                {/* Rejeitar */}
-                {modalState.entity.status === 'EM_ANALISE' && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleRejeitar(modalState.entity!)}
-                    className="flex items-center gap-2"
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Rejeitar
-                  </Button>
-                )}
-
-                {/* Cancelar */}
-                {!['CANCELADA', 'APROVADA'].includes(modalState.entity.status) && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCancelar(modalState.entity!)}
-                    className="flex items-center gap-2 border-orange-200 text-orange-700 hover:bg-orange-50"
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Cancelar
-                  </Button>
-                )}
-
-                {/* Deletar */}
-                {modalState.entity.status !== 'APROVADA' && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeletar(modalState.entity!)}
-                    className="flex items-center gap-2"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Deletar
-                  </Button>
-                )}
-
-                {/* Ir para Execução - Aparece quando programação está aprovada */}
-                {(() => {
-                  console.log('🔍 DEBUG Botão Ir para Execução:', {
-                    status: modalState.entity.status,
-                    isAprovada: modalState.entity.status === 'APROVADA',
-                    ordem_servico: modalState.entity.ordem_servico,
-                    ordem_servico_id: modalState.entity.ordem_servico?.id,
-                    shouldShowButton: modalState.entity.status === 'APROVADA' && modalState.entity.ordem_servico?.id
-                  });
-
-                  if (modalState.entity.status === 'APROVADA' && modalState.entity.ordem_servico?.id) {
-                    return (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => navigate(`/execucao-os?execucaoId=${modalState.entity.ordem_servico.id}`)}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-                      >
-                        <Play className="h-4 w-4" />
-                        Ir para Execução
-                      </Button>
-                    );
-                  }
-                  return null;
-                })()}
-              </div>
-            </div>
+          {/* Painel de confirmação de ação (view-first pattern) */}
+          {pendingAction && modalState.mode === 'view' && (
+            <ActionConfirmPanel
+              action={pendingAction}
+              onConfirm={handleConfirmAction}
+            />
           )}
         </BaseModal>
-
-        {/* Modal para ações de workflow */}
-        <WorkflowModal
-          isOpen={showWorkflowModal}
-          action={workflowAction}
-          programacao={programacaoWorkflow}
-          onClose={handleCloseWorkflowModal}
-          onConfirm={handleConfirmWorkflowAction}
-          loading={loading}
-        />
       </Layout.Main>
     </Layout>
   );

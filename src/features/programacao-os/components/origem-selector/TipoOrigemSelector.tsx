@@ -1,7 +1,7 @@
 // src/features/programacao-os/components/origem-selector/TipoOrigemSelector.tsx
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Settings, FilePenLine, FileText } from 'lucide-react';
+import { AlertTriangle, Settings, FilePenLine } from 'lucide-react';
 import { TipoOrigem } from './types';
 
 interface TipoOrigemSelectorProps {
@@ -12,7 +12,7 @@ interface TipoOrigemSelectorProps {
 
 /**
  * Componente para seleção do tipo de origem da ordem de serviço
- * Opções: Anomalia, Plano de Manutenção, Solicitação de Serviço ou Manual
+ * Opções: Anomalia, Plano de Manutenção, Solicitação de Serviço
  */
 export const TipoOrigemSelector: React.FC<TipoOrigemSelectorProps> = ({
   value,
@@ -20,7 +20,7 @@ export const TipoOrigemSelector: React.FC<TipoOrigemSelectorProps> = ({
   disabled = false
 }) => {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-3 gap-3">
       {/* Anomalia */}
       <Button
         type="button"
@@ -72,22 +72,6 @@ export const TipoOrigemSelector: React.FC<TipoOrigemSelectorProps> = ({
         <span className="text-[10px] opacity-70">Requisição</span>
       </Button>
 
-      {/* Manual */}
-      <Button
-        type="button"
-        variant={value === 'MANUAL' ? 'default' : 'outline'}
-        className={`h-24 flex-col gap-2 relative transition-all duration-200 ${
-          value === 'MANUAL'
-            ? 'ring-2 ring-primary ring-offset-2 bg-primary hover:bg-primary/90'
-            : 'hover:border-primary/50 hover:bg-primary/5'
-        }`}
-        onClick={() => onChange('MANUAL')}
-        disabled={disabled}
-      >
-        <FileText className={`h-6 w-6 ${value === 'MANUAL' ? 'text-primary-foreground' : 'text-blue-600'}`} />
-        <span className="text-xs font-medium">Manual</span>
-        <span className="text-[10px] opacity-70">Criação direta</span>
-      </Button>
     </div>
   );
 };

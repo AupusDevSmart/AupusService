@@ -1,10 +1,10 @@
-// src/features/planos-manutencao/components/PlantaEquipamentoController.tsx - OTIMIZADO
+// src/features/planos-manutencao/components/PlantaEquipamentoController.tsx
 import React from 'react';
 import { FormFieldProps } from '@/types/base';
 import { PlantasService, PlantaResponse } from '@/services/plantas.services';
 import { getUnidadesByPlanta } from '@/services/unidades.services';
 import { EquipamentosApiService, EquipamentoApiResponse } from '@/services/equipamentos.services';
-import { Loader2 } from 'lucide-react';
+import { ComboboxField } from '@/components/ui/combobox-field';
 
 interface PlantaEquipamentoValue {
   planta_id?: string;
@@ -147,6 +147,7 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
       try {
         const response = await equipamentosService.findAll({
           unidade_id: unidadeId,
+          semPlano: true,
           limit: 100
         });
         setEquipamentos(response.data);
@@ -201,109 +202,74 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
     });
   };
 
+  const plantaOptions = React.useMemo(
+    () => plantas.map((p) => ({ value: p.id, label: p.nome })),
+    [plantas],
+  );
+
+  const unidadeOptions = React.useMemo(
+    () => unidades.map((u) => ({ value: u.id, label: u.nome })),
+    [unidades],
+  );
+
+  const equipamentoOptions = React.useMemo(
+    () =>
+      equipamentos.map((e) => ({
+        value: e.id,
+        label: `${e.nome} - ${(e as any).tipo_equipamento || (e as any).tipo || 'N/A'}`,
+      })),
+    [equipamentos],
+  );
+
   return (
-    <div className="space-y-4">
-      {/* Planta */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">
-          Planta/Local <span className="text-red-500">*</span>
-        </label>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <ComboboxField
+        label="Planta/Local"
+        placeholder={loadingPlantas ? 'Carregando...' : 'Selecione a planta...'}
+        searchPlaceholder="Buscar planta..."
+        emptyText="Nenhuma planta encontrada."
+        options={plantaOptions}
+        value={plantaId}
+        onChange={handlePlantaChange}
+        disabled={disabled || loadingPlantas}
+        required
+      />
 
-        {loadingPlantas && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Carregando plantas...</span>
-          </div>
-        )}
+      <ComboboxField
+        label="Unidade"
+        placeholder={
+          !plantaId
+            ? 'Selecione uma planta primeiro'
+            : loadingUnidades
+              ? 'Carregando...'
+              : 'Selecione a unidade...'
+        }
+        searchPlaceholder="Buscar unidade..."
+        emptyText="Nenhuma unidade encontrada."
+        options={unidadeOptions}
+        value={unidadeId}
+        onChange={handleUnidadeChange}
+        disabled={disabled || !plantaId || loadingUnidades}
+        required
+      />
 
-        <select
-          value={plantaId}
-          onChange={(e) => handlePlantaChange(e.target.value)}
-          disabled={disabled || loadingPlantas}
-          className="w-full p-2 border rounded-md bg-background text-foreground"
-          required
-        >
-          <option value="">
-            {loadingPlantas ? 'Carregando plantas...' : 'Selecione a planta...'}
-          </option>
-          {plantas.map((planta) => (
-            <option key={planta.id} value={planta.id}>
-              {planta.nome}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Unidade */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">
-          Unidade <span className="text-red-500">*</span>
-        </label>
-
-        {loadingUnidades && plantaId && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Carregando unidades...</span>
-          </div>
-        )}
-
-        <select
-          value={unidadeId}
-          onChange={(e) => handleUnidadeChange(e.target.value)}
-          disabled={disabled || !plantaId || loadingUnidades}
-          className="w-full p-2 border rounded-md bg-background text-foreground"
-          required
-        >
-          <option value="">
-            {!plantaId
-              ? 'Primeiro selecione uma planta'
-              : loadingUnidades
-                ? 'Carregando unidades...'
-                : 'Selecione a unidade...'}
-          </option>
-          {unidades.map((unidade) => (
-            <option key={unidade.id} value={unidade.id}>
-              {unidade.nome}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Equipamento */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">
-          Equipamento <span className="text-red-500">*</span>
-        </label>
-
-        {loadingEquipamentos && unidadeId && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Carregando equipamentos...</span>
-          </div>
-        )}
-
-        <select
-          value={equipamentoId}
-          onChange={(e) => handleEquipamentoChange(e.target.value)}
-          disabled={disabled || !unidadeId || loadingEquipamentos}
-          className="w-full p-2 border rounded-md bg-background text-foreground"
-          required
-        >
-          <option value="">
-            {!unidadeId
-              ? 'Primeiro selecione uma unidade'
-              : loadingEquipamentos
-                ? 'Carregando equipamentos...'
-                : 'Selecione o equipamento...'}
-          </option>
-          {equipamentos.map((equipamento) => (
-            <option key={equipamento.id} value={equipamento.id}>
-              {equipamento.nome} -{' '}
-              {(equipamento as any).tipo_equipamento || (equipamento as any).tipo || 'N/A'}
-            </option>
-          ))}
-        </select>
-      </div>
+      <ComboboxField
+        label="Equipamento"
+        placeholder={
+          !unidadeId
+            ? 'Selecione uma unidade primeiro'
+            : loadingEquipamentos
+              ? 'Carregando...'
+              : 'Selecione o equipamento...'
+        }
+        searchPlaceholder="Buscar equipamento..."
+        emptyText="Nenhum equipamento encontrado."
+        options={equipamentoOptions}
+        value={equipamentoId}
+        onChange={handleEquipamentoChange}
+        disabled={disabled || !unidadeId || loadingEquipamentos}
+        required
+      />
     </div>
   );
 };

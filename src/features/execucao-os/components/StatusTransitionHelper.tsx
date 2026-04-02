@@ -5,9 +5,11 @@ import {
   Play,
   Pause,
   CheckCircle,
+  CheckCircle2,
+  Shield,
   X,
   Clock,
-  FileText,
+  RotateCcw,
 } from 'lucide-react';
 
 interface StatusTransitionHelperProps {
@@ -16,46 +18,61 @@ interface StatusTransitionHelperProps {
 
 export function StatusTransitionHelper({ currentStatus }: StatusTransitionHelperProps) {
   const statusConfig = {
-    // PLANEJADA removido - OS já começam como PROGRAMADA
-    PROGRAMADA: {
-      label: 'Programada',
+    PENDENTE: {
+      label: 'Pendente',
       icon: Clock,
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-100 dark:bg-gray-800',
+      color: 'text-amber-500',
+      bgColor: 'bg-amber-50 dark:bg-amber-900/20',
       nextStates: ['EM_EXECUCAO', 'CANCELADA'],
-      description: 'OS agendada com data/hora definida',
+      description: 'OS criada, aguardando inicio',
     },
     EM_EXECUCAO: {
-      label: 'Em Execução',
+      label: 'Em Execucao',
       icon: Play,
-      color: 'text-gray-700',
-      bgColor: 'bg-gray-100 dark:bg-gray-800',
-      nextStates: ['PAUSADA', 'FINALIZADA', 'CANCELADA'],
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+      nextStates: ['PAUSADA', 'EXECUTADA', 'CANCELADA'],
       description: 'OS sendo executada pela equipe',
     },
     PAUSADA: {
       label: 'Pausada',
       icon: Pause,
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-100 dark:bg-gray-800',
-      nextStates: ['EM_EXECUCAO', 'FINALIZADA', 'CANCELADA'],
-      description: 'Execução temporariamente pausada',
+      color: 'text-orange-500',
+      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+      nextStates: ['EM_EXECUCAO', 'EXECUTADA', 'CANCELADA'],
+      description: 'Execucao temporariamente pausada',
+    },
+    EXECUTADA: {
+      label: 'Executada',
+      icon: CheckCircle,
+      color: 'text-teal-500',
+      bgColor: 'bg-teal-50 dark:bg-teal-900/20',
+      nextStates: ['AUDITADA'],
+      description: 'Execucao concluida, aguardando auditoria',
+    },
+    AUDITADA: {
+      label: 'Auditada',
+      icon: Shield,
+      color: 'text-purple-500',
+      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+      nextStates: ['EM_EXECUCAO', 'FINALIZADA'],
+      description: 'Auditoria de qualidade realizada',
     },
     FINALIZADA: {
       label: 'Finalizada',
-      icon: CheckCircle,
-      color: 'text-gray-700',
-      bgColor: 'bg-gray-100 dark:bg-gray-800',
+      icon: CheckCircle2,
+      color: 'text-emerald-500',
+      bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
       nextStates: [],
-      description: 'OS concluída com sucesso',
+      description: 'OS encerrada definitivamente',
     },
     CANCELADA: {
       label: 'Cancelada',
       icon: X,
-      color: 'text-gray-500',
+      color: 'text-gray-400',
       bgColor: 'bg-gray-100 dark:bg-gray-800',
       nextStates: [],
-      description: 'OS cancelada antes da conclusão',
+      description: 'OS cancelada',
     },
   };
 
@@ -86,11 +103,11 @@ export function StatusTransitionHelper({ currentStatus }: StatusTransitionHelper
         </div>
       </div>
 
-      {/* Próximas Transições Possíveis */}
+      {/* Proximas Transicoes Possiveis */}
       {current.nextStates.length > 0 && (
         <div>
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Ações Disponíveis
+            Acoes Disponiveis
           </h4>
           <div className="space-y-2">
             {current.nextStates.map((nextState) => {
@@ -98,26 +115,33 @@ export function StatusTransitionHelper({ currentStatus }: StatusTransitionHelper
               if (!next) return null;
               const NextIcon = next.icon;
 
-              // Determinar a ação baseada na transição
               let actionLabel = '';
               let actionDescription = '';
 
-              // PLANEJADA removido - OS já começam como PROGRAMADA
-              if (currentStatus === 'PROGRAMADA' && nextState === 'EM_EXECUCAO') {
+              if (currentStatus === 'PENDENTE' && nextState === 'EM_EXECUCAO') {
                 actionLabel = 'Iniciar';
-                actionDescription = 'Começar a execução com equipe definida';
+                actionDescription = 'Comecar a execucao com equipe definida';
               } else if (currentStatus === 'EM_EXECUCAO' && nextState === 'PAUSADA') {
                 actionLabel = 'Pausar';
                 actionDescription = 'Interromper temporariamente';
-              } else if (currentStatus === 'EM_EXECUCAO' && nextState === 'FINALIZADA') {
-                actionLabel = 'Finalizar';
-                actionDescription = 'Concluir com resultados';
+              } else if (currentStatus === 'EM_EXECUCAO' && nextState === 'EXECUTADA') {
+                actionLabel = 'Executar';
+                actionDescription = 'Registrar resultados da execucao';
               } else if (currentStatus === 'PAUSADA' && nextState === 'EM_EXECUCAO') {
                 actionLabel = 'Retomar';
-                actionDescription = 'Continuar execução';
-              } else if (currentStatus === 'PAUSADA' && nextState === 'FINALIZADA') {
+                actionDescription = 'Continuar execucao';
+              } else if (currentStatus === 'PAUSADA' && nextState === 'EXECUTADA') {
+                actionLabel = 'Executar';
+                actionDescription = 'Registrar resultados da execucao';
+              } else if (currentStatus === 'EXECUTADA' && nextState === 'AUDITADA') {
+                actionLabel = 'Auditar';
+                actionDescription = 'Realizar auditoria de qualidade';
+              } else if (currentStatus === 'AUDITADA' && nextState === 'EM_EXECUCAO') {
+                actionLabel = 'Reabrir';
+                actionDescription = 'Reabrir para nova execucao';
+              } else if (currentStatus === 'AUDITADA' && nextState === 'FINALIZADA') {
                 actionLabel = 'Finalizar';
-                actionDescription = 'Concluir diretamente';
+                actionDescription = 'Encerrar OS definitivamente';
               } else if (nextState === 'CANCELADA') {
                 actionLabel = 'Cancelar';
                 actionDescription = 'Cancelar com motivo';
@@ -135,7 +159,7 @@ export function StatusTransitionHelper({ currentStatus }: StatusTransitionHelper
                       {actionLabel}
                     </span>
                     <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">
-                      → {next.label}
+                      &rarr; {next.label}
                     </span>
                     <div className="text-xs text-gray-500 dark:text-gray-500">
                       {actionDescription}
@@ -152,7 +176,7 @@ export function StatusTransitionHelper({ currentStatus }: StatusTransitionHelper
       {current.nextStates.length === 0 && (
         <div className="mt-3 p-2 bg-gray-100 dark:bg-gray-800 rounded text-center">
           <span className="text-sm text-gray-600 dark:text-gray-400">
-            Estado final - Nenhuma ação disponível
+            Estado final - Nenhuma acao disponivel
           </span>
         </div>
       )}

@@ -5,7 +5,7 @@ import { api } from '@/config/api';
 // ENUMS E TIPOS (alinhados com o backend)
 // ============================================================================
 
-export type StatusProgramacao = 'RASCUNHO' | 'PENDENTE' | 'EM_ANALISE' | 'APROVADA' | 'REJEITADA' | 'CANCELADA';
+export type StatusProgramacao = 'PENDENTE' | 'APROVADA' | 'FINALIZADA' | 'CANCELADA';
 export type TipoManutencao = 'PREVENTIVA' | 'PREDITIVA' | 'CORRETIVA' | 'INSPECAO';
 export type PrioridadeProgramacao = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA';
 export type OrigemProgramacao = 'ANOMALIA' | 'PLANO_MANUTENCAO' | 'TAREFA';
@@ -68,19 +68,12 @@ export interface CreateProgramacaoDto {
 
 export interface UpdateProgramacaoDto extends Partial<CreateProgramacaoDto> {}
 
-export interface AnalisarProgramacaoDto {
-  observacoes_analise?: string;
-}
-
 export interface AprovarProgramacaoDto {
-  observacoes_aprovacao?: string;
-  ajustes_orcamento?: number;
-  data_hora_programada_sugerida?: string; // ISO DateTime string
+  observacoes?: string;
 }
 
-export interface RejeitarProgramacaoDto {
-  motivo_rejeicao: string;
-  sugestoes_melhoria?: string;
+export interface FinalizarProgramacaoDto {
+  observacoes?: string;
 }
 
 export interface CancelarProgramacaoDto {
@@ -248,6 +241,10 @@ export interface ProgramacaoResponse {
   aprovado_por?: string;
   aprovado_por_id?: string;
   data_aprovacao?: string;
+  finalizado_por?: string;
+  finalizado_por_id?: string;
+  data_finalizacao?: string;
+  observacoes_finalizacao?: string;
   materiais?: MaterialProgramacaoResponse[];
   ferramentas?: FerramentaProgramacaoResponse[];
   tecnicos?: TecnicoProgramacaoResponse[];
@@ -276,11 +273,9 @@ export interface ProgramacaoDetalhesResponse extends ProgramacaoResponse {
 }
 
 export interface ProgramacaoStatsResponse {
-  rascunho: number;
   pendentes: number;
-  em_analise: number;
   aprovadas: number;
-  rejeitadas: number;
+  finalizadas: number;
   canceladas: number;
 }
 
@@ -393,50 +388,20 @@ export class ProgramacaoOSApiService {
   // OPERAÇÕES DE WORKFLOW
   // ============================================================================
 
-  async analisar(id: string, data: AnalisarProgramacaoDto): Promise<{ message: string }> {
-    console.log('🔍 [DEBUG] PROGRAMACAO-OS API: Iniciando análise da programação:', {
-      url: `${this.baseEndpoint}/${id}/analisar`,
-      id,
-      data,
-      fullUrl: `${this.baseEndpoint}/${id}/analisar`
-    });
-
-    try {
-      const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/analisar`, data);
-      console.log('✅ PROGRAMACAO-OS API: Análise iniciada:', response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error('💥 [DEBUG] PROGRAMACAO-OS API: Erro ao analisar programação:', {
-        error,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-      throw error;
-    }
-  }
-
   async aprovar(id: string, data: AprovarProgramacaoDto): Promise<{ message: string }> {
-    // // console.log('✅ PROGRAMACAO-OS API: Aprovando programação:', id, data);
-
     try {
       const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/aprovar`, data);
-      // // console.log('✅ PROGRAMACAO-OS API: Programação aprovada:', response.data);
       return response.data;
     } catch (error: any) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao aprovar programação:', error);
       throw error;
     }
   }
 
-  async rejeitar(id: string, data: RejeitarProgramacaoDto): Promise<{ message: string }> {
-    // // console.log('❌ PROGRAMACAO-OS API: Rejeitando programação:', id, data);
-
+  async finalizar(id: string, data: FinalizarProgramacaoDto): Promise<{ message: string }> {
     try {
-      const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/rejeitar`, data);
-      // // console.log('✅ PROGRAMACAO-OS API: Programação rejeitada:', response.data);
+      const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/finalizar`, data);
       return response.data;
     } catch (error: any) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao rejeitar programação:', error);
       throw error;
     }
   }

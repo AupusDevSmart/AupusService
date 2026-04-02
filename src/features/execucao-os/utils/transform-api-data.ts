@@ -35,6 +35,14 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
   const dataInicioReal = separarDataHora(apiData.data_hora_inicio_real);
   const dataFimReal = separarDataHora(apiData.data_hora_fim_real);
 
+  // Formatar para datetime-local (YYYY-MM-DDTHH:mm)
+  const toDatetimeLocal = (isoString?: string): string => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
   // Transformar checklist_atividades para camelCase
   const checklistAtividades: ChecklistAtividade[] = (apiData.checklist_atividades || []).map((item: any) => ({
     id: item.id,
@@ -64,7 +72,9 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     numero_os: apiData.numero_os || apiData.codigo,
     numeroOS: apiData.numero_os || apiData.codigo,
     descricao: apiData.descricao,
+    descricaoOS: apiData.descricao,
     local: apiData.local,
+    localAtivo: [apiData.local, apiData.ativo].filter(Boolean).join(' - '),
     ativo: apiData.ativo,
 
     // Classificação
@@ -72,7 +82,9 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     status: apiData.status,
     statusExecucao: apiData.status,
     tipo: apiData.tipo,
+    tipoOS: apiData.tipo,
     prioridade: apiData.prioridade,
+    prioridadeOS: apiData.prioridade,
     origem: apiData.origem,
 
     // Relacionamentos de origem
@@ -98,9 +110,11 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     data_hora_inicio_real: apiData.data_hora_inicio_real,
     dataInicioReal: dataInicioReal.data,
     horaInicioReal: dataInicioReal.hora,
+    dataHoraInicioReal: toDatetimeLocal(apiData.data_hora_inicio_real),
     data_hora_fim_real: apiData.data_hora_fim_real,
     dataFimReal: dataFimReal.data,
     horaFimReal: dataFimReal.hora,
+    dataHoraFimReal: toDatetimeLocal(apiData.data_hora_fim_real),
 
     // Equipe presente
     equipe_presente: apiData.equipe_presente || [],
@@ -118,6 +132,8 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     observacoesInicio: apiData.observacoes_inicio,
     observacoesFinalizacao: apiData.observacoes_finalizacao,
     motivo_cancelamento: apiData.motivo_cancelamento,
+    motivoCancelamento: apiData.motivo_cancelamento,
+    motivoPausas: apiData.motivo_pausa,
 
     // Resultados da execução
     resultado_servico: apiData.resultado_servico,
@@ -126,11 +142,13 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     problemasEncontrados: apiData.problemas_encontrados,
     recomendacoes: apiData.recomendacoes,
     proxima_manutencao: apiData.proxima_manutencao,
+    proximaManutencao: toDatetimeLocal(apiData.proxima_manutencao),
 
     // Qualidade
     avaliacao_qualidade: apiData.avaliacao_qualidade,
     avaliacaoQualidade: apiData.avaliacao_qualidade,
     observacoes_qualidade: apiData.observacoes_qualidade,
+    observacoesQualidade: apiData.observacoes_qualidade,
 
     // Auditoria
     criado_por: apiData.criado_por,
@@ -139,9 +157,13 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     programado_por_id: apiData.programado_por_id,
     finalizado_por: apiData.finalizado_por,
     finalizado_por_id: apiData.finalizado_por_id,
+    finalizadoPor: apiData.finalizado_por,
+    dataFinalizacao: toDatetimeLocal(apiData.data_hora_fim_real),
     aprovado_por: apiData.aprovado_por,
     aprovado_por_id: apiData.aprovado_por_id,
+    aprovadoPor: apiData.aprovado_por,
     data_aprovacao: apiData.data_aprovacao,
+    dataAprovacao: toDatetimeLocal(apiData.data_aprovacao),
 
     // Relacionamentos (arrays)
     materiais: apiData.materiais || [],
@@ -184,6 +206,15 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
       origem: apiData.origem,
       dados_origem: apiData.dados_origem,
     },
+
+    // Detalhes da execucao (aliases camelCase para form-config)
+    atividadesRealizadas: apiData.atividades_realizadas,
+    checklistConcluido: apiData.checklist_concluido,
+    procedimentosSeguidos: apiData.procedimentos_seguidos,
+    equipamentosSeguranca: apiData.equipamentos_seguranca,
+    incidentesSeguranca: apiData.incidentes_seguranca,
+    medidasSegurancaAdicionais: apiData.medidas_seguranca_adicionais,
+    custosAdicionais: apiData.custos_adicionais,
 
     // Campos computados
     tempoTotalExecucao: calcularTempoExecucao(),

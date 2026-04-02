@@ -60,7 +60,7 @@ export const useOrigemDados = () => {
         limit: 100,
         search: '',
         periodo: 'all',
-        status: 'all', // ✅ MOSTRAR TODAS as anomalias (não apenas EM_ANALISE)
+        status: 'REGISTRADA', // Apenas anomalias registradas podem gerar programação
         prioridade: 'all',
         origem: 'all',
         // ✅ NOVO: Filtrar por planta e unidade
@@ -76,9 +76,8 @@ export const useOrigemDados = () => {
 
       const anomaliasFiltradas = response.data
         .filter(anomalia => {
-          // ✅ PERMITIR: AGUARDANDO, EM_ANALISE (podem gerar OS)
-          // ❌ BLOQUEAR: OS_GERADA, RESOLVIDA, CANCELADA (já tem OS ou não faz sentido)
-          const statusPermitido = ['AGUARDANDO', 'EM_ANALISE'].includes(anomalia.status);
+          // Apenas anomalias REGISTRADA podem gerar OS
+          const statusPermitido = anomalia.status === 'REGISTRADA';
 
           if (!statusPermitido) {
             console.log('⚠️ [useOrigemDados] Anomalia bloqueada por status:', {
@@ -257,7 +256,7 @@ export const useOrigemDados = () => {
       const response = await solicitacoesServicoService.findAll({
         page: 1,
         limit: 100,
-        status: 'APROVADA', // Apenas aprovadas
+        status: 'REGISTRADA', // Apenas registradas
         plantaId: plantaId || undefined
       });
 
@@ -434,7 +433,7 @@ export const useOrigemDados = () => {
 
   // Verificar se uma anomalia pode gerar OS
   const podeAnomaliaGerarOS = useCallback((anomalia: AnomaliaDisponivel): boolean => {
-    return ['AGUARDANDO', 'EM_ANALISE'].includes(anomalia.status);
+    return anomalia.status === 'REGISTRADA';
   }, []);
 
   // Verificar se um plano está disponível

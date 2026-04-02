@@ -1,15 +1,16 @@
-// src/features/anomalias/config/form-config.tsx - VERSÃO CORRIGIDA
+// src/features/anomalias/config/form-config.tsx
 import { FormField } from '@/types/base';
 import { LocalizacaoController } from '../components/LocalizacaoController';
 import { AnexosUpload } from '../components/AnexosUpload';
 
 // ✅ SOLUÇÃO: Extrair renders como funções estáveis FORA do array
-const LocalizacaoRender = ({ value, onChange, disabled, mode }: any) => (
-  <LocalizacaoController 
-    value={value} 
-    onChange={onChange} 
+const LocalizacaoRender = ({ value, onChange, disabled, mode, entity }: any) => (
+  <LocalizacaoController
+    value={value}
+    onChange={onChange}
     disabled={disabled}
     mode={mode}
+    entity={entity}
   />
 );
 
@@ -48,23 +49,6 @@ export const anomaliasFormFields: FormField[] = [
 
   // Classificação
   {
-    key: 'status',
-    label: 'Status',
-    type: 'select', // Select com busca (combobox não implementado ainda no BaseForm)
-    required: true,
-    disabled: true, // Status é readonly, alterado automaticamente pelo sistema
-    options: [
-      { value: 'AGUARDANDO', label: 'Aguardando' },
-      { value: 'EM_ANALISE', label: 'Em Análise' },
-      { value: 'OS_GERADA', label: 'OS Gerada' },
-      { value: 'RESOLVIDA', label: 'Resolvida' },
-      { value: 'CANCELADA', label: 'Cancelada' }
-    ],
-    group: 'classificacao',
-    visibleInModes: ['view', 'edit'], // Mostrar em view e edit, ocultar em create
-    width: 'half', // Layout 2x2 em telas maiores
-  },
-  {
     key: 'condicao',
     label: 'Condição',
     type: 'select', // Select com busca (combobox não implementado ainda no BaseForm)
@@ -93,7 +77,7 @@ export const anomaliasFormFields: FormField[] = [
   {
     key: 'prioridade',
     label: 'Prioridade',
-    type: 'select', // Select com busca (combobox não implementado ainda no BaseForm)
+    type: 'select',
     defaultValue: 'MEDIA',
     required: true,
     options: [
@@ -103,7 +87,21 @@ export const anomaliasFormFields: FormField[] = [
       { value: 'CRITICA', label: 'Crítica' }
     ],
     group: 'classificacao',
-    width: 'half', // Layout 2x2 em telas maiores
+    width: 'half',
+  },
+  {
+    key: 'status',
+    label: 'Status',
+    type: 'select',
+    disabled: true,
+    defaultValue: 'REGISTRADA',
+    options: [
+      { value: 'REGISTRADA', label: 'Registrada' },
+      { value: 'PROGRAMADA', label: 'Programada' },
+      { value: 'FINALIZADA', label: 'Finalizada' },
+    ],
+    group: 'classificacao',
+    width: 'half',
   },
 
   // Observações
@@ -117,22 +115,15 @@ export const anomaliasFormFields: FormField[] = [
     colSpan: 2, // ✅ Ocupa 100% da largura (S maiúsculo!)
   },
 
-  // ✅ NOVO: Observações da análise (só visível em modo view quando analisada)
+  // Instrucoes vinculadas (editável)
   {
-    key: 'observacoes_analise',
-    label: 'Observações da Análise',
-    type: 'textarea',
+    key: 'instrucoes_ids',
+    label: '',
+    type: 'custom',
     required: false,
-    disabled: true, // Sempre disabled pois é apenas para visualização
-    placeholder: 'Nenhuma observação registrada na análise',
-    group: 'analise',
-    visibleInModes: ['view'], // Só aparece no modo visualização
-    colSpan: 2, // ✅ Ocupa 100% da largura (S maiúsculo!)
-    condition: (entity: any) => {
-      // Só mostrar se tiver observações de análise
-      return entity?.observacoes_analise && entity.observacoes_analise.trim() !== '';
-    }
-  },
+    colSpan: 2,
+    group: 'instrucoes_vinculadas',
+  } as any,
 
   // Anexos - ✅ CORRIGIDO: Usar função estável
   {

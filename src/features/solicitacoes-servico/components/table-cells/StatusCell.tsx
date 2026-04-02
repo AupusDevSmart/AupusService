@@ -10,14 +10,9 @@ const statusConfig: Record<
   StatusSolicitacaoServico,
   { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
 > = {
-  RASCUNHO: { label: 'Rascunho', variant: 'outline' },
-  AGUARDANDO: { label: 'Aguardando', variant: 'secondary' },
-  EM_ANALISE: { label: 'Em Análise', variant: 'default' },
-  APROVADA: { label: 'Aprovada', variant: 'default' },
-  REJEITADA: { label: 'Rejeitada', variant: 'destructive' },
-  EM_EXECUCAO: { label: 'Em Execução', variant: 'default' },
-  CONCLUIDA: { label: 'Concluída', variant: 'default' },
-  CANCELADA: { label: 'Cancelada', variant: 'destructive' },
+  REGISTRADA: { label: 'Registrada', variant: 'outline' },
+  PROGRAMADA: { label: 'Programada', variant: 'default' },
+  FINALIZADA: { label: 'Finalizada', variant: 'secondary' },
 };
 
 export function StatusCell({ status }: StatusCellProps) {

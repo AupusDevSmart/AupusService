@@ -3,19 +3,20 @@ import { useState, useCallback } from 'react';
 import { PlantasService } from '@/services/plantas.services';
 import { unidadesService } from '@/services/unidades.services';
 import { usePlanosManutencaoApi } from '@/features/planos-manutencao/hooks/usePlanosManutencaoApi';
+import { instrucoesApi } from '@/services/instrucoes.services';
 import { tarefasFilterConfig } from '../config/filter-config';
 import { tarefasFormFields } from '../config/form-config';
 import { FilterConfig } from '@/types/base';
 import { QueryTarefasApiParams } from '@/services/tarefas.services';
 
-export function useTarefasFilters(initialFilters: QueryTarefasApiParams) {
+export function useTarefasFilters(initialFilters: QueryTarefasApiParams, onAnexosCopied?: (files: File[]) => void) {
   const [filterConfig, setFilterConfig] = useState<FilterConfig[]>(tarefasFilterConfig);
   const [formFields, setFormFields] = useState(tarefasFormFields);
   const { fetchPlanos } = usePlanosManutencaoApi();
 
   const loadFilterOptions = useCallback(async (plantaId?: string, unidadeId?: string) => {
     try {
-      const [plantasResponse, unidadesResponse, planosResponse] = await Promise.all([
+      const [plantasResponse, unidadesResponse, planosResponse, instrucoesResponse] = await Promise.all([
         PlantasService.getAllPlantas({ limit: 100 }),
         unidadesService.listarUnidades({
           limit: 100,
@@ -24,7 +25,8 @@ export function useTarefasFilters(initialFilters: QueryTarefasApiParams) {
         fetchPlanos({
           limit: 100,
           ...(unidadeId && unidadeId !== 'all' ? { unidade_id: unidadeId } : {})
-        })
+        }),
+        instrucoesApi.findAll({ limit: 100, status: 'ATIVA' as any })
       ]);
 
       // Atualizar configuração dos filtros
@@ -88,8 +90,18 @@ export function useTarefasFilters(initialFilters: QueryTarefasApiParams) {
           };
         }
 
-        // Planta e Equipamento não precisam de opções
-        // São campos informativos (read-only) que mostram os dados da entidade
+        if (field.key === 'instrucao_id') {
+          return {
+            ...field,
+            options: (instrucoesResponse.data || [])
+              .filter((inst: any) => inst.id && inst.nome)
+              .map((inst: any) => ({
+                value: inst.id,
+                label: `${inst.tag ? inst.tag + ' - ' : ''}${inst.nome}`
+              })),
+            onAnexosCopied
+          };
+        }
 
         return field;
       });

@@ -5,16 +5,12 @@ import { Anomalia } from '../types';
 interface UseAnomaliasActionsProps {
   openModal: (mode: 'create' | 'edit' | 'view', entity?: Anomalia) => void;
   deleteItem: (id: string) => Promise<boolean>;
-  gerarProgramacaoOS: (anomaliaId: string) => Promise<any>;
-  cancelar: (anomaliaId: string, motivo?: string) => Promise<Anomalia>;
   onSuccess: () => void | Promise<void>;
 }
 
 export function useAnomaliasActions({
   openModal,
   deleteItem,
-  gerarProgramacaoOS,
-  cancelar,
   onSuccess,
 }: UseAnomaliasActionsProps) {
   const handleView = useCallback(
@@ -26,11 +22,10 @@ export function useAnomaliasActions({
 
   const handleEdit = useCallback(
     (anomalia: Anomalia) => {
-      // Verificar se a anomalia pode ser editada
-      if (anomalia.status !== 'AGUARDANDO' && anomalia.status !== 'EM_ANALISE') {
+      if (anomalia.status !== 'REGISTRADA') {
         alert(
-          `Não é possível editar uma anomalia com status "${anomalia.status}". ` +
-          'Apenas anomalias "AGUARDANDO" ou "EM ANÁLISE" podem ser editadas.'
+          `Nao e possivel editar uma anomalia com status "${anomalia.status}". ` +
+          'Apenas anomalias "REGISTRADA" podem ser editadas.'
         );
         return;
       }
@@ -41,11 +36,10 @@ export function useAnomaliasActions({
 
   const handleDelete = useCallback(
     async (anomalia: Anomalia) => {
-      // Verificar se a anomalia pode ser deletada
-      if (anomalia.status !== 'AGUARDANDO' && anomalia.status !== 'CANCELADA') {
+      if (anomalia.status !== 'REGISTRADA') {
         alert(
-          `Não é possível excluir uma anomalia com status "${anomalia.status}". ` +
-          'Apenas anomalias "AGUARDANDO" ou "CANCELADA" podem ser excluídas.'
+          `Nao e possivel excluir uma anomalia com status "${anomalia.status}". ` +
+          'Apenas anomalias "REGISTRADA" podem ser excluidas.'
         );
         return;
       }
@@ -67,72 +61,9 @@ export function useAnomaliasActions({
     [deleteItem, onSuccess]
   );
 
-  const handleGerarProgramacaoOS = useCallback(
-    async (anomalia: Anomalia) => {
-      // Verificar se pode programar OS
-      if (
-        anomalia.status !== 'AGUARDANDO' &&
-        anomalia.status !== 'EM_ANALISE'
-      ) {
-        alert(
-          'Só é possível programar OS para anomalias com status "AGUARDANDO" ou "EM ANÁLISE".'
-        );
-        return;
-      }
-
-      const confirmProgramarOS = confirm(
-        `Programar Ordem de Serviço para a anomalia: ${anomalia.descricao}?`
-      );
-
-      if (!confirmProgramarOS) return;
-
-      try {
-        await gerarProgramacaoOS(anomalia.id);
-        await onSuccess();
-        alert('Programação de OS criada com sucesso!');
-      } catch (error) {
-        console.error('Erro ao programar OS:', error);
-        alert('Erro ao programar OS. Tente novamente.');
-      }
-    },
-    [gerarProgramacaoOS, onSuccess]
-  );
-
-  const handleCancelar = useCallback(
-    async (anomalia: Anomalia) => {
-      // Verificar se pode cancelar
-      if (
-        anomalia.status === 'RESOLVIDA' ||
-        anomalia.status === 'CANCELADA'
-      ) {
-        alert('Esta anomalia já foi resolvida ou cancelada.');
-        return;
-      }
-
-      const motivo = prompt('Digite o motivo do cancelamento:');
-
-      if (!motivo) {
-        alert('É necessário informar o motivo do cancelamento.');
-        return;
-      }
-
-      try {
-        await cancelar(anomalia.id, motivo);
-        await onSuccess();
-        alert('Anomalia cancelada com sucesso!');
-      } catch (error) {
-        console.error('Erro ao cancelar anomalia:', error);
-        alert('Erro ao cancelar anomalia. Tente novamente.');
-      }
-    },
-    [cancelar, onSuccess]
-  );
-
   return {
     handleView,
     handleEdit,
     handleDelete,
-    handleGerarProgramacaoOS,
-    handleCancelar,
   };
 }

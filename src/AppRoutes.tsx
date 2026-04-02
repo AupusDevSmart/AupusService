@@ -12,6 +12,7 @@ import { PlanosManutencaoPage } from './features/planos-manutencao/components/Pl
 import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
 import { TarefasPage } from './features/tarefas/components/TarefasPage';
+import { InstrucoesPage } from './features/instrucoes/components/InstrucoesPage';
 import { VeiculosPage } from './features/veiculos/components/VeiculosPage';
 import { AppTemplate } from './pages/AppTemplate';
 import { AnomaliaPage } from './pages/anomalias';
@@ -196,6 +197,14 @@ export const appRoutes = createBrowserRouter([
         element: (
           <FeatureWrapper feature="Equipamentos">
             <TarefasPage />
+          </FeatureWrapper>
+        ),
+      },
+      {
+        path: 'instrucoes',
+        element: (
+          <FeatureWrapper feature="Equipamentos">
+            <InstrucoesPage />
           </FeatureWrapper>
         ),
       },

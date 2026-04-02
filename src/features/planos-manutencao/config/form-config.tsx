@@ -65,6 +65,7 @@ export const planosFormFields: FormField[] = [
     type: 'select',
     required: true,
     group: 'configuracoes',
+    colSpan: 2,
     options: [
       { value: 'ATIVO', label: 'Ativo' },
       { value: 'INATIVO', label: 'Inativo' },

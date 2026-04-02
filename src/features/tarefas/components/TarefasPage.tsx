@@ -1,5 +1,5 @@
 // src/features/tarefas/components/TarefasPage.tsx - REFATORADA
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -75,7 +75,10 @@ export function TarefasPage() {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   // Hooks
-  const { filterConfig, formFields, loadFilterOptions } = useTarefasFilters(initialFilters);
+  const handleAnexosCopied = useCallback((files: File[]) => {
+    setPendingFiles(prev => [...prev, ...files]);
+  }, []);
+  const { filterConfig, formFields, loadFilterOptions } = useTarefasFilters(initialFilters, handleAnexosCopied);
   const {
     loading,
     tarefas,
@@ -146,7 +149,8 @@ export function TarefasPage() {
         // Adicionar criado_por automaticamente
         const tarefaData = {
           ...data,
-          criado_por: user.id // ✅ ID do usuário logado (obrigatório)
+          tempo_estimado: Math.round((Number(data.duracao_estimada) || 0) * 60),
+          criado_por: user.id
         };
 
         const novaTarefa = await createTarefa(tarefaData);
@@ -164,7 +168,10 @@ export function TarefasPage() {
           setPendingFiles([]);
         }
       } else if (modalState.mode === 'edit' && modalState.entity) {
-        await updateTarefa(modalState.entity.id, data);
+        await updateTarefa(modalState.entity.id, {
+          ...data,
+          tempo_estimado: Math.round((Number(data.duracao_estimada) || 0) * 60),
+        });
       }
 
       await handleSuccess();

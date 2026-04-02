@@ -11,11 +11,9 @@ export const formatarPrioridade = (prioridade: string): string => {
 
 export const formatarStatus = (status: string): string => {
   const labels: Record<string, string> = {
-    'AGUARDANDO': 'Aguardando',
-    'EM_ANALISE': 'Em Análise',
-    'OS_GERADA': 'OS Gerada',
-    'RESOLVIDA': 'Resolvida',
-    'CANCELADA': 'Cancelada'
+    'REGISTRADA': 'Registrada',
+    'PROGRAMADA': 'Programada',
+    'FINALIZADA': 'Finalizada',
   };
   return labels[status] || status;
 };
@@ -45,11 +43,9 @@ export const obterCorPrioridade = (prioridade: string): string => {
 
 export const obterCorStatus = (status: string): string => {
   const cores: Record<string, string> = {
-    'AGUARDANDO': 'blue',
-    'EM_ANALISE': 'purple',
-    'OS_GERADA': 'indigo',
-    'RESOLVIDA': 'green',
-    'CANCELADA': 'red'
+    'REGISTRADA': 'blue',
+    'PROGRAMADA': 'purple',
+    'FINALIZADA': 'green',
   };
   return cores[status] || 'gray';
 };
@@ -81,7 +77,7 @@ export const calcularTempoDecorridoAnomalia = (data: string): string => {
 
 // Função para validar se uma anomalia pode gerar OS
 export const podeAnomaliaGerarOS = (status: string): boolean => {
-  return ['AGUARDANDO', 'EM_ANALISE'].includes(status);
+  return status === 'REGISTRADA';
 };
 
 // Função para validar se um plano pode ser usado para OS
@@ -116,7 +112,7 @@ export const calcularTempoDecorrido = (data: string): string => {
 
 // Função para validar se uma anomalia pode gerar OS
 export const podeGerarOS = (status: string): boolean => {
-  return ['AGUARDANDO', 'EM_ANALISE'].includes(status);
+  return status === 'REGISTRADA';
 };
 
 // Função para validar se um plano pode ser usado

@@ -72,5 +72,38 @@ export default defineConfig({
       // Alias explícito para importar do NexOn
       '@nexon': path.resolve(__dirname, '../../AupusNexOn/src'),
     },
+    // Forçar uma única instância de React e Radix UI no bundle
+    // Sem isso, NexOn resolve de seu próprio node_modules/ criando
+    // instâncias duplicadas que quebram contextos do Radix (Popover, Dialog, etc.)
+    dedupe: [
+      'react',
+      'react-dom',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-select',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-alert-dialog',
+      '@radix-ui/react-tooltip',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-checkbox',
+      '@radix-ui/react-switch',
+      '@radix-ui/react-label',
+      '@radix-ui/react-radio-group',
+      '@radix-ui/react-scroll-area',
+      '@radix-ui/react-collapsible',
+      '@radix-ui/react-separator',
+      '@radix-ui/react-slot',
+      '@radix-ui/react-avatar',
+      '@radix-ui/react-progress',
+      '@radix-ui/react-toast',
+      'cmdk',
+      'zustand',
+      'react-router-dom',
+      'lucide-react',
+      'class-variance-authority',
+      'clsx',
+    ],
   },
 })

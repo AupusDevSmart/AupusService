@@ -1,5 +1,5 @@
 // src/features/planos-manutencao/components/PlanosManutencaoPage.tsx - REFATORADA
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@nexon/components/common/base-table/BaseTable';
@@ -22,6 +22,16 @@ import {
 import { PlanosDashboard } from './PlanosDashboard';
 import { PlanosAlerts } from './PlanosAlerts';
 import { PlanosModal } from './PlanosModal';
+import { TarefasModal } from '@/features/tarefas/components/TarefasModal';
+import { tarefasFormFields } from '@/features/tarefas/config/form-config';
+import { InstrucoesApiService } from '@/services/instrucoes.services';
+
+// Campos a esconder quando tarefa é criada dentro do plano (plano/equipamento já definidos)
+const camposPlanoContexto = ['plano_manutencao_id', 'planta_id', 'equipamento_id'];
+const tarefasFormFieldsFromPlano = tarefasFormFields.filter(f => !camposPlanoContexto.includes(f.key));
+const instrucoesApi = new InstrucoesApiService();
+import { tarefasApi, type TarefaApiResponse } from '@/services/tarefas.services';
+import { toast } from '@/hooks/use-toast';
 
 interface PlanosFiltersApi {
   search?: string;
@@ -63,9 +73,22 @@ export function PlanosManutencaoPage() {
   const [filters, setFilters] = useState<PlanosFiltersApi>(initialFilters);
   const [dashboardData, setDashboardData] = useState<DashboardPlanosDto>(initialDashboard);
 
+  // Estado do modal de tarefa (nested dentro do modal de plano)
+  const [tarefaModal, setTarefaModal] = useState<{
+    isOpen: boolean;
+    mode: 'create' | 'edit' | 'view';
+    entity: TarefaApiResponse | null;
+    editIndex?: number; // para editar tarefa pendente no modo create
+  }>({ isOpen: false, mode: 'create', entity: null });
+  const [tarefaPendingFiles, setTarefaPendingFiles] = useState<File[]>([]);
+  // Tarefas acumuladas durante criação de plano (antes de salvar)
+  const [tarefasPendentes, setTarefasPendentes] = useState<any[]>([]);
+  // Opções de instruções para o modal de tarefa
+  const [tarefaFormFieldsEnriched, setTarefaFormFieldsEnriched] = useState(tarefasFormFieldsFromPlano);
+
   // Hooks customizados
   const { filterConfig, formFields, loadFilterOptions } = usePlanosFilters(initialFilters);
-  const { tarefas, loading: carregandoTarefas, carregarTarefas, limparTarefas } = useTarefasPlano();
+  const { tarefas, loading: carregandoTarefas, loaded: tarefasLoaded, carregarTarefas, limparTarefas } = useTarefasPlano();
   const {
     loading,
     planos,
@@ -75,10 +98,33 @@ export function PlanosManutencaoPage() {
     fetchPlanos,
     createPlano,
     updatePlano,
+    getPlano,
     getDashboard
   } = usePlanosManutencaoApi();
 
   const { modalState, openModal, closeModal: originalCloseModal } = useGenericModal<PlanoManutencaoApiResponse>();
+
+  // Callback para quando anexos são copiados da instrução
+  const handleAnexosCopied = useCallback((files: File[]) => {
+    setTarefaPendingFiles(prev => [...prev, ...files]);
+  }, []);
+
+  // Carregar opções de instruções para o modal de tarefa
+  useEffect(() => {
+    instrucoesApi.findAll({ limit: 100, status: 'ATIVA' as any }).then((res) => {
+      const options = (res.data || [])
+        .filter((inst: any) => inst.id && inst.nome)
+        .map((inst: any) => ({
+          value: inst.id,
+          label: `${inst.tag ? inst.tag + ' - ' : ''}${inst.nome}`
+        }));
+      setTarefaFormFieldsEnriched(
+        tarefasFormFieldsFromPlano.map(f =>
+          f.key === 'instrucao_id' ? { ...f, options, onAnexosCopied: handleAnexosCopied } : f
+        )
+      );
+    }).catch(() => {});
+  }, [handleAnexosCopied]);
 
   // Funções de carregamento
   const loadData = async () => {
@@ -112,6 +158,7 @@ export function PlanosManutencaoPage() {
   // Wrapper para closeModal
   const closeModal = () => {
     limparTarefas();
+    setTarefasPendentes([]);
     originalCloseModal();
   };
 
@@ -127,14 +174,14 @@ export function PlanosManutencaoPage() {
     loadData();
   }, [filters]);
 
-  // Carregar tarefas quando modal view é aberto
+  // Carregar tarefas quando modal view/edit é aberto
   useEffect(() => {
-    if (modalState.isOpen && modalState.mode === 'view' && modalState.entity) {
-      if (tarefas.length === 0 && !carregandoTarefas) {
+    if (modalState.isOpen && (modalState.mode === 'view' || modalState.mode === 'edit') && modalState.entity) {
+      if (!tarefasLoaded && !carregandoTarefas) {
         carregarTarefas(modalState.entity.id);
       }
     }
-  }, [modalState.isOpen, modalState.mode, modalState.entity, tarefas.length, carregandoTarefas, carregarTarefas]);
+  }, [modalState.isOpen, modalState.mode, modalState.entity, tarefasLoaded, carregandoTarefas, carregarTarefas]);
 
   // Handlers de modal
   const handleSuccess = async () => {
@@ -162,7 +209,32 @@ export function PlanosManutencaoPage() {
           observacoes: data.observacoes,
           criado_por: user.id
         };
-        await createPlano(createData);
+        const planoResult = await createPlano(createData);
+
+        // Criar tarefas pendentes vinculadas ao plano recém-criado
+        if (tarefasPendentes.length > 0 && planoResult?.id) {
+          let criadas = 0;
+          for (const tarefaData of tarefasPendentes) {
+            try {
+              await tarefasApi.create({
+                ...tarefaData,
+                plano_manutencao_id: planoResult.id,
+                equipamento_id: data.equipamento_id,
+                criticidade: Number(tarefaData.criticidade) || 3,
+                duracao_estimada: Number(tarefaData.duracao_estimada) || 1,
+                tempo_estimado: Math.round((Number(tarefaData.duracao_estimada) || 1) * 60),
+                criado_por: user.id,
+              });
+              criadas++;
+            } catch (err) {
+              console.error('Erro ao criar tarefa do plano:', err);
+            }
+          }
+          if (criadas > 0) {
+            toast({ title: `Plano criado com ${criadas} tarefa${criadas > 1 ? 's' : ''}` });
+          }
+          setTarefasPendentes([]);
+        }
       } else if (modalState.mode === 'edit' && modalState.entity) {
         const updateData: UpdatePlanoManutencaoApiData = {
           nome: data.nome,
@@ -184,13 +256,145 @@ export function PlanosManutencaoPage() {
   };
 
   const handleView = async (plano: PlanoManutencaoApiResponse) => {
-    openModal('view', plano);
-    await carregarTarefas(plano.id);
+    try {
+      const planoCompleto = await getPlano(plano.id, true);
+      openModal('view', planoCompleto);
+    } catch {
+      openModal('view', plano);
+    }
   };
 
-  const handleEdit = (plano: PlanoManutencaoApiResponse) => {
-    openModal('edit', plano);
+  const handleEdit = async (plano: PlanoManutencaoApiResponse) => {
     limparTarefas();
+    try {
+      const planoCompleto = await getPlano(plano.id, true);
+      openModal('edit', planoCompleto);
+    } catch {
+      openModal('edit', plano);
+    }
+  };
+
+  // ============================
+  // Handlers de tarefa (nested)
+  // ============================
+
+  const handleAddTarefa = () => {
+    setTarefaModal({ isOpen: true, mode: 'create', entity: null });
+    setTarefaPendingFiles([]);
+  };
+
+  const handleEditTarefa = async (tarefa: any) => {
+    // No modo create do plano, editar tarefa pendente local
+    if (modalState.mode === 'create') {
+      const idx = tarefasPendentes.findIndex((t) => t === tarefa || t._tempId === tarefa._tempId);
+      setTarefaModal({ isOpen: true, mode: 'edit', entity: tarefa as any, editIndex: idx >= 0 ? idx : undefined });
+      return;
+    }
+
+    try {
+      const tarefaCompleta = await tarefasApi.findOne((tarefa.id || tarefa.tarefa_id || '').trim());
+      setTarefaModal({ isOpen: true, mode: 'edit', entity: tarefaCompleta });
+    } catch {
+      setTarefaModal({ isOpen: true, mode: 'edit', entity: tarefa });
+    }
+  };
+
+  const handleDeleteTarefa = async (tarefa: any) => {
+    // No modo create do plano, remover tarefa pendente local
+    if (modalState.mode === 'create') {
+      setTarefasPendentes((prev) => prev.filter((t) => t !== tarefa && t._tempId !== tarefa._tempId));
+      return;
+    }
+
+    const tarefaId = (tarefa.id || tarefa.tarefa_id || '').trim();
+    const tarefaNome = tarefa.nome || tarefa.tag || 'esta tarefa';
+
+    if (!confirm(`Deseja remover a tarefa "${tarefaNome}" deste plano?`)) return;
+
+    try {
+      await tarefasApi.remove(tarefaId);
+      toast({ title: 'Tarefa removida' });
+      if (modalState.entity) {
+        await carregarTarefas(modalState.entity.id);
+      }
+    } catch (error) {
+      console.error('Erro ao remover tarefa:', error);
+      toast({ title: 'Erro ao remover tarefa', variant: 'destructive' });
+    }
+  };
+
+  const handleTarefaSubmit = async (data: any) => {
+    try {
+      // Modo create do plano: acumular tarefas localmente
+      if (modalState.mode === 'create') {
+        const tarefaLocal = {
+          ...data,
+          _tempId: `temp_${Date.now()}`,
+          id: `temp_${Date.now()}`,
+          tag: `Nova-${tarefasPendentes.length + 1}`,
+          nome: data.nome,
+          ordem: tarefasPendentes.length + 1,
+          ativo: true,
+          categoria: data.categoria || 'MECANICA',
+          tipo_manutencao: data.tipo_manutencao || 'PREVENTIVA',
+          tempo_estimado: Math.round((Number(data.duracao_estimada) || 1) * 60),
+          criticidade: Number(data.criticidade) || 3,
+          status: 'ATIVA',
+        };
+
+        if (tarefaModal.editIndex !== undefined && tarefaModal.editIndex >= 0) {
+          // Editar tarefa pendente existente
+          setTarefasPendentes((prev) => {
+            const updated = [...prev];
+            updated[tarefaModal.editIndex!] = { ...updated[tarefaModal.editIndex!], ...tarefaLocal, _tempId: updated[tarefaModal.editIndex!]._tempId };
+            return updated;
+          });
+        } else {
+          setTarefasPendentes((prev) => [...prev, tarefaLocal]);
+        }
+
+        setTarefaModal({ isOpen: false, mode: 'create', entity: null });
+        return;
+      }
+
+      // Modo edit do plano: salvar via API
+      if (tarefaModal.mode === 'create') {
+        const planoId = modalState.entity?.id;
+        const equipamentoId = modalState.entity?.equipamento_id?.trim();
+        await tarefasApi.create({
+          ...data,
+          plano_manutencao_id: planoId,
+          equipamento_id: equipamentoId,
+          criticidade: Number(data.criticidade) || 3,
+          duracao_estimada: Number(data.duracao_estimada) || 1,
+          tempo_estimado: Math.round((Number(data.duracao_estimada) || 1) * 60),
+          ordem: tarefas.length + 1,
+          criado_por: user?.id,
+        });
+        toast({ title: 'Tarefa adicionada' });
+      } else if (tarefaModal.mode === 'edit' && tarefaModal.entity) {
+        await tarefasApi.update(tarefaModal.entity.id.trim(), {
+          ...data,
+          criticidade: Number(data.criticidade) || 3,
+          duracao_estimada: Number(data.duracao_estimada) || 1,
+          tempo_estimado: Math.round((Number(data.duracao_estimada) || 1) * 60),
+        });
+        toast({ title: 'Tarefa atualizada' });
+      }
+
+      setTarefaModal({ isOpen: false, mode: 'create', entity: null });
+      if (modalState.entity) {
+        await carregarTarefas(modalState.entity.id);
+      }
+    } catch (error) {
+      console.error('Erro ao salvar tarefa:', error);
+      toast({ title: 'Erro ao salvar tarefa', variant: 'destructive' });
+    }
+  };
+
+  const closeTarefaModal = () => {
+    setTarefaModal({ isOpen: false, mode: 'create', entity: null });
+    setTarefaPendingFiles([]);
   };
 
   // Filtros
@@ -270,10 +474,25 @@ export function PlanosManutencaoPage() {
           mode={modalState.mode as 'create' | 'edit' | 'view'}
           entity={modalState.entity}
           formFields={formFields}
-          tarefas={tarefas}
-          carregandoTarefas={carregandoTarefas}
+          tarefas={modalState.mode === 'create' ? tarefasPendentes : tarefas}
+          carregandoTarefas={modalState.mode !== 'create' && carregandoTarefas}
           onClose={closeModal}
           onSubmit={handleSubmit}
+          onEditTarefa={handleEditTarefa}
+          onDeleteTarefa={handleDeleteTarefa}
+          onAddTarefa={handleAddTarefa}
+        />
+
+        {/* Modal de Tarefa (nested) */}
+        <TarefasModal
+          isOpen={tarefaModal.isOpen}
+          mode={tarefaModal.mode}
+          entity={tarefaModal.entity}
+          formFields={tarefaFormFieldsEnriched}
+          pendingFiles={tarefaPendingFiles}
+          onClose={closeTarefaModal}
+          onSubmit={handleTarefaSubmit}
+          onFilesChange={setTarefaPendingFiles}
         />
       </Layout.Main>
     </Layout>

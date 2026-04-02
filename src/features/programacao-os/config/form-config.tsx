@@ -7,28 +7,6 @@ import { FerramentasCardManager } from '@/components/common/cards/FerramentasCar
 import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManager';
 import { ReservaViaturaField } from '../components/ReservaViaturaField';
 import { ReservaVinculadaCard } from '../components/ReservaVinculadaCard';
-import { FileText, Clock, Search, CheckCircle, XCircle, Ban } from 'lucide-react';
-
-// Mapeamento de ícones por status
-const statusIcons = {
-  RASCUNHO: FileText,
-  PENDENTE: Clock,
-  EM_ANALISE: Search,
-  APROVADA: CheckCircle,
-  REJEITADA: XCircle,
-  CANCELADA: Ban
-};
-
-// Helper para renderizar label com ícone
-const getStatusLabel = (value: string, label: string) => {
-  const Icon = statusIcons[value as keyof typeof statusIcons];
-  return Icon ? (
-    <span className="flex items-center gap-2">
-      <Icon className="h-4 w-4" />
-      {label}
-    </span>
-  ) : label;
-};
 
 export const programacaoOSFormFields: FormField[] = [
   // Informações básicas - GRUPO: identificacao
@@ -39,7 +17,7 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Gerado automaticamente',
     disabled: true,
     group: 'identificacao',
-    width: 'half' // 50% em desktop
+    colSpan: 2,
   },
   {
     key: 'status',
@@ -47,35 +25,14 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'select',
     disabled: true,
     options: [
-      { value: 'RASCUNHO', label: 'Rascunho' },
       { value: 'PENDENTE', label: 'Pendente' },
-      { value: 'EM_ANALISE', label: 'Em Análise' },
       { value: 'APROVADA', label: 'Aprovada' },
-      { value: 'REJEITADA', label: 'Rejeitada' },
+      { value: 'FINALIZADA', label: 'Finalizada' },
       { value: 'CANCELADA', label: 'Cancelada' }
     ],
     group: 'identificacao',
     showOnlyOnMode: ['view', 'edit'],
-    width: 'half', // 50% em desktop
-    render: (props: any) => {
-      const { value } = props;
-      const Icon = statusIcons[value as keyof typeof statusIcons];
-      const option = [
-        { value: 'RASCUNHO', label: 'Rascunho' },
-        { value: 'PENDENTE', label: 'Pendente' },
-        { value: 'EM_ANALISE', label: 'Em Análise' },
-        { value: 'APROVADA', label: 'Aprovada' },
-        { value: 'REJEITADA', label: 'Rejeitada' },
-        { value: 'CANCELADA', label: 'Cancelada' }
-      ].find(opt => opt.value === value);
-
-      return (
-        <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-muted/50">
-          {Icon && <Icon className="h-4 w-4" />}
-          <span>{option?.label || value}</span>
-        </div>
-      );
-    }
+    width: 'half'
   },
   {
     key: 'descricao',
@@ -84,36 +41,11 @@ export const programacaoOSFormFields: FormField[] = [
     required: true,
     placeholder: 'Descreva o serviço a ser executado',
     group: 'identificacao',
-    width: 'full', // 100% - campo de texto longo
+    colSpan:2,
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
-  {
-    key: 'local',
-    label: 'Local',
-    type: 'text',
-    required: true,
-    placeholder: 'Local onde será executado o serviço',
-    group: 'identificacao',
-    width: 'half',
-    computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
-    }
-  },
-  {
-    key: 'ativo',
-    label: 'Ativo',
-    type: 'text',
-    required: true,
-    placeholder: 'Equipamento ou ativo relacionado',
-    group: 'identificacao',
-    width: 'half',
-    computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
-    }
-  },
-
   // Origem da OS - GRUPO: origem
   {
     key: 'origem',
@@ -122,7 +54,7 @@ export const programacaoOSFormFields: FormField[] = [
     component: OrigemOSSelector,
     required: true,
     defaultValue: {
-      tipo: 'MANUAL',
+      tipo: 'ANOMALIA',
       anomaliaId: undefined,
       planoId: undefined,
       tarefasSelecionadas: [],
@@ -152,6 +84,7 @@ export const programacaoOSFormFields: FormField[] = [
           planoManutencao={entity?.plano_manutencao}
           planosSelecionados={entity?.planos_selecionados}
           tarefasPorPlano={entity?.tarefas_por_plano}
+          solicitacaoServico={entity?.solicitacao_servico}
         />
       );
     }
@@ -174,7 +107,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'classificacao',
     width: 'third', // 33.33% em desktop (3 campos na linha)
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
   {
@@ -191,7 +124,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'classificacao',
     width: 'third', // 33.33% em desktop (3 campos na linha)
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
   {
@@ -206,7 +139,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'classificacao',
     width: 'third', // 33.33% em desktop (3 campos na linha)
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
 
@@ -220,7 +153,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'planejamento',
     width: 'half', // 50% em desktop
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
   {
@@ -231,7 +164,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'planejamento',
     width: 'half', // 50% em desktop
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
   {
@@ -241,7 +174,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'planejamento',
     width: 'half', // 50% em desktop
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
   {
@@ -251,7 +184,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'planejamento',
     width: 'half', // 50% em desktop
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
 
@@ -268,7 +201,7 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'datetime-local',
     group: 'programacao',
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
   {
@@ -278,7 +211,7 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Nome do responsável',
     group: 'programacao',
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
   {
@@ -288,7 +221,7 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'ID do usuário responsável',
     group: 'programacao',
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
   {
@@ -298,7 +231,7 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Ex: Equipe de Manutenção A',
     group: 'programacao',
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
   */
@@ -311,7 +244,7 @@ export const programacaoOSFormFields: FormField[] = [
     defaultValue: false, // ✅ Sempre iniciar com false para evitar uncontrolled
     group: 'veiculo',
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
   {
@@ -330,7 +263,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'veiculo',
     colSpan: 2, // Ocupar largura total no sheet
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
   {
@@ -370,7 +303,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'recursos',
     colSpan: 2, // Ocupar largura total no sheet
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
 
@@ -390,7 +323,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'recursos',
     colSpan: 2, // Ocupar largura total no sheet
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
 
@@ -410,7 +343,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'recursos',
     colSpan: 2, // Ocupar largura total no sheet
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
 
@@ -423,7 +356,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'observacoes',
     width: 'full', // 100% - campo de texto longo
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
   {
@@ -436,10 +369,10 @@ export const programacaoOSFormFields: FormField[] = [
     condition: (entity: any) => {
       // Mostrar justificativa apenas em modo view quando já foi preenchida
       // ou em modo create/edit quando ainda está em rascunho/pendente
-      return entity?.justificativa || ['RASCUNHO', 'PENDENTE', undefined].includes(entity?.status);
+      return entity?.justificativa || ['PENDENTE', undefined].includes(entity?.status);
     },
     computeDisabled: (entity: any) => {
-      return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+      return entity?.status && entity.status !== 'PENDENTE';
     }
   },
 
@@ -451,57 +384,60 @@ export const programacaoOSFormFields: FormField[] = [
   // CAMPOS DE VISUALIZAÇÃO POR STATUS
   // ============================
 
-  // Campos para análise - mostrar sempre que foi analisada (tem dados OU status requer)
+  // Campos de aprovacao - mostrar quando aprovada ou finalizada
   {
-    key: 'observacoes_analise',
-    label: 'Observações da Análise',
+    key: 'observacoes_aprovacao',
+    label: 'Observacoes da Aprovacao',
     type: 'textarea',
-    placeholder: 'Observações da análise',
+    placeholder: 'Observacoes da aprovacao',
     disabled: true,
     group: 'workflow',
-    width: 'full', // 100% - campo de texto longo
-    condition: (entity: any) => {
-      // Mostrar sempre que o status indica que passou pela análise
-      return ['EM_ANALISE', 'APROVADA', 'REJEITADA'].includes(entity?.status);
+    colSpan: 2,
+    condition: (entity: any, data: any) => {
+      const status = data?.status || entity?.status;
+      return ['APROVADA', 'FINALIZADA'].includes(status) && (data?.observacoes_aprovacao || entity?.observacoes_aprovacao);
     }
   },
 
-  // Campos de aprovação - mostrar sempre quando aprovada
+  // Campos de finalizacao - mostrar quando finalizada
   {
-    key: 'observacoes_aprovacao',
-    label: 'Observações da Aprovação',
+    key: 'observacoes_finalizacao',
+    label: 'Observacoes da Finalizacao',
     type: 'textarea',
-    placeholder: 'Observações da aprovação',
+    placeholder: 'Sem observacoes',
     disabled: true,
     group: 'workflow',
-    width: 'full', // 100% - campo de texto longo
-    condition: (entity: any) => {
-      return entity?.status === 'APROVADA';
-    }
-  },
-  // Campos de rejeição - mostrar apenas se foi rejeitada
-  {
-    key: 'motivo_rejeicao',
-    label: 'Motivo da Rejeição',
-    type: 'textarea',
-    placeholder: 'Descreva o motivo da rejeição',
-    disabled: true,
-    group: 'workflow',
-    width: 'full', // 100% - campo de texto longo
-    condition: (entity: any) => {
-      return entity?.status === 'REJEITADA' && entity?.motivo_rejeicao;
+    colSpan: 2,
+    showOnlyOnMode: ['view'],
+    condition: (entity: any, data: any) => {
+      const status = data?.status || entity?.status;
+      return status === 'FINALIZADA';
     }
   },
   {
-    key: 'sugestoes_melhoria',
-    label: 'Sugestões de Melhoria',
-    type: 'textarea',
-    placeholder: 'Sugestões para melhorar a programação (opcional)',
+    key: 'finalizado_por',
+    label: 'Finalizado Por',
+    type: 'text',
     disabled: true,
     group: 'workflow',
-    width: 'full', // 100% - campo de texto longo
-    condition: (entity: any) => {
-      return entity?.status === 'REJEITADA';
+    colSpan: 1,
+    showOnlyOnMode: ['view'],
+    condition: (entity: any, data: any) => {
+      const status = data?.status || entity?.status;
+      return status === 'FINALIZADA';
+    }
+  },
+  {
+    key: 'data_finalizacao',
+    label: 'Data da Finalizacao',
+    type: 'datetime-local',
+    disabled: true,
+    group: 'workflow',
+    colSpan: 1,
+    showOnlyOnMode: ['view'],
+    condition: (entity: any, data: any) => {
+      const status = data?.status || entity?.status;
+      return status === 'FINALIZADA';
     }
   },
 
@@ -513,9 +449,10 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Motivo do cancelamento',
     disabled: true,
     group: 'workflow',
-    width: 'full', // 100% - campo de texto longo
-    condition: (entity: any) => {
-      return entity?.status === 'CANCELADA';
+    colSpan: 2,
+    condition: (entity: any, data: any) => {
+      const status = data?.status || entity?.status;
+      return status === 'CANCELADA';
     }
   },
 
@@ -586,7 +523,7 @@ export const programacaoOSFormGroups = [
   {
     key: 'identificacao',
     title: 'Identificação da OS',
-    fields: ['numeroOS', 'status', 'descricao', 'local', 'ativo']
+    fields: ['numeroOS', 'status', 'descricao']
   },
   {
     key: 'origem',
@@ -631,14 +568,14 @@ export const programacaoOSFormGroups = [
     title: 'Histórico de Ações',
     fields: [
       'observacoes_aprovacao',
-      'motivo_rejeicao', 'sugestoes_melhoria', 'motivo_cancelamento',
-      'observacoes_analise'
+      'observacoes_finalizacao', 'finalizado_por', 'data_finalizacao',
+      'motivo_cancelamento'
     ],
     conditional: {
       field: 'status',
       value: function(entity: any) {
         // Mostrar grupo sempre que o status indica que passou por alguma ação de workflow
-        return entity?.status && !['RASCUNHO', 'PENDENTE'].includes(entity.status);
+        return entity?.status && entity.status !== 'PENDENTE';
       }
     }
   },
@@ -650,9 +587,8 @@ export const programacaoOSFormGroups = [
       'aprovado_por', 'data_aprovacao'
     ],
     conditional: {
-      field: 'mode',
-      value: function(_entity: any) {
-        // Mostrar auditoria sempre que aplicável
+      field: 'status',
+      value: function() {
         return true;
       }
     }

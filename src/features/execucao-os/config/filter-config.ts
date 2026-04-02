@@ -25,9 +25,11 @@ export const execucaoOSFilterConfig: FilterConfig[] = [
     placeholder: 'Todos os status', // ✅ Placeholder descritivo
     options: [
       { value: 'all', label: 'Todos os status' },
-      { value: 'PROGRAMADA', label: 'Programada' },
+      { value: 'PENDENTE', label: 'Pendente' },
       { value: 'EM_EXECUCAO', label: 'Em Execução' },
       { value: 'PAUSADA', label: 'Pausada' },
+      { value: 'EXECUTADA', label: 'Executada' },
+      { value: 'AUDITADA', label: 'Auditada' },
       { value: 'FINALIZADA', label: 'Finalizada' },
       { value: 'CANCELADA', label: 'Cancelada' }
     ],

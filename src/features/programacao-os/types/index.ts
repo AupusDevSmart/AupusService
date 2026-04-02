@@ -5,12 +5,10 @@ import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/ty
 // ENUMS E TIPOS BASE (CONFORME SCHEMA)
 // ========================================
 
-export type StatusProgramacao = 
-  | 'RASCUNHO'
-  | 'PENDENTE' 
-  | 'EM_ANALISE'
+export type StatusProgramacao =
+  | 'PENDENTE'
   | 'APROVADA'
-  | 'REJEITADA'
+  | 'FINALIZADA'
   | 'CANCELADA';
 
 export type TipoOS = 

@@ -146,6 +146,14 @@ export const navigationLinks: Array<NavigationLink> = [
         hint: 'Tarefas',
       },
       {
+        key: 'instrucoes',
+        featureKey: 'Equipamentos',
+        path: '/instrucoes',
+        icon: FileText,
+        label: 'Instruções',
+        hint: 'Instruções',
+      },
+      {
         key: 'programacao-os',
         featureKey: 'Equipamentos',
         path: '/programacao-os',

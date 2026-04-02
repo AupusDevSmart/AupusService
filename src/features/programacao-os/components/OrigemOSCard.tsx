@@ -11,9 +11,13 @@ import {
   Calendar,
   Wrench,
   Clock,
-  Loader2
+  Loader2,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import PlanosManutencaoViewer from './PlanosManutencaoViewer';
+import { solicitacoesServicoService } from '@/services/solicitacoes-servico.service';
+import { tarefasApi, type TarefaApiResponse } from '@/services/tarefas.services';
 
 interface OrigemOSCardProps {
   origem: string;
@@ -21,19 +25,16 @@ interface OrigemOSCardProps {
   anomalia?: any;
   tarefas?: any[];
   planoManutencao?: any;
-  // Novos campos para múltiplos planos
   planosSelecionados?: any[];
   tarefasPorPlano?: { [planoId: string]: { plano: any; tarefas: any[] } };
+  solicitacaoServico?: any;
 }
 
-// Função utilitária para formatar datas
 const formatarData = (dataField: any): string => {
   if (!dataField) return 'Data não informada';
 
   try {
-    // Se é uma string de data ISO ou similar
     if (typeof dataField === 'string') {
-      // Verificar se está no formato ISO (YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss)
       if (dataField.includes('-')) {
         const date = new Date(dataField);
         if (!isNaN(date.getTime())) {
@@ -45,12 +46,10 @@ const formatarData = (dataField: any): string => {
         }
       }
 
-      // Se está no formato DD/MM/YYYY, retornar como está
       if (dataField.includes('/')) {
         return dataField;
       }
 
-      // Tentar parse direto
       const date = new Date(dataField);
       if (!isNaN(date.getTime())) {
         return date.toLocaleDateString('pt-BR', {
@@ -61,12 +60,33 @@ const formatarData = (dataField: any): string => {
       }
     }
 
-    // Fallback: retornar o valor como string
     return dataField.toString();
-  } catch (error) {
-    console.error('Erro ao formatar data da anomalia:', error);
+  } catch {
     return dataField.toString();
   }
+};
+
+const getOrigemLabel = (origem: string): string => {
+  const labels: Record<string, string> = {
+    'ANOMALIA': 'Anomalia',
+    'PLANO_MANUTENCAO': 'Plano de Manutenção',
+    'TAREFA': 'Tarefa',
+    'SOLICITACAO_SERVICO': 'Solicitação de Serviço',
+    'EMERGENCIA': 'Emergência',
+    'CORRETIVA': 'Corretiva',
+    'PREVENTIVA': 'Preventiva',
+    'PREDITIVA': 'Preditiva',
+    'PLANEJAMENTO': 'Planejamento'
+  };
+  return labels[origem] || origem;
+};
+
+const getOrigemIcon = (origem: string) => {
+  if (origem === 'ANOMALIA' || origem === 'EMERGENCIA') return AlertTriangle;
+  if (origem === 'PLANO_MANUTENCAO' || origem === 'PREVENTIVA' || origem === 'TAREFA') return Calendar;
+  if (origem === 'SOLICITACAO_SERVICO') return FileText;
+  if (origem === 'CORRETIVA' || origem === 'PREDITIVA') return Wrench;
+  return FileText;
 };
 
 export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
@@ -76,11 +96,16 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
   tarefas = [],
   planoManutencao,
   planosSelecionados = [],
-  tarefasPorPlano = {}
+  tarefasPorPlano = {},
+  solicitacaoServico
 }) => {
-  // Hook para carregar dados da anomalia da API
+  const [expanded, setExpanded] = useState(false);
   const { obterAnomalia, loading: anomaliaLoading, error: anomaliaError } = useAnomalias();
   const [anomaliaFromAPI, setAnomaliaFromAPI] = useState(null);
+  const [solicitacaoFromAPI, setSolicitacaoFromAPI] = useState<any>(null);
+  const [solicitacaoLoading, setSolicitacaoLoading] = useState(false);
+  const [tarefasFromAPI, setTarefasFromAPI] = useState<TarefaApiResponse[]>([]);
+  const [tarefasLoading, setTarefasLoading] = useState(false);
 
   useEffect(() => {
     const anomaliaId = dadosOrigem?.anomaliaId || anomalia?.id;
@@ -93,233 +118,513 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
     }
   }, [dadosOrigem?.anomaliaId, anomalia?.id, obterAnomalia]);
 
-  const renderAnomaliaCard = () => {
-    const anomaliaId = dadosOrigem?.anomaliaId || anomalia?.id;
-    if (!anomaliaId && !anomalia && !dadosOrigem?.anomaliaId) return null;
+  useEffect(() => {
+    const solicitacaoId = dadosOrigem?.solicitacaoServicoId || solicitacaoServico?.id;
+    if (solicitacaoId && !solicitacaoServico?.titulo) {
+      setSolicitacaoLoading(true);
+      solicitacoesServicoService.findOne(solicitacaoId)
+        .then((result) => { if (result) setSolicitacaoFromAPI(result); })
+        .catch(() => {})
+        .finally(() => setSolicitacaoLoading(false));
+    }
+  }, [dadosOrigem?.solicitacaoServicoId, solicitacaoServico?.id, solicitacaoServico?.titulo]);
 
-    // Usar dados da API se disponíveis, senão usar dados passados via props
+  // Buscar detalhes das tarefas quando expandir card de origem TAREFA
+  useEffect(() => {
+    if (!expanded || origem !== 'TAREFA' || tarefasFromAPI.length > 0) return;
+
+    const tarefaIds: string[] = dadosOrigem?.tarefas_ids || [];
+    if (tarefaIds.length === 0) return;
+
+    setTarefasLoading(true);
+    Promise.all(
+      tarefaIds.map((id: string) =>
+        tarefasApi.findOne(id.trim()).catch(() => null)
+      )
+    )
+      .then((results) => {
+        setTarefasFromAPI(results.filter((r): r is TarefaApiResponse => r !== null));
+      })
+      .finally(() => setTarefasLoading(false));
+  }, [expanded, origem, dadosOrigem?.tarefas_ids]);
+
+  const hasAnomaliaDetails = origem === 'ANOMALIA' && !!(dadosOrigem?.anomaliaId || anomalia?.id || anomalia);
+
+  const hasPlanoDetails = (() => {
+    if (origem !== 'PLANO_MANUTENCAO' && origem !== 'TAREFA') return false;
+    const tarefasPorPlanoData = tarefasPorPlano && Object.keys(tarefasPorPlano).length > 0
+      ? tarefasPorPlano
+      : dadosOrigem?.tarefasPorPlano || {};
+    const hasMultiplosPlanos = Object.keys(tarefasPorPlanoData).length > 0;
+    const hasTarefasLegacy = tarefas?.length > 0 || dadosOrigem?.tarefasSelecionadas?.length > 0;
+    return hasMultiplosPlanos || hasTarefasLegacy;
+  })();
+
+  const hasTarefaDetails = origem === 'TAREFA' && !!(
+    dadosOrigem?.tarefas_ids?.length ||
+    dadosOrigem?.tarefas_nomes?.length ||
+    dadosOrigem?.tarefas_tags?.length ||
+    dadosOrigem?.tarefas_count
+  );
+
+  const hasSolicitacaoDetails = origem === 'SOLICITACAO_SERVICO' && !!(solicitacaoServico || dadosOrigem?.solicitacaoServicoId);
+
+  const hasDetails = hasAnomaliaDetails || hasPlanoDetails || hasTarefaDetails || hasSolicitacaoDetails;
+
+  const OrigemIcon = getOrigemIcon(origem);
+
+  const renderAnomaliaDetails = () => {
     const anomaliaData = anomaliaFromAPI || anomalia || dadosOrigem;
 
     return (
-      <Card className="border-red-200 bg-red-50 dark:bg-red-900/30 dark:border-red-700/50">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-red-700 dark:text-white">
-            {anomaliaLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <AlertTriangle className="h-5 w-5" />
-            )}
-            Anomalia Origem
-            {anomaliaLoading && <span className="text-xs font-normal">(carregando...)</span>}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {anomaliaError && (
-            <div className="text-xs text-red-600 dark:text-red-300 bg-red-100 dark:bg-red-900/50 p-2 rounded">
-              Erro ao carregar dados da anomalia
+      <div className="space-y-3">
+        {anomaliaError && (
+          <div className="text-xs text-red-600 dark:text-red-300 bg-red-100 dark:bg-red-900/50 p-2 rounded">
+            Erro ao carregar dados da anomalia
+          </div>
+        )}
+        <div>
+          <h4 className="font-medium text-sm text-gray-800 dark:text-gray-200">
+            {anomaliaData?.descricao || 'Descrição não disponível'}
+          </h4>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="flex items-center gap-1">
+            <MapPin className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+            <span className="text-gray-700 dark:text-gray-300">
+              {anomaliaData?.localizacao?.local || anomaliaData?.local || 'Local não informado'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Settings className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+            <span className="text-gray-700 dark:text-gray-300">
+              {anomaliaData?.localizacao?.ativo || anomaliaData?.ativo || 'Ativo não informado'}
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-2">
+          {anomaliaData?.condicao && (
+            <div className="flex items-center gap-1 text-xs">
+              <span className="font-medium text-gray-600 dark:text-gray-400">Condição:</span>
+              <span className="text-gray-700 dark:text-gray-300">{anomaliaData.condicao}</span>
             </div>
           )}
-          <div>
-            <h4 className="font-medium text-sm text-red-800 dark:text-white">
-              {anomaliaData?.descricao || 'Descrição não disponível'}
-            </h4>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="flex items-center gap-1">
-              <MapPin className="h-3 w-3 text-red-600 dark:text-red-400" />
-              <span className="text-red-700 dark:text-white">
-                {anomaliaData?.localizacao?.local || anomaliaData?.local || 'Local não informado'}
-              </span>
+          {anomaliaData?.origem && (
+            <div className="flex items-center gap-1 text-xs">
+              <span className="font-medium text-gray-600 dark:text-gray-400">Origem:</span>
+              <span className="text-gray-700 dark:text-gray-300">{anomaliaData.origem}</span>
             </div>
-            <div className="flex items-center gap-1">
-              <Settings className="h-3 w-3 text-red-600 dark:text-red-400" />
-              <span className="text-red-700 dark:text-white">
-                {anomaliaData?.localizacao?.ativo || anomaliaData?.ativo || 'Ativo não informado'}
-              </span>
+          )}
+          {anomaliaData?.observacoes && (
+            <div className="text-xs">
+              <span className="font-medium text-gray-600 dark:text-gray-400">Observações:</span>
+              <p className="text-gray-700 dark:text-gray-300 mt-1 leading-relaxed">
+                {anomaliaData.observacoes}
+              </p>
             </div>
-          </div>
+          )}
+        </div>
 
-          {/* Mais informações da anomalia */}
-          <div className="space-y-2 border-t border-red-200 dark:border-red-700/50 pt-2">
-            {anomaliaData?.condicao && (
-              <div className="flex items-center gap-1 text-xs">
-                <span className="font-medium text-red-700 dark:text-red-300">Condição:</span>
-                <span className="text-red-600 dark:text-white">{anomaliaData.condicao}</span>
-              </div>
-            )}
-            {anomaliaData?.origem && (
-              <div className="flex items-center gap-1 text-xs">
-                <span className="font-medium text-red-700 dark:text-red-300">Origem:</span>
-                <span className="text-red-600 dark:text-white">{anomaliaData.origem}</span>
-              </div>
-            )}
-            {anomaliaData?.observacoes && (
-              <div className="text-xs">
-                <span className="font-medium text-red-700 dark:text-red-300">Observações:</span>
-                <p className="text-red-600 dark:text-white mt-1 leading-relaxed">
-                  {anomaliaData.observacoes}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {anomaliaData?.prioridade && (
-            <div className="flex gap-2">
-              <Badge
-                variant={anomaliaData.prioridade === 'CRITICA' || anomaliaData.prioridade === 'ALTA' ? 'destructive' : 'secondary'}
-                className="text-xs"
-              >
-                {anomaliaData.prioridade}
+        {anomaliaData?.prioridade && (
+          <div className="flex gap-2">
+            <Badge
+              variant={anomaliaData.prioridade === 'CRITICA' || anomaliaData.prioridade === 'ALTA' ? 'destructive' : 'secondary'}
+              className="text-xs"
+            >
+              {anomaliaData.prioridade}
+            </Badge>
+            {anomaliaData.status && (
+              <Badge variant="outline" className="text-xs">
+                {anomaliaData.status}
               </Badge>
-              {anomaliaData.status && (
-                <Badge variant="outline" className="text-xs">
-                  {anomaliaData.status}
-                </Badge>
-              )}
-            </div>
-          )}
-
-          {/* Datas da anomalia */}
-          <div className="space-y-1 border-t border-red-200 dark:border-red-700/50 pt-2">
-            {(anomaliaData?.createdAt || anomaliaData?.created_at || anomaliaData?.data) && (
-              <div className="flex items-center gap-1 text-xs text-red-600 dark:text-white">
-                <Calendar className="h-3 w-3" />
-                <span>
-                  Reportada em: {formatarData(anomaliaData.createdAt || anomaliaData.created_at || anomaliaData.data)}
-                </span>
-              </div>
-            )}
-            {(anomaliaData?.updatedAt || anomaliaData?.updated_at || anomaliaData?.atualizadoEm) && (
-              <div className="flex items-center gap-1 text-xs text-red-600 dark:text-white">
-                <Clock className="h-3 w-3" />
-                <span>
-                  Atualizada em: {formatarData(anomaliaData.updatedAt || anomaliaData.updated_at || anomaliaData.atualizadoEm)}
-                </span>
-              </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+        )}
+
+        <div className="space-y-1 border-t border-gray-200 dark:border-gray-700 pt-2">
+          {(anomaliaData?.createdAt || anomaliaData?.created_at || anomaliaData?.data) && (
+            <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+              <Calendar className="h-3 w-3" />
+              <span>
+                Reportada em: {formatarData(anomaliaData.createdAt || anomaliaData.created_at || anomaliaData.data)}
+              </span>
+            </div>
+          )}
+          {(anomaliaData?.updatedAt || anomaliaData?.updated_at || anomaliaData?.atualizadoEm) && (
+            <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+              <Clock className="h-3 w-3" />
+              <span>
+                Atualizada em: {formatarData(anomaliaData.updatedAt || anomaliaData.updated_at || anomaliaData.atualizadoEm)}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
     );
   };
 
-
-  const renderMultiplosPlanosCard = () => {
-    // Usar tarefasPorPlano dos dadosOrigem se não estiver na prop direta
+  const renderPlanoDetails = () => {
     const tarefasPorPlanoData = tarefasPorPlano && Object.keys(tarefasPorPlano).length > 0
       ? tarefasPorPlano
       : dadosOrigem?.tarefasPorPlano || {};
 
     const hasMultiplosPlanos = Object.keys(tarefasPorPlanoData).length > 0;
-    const hasTarefasLegacy = tarefas?.length > 0 || dadosOrigem?.tarefasSelecionadas?.length > 0;
 
-    console.log('🔍 [OrigemOSCard] renderMultiplosPlanosCard chamado');
-    console.log('🔍 [OrigemOSCard] tarefasPorPlano (prop):', tarefasPorPlano);
-    console.log('🔍 [OrigemOSCard] dadosOrigem.tarefasPorPlano:', dadosOrigem?.tarefasPorPlano);
-    console.log('🔍 [OrigemOSCard] tarefasPorPlanoData (final):', tarefasPorPlanoData);
-    console.log('🔍 [OrigemOSCard] hasMultiplosPlanos:', hasMultiplosPlanos);
-    console.log('🔍 [OrigemOSCard] tarefas:', tarefas);
-    console.log('🔍 [OrigemOSCard] hasTarefasLegacy:', hasTarefasLegacy);
+    if (!hasMultiplosPlanos) return null;
 
-    if (!hasMultiplosPlanos && !hasTarefasLegacy) {
-      console.log('❌ [OrigemOSCard] Retornando null - sem dados para exibir');
-      return null;
-    }
+    const tarefasIds: string[] = [];
+    const planosIds: string[] = Object.keys(tarefasPorPlanoData);
 
-    // Se tem múltiplos planos, usar nova visualização
-    if (hasMultiplosPlanos) {
-      const totalTarefas = Object.values(tarefasPorPlanoData).reduce(
-        (total, grupo) => total + grupo.tarefas.length,
-        0
-      );
-
-      // Usar apenas tarefas que estão relacionadas à programação específica
-      // Em vez de buscar todas as tarefas dos planos, usar as tarefas já carregadas
-      const tarefasIds: string[] = [];
-      const planosIds: string[] = [];
-
-      // Extrair IDs dos planos
-      Object.keys(tarefasPorPlanoData).forEach((planoId) => {
-        planosIds.push(planoId);
+    if (dadosOrigem?.tarefasSelecionadas && dadosOrigem.tarefasSelecionadas.length > 0) {
+      dadosOrigem.tarefasSelecionadas.forEach((tarefaId: string) => {
+        if (tarefaId && tarefaId.trim()) {
+          tarefasIds.push(tarefaId.trim());
+        }
       });
-
-      // Usar apenas as tarefas reais dos dados de origem, não os IDs de relacionamento
-      console.log('🔍 [OrigemOSCard] Verificando fonte de tarefas:');
-      console.log('🔍 [OrigemOSCard] tarefas (array):', tarefas);
-      console.log('🔍 [OrigemOSCard] dadosOrigem.tarefasSelecionadas:', dadosOrigem?.tarefasSelecionadas);
-
-      // Priorizar sempre os IDs reais das tarefas dos dadosOrigem
-      if (dadosOrigem?.tarefasSelecionadas && dadosOrigem.tarefasSelecionadas.length > 0) {
-        console.log('✅ [OrigemOSCard] Usando tarefasSelecionadas dos dadosOrigem (IDs reais)');
-        dadosOrigem.tarefasSelecionadas.forEach((tarefaId: string) => {
-          console.log('🔍 [OrigemOSCard] TarefaId real encontrado:', tarefaId);
-          if (tarefaId && tarefaId.trim()) {
-            tarefasIds.push(tarefaId.trim());
-          }
-        });
-      } else if (tarefas && tarefas.length > 0) {
-        console.log('⚠️ [OrigemOSCard] Usando array de tarefas como fallback');
-        tarefas.forEach((tarefa: any) => {
-          console.log('🔍 [OrigemOSCard] Tarefa encontrada:', tarefa);
-          // Usar tarefa_id se disponível, senão usar id
-          const idReal = tarefa.tarefa_id || tarefa.id;
-          if (idReal) {
-            tarefasIds.push(idReal);
-          }
-        });
-      }
-
-      console.log('✅ [OrigemOSCard] IDs finais extraídos:', { tarefasIds, planosIds });
-      console.log('✅ [OrigemOSCard] Renderizando PlanosManutencaoViewer com tarefas da programação:', { tarefasIds, planosIds });
-
-      return (
-        <PlanosManutencaoViewer
-          tarefasIds={tarefasIds}
-          planosIds={planosIds}
-          title={`Planos de Manutenção (${Object.keys(tarefasPorPlanoData).length}) - ${tarefasIds.length} Tarefas`}
-          className=""
-        />
-      );
+    } else if (tarefas && tarefas.length > 0) {
+      tarefas.forEach((tarefa: any) => {
+        const idReal = tarefa.tarefa_id || tarefa.id;
+        if (idReal) {
+          tarefasIds.push(idReal);
+        }
+      });
     }
 
-    return null;
-  };
-
-  const renderManualCard = () => {
     return (
-      <Card className="border-gray-200 bg-gray-50 dark:bg-gray-950/20">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-gray-700 dark:text-gray-400">
-            <FileText className="h-5 w-5" />
-            Ordem de Serviço Manual
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Esta ordem de serviço foi criada manualmente, sem origem específica de anomalia ou plano de manutenção.
-          </p>
-        </CardContent>
-      </Card>
+      <PlanosManutencaoViewer
+        tarefasIds={tarefasIds}
+        planosIds={planosIds}
+        title={`Planos de Manutenção (${planosIds.length}) - ${tarefasIds.length} Tarefas`}
+        className=""
+      />
     );
   };
 
-  // Renderizar baseado na origem
-  const renderKey = Math.random().toString(36).substr(2, 9);
-  console.log(`🔍 [OrigemOSCard-${renderKey}] Renderizando com origem:`, origem);
-  console.log(`🔍 [OrigemOSCard-${renderKey}] Props recebidas:`, { origem, dadosOrigem, anomalia, tarefas, planoManutencao, planosSelecionados, tarefasPorPlano });
+  const renderTarefaDetails = () => {
+    if (!dadosOrigem) return null;
 
-  switch (origem) {
-    case 'ANOMALIA':
-      console.log('🔍 [OrigemOSCard] Renderizando ANOMALIA');
-      return renderAnomaliaCard();
-    case 'PLANO_MANUTENCAO':
-    case 'TAREFA':
-      console.log('🔍 [OrigemOSCard] Renderizando PLANO_MANUTENCAO/TAREFA');
-      return renderMultiplosPlanosCard();
-    case 'MANUAL':
-    default:
-      console.log('🔍 [OrigemOSCard] Renderizando MANUAL');
-      return renderManualCard();
-  }
+    const count = dadosOrigem.tarefas_count || dadosOrigem.tarefas_ids?.length || 0;
+    const unidadeNome = dadosOrigem.unidade_nome;
+    const autoGerada = dadosOrigem.auto_gerada;
+
+    const frequenciaLabels: Record<string, string> = {
+      DIARIA: 'Diária', SEMANAL: 'Semanal', QUINZENAL: 'Quinzenal',
+      MENSAL: 'Mensal', BIMESTRAL: 'Bimestral', TRIMESTRAL: 'Trimestral',
+      SEMESTRAL: 'Semestral', ANUAL: 'Anual', PERSONALIZADA: 'Personalizada',
+    };
+
+    const categoriaLabels: Record<string, string> = {
+      MECANICA: 'Mecânica', ELETRICA: 'Elétrica', INSTRUMENTACAO: 'Instrumentação',
+      LUBRIFICACAO: 'Lubrificação', LIMPEZA: 'Limpeza', INSPECAO: 'Inspeção',
+      CALIBRACAO: 'Calibração', OUTROS: 'Outros',
+    };
+
+    const tipoLabels: Record<string, string> = {
+      PREVENTIVA: 'Preventiva', PREDITIVA: 'Preditiva', CORRETIVA: 'Corretiva',
+      INSPECAO: 'Inspeção', VISITA_TECNICA: 'Visita Técnica',
+    };
+
+    return (
+      <div className="space-y-3">
+        {/* Resumo */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="outline" className="text-xs">
+            {count} tarefa{count !== 1 ? 's' : ''}
+          </Badge>
+          {unidadeNome && (
+            <Badge variant="secondary" className="text-xs">{unidadeNome}</Badge>
+          )}
+          {autoGerada && (
+            <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+              Auto-gerada
+            </Badge>
+          )}
+        </div>
+
+        {/* Loading */}
+        {tarefasLoading && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Carregando detalhes das tarefas...
+          </div>
+        )}
+
+        {/* Lista de tarefas com detalhes completos */}
+        {tarefasFromAPI.length > 0 && (
+          <div className="space-y-2">
+            {tarefasFromAPI.map((tarefa) => (
+              <div
+                key={tarefa.id}
+                className="border border-gray-200 dark:border-gray-700 rounded-md p-3 space-y-2"
+              >
+                {/* Header da tarefa */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs text-muted-foreground">{tarefa.tag}</span>
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                        {tarefa.nome}
+                      </span>
+                    </div>
+                    {tarefa.descricao && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {tarefa.descricao}
+                      </p>
+                    )}
+                  </div>
+                  <Badge
+                    variant={tarefa.status === 'ATIVA' ? 'default' : 'secondary'}
+                    className="text-xs shrink-0"
+                  >
+                    {tarefa.status}
+                  </Badge>
+                </div>
+
+                {/* Detalhes em grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs">
+                  {tarefa.categoria && (
+                    <div>
+                      <span className="text-muted-foreground">Categoria: </span>
+                      <span className="text-gray-700 dark:text-gray-300">
+                        {categoriaLabels[tarefa.categoria] || tarefa.categoria}
+                      </span>
+                    </div>
+                  )}
+                  {tarefa.tipo_manutencao && (
+                    <div>
+                      <span className="text-muted-foreground">Tipo: </span>
+                      <span className="text-gray-700 dark:text-gray-300">
+                        {tipoLabels[tarefa.tipo_manutencao] || tarefa.tipo_manutencao}
+                      </span>
+                    </div>
+                  )}
+                  {tarefa.frequencia && (
+                    <div>
+                      <span className="text-muted-foreground">Frequência: </span>
+                      <span className="text-gray-700 dark:text-gray-300">
+                        {frequenciaLabels[tarefa.frequencia] || tarefa.frequencia}
+                        {tarefa.frequencia === 'PERSONALIZADA' && tarefa.frequencia_personalizada
+                          ? ` (${tarefa.frequencia_personalizada} dias)`
+                          : ''}
+                      </span>
+                    </div>
+                  )}
+                  {tarefa.criticidade != null && (
+                    <div>
+                      <span className="text-muted-foreground">Criticidade: </span>
+                      <span className="text-gray-700 dark:text-gray-300">{tarefa.criticidade}/5</span>
+                    </div>
+                  )}
+                  {tarefa.duracao_estimada != null && (
+                    <div>
+                      <span className="text-muted-foreground">Duração: </span>
+                      <span className="text-gray-700 dark:text-gray-300">{tarefa.duracao_estimada}h</span>
+                    </div>
+                  )}
+                  {tarefa.condicao_ativo && (
+                    <div>
+                      <span className="text-muted-foreground">Condição: </span>
+                      <span className="text-gray-700 dark:text-gray-300">{tarefa.condicao_ativo}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Equipamento e plano */}
+                <div className="flex items-center gap-3 text-xs flex-wrap">
+                  {tarefa.equipamento && (
+                    <div className="flex items-center gap-1">
+                      <Settings className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-gray-700 dark:text-gray-300">{tarefa.equipamento.nome}</span>
+                    </div>
+                  )}
+                  {tarefa.plano_manutencao && (
+                    <div className="flex items-center gap-1">
+                      <FileText className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-gray-700 dark:text-gray-300">{tarefa.plano_manutencao.nome}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Execução */}
+                {(tarefa.data_ultima_execucao || tarefa.numero_execucoes > 0) && (
+                  <div className="flex items-center gap-3 text-xs border-t border-gray-100 dark:border-gray-700/50 pt-1.5">
+                    {tarefa.data_ultima_execucao && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          Última execução: {formatarData(tarefa.data_ultima_execucao)}
+                        </span>
+                      </div>
+                    )}
+                    {tarefa.numero_execucoes > 0 && (
+                      <span className="text-muted-foreground">
+                        ({tarefa.numero_execucoes} execuç{tarefa.numero_execucoes === 1 ? 'ão' : 'ões'})
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Sub-tarefas */}
+                {tarefa.sub_tarefas && tarefa.sub_tarefas.length > 0 && (
+                  <div className="border-t border-gray-100 dark:border-gray-700/50 pt-1.5">
+                    <span className="text-xs text-muted-foreground">
+                      Sub-tarefas ({tarefa.sub_tarefas.length}):
+                    </span>
+                    <ul className="mt-1 space-y-0.5">
+                      {tarefa.sub_tarefas.map((st) => (
+                        <li key={st.id} className="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                          <span className="h-1 w-1 rounded-full bg-gray-400 shrink-0" />
+                          {st.descricao}
+                          {st.obrigatoria && (
+                            <span className="text-destructive text-[10px]">*</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Fallback: se não conseguiu carregar da API, mostrar dados básicos */}
+        {!tarefasLoading && tarefasFromAPI.length === 0 && (dadosOrigem.tarefas_tags?.length > 0 || dadosOrigem.tarefas_nomes?.length > 0) && (
+          <div className="space-y-1">
+            {(dadosOrigem.tarefas_tags || []).map((tag: string, i: number) => (
+              <div key={tag} className="flex items-center gap-2 text-xs">
+                <span className="font-mono text-muted-foreground">{tag}</span>
+                {dadosOrigem.tarefas_nomes?.[i] && (
+                  <span className="text-gray-700 dark:text-gray-300">{dadosOrigem.tarefas_nomes[i]}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderSolicitacaoDetails = () => {
+    const sol = solicitacaoFromAPI || solicitacaoServico || dadosOrigem;
+    if (!sol) return null;
+
+    const tipoLabels: Record<string, string> = {
+      INSTALACAO: 'Instalação',
+      MANUTENCAO_PREVENTIVA: 'Manutenção Preventiva',
+      MANUTENCAO_CORRETIVA: 'Manutenção Corretiva',
+      INSPECAO: 'Inspeção',
+      CALIBRACAO: 'Calibração',
+      MODIFICACAO: 'Modificação',
+      REMOCAO: 'Remoção',
+      CONSULTORIA: 'Consultoria',
+      TREINAMENTO: 'Treinamento',
+      OUTRO: 'Outro',
+    };
+
+    return (
+      <div className="space-y-3">
+        {/* Número e título */}
+        {sol.numero && (
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs font-mono">{sol.numero}</Badge>
+            {sol.status && (
+              <Badge variant="secondary" className="text-xs">{sol.status}</Badge>
+            )}
+          </div>
+        )}
+
+        {sol.titulo && (
+          <h4 className="font-medium text-sm text-gray-800 dark:text-gray-200">
+            {sol.titulo}
+          </h4>
+        )}
+
+        {sol.descricao && (
+          <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+            {sol.descricao}
+          </p>
+        )}
+
+        {/* Detalhes em grid */}
+        <div className="grid grid-cols-2 gap-3 text-xs">
+          {sol.tipo && (
+            <div>
+              <span className="font-medium text-gray-600 dark:text-gray-400">Tipo: </span>
+              <span className="text-gray-700 dark:text-gray-300">{tipoLabels[sol.tipo] || sol.tipo}</span>
+            </div>
+          )}
+          {sol.prioridade && (
+            <div>
+              <span className="font-medium text-gray-600 dark:text-gray-400">Prioridade: </span>
+              <Badge
+                variant={sol.prioridade === 'URGENTE' || sol.prioridade === 'ALTA' ? 'destructive' : 'secondary'}
+                className="text-xs"
+              >
+                {sol.prioridade}
+              </Badge>
+            </div>
+          )}
+          {sol.local && (
+            <div className="flex items-center gap-1">
+              <MapPin className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+              <span className="text-gray-700 dark:text-gray-300">{sol.local}</span>
+            </div>
+          )}
+          {sol.solicitante_nome && (
+            <div>
+              <span className="font-medium text-gray-600 dark:text-gray-400">Solicitante: </span>
+              <span className="text-gray-700 dark:text-gray-300">{sol.solicitante_nome}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Data */}
+        {sol.data_solicitacao && (
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
+            <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+              <Calendar className="h-3 w-3" />
+              <span>Solicitada em: {formatarData(sol.data_solicitacao)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <Card className="border border-gray-200 dark:border-gray-700 shadow-sm">
+      <CardHeader
+        className="pb-3 bg-gray-50 dark:bg-gray-800/50 cursor-pointer select-none"
+        onClick={() => hasDetails && setExpanded(!expanded)}
+      >
+        <CardTitle className="text-sm flex items-center justify-between text-gray-700 dark:text-gray-300">
+          <div className="flex items-center gap-2">
+            {(anomaliaLoading || solicitacaoLoading || tarefasLoading) ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <OrigemIcon className="h-4 w-4" />
+            )}
+            <span>Origem: {getOrigemLabel(origem)}</span>
+          </div>
+          {hasDetails && (
+            expanded
+              ? <ChevronUp className="h-4 w-4 text-gray-400" />
+              : <ChevronDown className="h-4 w-4 text-gray-400" />
+          )}
+        </CardTitle>
+      </CardHeader>
+
+      {expanded && (
+        <CardContent className="pt-4">
+          {origem === 'ANOMALIA' && renderAnomaliaDetails()}
+          {origem === 'PLANO_MANUTENCAO' && renderPlanoDetails()}
+          {origem === 'TAREFA' && (renderPlanoDetails() || (hasTarefaDetails && renderTarefaDetails()))}
+          {origem === 'SOLICITACAO_SERVICO' && renderSolicitacaoDetails()}
+        </CardContent>
+      )}
+    </Card>
+  );
 });

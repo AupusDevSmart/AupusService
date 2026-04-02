@@ -50,7 +50,6 @@ export function TarefasModal({
         status: 'ATIVA',
         ativo: true,
         duracao_estimada: 1,
-        tempo_estimado: 60,
         data_ultima_execucao: new Date().toISOString().slice(0, 16),
         numero_execucoes: 0,
         sub_tarefas: [],
@@ -90,7 +89,7 @@ export function TarefasModal({
         {
           key: 'informacoes_basicas',
           title: 'Informações Básicas',
-          fields: ['origem_plano_info', 'plano_manutencao_id', 'tag', 'nome', 'descricao']
+          fields: ['plano_manutencao_id', 'instrucao_id', 'tag', 'nome', 'descricao']
         },
         ...(mode !== 'create'
           ? [
@@ -113,7 +112,6 @@ export function TarefasModal({
             'frequencia',
             'frequencia_personalizada',
             'duracao_estimada',
-            'tempo_estimado',
             'planejador',
             'responsavel',
             'data_ultima_execucao',

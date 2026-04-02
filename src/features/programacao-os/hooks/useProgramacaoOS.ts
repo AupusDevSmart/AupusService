@@ -70,11 +70,9 @@ export const useProgramacaoOS = () => {
           totalPages: 0
         },
         stats: {
-          rascunho: 0,
           pendentes: 0,
-          em_analise: 0,
           aprovadas: 0,
-          rejeitadas: 0,
+          finalizadas: 0,
           canceladas: 0
         }
       };
@@ -98,32 +96,13 @@ export const useProgramacaoOS = () => {
     }
   }, [handleError]);
 
-  // Analisar programação
-  const analisarProgramacao = useCallback(async (id: string, observacoes?: string) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const result = await programacaoOSApi.analisar(id, { observacoes_analise: observacoes });
-      return result;
-    } catch (error) {
-      return handleError(error, 'Erro ao analisar programação');
-    } finally {
-      setLoading(false);
-    }
-  }, [handleError]);
-
   // Aprovar programação
-  const aprovarProgramacao = useCallback(async (id: string, observacoes?: string, ajustes?: any) => {
+  const aprovarProgramacao = useCallback(async (id: string, observacoes?: string) => {
     setLoading(true);
     setError(null);
 
     try {
-      const result = await programacaoOSApi.aprovar(id, {
-        observacoes_aprovacao: observacoes,
-        ajustes_orcamento: ajustes?.orcamento,
-        data_hora_programada_sugerida: ajustes?.dataHoraProgramada
-      });
+      const result = await programacaoOSApi.aprovar(id, { observacoes });
       return result;
     } catch (error) {
       return handleError(error, 'Erro ao aprovar programação');
@@ -132,19 +111,16 @@ export const useProgramacaoOS = () => {
     }
   }, [handleError]);
 
-  // Rejeitar programação
-  const rejeitarProgramacao = useCallback(async (id: string, motivo: string, sugestoes?: string) => {
+  // Finalizar programação
+  const finalizarProgramacao = useCallback(async (id: string, observacoes?: string) => {
     setLoading(true);
     setError(null);
 
     try {
-      const result = await programacaoOSApi.rejeitar(id, {
-        motivo_rejeicao: motivo,
-        sugestoes_melhoria: sugestoes
-      });
+      const result = await programacaoOSApi.finalizar(id, { observacoes });
       return result;
     } catch (error) {
-      return handleError(error, 'Erro ao rejeitar programação');
+      return handleError(error, 'Erro ao finalizar programação');
     } finally {
       setLoading(false);
     }
@@ -311,9 +287,8 @@ export const useProgramacaoOS = () => {
     atualizarProgramacao,
     listarProgramacoes,
     buscarProgramacao,
-    analisarProgramacao,
     aprovarProgramacao,
-    rejeitarProgramacao,
+    finalizarProgramacao,
     cancelarProgramacao,
     criarDeAnomalia,
     criarDeTarefas,

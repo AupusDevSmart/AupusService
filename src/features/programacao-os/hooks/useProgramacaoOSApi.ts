@@ -9,9 +9,8 @@ import type {
   CreateProgramacaoDto,
   UpdateProgramacaoDto,
   ListarProgramacoesResponse,
-  AnalisarProgramacaoDto,
   AprovarProgramacaoDto,
-  RejeitarProgramacaoDto,
+  FinalizarProgramacaoDto,
   CancelarProgramacaoDto,
   CreateProgramacaoAnomaliaDto,
   CreateProgramacaoTarefasDto,
@@ -31,18 +30,14 @@ export function useProgramacaoOSApi() {
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [stats, setStats] = useState<{
-    rascunho: number;
     pendentes: number;
-    em_analise: number;
     aprovadas: number;
-    rejeitadas: number;
+    finalizadas: number;
     canceladas: number;
   }>({
-    rascunho: 0,
     pendentes: 0,
-    em_analise: 0,
     aprovadas: 0,
-    rejeitadas: 0,
+    finalizadas: 0,
     canceladas: 0,
   });
 
@@ -62,11 +57,9 @@ export function useProgramacaoOSApi() {
       setTotalPages(response.pagination?.totalPages || 0);
       setCurrentPage(response.pagination?.page || 1);
       setStats(response.stats || {
-        rascunho: 0,
         pendentes: 0,
-        em_analise: 0,
         aprovadas: 0,
-        rejeitadas: 0,
+        finalizadas: 0,
         canceladas: 0,
       });
 
@@ -152,41 +145,12 @@ export function useProgramacaoOSApi() {
   // TRANSIÇÕES DE WORKFLOW
   // ============================================================================
 
-  const analisar = useCallback(async (id: string, observacoes?: string) => {
+  const aprovar = useCallback(async (id: string, observacoes?: string) => {
     try {
       setLoading(true);
       setError(null);
 
-      const data: AnalisarProgramacaoDto = { observacoes_analise: observacoes };
-      const response = await programacaoOSApi.analisar(id, data);
-      return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao analisar programação';
-      setError(errorMessage);
-      console.error('Erro ao analisar programação:', err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const aprovar = useCallback(async (
-    id: string,
-    observacoes?: string,
-    ajustes?: {
-      ajustes_orcamento?: number;
-      data_programada_sugerida?: string;
-      hora_programada_sugerida?: string;
-    }
-  ) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const data: AprovarProgramacaoDto = {
-        observacoes_aprovacao: observacoes,
-        ...ajustes,
-      };
+      const data: AprovarProgramacaoDto = { observacoes };
       const response = await programacaoOSApi.aprovar(id, data);
       return response;
     } catch (err: any) {
@@ -199,21 +163,18 @@ export function useProgramacaoOSApi() {
     }
   }, []);
 
-  const rejeitar = useCallback(async (id: string, motivo: string, sugestoes?: string) => {
+  const finalizar = useCallback(async (id: string, observacoes?: string) => {
     try {
       setLoading(true);
       setError(null);
 
-      const data: RejeitarProgramacaoDto = {
-        motivo_rejeicao: motivo,
-        sugestoes_melhoria: sugestoes,
-      };
-      const response = await programacaoOSApi.rejeitar(id, data);
+      const data: FinalizarProgramacaoDto = { observacoes };
+      const response = await programacaoOSApi.finalizar(id, data);
       return response;
     } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao rejeitar programação';
+      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao finalizar programação';
       setError(errorMessage);
-      console.error('Erro ao rejeitar programação:', err);
+      console.error('Erro ao finalizar programação:', err);
       throw err;
     } finally {
       setLoading(false);
@@ -348,9 +309,8 @@ export function useProgramacaoOSApi() {
     deleteItem,
 
     // Workflow
-    analisar,
     aprovar,
-    rejeitar,
+    finalizar,
     cancelar,
 
     // Operações específicas

@@ -24,9 +24,9 @@ export function DataProgramadaCell({ data_hora_programada, status }: DataProgram
     const dataFormatada = format(data, "dd/MM/yyyy", { locale: ptBR });
     const horaFormatada = format(data, "HH:mm", { locale: ptBR });
 
-    // Verificar se está atrasada (data passada e status não é APROVADA, REJEITADA ou CANCELADA)
+    // Verificar se está atrasada (data passada e status não é FINALIZADA ou CANCELADA)
     const isAtrasada = isPast(data) &&
-                       !['APROVADA', 'REJEITADA', 'CANCELADA'].includes(status) &&
+                       !['FINALIZADA', 'CANCELADA'].includes(status) &&
                        !isToday(data);
 
     const isHoje = isToday(data);

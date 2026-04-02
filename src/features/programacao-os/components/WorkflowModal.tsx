@@ -1,15 +1,14 @@
 // src/features/programacao-os/components/WorkflowModal.tsx
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { X, Save, AlertTriangle, CheckCircle, XCircle, Ban } from 'lucide-react';
+import { X, Save, CheckCircle, Flag, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WorkflowModalProps {
   isOpen: boolean;
-  action: 'analisar' | 'aprovar' | 'rejeitar' | 'cancelar' | null;
+  action: 'aprovar' | 'finalizar' | 'cancelar' | null;
   programacao: any;
   onClose: () => void;
   onConfirm: (data: any) => void;
@@ -24,12 +23,11 @@ export function WorkflowModal({
   onConfirm,
   loading = false
 }: WorkflowModalProps) {
-  const [formData, setFormData] = useState<any>({});
+  const [observacoes, setObservacoes] = useState('');
 
   useEffect(() => {
     if (isOpen && action) {
-      // Resetar dados quando modal abre
-      setFormData({});
+      setObservacoes('');
     }
   }, [isOpen, action]);
 
@@ -37,83 +35,44 @@ export function WorkflowModal({
 
   const getModalConfig = () => {
     switch (action) {
-      case 'analisar':
-        return {
-          title: 'Analisar Programação',
-          icon: <AlertTriangle className="h-5 w-5 text-purple-600" />,
-          description: 'Enviar programação para análise (PENDENTE → EM_ANÁLISE)',
-          fields: [
-            {
-              key: 'observacoes_analise',
-              label: 'Observações da Análise',
-              type: 'textarea',
-              placeholder: 'Observações da análise (opcional)',
-              required: false
-            }
-          ]
-        };
-
       case 'aprovar':
         return {
-          title: 'Aprovar Programação',
-          icon: <CheckCircle className="h-5 w-5 text-green-600" />,
-          description: 'Aprovar programação e gerar OS (EM_ANÁLISE → APROVADA)',
-          fields: [
-            {
-              key: 'observacoes_aprovacao',
-              label: 'Observações da Aprovação',
-              type: 'textarea',
-              placeholder: 'Observações da aprovação (opcional)',
-              required: false
-            }
-          ]
+          title: 'Aprovar Programacao',
+          icon: <CheckCircle className="h-5 w-5 text-emerald-600" />,
+          description: 'Aprovar programacao (PENDENTE -> APROVADA)',
+          observacoesLabel: 'Observacoes',
+          observacoesPlaceholder: 'Observacoes da aprovacao (opcional)',
+          required: false,
         };
 
-      case 'rejeitar':
+      case 'finalizar':
         return {
-          title: 'Rejeitar Programação',
-          icon: <XCircle className="h-5 w-5 text-red-600" />,
-          description: 'Rejeitar programação (EM_ANÁLISE → REJEITADA)',
-          fields: [
-            {
-              key: 'motivo_rejeicao',
-              label: 'Motivo da Rejeição',
-              type: 'textarea',
-              placeholder: 'Descreva o motivo da rejeição',
-              required: true
-            },
-            {
-              key: 'sugestoes_melhoria',
-              label: 'Sugestões de Melhoria',
-              type: 'textarea',
-              placeholder: 'Sugestões para melhorar a programação (opcional)',
-              required: false
-            }
-          ]
+          title: 'Finalizar Programacao',
+          icon: <Flag className="h-5 w-5 text-blue-600" />,
+          description: 'Finalizar programacao (APROVADA -> FINALIZADA)',
+          observacoesLabel: 'Observacoes',
+          observacoesPlaceholder: 'Observacoes da finalizacao (opcional)',
+          required: false,
         };
 
       case 'cancelar':
         return {
-          title: 'Cancelar Programação',
+          title: 'Cancelar Programacao',
           icon: <Ban className="h-5 w-5 text-orange-600" />,
-          description: 'Cancelar programação (QUALQUER_STATUS → CANCELADA)',
-          fields: [
-            {
-              key: 'motivo_cancelamento',
-              label: 'Motivo do Cancelamento',
-              type: 'textarea',
-              placeholder: 'Descreva o motivo do cancelamento',
-              required: true
-            }
-          ]
+          description: 'Cancelar programacao (-> CANCELADA)',
+          observacoesLabel: 'Motivo do Cancelamento',
+          observacoesPlaceholder: 'Descreva o motivo do cancelamento',
+          required: true,
         };
 
       default:
         return {
-          title: 'Ação',
+          title: 'Acao',
           icon: null,
           description: '',
-          fields: []
+          observacoesLabel: 'Observacoes',
+          observacoesPlaceholder: '',
+          required: false,
         };
     }
   };
@@ -123,23 +82,12 @@ export function WorkflowModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validar campos obrigatórios
-    const requiredFields = config.fields.filter(field => field.required);
-    const missingFields = requiredFields.filter(field => !formData[field.key]?.trim());
-
-    if (missingFields.length > 0) {
-      alert(`⚠️ Campos obrigatórios não preenchidos: ${missingFields.map(f => f.label).join(', ')}`);
+    if (config.required && !observacoes.trim()) {
+      alert(`Campo obrigatorio: ${config.observacoesLabel}`);
       return;
     }
 
-    onConfirm(formData);
-  };
-
-  const handleFieldChange = (key: string, value: string) => {
-    setFormData((prev: any) => ({
-      ...prev,
-      [key]: value
-    }));
+    onConfirm({ observacoes });
   };
 
   return (
@@ -184,9 +132,9 @@ export function WorkflowModal({
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-6">
-              {/* Programação Info */}
+              {/* Programacao Info */}
               <div className="mb-6 p-4 bg-muted rounded-lg">
-                <h3 className="font-medium mb-2">Programação: {programacao?.descricao}</h3>
+                <h3 className="font-medium mb-2">Programacao: {programacao?.descricao}</h3>
                 <div className="text-sm text-muted-foreground space-y-1">
                   <div>Status: <span className="font-medium">{programacao?.status}</span></div>
                   <div>Local: {programacao?.local}</div>
@@ -196,37 +144,23 @@ export function WorkflowModal({
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-4">
-                {config.fields.map((field) => (
-                  <div key={field.key}>
-                    <Label htmlFor={field.key} className="text-sm font-medium">
-                      {field.label}
-                      {field.required && <span className="text-red-500 ml-1">*</span>}
-                    </Label>
-
-                    <div className="mt-1">
-                      {field.type === 'textarea' ? (
-                        <Textarea
-                          id={field.key}
-                          value={formData[field.key] || ''}
-                          onChange={(e) => handleFieldChange(field.key, e.target.value)}
-                          placeholder={field.placeholder}
-                          disabled={loading}
-                          rows={3}
-                          className="resize-none"
-                        />
-                      ) : (
-                        <Input
-                          id={field.key}
-                          type={field.type}
-                          value={formData[field.key] || ''}
-                          onChange={(e) => handleFieldChange(field.key, e.target.value)}
-                          placeholder={field.placeholder}
-                          disabled={loading}
-                        />
-                      )}
-                    </div>
+                <div>
+                  <Label htmlFor="observacoes" className="text-sm font-medium">
+                    {config.observacoesLabel}
+                    {config.required && <span className="text-red-500 ml-1">*</span>}
+                  </Label>
+                  <div className="mt-1">
+                    <Textarea
+                      id="observacoes"
+                      value={observacoes}
+                      onChange={(e) => setObservacoes(e.target.value)}
+                      placeholder={config.observacoesPlaceholder}
+                      disabled={loading}
+                      rows={3}
+                      className="resize-none"
+                    />
                   </div>
-                ))}
+                </div>
               </form>
             </div>
           </div>

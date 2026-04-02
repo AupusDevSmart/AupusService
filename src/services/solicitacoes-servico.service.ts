@@ -4,12 +4,6 @@ import {
   SolicitacaoServico,
   SolicitacaoServicoFormData,
   SolicitacoesFilters,
-  EnviarSolicitacaoDto,
-  AnalisarSolicitacaoDto,
-  AprovarSolicitacaoDto,
-  RejeitarSolicitacaoDto,
-  CancelarSolicitacaoDto,
-  ConcluirSolicitacaoDto,
   AdicionarComentarioDto,
   ComentarioSolicitacao,
   HistoricoSolicitacao,
@@ -27,18 +21,11 @@ export interface SolicitacoesResponse {
 
 export interface SolicitacoesStats {
   total: number;
-  rascunhos: number;
-  aguardando: number;
-  emAnalise: number;
-  aprovadas: number;
-  rejeitadas: number;
-  emExecucao: number;
-  concluidas: number;
-  canceladas: number;
-  urgentes: number;
+  registradas: number;
+  programadas: number;
+  finalizadas: number;
   porTipo: Record<string, number>;
   porPrioridade: Record<string, number>;
-  taxaAprovacao: number;
 }
 
 export interface CreateSolicitacaoDto {
@@ -47,7 +34,9 @@ export interface CreateSolicitacaoDto {
   tipo: string;
   prioridade?: string;
   origem?: string;
+  proprietario_id?: string;
   planta_id?: string;
+  unidade_id?: string;
   area?: string;
   local?: string;
   local_especifico?: string;
@@ -60,7 +49,7 @@ export interface CreateSolicitacaoDto {
   beneficios_esperados?: string;
   riscos_nao_execucao?: string;
   requisitos_especiais?: string;
-  observacoes?: string;
+  // observacoes?: string; // Campo removido - backend não aceita
   data_necessidade?: string;
   prazo_esperado?: number;
   tempo_estimado?: number;
@@ -68,6 +57,7 @@ export interface CreateSolicitacaoDto {
   materiais_necessarios?: string;
   ferramentas_necessarias?: string;
   mao_obra_necessaria?: string;
+  instrucoes_ids?: string[];
 }
 
 export interface UpdateSolicitacaoDto extends Partial<CreateSolicitacaoDto> {}
@@ -91,10 +81,18 @@ class SolicitacoesServicoApiService {
     if (filters.prioridade && filters.prioridade !== 'all')
       params.append('prioridade', filters.prioridade);
     if (filters.origem && filters.origem !== 'all') params.append('origem', filters.origem);
-    if (filters.planta && filters.planta !== 'all') params.append('planta', filters.planta);
+    if (filters.planta_id && filters.planta_id !== 'all') params.append('planta_id', filters.planta_id);
 
     const url = `${this.baseUrl}?${params}`;
+    console.log('[SERVICE] Parâmetros enviados para API:', params.toString());
     const response = await api.get(url);
+
+    // Debug: verificar o que está vindo do backend
+    if (response.data?.data?.length > 0) {
+      console.log('[SERVICE] Primeira solicitação recebida do backend:', response.data.data[0]);
+      console.log('[SERVICE] unidade_id:', response.data.data[0].unidade_id);
+      console.log('[SERVICE] unidade:', response.data.data[0].unidade);
+    }
 
     return response.data;
   }
@@ -105,13 +103,20 @@ class SolicitacoesServicoApiService {
   }
 
   async create(data: SolicitacaoServicoFormData): Promise<SolicitacaoServico> {
+    // Validar que planta_id está preenchido
+    if (!data.planta_id) {
+      throw new Error('É necessário selecionar uma planta');
+    }
+
     const createDto: CreateSolicitacaoDto = {
       titulo: data.titulo,
       descricao: data.descricao,
       tipo: data.tipo,
-      prioridade: data.prioridade,
-      origem: data.origem,
+      prioridade: data.prioridade || 'MEDIA',
+      origem: data.origem || 'PORTAL', // Valor padrão: PORTAL (conforme validação da API)
+      proprietario_id: data.proprietario_id || undefined,
       planta_id: data.planta_id,
+      unidade_id: data.unidade_id || undefined,
       area: data.area,
       local: data.local,
       local_especifico: data.local_especifico,
@@ -124,7 +129,7 @@ class SolicitacoesServicoApiService {
       beneficios_esperados: data.beneficios_esperados,
       riscos_nao_execucao: data.riscos_nao_execucao,
       requisitos_especiais: data.requisitos_especiais,
-      observacoes: data.observacoes,
+      // observacoes: data.observacoes, // Campo removido - backend não aceita
       data_necessidade: data.data_necessidade,
       prazo_esperado: data.prazo_esperado,
       tempo_estimado: data.tempo_estimado,
@@ -132,6 +137,7 @@ class SolicitacoesServicoApiService {
       materiais_necessarios: data.materiais_necessarios,
       ferramentas_necessarias: data.ferramentas_necessarias,
       mao_obra_necessaria: data.mao_obra_necessaria,
+      instrucoes_ids: data.instrucoes_ids,
     };
 
     const response = await api.post(this.baseUrl, createDto);
@@ -148,12 +154,13 @@ class SolicitacoesServicoApiService {
       beneficios_esperados: data.beneficios_esperados,
       riscos_nao_execucao: data.riscos_nao_execucao,
       requisitos_especiais: data.requisitos_especiais,
-      observacoes: data.observacoes,
+      // observacoes: data.observacoes, // Campo removido - backend não aceita
       tempo_estimado: data.tempo_estimado,
       custo_estimado: data.custo_estimado,
       materiais_necessarios: data.materiais_necessarios,
       ferramentas_necessarias: data.ferramentas_necessarias,
       mao_obra_necessaria: data.mao_obra_necessaria,
+      instrucoes_ids: data.instrucoes_ids,
     };
 
     const response = await api.patch(`${this.baseUrl}/${id}`, updateDto);
@@ -178,40 +185,6 @@ class SolicitacoesServicoApiService {
     const url = `${this.baseUrl}/stats${params.toString() ? `?${params}` : ''}`;
     const response = await api.get(url);
 
-    return response.data;
-  }
-
-  // ==========================================
-  // 🔄 3. AÇÕES DE WORKFLOW
-  // ==========================================
-
-  async enviar(id: string, dto?: EnviarSolicitacaoDto): Promise<SolicitacaoServico> {
-    const response = await api.patch(`${this.baseUrl}/${id}/enviar`, dto || {});
-    return response.data;
-  }
-
-  async analisar(id: string, dto: AnalisarSolicitacaoDto): Promise<SolicitacaoServico> {
-    const response = await api.patch(`${this.baseUrl}/${id}/analisar`, dto);
-    return response.data;
-  }
-
-  async aprovar(id: string, dto?: AprovarSolicitacaoDto): Promise<SolicitacaoServico> {
-    const response = await api.patch(`${this.baseUrl}/${id}/aprovar`, dto || {});
-    return response.data;
-  }
-
-  async rejeitar(id: string, dto: RejeitarSolicitacaoDto): Promise<SolicitacaoServico> {
-    const response = await api.patch(`${this.baseUrl}/${id}/rejeitar`, dto);
-    return response.data;
-  }
-
-  async cancelar(id: string, dto: CancelarSolicitacaoDto): Promise<SolicitacaoServico> {
-    const response = await api.patch(`${this.baseUrl}/${id}/cancelar`, dto);
-    return response.data;
-  }
-
-  async concluir(id: string, dto?: ConcluirSolicitacaoDto): Promise<SolicitacaoServico> {
-    const response = await api.patch(`${this.baseUrl}/${id}/concluir`, dto || {});
     return response.data;
   }
 

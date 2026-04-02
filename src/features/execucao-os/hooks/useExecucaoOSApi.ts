@@ -11,6 +11,10 @@ import type {
   RetomarExecucaoApiData,
   FinalizarExecucaoApiData,
   CancelarExecucaoApiData,
+  ExecutarExecucaoApiData,
+  AuditarExecucaoApiData,
+  ReabrirExecucaoApiData,
+  FinalizarExecucaoOSApiData,
   DashboardExecucaoOSDto,
 } from '@/services/execucao-os.service';
 import { transformApiArrayToExecucaoOS } from '../utils/transform-api-data';
@@ -27,6 +31,7 @@ export function useExecucaoOSApi() {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [stats, setStats] = useState<Record<string, number>>({});
   const [dashboard, setDashboard] = useState<DashboardExecucaoOSDto | null>(null);
 
   // ============================================================================
@@ -45,8 +50,9 @@ export function useExecucaoOSApi() {
 
       setItems(execucoesFormatadas);
       setTotal(response.pagination?.total || 0);
-      setTotalPages(response.pagination?.pages || 0);
+      setTotalPages(response.pagination?.totalPages || 0);
       setCurrentPage(response.pagination?.page || 1);
+      setStats(response.stats || {});
 
       return response;
     } catch (err: any) {
@@ -186,6 +192,74 @@ export function useExecucaoOSApi() {
     }
   }, []);
 
+  const executar = useCallback(async (id: string, data: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await execucaoOSTransitionsService.executar(id, data);
+      return response;
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao registrar execução';
+      setError(errorMessage);
+      console.error('Erro ao registrar execução:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const auditar = useCallback(async (id: string, data: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await execucaoOSTransitionsService.auditar(id, data);
+      return response;
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao auditar execução';
+      setError(errorMessage);
+      console.error('Erro ao auditar execução:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const reabrir = useCallback(async (id: string, data: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await execucaoOSTransitionsService.reabrir(id, data);
+      return response;
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao reabrir execução';
+      setError(errorMessage);
+      console.error('Erro ao reabrir execução:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const finalizarOS = useCallback(async (id: string, data: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await execucaoOSTransitionsService.finalizar(id, data);
+      return response;
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao finalizar OS';
+      setError(errorMessage);
+      console.error('Erro ao finalizar OS:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // ============================================================================
   // OPERAÇÕES ADICIONAIS
   // ============================================================================
@@ -254,6 +328,7 @@ export function useExecucaoOSApi() {
     total,
     totalPages,
     currentPage,
+    stats,
     dashboard,
 
     // CRUD
@@ -267,6 +342,10 @@ export function useExecucaoOSApi() {
     retomar,
     finalizar,
     cancelar,
+    executar,
+    auditar,
+    reabrir,
+    finalizarOS,
 
     // Operações adicionais
     getAnexos,

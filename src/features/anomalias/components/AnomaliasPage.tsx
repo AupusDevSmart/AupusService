@@ -24,11 +24,9 @@ const initialFilters = {
 
 const initialStats: AnomaliasStats = {
   total: 0,
-  aguardando: 0,
-  emAnalise: 0,
-  osGerada: 0,
-  resolvida: 0,
-  cancelada: 0,
+  registradas: 0,
+  programadas: 0,
+  finalizadas: 0,
   criticas: 0,
 };
 
@@ -49,8 +47,6 @@ export function AnomaliasPage() {
     updateAnomalia,
     deleteAnomalia,
     getStats,
-    gerarProgramacaoOS,
-    cancelar,
   } = useAnomaliasApi();
 
   // Hook de filtros
@@ -70,8 +66,6 @@ export function AnomaliasPage() {
   const anomaliasActions = useAnomaliasActions({
     openModal,
     deleteItem: deleteAnomalia,
-    gerarProgramacaoOS,
-    cancelar,
     onSuccess: reloadData,
   });
 
@@ -81,12 +75,9 @@ export function AnomaliasPage() {
       onView: anomaliasActions.handleView,
       onEdit: anomaliasActions.handleEdit,
       onDelete: anomaliasActions.handleDelete,
-      onGerarProgramacaoOS: anomaliasActions.handleGerarProgramacaoOS,
-      onCancelar: anomaliasActions.handleCancelar,
     });
 
     // Filtrar apenas as ações extras (não View, Edit)
-    // Converter TableAction[] para CustomAction[]
     return tableActions
       .filter((action) => action.label !== 'Visualizar' && action.label !== 'Editar')
       .map((action) => {
@@ -162,6 +153,7 @@ export function AnomaliasPage() {
               equipamentoId: equipamentoId.toString().trim(),
             }),
         },
+        instrucoes_ids: data.instrucoes_ids,
       };
 
       if (modalState.mode === 'create') {
@@ -232,7 +224,7 @@ export function AnomaliasPage() {
         data: new Date().toISOString(),
         condicao: 'FUNCIONANDO',
         origem: 'OPERADOR',
-        status: 'AGUARDANDO',
+        status: 'REGISTRADA',
         prioridade: 'MEDIA',
         observacoes: '',
         localizacao: {
@@ -386,7 +378,7 @@ export function AnomaliasPage() {
               {
                 key: 'classificacao',
                 title: 'Classificação',
-                fields: ['status', 'condicao', 'origem', 'prioridade'],
+                fields: ['condicao', 'origem', 'prioridade', 'status'],
               },
               {
                 key: 'observacoes',
@@ -394,9 +386,9 @@ export function AnomaliasPage() {
                 fields: ['observacoes'],
               },
               {
-                key: 'analise',
-                title: 'Análise da Anomalia',
-                fields: ['observacoes_analise'],
+                key: 'instrucoes_vinculadas',
+                title: 'Instrucoes Vinculadas',
+                fields: ['instrucoes_ids'],
               },
               {
                 key: 'anexos',

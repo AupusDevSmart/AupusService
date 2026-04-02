@@ -1,264 +1,116 @@
 // src/features/solicitacoes-servico/hooks/useSolicitacoesActions.ts
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
+import { solicitacoesServicoService } from '@/services/solicitacoes-servico.service';
 import { SolicitacaoServico } from '../types';
+import { PendingAction } from '../components/ActionConfirmPanel';
 
 interface UseSolicitacoesActionsProps {
   openModal: (mode: 'create' | 'edit' | 'view', entity?: SolicitacaoServico) => void;
+  closeModal: () => void;
   deleteItem: (id: string) => Promise<void>;
-  enviar: (id: string, observacoes?: string) => Promise<any>;
-  analisar: (id: string, dto: any) => Promise<any>;
-  aprovar: (id: string, dto?: any) => Promise<any>;
-  rejeitar: (id: string, dto: any) => Promise<any>;
-  cancelar: (id: string, dto: any) => Promise<any>;
-  concluir: (id: string, dto?: any) => Promise<any>;
   onSuccess: () => void | Promise<void>;
 }
 
 export function useSolicitacoesActions({
   openModal,
+  closeModal,
   deleteItem,
-  enviar,
-  analisar,
-  aprovar,
-  rejeitar,
-  cancelar,
-  concluir,
   onSuccess,
 }: UseSolicitacoesActionsProps) {
-  const handleView = useCallback(
-    (solicitacao: SolicitacaoServico) => {
-      openModal('view', solicitacao);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [actionEntity, setActionEntity] = useState<SolicitacaoServico | null>(null);
+
+  const openViewWithAction = useCallback(
+    async (solicitacao: SolicitacaoServico, action: PendingAction) => {
+      try {
+        const complete = await solicitacoesServicoService.findOne(solicitacao.id);
+        setActionEntity(complete as SolicitacaoServico);
+        setPendingAction(action);
+        openModal('view', complete as SolicitacaoServico);
+      } catch (error) {
+        console.error('Erro ao buscar solicitacao completa:', error);
+        setActionEntity(solicitacao);
+        setPendingAction(action);
+        openModal('view', solicitacao);
+      }
     },
     [openModal]
+  );
+
+  const clearPendingAction = useCallback(() => {
+    setPendingAction(null);
+    setActionEntity(null);
+  }, []);
+
+  const handleView = useCallback(
+    async (solicitacao: SolicitacaoServico) => {
+      clearPendingAction();
+      try {
+        const complete = await solicitacoesServicoService.findOne(solicitacao.id);
+        openModal('view', complete as SolicitacaoServico);
+      } catch (error) {
+        console.error('[ACTIONS] handleView - Erro no findOne, usando dados da lista:', error);
+        openModal('view', solicitacao);
+      }
+    },
+    [openModal, clearPendingAction]
   );
 
   const handleEdit = useCallback(
-    (solicitacao: SolicitacaoServico) => {
-      // Apenas rascunhos podem ser editados
-      if (solicitacao.status !== 'RASCUNHO') {
-        alert(
-          `Não é possível editar uma solicitação com status "${solicitacao.status}". ` +
-            'Apenas solicitações em "RASCUNHO" podem ser editadas.'
-        );
+    async (solicitacao: SolicitacaoServico) => {
+      if (solicitacao.status !== 'REGISTRADA') {
+        alert('Apenas solicitacoes registradas podem ser editadas.');
         return;
       }
-      openModal('edit', solicitacao);
+      clearPendingAction();
+      try {
+        const complete = await solicitacoesServicoService.findOne(solicitacao.id);
+        openModal('edit', complete as SolicitacaoServico);
+      } catch (error) {
+        console.error('[ACTIONS] handleEdit - Erro no findOne, usando dados da lista:', error);
+        openModal('edit', solicitacao);
+      }
     },
-    [openModal]
+    [openModal, clearPendingAction]
   );
 
   const handleDelete = useCallback(
-    async (solicitacao: SolicitacaoServico) => {
-      // Apenas rascunhos e canceladas podem ser deletados
-      if (solicitacao.status !== 'RASCUNHO' && solicitacao.status !== 'CANCELADA') {
-        alert(
-          `Não é possível excluir uma solicitação com status "${solicitacao.status}". ` +
-            'Apenas solicitações em "RASCUNHO" ou "CANCELADA" podem ser excluídas.'
-        );
+    (solicitacao: SolicitacaoServico) => {
+      if (solicitacao.status !== 'REGISTRADA') {
+        alert('Apenas solicitacoes registradas podem ser excluidas.');
         return;
       }
-
-      const confirmDelete = confirm(
-        `Tem certeza que deseja excluir a solicitação: ${solicitacao.titulo}?`
-      );
-
-      if (!confirmDelete) return;
-
-      try {
-        await deleteItem(solicitacao.id);
-        await onSuccess();
-      } catch (error) {
-        console.error('Erro ao excluir solicitação:', error);
-        alert('Erro ao excluir solicitação. Tente novamente.');
-      }
+      openViewWithAction(solicitacao, 'excluir');
     },
-    [deleteItem, onSuccess]
+    [openViewWithAction]
   );
 
-  const handleEnviar = useCallback(
-    async (solicitacao: SolicitacaoServico) => {
-      if (solicitacao.status !== 'RASCUNHO') {
-        alert('Apenas solicitações em "RASCUNHO" podem ser enviadas para análise.');
-        return;
-      }
-
-      const confirmEnviar = confirm(
-        `Enviar solicitação "${solicitacao.titulo}" para análise?`
-      );
-
-      if (!confirmEnviar) return;
+  const confirmAction = useCallback(
+    async (_input?: string) => {
+      if (!pendingAction || !actionEntity) return;
 
       try {
-        await enviar(solicitacao.id);
+        if (pendingAction === 'excluir') {
+          await deleteItem(actionEntity.id);
+        }
+
+        closeModal();
+        clearPendingAction();
         await onSuccess();
-        alert('Solicitação enviada para análise com sucesso!');
       } catch (error) {
-        console.error('Erro ao enviar solicitação:', error);
-        alert('Erro ao enviar solicitação. Tente novamente.');
+        console.error(`Erro ao executar acao ${pendingAction}:`, error);
+        alert('Erro ao executar acao. Tente novamente.');
       }
     },
-    [enviar, onSuccess]
-  );
-
-  const handleAnalisar = useCallback(
-    async (solicitacao: SolicitacaoServico) => {
-      if (solicitacao.status !== 'AGUARDANDO') {
-        alert('Apenas solicitações "AGUARDANDO" podem ser analisadas.');
-        return;
-      }
-
-      const observacoes = prompt(
-        'Digite as observações da análise (obrigatório):'
-      );
-
-      if (!observacoes || observacoes.trim() === '') {
-        alert('É necessário informar as observações da análise.');
-        return;
-      }
-
-      try {
-        await analisar(solicitacao.id, {
-          observacoes_analise: observacoes,
-        });
-        await onSuccess();
-        alert('Solicitação em análise!');
-      } catch (error) {
-        console.error('Erro ao analisar solicitação:', error);
-        alert('Erro ao analisar solicitação. Tente novamente.');
-      }
-    },
-    [analisar, onSuccess]
-  );
-
-  const handleAprovar = useCallback(
-    async (solicitacao: SolicitacaoServico) => {
-      if (solicitacao.status !== 'EM_ANALISE') {
-        alert('Apenas solicitações "EM ANÁLISE" podem ser aprovadas.');
-        return;
-      }
-
-      const observacoes = prompt('Observações da aprovação (opcional):');
-
-      const confirmAprovar = confirm(
-        `Aprovar solicitação "${solicitacao.titulo}"?`
-      );
-
-      if (!confirmAprovar) return;
-
-      try {
-        await aprovar(solicitacao.id, {
-          observacoes_aprovacao: observacoes || undefined,
-        });
-        await onSuccess();
-        alert('Solicitação aprovada com sucesso!');
-      } catch (error) {
-        console.error('Erro ao aprovar solicitação:', error);
-        alert('Erro ao aprovar solicitação. Tente novamente.');
-      }
-    },
-    [aprovar, onSuccess]
-  );
-
-  const handleRejeitar = useCallback(
-    async (solicitacao: SolicitacaoServico) => {
-      if (solicitacao.status !== 'EM_ANALISE') {
-        alert('Apenas solicitações "EM ANÁLISE" podem ser rejeitadas.');
-        return;
-      }
-
-      const motivo = prompt('Digite o motivo da rejeição (obrigatório):');
-
-      if (!motivo || motivo.trim() === '') {
-        alert('É necessário informar o motivo da rejeição.');
-        return;
-      }
-
-      const sugestoes = prompt('Sugestões alternativas (opcional):');
-
-      try {
-        await rejeitar(solicitacao.id, {
-          motivo_rejeicao: motivo,
-          sugestoes_alternativas: sugestoes || undefined,
-        });
-        await onSuccess();
-        alert('Solicitação rejeitada.');
-      } catch (error) {
-        console.error('Erro ao rejeitar solicitação:', error);
-        alert('Erro ao rejeitar solicitação. Tente novamente.');
-      }
-    },
-    [rejeitar, onSuccess]
-  );
-
-  const handleCancelar = useCallback(
-    async (solicitacao: SolicitacaoServico) => {
-      if (
-        solicitacao.status === 'CONCLUIDA' ||
-        solicitacao.status === 'CANCELADA'
-      ) {
-        alert('Esta solicitação já foi concluída ou cancelada.');
-        return;
-      }
-
-      const motivo = prompt('Digite o motivo do cancelamento (obrigatório):');
-
-      if (!motivo || motivo.trim() === '') {
-        alert('É necessário informar o motivo do cancelamento.');
-        return;
-      }
-
-      try {
-        await cancelar(solicitacao.id, {
-          motivo_cancelamento: motivo,
-        });
-        await onSuccess();
-        alert('Solicitação cancelada com sucesso!');
-      } catch (error) {
-        console.error('Erro ao cancelar solicitação:', error);
-        alert('Erro ao cancelar solicitação. Tente novamente.');
-      }
-    },
-    [cancelar, onSuccess]
-  );
-
-  const handleConcluir = useCallback(
-    async (solicitacao: SolicitacaoServico) => {
-      if (solicitacao.status !== 'EM_EXECUCAO') {
-        alert('Apenas solicitações "EM EXECUÇÃO" podem ser concluídas.');
-        return;
-      }
-
-      const observacoes = prompt('Observações da conclusão (opcional):');
-
-      const confirmConcluir = confirm(
-        `Concluir solicitação "${solicitacao.titulo}"?`
-      );
-
-      if (!confirmConcluir) return;
-
-      try {
-        await concluir(solicitacao.id, {
-          observacoes_conclusao: observacoes || undefined,
-        });
-        await onSuccess();
-        alert('Solicitação concluída com sucesso!');
-      } catch (error) {
-        console.error('Erro ao concluir solicitação:', error);
-        alert('Erro ao concluir solicitação. Tente novamente.');
-      }
-    },
-    [concluir, onSuccess]
+    [pendingAction, actionEntity, deleteItem, closeModal, clearPendingAction, onSuccess]
   );
 
   return {
     handleView,
     handleEdit,
     handleDelete,
-    handleEnviar,
-    handleAnalisar,
-    handleAprovar,
-    handleRejeitar,
-    handleCancelar,
-    handleConcluir,
+    pendingAction,
+    confirmAction,
+    clearPendingAction,
   };
 }

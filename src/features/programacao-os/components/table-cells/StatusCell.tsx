@@ -7,25 +7,17 @@ interface StatusCellProps {
 }
 
 const statusConfig = {
-  RASCUNHO: {
-    label: 'Rascunho',
-    className: 'text-gray-600 dark:text-gray-400',
-  },
   PENDENTE: {
     label: 'Pendente',
     className: 'text-amber-600 dark:text-amber-500',
-  },
-  EM_ANALISE: {
-    label: 'Em Análise',
-    className: 'text-blue-600 dark:text-blue-400',
   },
   APROVADA: {
     label: 'Aprovada',
     className: 'text-emerald-600 dark:text-emerald-500',
   },
-  REJEITADA: {
-    label: 'Rejeitada',
-    className: 'text-red-600 dark:text-red-500',
+  FINALIZADA: {
+    label: 'Finalizada',
+    className: 'text-blue-600 dark:text-blue-400',
   },
   CANCELADA: {
     label: 'Cancelada',

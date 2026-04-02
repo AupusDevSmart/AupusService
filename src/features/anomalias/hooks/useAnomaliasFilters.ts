@@ -3,6 +3,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { FilterConfig } from '@/types/base';
 import { AnomaliasFilters } from '../types';
 import { anomaliasFormFields } from '../config/form-config';
+import { InstrucoesSelector } from '@/features/solicitacoes-servico/components/InstrucoesSelector';
 
 export function useAnomaliasFilters(initialFilters: Partial<AnomaliasFilters>) {
   const [plantas, setPlantas] = useState<Array<{ value: string; label: string }>>([]);
@@ -65,12 +66,10 @@ export function useAnomaliasFilters(initialFilters: Partial<AnomaliasFilters>) {
       label: 'Status',
       placeholder: 'Todos os status',
       options: [
-        { value: 'all', label: 'Todos os status' },
-        { value: 'AGUARDANDO', label: 'Aguardando' },
-        { value: 'EM_ANALISE', label: 'Em Análise' },
-        { value: 'OS_GERADA', label: 'OS Gerada' },
-        { value: 'RESOLVIDA', label: 'Resolvida' },
-        { value: 'CANCELADA', label: 'Cancelada' }
+        { value: 'all', label: 'Todos' },
+        { value: 'REGISTRADA', label: 'Registrada' },
+        { value: 'PROGRAMADA', label: 'Programada' },
+        { value: 'FINALIZADA', label: 'Finalizada' },
       ],
       className: 'w-full sm:w-auto sm:min-w-[160px]'
     },
@@ -101,8 +100,18 @@ export function useAnomaliasFilters(initialFilters: Partial<AnomaliasFilters>) {
     },
   ], [unidades]);
 
-  // Form fields para o modal
-  const formFields = useMemo(() => anomaliasFormFields, []);
+  // Form fields para o modal - injeta InstrucoesSelector no campo instrucoes_ids
+  const formFields = useMemo(() => {
+    return anomaliasFormFields.map(field => {
+      if (field.key === 'instrucoes_ids') {
+        return {
+          ...field,
+          render: InstrucoesSelector,
+        };
+      }
+      return field;
+    });
+  }, []);
 
   return {
     filterConfigs,

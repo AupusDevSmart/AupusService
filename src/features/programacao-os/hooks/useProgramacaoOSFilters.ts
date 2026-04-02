@@ -23,11 +23,9 @@ export function useProgramacaoOSFilters(currentFilters: ProgramacaoFiltersDto) {
       placeholder: 'Todos os status',
       options: [
         { value: 'all', label: 'Todos os status' },
-        { value: 'RASCUNHO', label: 'Rascunho' },
         { value: 'PENDENTE', label: 'Pendente' },
-        { value: 'EM_ANALISE', label: 'Em Análise' },
         { value: 'APROVADA', label: 'Aprovada' },
-        { value: 'REJEITADA', label: 'Rejeitada' },
+        { value: 'FINALIZADA', label: 'Finalizada' },
         { value: 'CANCELADA', label: 'Cancelada' },
       ],
     },

@@ -6,12 +6,13 @@ import { ProgramacaoResponse } from '../../programacao-os/types';
 // ENUMS E TIPOS BASE (CONFORME SCHEMA)
 // ========================================
 
-export type StatusExecucaoOS = 
-  | 'PLANEJADA'     // OS criada da programação aprovada
-  | 'PROGRAMADA'    // Data/hora definida, recursos confirmados  
+export type StatusExecucaoOS =
+  | 'PENDENTE'      // OS criada, aguardando início
   | 'EM_EXECUCAO'   // Execução iniciada
   | 'PAUSADA'       // Execução pausada
-  | 'FINALIZADA'    // Execução concluída
+  | 'EXECUTADA'     // Execução concluída, aguardando auditoria
+  | 'AUDITADA'      // Auditoria de qualidade realizada
+  | 'FINALIZADA'    // OS finalizada (encerrada)
   | 'CANCELADA';    // OS cancelada
 
 export type TipoAnexoOS = 
@@ -442,7 +443,7 @@ export interface ExecucaoOSFormData {
 
 export interface ExecucaoModalState {
   isOpen: boolean;
-  mode: ModalMode | 'iniciar' | 'pausar' | 'finalizar' | 'anexos';
+  mode: ModalMode;
   execucaoOS: ExecucaoOS | null;
   preselectedData?: any;
 }

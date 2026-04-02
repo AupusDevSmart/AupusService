@@ -27,7 +27,7 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'text',
     disabled: true,
     group: 'identificacao',
-    width: 'half'
+    colSpan: 2,
   },
   {
     key: 'tipoOS',
@@ -43,17 +43,17 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'textarea',
     disabled: true,
     group: 'identificacao',
-    width: 'full',
+    colSpan: 2,
     startNewRow: true
   },
-  {
-    key: 'localAtivo',
-    label: 'Local/Ativo',
-    type: 'text',
-    disabled: true,
-    group: 'identificacao',
-    width: 'two-thirds'
-  },
+  // {
+  //   key: 'localAtivo',
+  //   label: 'Local/Ativo',
+  //   type: 'text',
+  //   disabled: true,
+  //   group: 'identificacao',
+  //   width: 'two-thirds'
+  // },
   {
     key: 'prioridadeOS',
     label: 'Prioridade',
@@ -137,10 +137,11 @@ export const execucaoOSFormFields: FormField[] = [
     required: true,
     disabled: true, // ✅ Status não pode ser mudado manualmente - usar botões de ação
     options: [
-      // PLANEJADA removido - OS começam como PROGRAMADA
-      { value: 'PROGRAMADA', label: 'Programada' },
+      { value: 'PENDENTE', label: 'Pendente' },
       { value: 'EM_EXECUCAO', label: 'Em Execução' },
       { value: 'PAUSADA', label: 'Pausada' },
+      { value: 'EXECUTADA', label: 'Executada' },
+      { value: 'AUDITADA', label: 'Auditada' },
       { value: 'FINALIZADA', label: 'Finalizada' },
       { value: 'CANCELADA', label: 'Cancelada' }
     ],
@@ -152,7 +153,7 @@ export const execucaoOSFormFields: FormField[] = [
     label: '',
     type: 'custom',
     component: (props: any) => {
-      const status = props.value || props.entity?.statusExecucao || 'PROGRAMADA'; // Default: PROGRAMADA
+      const status = props.value || props.entity?.statusExecucao || 'PENDENTE';
       return <StatusTransitionHelper currentStatus={status} />;
     },
     group: 'controle',
@@ -208,7 +209,7 @@ export const execucaoOSFormFields: FormField[] = [
     width: 'two-thirds',
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
-      return status === 'PROGRAMADA' || status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+      return status === 'PENDENTE' || status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'EXECUTADA' || status === 'AUDITADA' || status === 'FINALIZADA';
     }
   },
   {
@@ -220,7 +221,7 @@ export const execucaoOSFormFields: FormField[] = [
     width: 'third',
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
-      return status === 'PROGRAMADA' || status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
+      return status === 'PENDENTE' || status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'EXECUTADA' || status === 'AUDITADA' || status === 'FINALIZADA';
     }
   },
 

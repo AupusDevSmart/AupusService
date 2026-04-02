@@ -4,7 +4,6 @@ import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Combobox } from '@nexon/components/ui/combobox';
 import { useEquipamentos } from '@nexon/features/equipamentos/hooks/useEquipamentos';
 import { useGenericModal } from '@/hooks/useGenericModal';
@@ -33,9 +32,9 @@ import { usePlanosManutencaoApi } from '../hooks/usePlanosManutencaoApi';
 import { PlanosModal } from './PlanosModal';
 
 interface EquipamentoSelecionado {
-  equipamentoId: string; // Mudado para string (CUID)
+  equipamentoId: string;
   equipamentoNome: string;
-  plantaId: number;
+  plantaId: string;
   plantaNome: string;
   unidadeId: string;
   unidadeNome: string;
@@ -44,8 +43,6 @@ interface EquipamentoSelecionado {
 interface AssociacaoRapida {
   equipamentos: EquipamentoSelecionado[];
   planoSelecionado: string;
-  responsavelPadrao: string;
-  observacoesPadrao: string;
 }
 
 export function AssociacaoEquipamentosPage() {
@@ -87,9 +84,7 @@ export function AssociacaoEquipamentosPage() {
   const [loadingEquipamentos, setLoadingEquipamentos] = useState(false);
   const [associacao, setAssociacao] = useState<AssociacaoRapida>({
     equipamentos: [],
-    planoSelecionado: planoIdInicial || '',
-    responsavelPadrao: '',
-    observacoesPadrao: ''
+    planoSelecionado: planoIdInicial || ''
   });
 
   // Estados para as novas funcionalidades
@@ -113,6 +108,7 @@ export function AssociacaoEquipamentosPage() {
           unidadeId: unidadeSelecionada,
           criticidade: 'all',
           classificacao: 'UC',
+          semPlano: true,
           limit: 100
         });
         setEquipamentosUnidade(equipamentosData);
@@ -225,7 +221,7 @@ export function AssociacaoEquipamentosPage() {
     const novoEquipamento: EquipamentoSelecionado = {
       equipamentoId: equipamento.id.toString(),
       equipamentoNome: equipamento.nome,
-      plantaId: parseInt(planta.id.toString()),
+      plantaId: planta.id.toString(),
       plantaNome: planta.nome,
       unidadeId: unidade.id,
       unidadeNome: unidade.nome
@@ -288,14 +284,14 @@ export function AssociacaoEquipamentosPage() {
           data_vigencia_inicio: data.data_vigencia_inicio,
           data_vigencia_fim: data.data_vigencia_fim,
           observacoes: data.observacoes,
-          criado_por: data.criado_por || 'usuario-atual'
+          criado_por: data.criado_por || user?.id
         };
         novoPlano = await createPlano(createData);
       } else if (mostrandoOpcaoPlano === 'duplicar') {
         novoPlano = await duplicarPlano(planoParaDuplicar, {
           equipamento_destino_id: data.equipamento_id,
           novo_nome: data.nome,
-          criado_por: 'usuario-atual'
+          criado_por: user?.id
         });
       }
       
@@ -340,7 +336,7 @@ export function AssociacaoEquipamentosPage() {
       const resultado = await clonarLote(associacao.planoSelecionado, {
         equipamentos_destino_ids: equipamentosIds,
         manter_nome_original: false, // Adicionar nome do equipamento ao plano
-        criado_por: user?.id || 'usuario-atual'
+        criado_por: user?.id
       });
 
       console.log('✅ Resultado da associação:', resultado);
@@ -724,29 +720,6 @@ ${resultado.detalhes.map(det =>
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Responsável Padrão (Opcional)
-                  </label>
-                  <Input
-                    placeholder="Nome do responsável..."
-                    value={associacao.responsavelPadrao}
-                    onChange={(e) => setAssociacao(prev => ({ ...prev, responsavelPadrao: e.target.value }))}
-                    className="!rounded-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Observações Padrão (Opcional)
-                  </label>
-                  <Input
-                    placeholder="Observações para todas as tarefas..."
-                    value={associacao.observacoesPadrao}
-                    onChange={(e) => setAssociacao(prev => ({ ...prev, observacoesPadrao: e.target.value }))}
-                    className="!rounded-sm"
-                  />
-                </div>
               </div>
 
               {/* Preview do Plano Selecionado - USANDO API */}

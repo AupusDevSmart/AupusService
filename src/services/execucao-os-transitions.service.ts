@@ -4,10 +4,11 @@
 import { api } from '@/config/api';
 
 export type StatusExecucaoOS =
-  // 'PLANEJADA' removido - OS começam como PROGRAMADA
-  | 'PROGRAMADA'
+  | 'PENDENTE'
   | 'EM_EXECUCAO'
   | 'PAUSADA'
+  | 'EXECUTADA'
+  | 'AUDITADA'
   | 'FINALIZADA'
   | 'CANCELADA';
 
@@ -15,30 +16,10 @@ export type StatusExecucaoOS =
 // DTOs para transições de status
 // ============================================================================
 
-export interface ProgramarOSDto {
-  data_hora_programada: string; // ISO DateTime
-  responsavel: string;
-  responsavel_id?: string;
-  time_equipe?: string;
-  materiais_confirmados: string[];
-  ferramentas_confirmadas: string[];
-  tecnicos_confirmados: string[];
-  reserva_veiculo?: {
-    veiculo_id: string;
-    data_inicio: string;
-    data_fim: string;
-    hora_inicio: string;
-    hora_fim: string;
-    finalidade: string;
-    km_inicial?: number;
-  };
-  observacoes_programacao?: string;
-}
-
 export interface IniciarExecucaoDto {
-  equipe_presente: string[];
-  responsavel_execucao: string;
-  observacoes_inicio?: string;
+  equipe_presente?: string[];
+  responsavel_execucao?: string;
+  observacoes?: string;
   data_hora_inicio_real?: string; // ISO DateTime
 }
 
@@ -51,31 +32,19 @@ export interface RetomarExecucaoDto {
   observacoes_retomada?: string;
 }
 
-export interface MaterialFinalizacaoDto {
-  id: string;
-  quantidade_consumida: number;
+export interface CancelarOSDto {
+  motivo_cancelamento: string;
   observacoes?: string;
 }
 
-export interface FerramentaFinalizacaoDto {
-  id: string;
-  condicao_depois: string;
-  observacoes?: string;
-}
-
-export interface FinalizarOSDto {
+export interface ExecutarOSDto {
   data_hora_fim_real?: string; // ISO DateTime
   resultado_servico: string;
   problemas_encontrados?: string;
   recomendacoes?: string;
-  proxima_manutencao?: string; // ISO Date
-  materiais_consumidos: MaterialFinalizacaoDto[];
-  ferramentas_utilizadas: FerramentaFinalizacaoDto[];
-  avaliacao_qualidade: number; // 1-5
-  observacoes_qualidade?: string;
-  km_final?: number;
-  observacoes_veiculo?: string;
-  // Novos campos adicionados
+  observacoes_execucao?: string;
+  materiais_consumidos?: { id: string; quantidade_consumida: number; observacoes?: string }[];
+  ferramentas_utilizadas?: { id: string; condicao_depois: string; observacoes?: string }[];
   atividades_realizadas?: string;
   checklist_concluido?: number;
   procedimentos_seguidos?: string;
@@ -83,10 +52,20 @@ export interface FinalizarOSDto {
   incidentes_seguranca?: string;
   medidas_seguranca_adicionais?: string;
   custos_adicionais?: number;
+  km_final?: number;
+  observacoes_veiculo?: string;
 }
 
-export interface CancelarOSDto {
-  motivo_cancelamento: string;
+export interface AuditarOSDto {
+  avaliacao_qualidade?: number; // 1-5
+  observacoes_qualidade?: string;
+}
+
+export interface ReabrirOSDto {
+  observacoes?: string;
+}
+
+export interface FinalizarOSFinalDto {
   observacoes?: string;
 }
 
@@ -98,41 +77,18 @@ export class ExecucaoOSTransitionsService {
   private readonly baseEndpoint = '/execucao-os';
 
   /**
-   * Reprogramar OS (já não existe mais PLANEJADA)
-   * Atualiza data/hora e confirma recursos para a OS
-   */
-  async programar(id: string, data: ProgramarOSDto): Promise<{ message: string }> {
-    console.log('📅 PROGRAMAR OS:', id, data);
-
-    try {
-      const response = await api.patch<{ message: string }>(
-        `${this.baseEndpoint}/${id}/programar`,
-        data
-      );
-      console.log('✅ OS Programada com sucesso');
-      return response.data;
-    } catch (error: any) {
-      console.error('❌ Erro ao programar OS:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Transição: PROGRAMADA → EM_EXECUCAO
+   * Transição: PENDENTE -> EM_EXECUCAO
    * Inicia a execução da OS com equipe definida
    */
   async iniciar(id: string, data: IniciarExecucaoDto): Promise<{ message: string }> {
-    console.log('▶️ INICIAR EXECUÇÃO:', id, data);
-
     try {
       const response = await api.patch<{ message: string }>(
         `${this.baseEndpoint}/${id}/iniciar`,
         data
       );
-      console.log('✅ Execução iniciada com sucesso');
       return response.data;
     } catch (error: any) {
-      console.error('❌ Erro ao iniciar execução:', error);
+      console.error('Erro ao iniciar execucao:', error);
       throw error;
     }
   }
@@ -142,17 +98,14 @@ export class ExecucaoOSTransitionsService {
    * Pausa temporariamente a execução da OS
    */
   async pausar(id: string, data: PausarExecucaoDto): Promise<{ message: string }> {
-    console.log('⏸️ PAUSAR EXECUÇÃO:', id, data);
-
     try {
       const response = await api.patch<{ message: string }>(
         `${this.baseEndpoint}/${id}/pausar`,
         data
       );
-      console.log('✅ Execução pausada com sucesso');
       return response.data;
     } catch (error: any) {
-      console.error('❌ Erro ao pausar execução:', error);
+      console.error('Erro ao pausar execucao:', error);
       throw error;
     }
   }
@@ -162,57 +115,99 @@ export class ExecucaoOSTransitionsService {
    * Retoma a execução de uma OS pausada
    */
   async retomar(id: string, data: RetomarExecucaoDto): Promise<{ message: string }> {
-    console.log('▶️ RETOMAR EXECUÇÃO:', id, data);
-
     try {
       const response = await api.patch<{ message: string }>(
         `${this.baseEndpoint}/${id}/retomar`,
         data
       );
-      console.log('✅ Execução retomada com sucesso');
       return response.data;
     } catch (error: any) {
-      console.error('❌ Erro ao retomar execução:', error);
+      console.error('Erro ao retomar execucao:', error);
       throw error;
     }
   }
 
   /**
-   * Transição: EM_EXECUCAO/PAUSADA → FINALIZADA
-   * Finaliza a execução da OS com resultados
+   * Transição: EM_EXECUCAO/PAUSADA -> EXECUTADA
+   * Registra resultados da execução
    */
-  async finalizar(id: string, data: FinalizarOSDto): Promise<{ message: string }> {
-    console.log('🏁 FINALIZAR OS:', id, data);
+  async executar(id: string, data: ExecutarOSDto): Promise<{ message: string }> {
+    try {
+      const response = await api.patch<{ message: string }>(
+        `${this.baseEndpoint}/${id}/executar`,
+        data
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('Erro ao executar OS:', error);
+      throw error;
+    }
+  }
 
+  /**
+   * Transição: EXECUTADA -> AUDITADA
+   * Registra auditoria de qualidade
+   */
+  async auditar(id: string, data: AuditarOSDto): Promise<{ message: string }> {
+    try {
+      const response = await api.patch<{ message: string }>(
+        `${this.baseEndpoint}/${id}/auditar`,
+        data
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('Erro ao auditar OS:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Ação: AUDITADA -> EM_EXECUCAO
+   * Reabre OS para nova execução (não é status, é ação)
+   */
+  async reabrir(id: string, data: ReabrirOSDto): Promise<{ message: string }> {
+    try {
+      const response = await api.patch<{ message: string }>(
+        `${this.baseEndpoint}/${id}/reabrir`,
+        data
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('Erro ao reabrir OS:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Transição: AUDITADA -> FINALIZADA
+   * Finaliza definitivamente a OS
+   */
+  async finalizar(id: string, data: FinalizarOSFinalDto): Promise<{ message: string }> {
     try {
       const response = await api.patch<{ message: string }>(
         `${this.baseEndpoint}/${id}/finalizar`,
         data
       );
-      console.log('✅ OS finalizada com sucesso');
       return response.data;
     } catch (error: any) {
-      console.error('❌ Erro ao finalizar OS:', error);
+      console.error('Erro ao finalizar OS:', error);
       throw error;
     }
   }
 
   /**
-   * Transição: QUALQUER (exceto FINALIZADA) → CANCELADA
+   * Transição: QUALQUER (exceto FINALIZADA/CANCELADA) -> CANCELADA
    * Cancela a OS com motivo
    */
   async cancelar(id: string, data: CancelarOSDto): Promise<{ message: string }> {
-    console.log('🚫 CANCELAR OS:', id, data);
-
     try {
       const response = await api.patch<{ message: string }>(
         `${this.baseEndpoint}/${id}/cancelar`,
         data
       );
-      console.log('✅ OS cancelada com sucesso');
       return response.data;
     } catch (error: any) {
-      console.error('❌ Erro ao cancelar OS:', error);
+      console.error('Erro ao cancelar OS:', error);
       throw error;
     }
   }

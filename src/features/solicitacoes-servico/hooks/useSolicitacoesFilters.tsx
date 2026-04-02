@@ -1,31 +1,27 @@
-// src/features/solicitacoes-servico/hooks/useSolicitacoesFilters.ts
+// src/features/solicitacoes-servico/hooks/useSolicitacoesFilters.tsx
 import { useState, useCallback, useMemo } from 'react';
 import { FilterConfig } from '@/types/base';
 import { SolicitacoesFilters } from '../types';
 import { solicitacoesFormFields } from '../config/form-config';
+import { InstrucoesSelector } from '../components/InstrucoesSelector';
 
 export function useSolicitacoesFilters(initialFilters: Partial<SolicitacoesFilters>) {
   const [plantas, setPlantas] = useState<Array<{ value: string; label: string }>>([]);
 
-  // Carregar opções de filtros da API
   const loadFilterOptions = useCallback(async () => {
     try {
-      // Carregar plantas para o filtro
       const { PlantasService } = await import('@/services/plantas.services');
       const plantasResponse = await PlantasService.getAllPlantas({ limit: 100 });
 
-      const plantasOptions = plantasResponse.data.map((planta: any) => ({
+      setPlantas(plantasResponse.data.map((planta: any) => ({
         value: planta.id.toString(),
         label: planta.nome,
-      }));
-
-      setPlantas(plantasOptions);
+      })));
     } catch (error) {
       console.error('Erro ao carregar opções de filtros:', error);
     }
   }, []);
 
-  // Configuração de filtros
   const filterConfigs: FilterConfig[] = useMemo(
     () => [
       {
@@ -39,16 +35,12 @@ export function useSolicitacoesFilters(initialFilters: Partial<SolicitacoesFilte
         type: 'combobox',
         label: 'Status',
         placeholder: 'Todos os status',
+        allowClear: true,
         options: [
           { value: 'all', label: 'Todos os status' },
-          { value: 'RASCUNHO', label: 'Rascunho' },
-          { value: 'AGUARDANDO', label: 'Aguardando Análise' },
-          { value: 'EM_ANALISE', label: 'Em Análise' },
-          { value: 'APROVADA', label: 'Aprovada' },
-          { value: 'REJEITADA', label: 'Rejeitada' },
-          { value: 'EM_EXECUCAO', label: 'Em Execução' },
-          { value: 'CONCLUIDA', label: 'Concluída' },
-          { value: 'CANCELADA', label: 'Cancelada' },
+          { value: 'REGISTRADA', label: 'Registrada' },
+          { value: 'PROGRAMADA', label: 'Programada' },
+          { value: 'FINALIZADA', label: 'Finalizada' },
         ],
         className: 'w-full sm:w-auto sm:min-w-[180px]',
       },
@@ -57,6 +49,7 @@ export function useSolicitacoesFilters(initialFilters: Partial<SolicitacoesFilte
         type: 'combobox',
         label: 'Tipo',
         placeholder: 'Todos os tipos',
+        allowClear: true,
         options: [
           { value: 'all', label: 'Todos os tipos' },
           { value: 'INSTALACAO', label: 'Instalação' },
@@ -72,6 +65,7 @@ export function useSolicitacoesFilters(initialFilters: Partial<SolicitacoesFilte
         type: 'combobox',
         label: 'Prioridade',
         placeholder: 'Todas as prioridades',
+        allowClear: true,
         options: [
           { value: 'all', label: 'Todas as prioridades' },
           { value: 'URGENTE', label: 'Urgente' },
@@ -82,10 +76,11 @@ export function useSolicitacoesFilters(initialFilters: Partial<SolicitacoesFilte
         className: 'w-full sm:w-auto sm:min-w-[140px]',
       },
       {
-        key: 'planta',
+        key: 'planta_id',
         type: 'combobox',
         label: 'Planta',
         placeholder: 'Todas as plantas',
+        allowClear: true,
         options: [{ value: 'all', label: 'Todas as plantas' }, ...plantas],
         className: 'w-full sm:w-auto sm:min-w-[180px]',
       },
@@ -93,8 +88,18 @@ export function useSolicitacoesFilters(initialFilters: Partial<SolicitacoesFilte
     [plantas]
   );
 
-  // Form fields para o modal
-  const formFields = useMemo(() => solicitacoesFormFields, []);
+  // Form fields com render do InstrucoesSelector injetado
+  const formFields = useMemo(() => {
+    return solicitacoesFormFields.map(field => {
+      if (field.key === 'instrucoes_ids') {
+        return {
+          ...field,
+          render: InstrucoesSelector
+        };
+      }
+      return field;
+    });
+  }, []);
 
   return {
     filterConfigs,

@@ -43,11 +43,9 @@ export const anomaliasFilterConfig: FilterConfig[] = [
     placeholder: 'Todos os status',
     options: [
       { value: 'all', label: 'Todos os status' },
-      { value: 'AGUARDANDO', label: 'Aguardando' },
-      { value: 'EM_ANALISE', label: 'Em Análise' },
-      { value: 'OS_GERADA', label: 'OS Gerada' },
-      { value: 'RESOLVIDA', label: 'Resolvida' },
-      { value: 'CANCELADA', label: 'Cancelada' }
+      { value: 'REGISTRADA', label: 'Registrada' },
+      { value: 'PROGRAMADA', label: 'Programada' },
+      { value: 'FINALIZADA', label: 'Finalizada' }
     ],
     className: 'min-w-40'
   },

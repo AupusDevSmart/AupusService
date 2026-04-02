@@ -7,30 +7,28 @@ interface UseProgramacaoOSActionsProps {
   openModal: (mode: 'create' | 'edit' | 'view', entity?: any, preselectedData?: any) => void;
   fetchOne: (id: string) => Promise<ProgramacaoDetalhesResponse>;
   deleteItem: (id: string) => Promise<void>;
-  analisar: (id: string, observacoes?: string) => Promise<any>;
-  aprovar: (id: string, observacoes?: string, ajustes?: any) => Promise<any>;
-  rejeitar: (id: string, motivo: string, sugestoes?: string) => Promise<any>;
+  aprovar: (id: string, observacoes?: string) => Promise<any>;
+  finalizar: (id: string, observacoes?: string) => Promise<any>;
   cancelar: (id: string, motivo: string) => Promise<any>;
   onSuccess: () => void;
 }
 
 /**
  * Hook customizado para ações da tabela de Programação de OS
- * Segue o padrão definido no FEATURE_REFACTORING_GUIDE.md
+ * Fluxo: PENDENTE -> APROVADA -> FINALIZADA, e PENDENTE/APROVADA -> CANCELADA
  */
 export function useProgramacaoOSActions({
   openModal,
   fetchOne,
   deleteItem,
-  analisar,
   aprovar,
-  rejeitar,
+  finalizar,
   cancelar,
   onSuccess,
 }: UseProgramacaoOSActionsProps) {
   const [loading, setLoading] = useState(false);
   const [showWorkflowModal, setShowWorkflowModal] = useState(false);
-  const [workflowAction, setWorkflowAction] = useState<'analisar' | 'aprovar' | 'rejeitar' | 'cancelar' | null>(null);
+  const [workflowAction, setWorkflowAction] = useState<'aprovar' | 'finalizar' | 'cancelar' | null>(null);
   const [selectedProgramacao, setSelectedProgramacao] = useState<ProgramacaoResponse | null>(null);
 
   // ============================================================================
@@ -44,7 +42,6 @@ export function useProgramacaoOSActions({
       openModal('view', dadosCompletos);
     } catch (error) {
       console.error('Erro ao carregar dados completos:', error);
-      // Fallback: usar dados básicos
       openModal('view', programacao);
     } finally {
       setLoading(false);
@@ -52,9 +49,8 @@ export function useProgramacaoOSActions({
   }, [fetchOne, openModal]);
 
   const handleEdit = useCallback(async (programacao: ProgramacaoResponse) => {
-    // Verificar se pode ser editada
-    if (!['RASCUNHO', 'PENDENTE'].includes(programacao.status)) {
-      alert('Apenas programações em rascunho ou pendentes podem ser editadas');
+    if (programacao.status !== 'PENDENTE') {
+      alert('Apenas programacoes pendentes podem ser editadas');
       return;
     }
 
@@ -64,7 +60,6 @@ export function useProgramacaoOSActions({
       openModal('edit', dadosCompletos);
     } catch (error) {
       console.error('Erro ao carregar dados completos:', error);
-      // Fallback: usar dados básicos
       openModal('edit', programacao);
     } finally {
       setLoading(false);
@@ -72,22 +67,22 @@ export function useProgramacaoOSActions({
   }, [fetchOne, openModal]);
 
   const handleDelete = useCallback(async (programacao: ProgramacaoResponse) => {
-    if (programacao.status === 'APROVADA') {
-      alert('Programações aprovadas não podem ser deletadas');
+    if (programacao.status !== 'PENDENTE') {
+      alert('Apenas programacoes pendentes podem ser deletadas');
       return;
     }
 
-    const confirmacao = confirm(`Deseja deletar a programação "${programacao.descricao}"?`);
+    const confirmacao = confirm(`Deseja deletar a programacao "${programacao.descricao}"?`);
     if (!confirmacao) return;
 
     try {
       setLoading(true);
       await deleteItem(programacao.id);
       onSuccess();
-      alert('Programação deletada com sucesso!');
+      alert('Programacao deletada com sucesso!');
     } catch (error) {
       console.error('Erro ao deletar:', error);
-      alert('Erro ao deletar programação. Tente novamente.');
+      alert('Erro ao deletar programacao. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -97,46 +92,13 @@ export function useProgramacaoOSActions({
   // AÇÕES DE WORKFLOW
   // ============================================================================
 
-  const handleAnalisar = useCallback(async (programacao: ProgramacaoResponse, observacoes?: string) => {
+  const handleAprovar = useCallback(async (programacao: ProgramacaoResponse, observacoes?: string) => {
     if (programacao.status !== 'PENDENTE') {
-      alert('Apenas programações pendentes podem ser analisadas');
+      alert('Apenas programacoes pendentes podem ser aprovadas');
       return;
     }
 
-    // Se não há observações, abrir modal para coletar
     if (observacoes === undefined) {
-      setSelectedProgramacao(programacao);
-      setWorkflowAction('analisar');
-      setShowWorkflowModal(true);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await analisar(programacao.id, observacoes);
-      onSuccess();
-      setShowWorkflowModal(false);
-      alert('Programação enviada para análise com sucesso!');
-    } catch (error) {
-      console.error('Erro ao analisar:', error);
-      alert('Erro ao iniciar análise. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  }, [analisar, onSuccess]);
-
-  const handleAprovar = useCallback(async (
-    programacao: ProgramacaoResponse,
-    observacoes?: string,
-    ajustes?: any
-  ) => {
-    if (programacao.status !== 'EM_ANALISE') {
-      alert('Apenas programações em análise podem ser aprovadas');
-      return;
-    }
-
-    // Se não há dados, abrir modal
-    if (observacoes === undefined && !ajustes) {
       setSelectedProgramacao(programacao);
       setWorkflowAction('aprovar');
       setShowWorkflowModal(true);
@@ -145,53 +107,51 @@ export function useProgramacaoOSActions({
 
     try {
       setLoading(true);
-      await aprovar(programacao.id, observacoes, ajustes);
+      await aprovar(programacao.id, observacoes);
       onSuccess();
       setShowWorkflowModal(false);
-      alert('Programação aprovada! Uma ordem de serviço foi gerada automaticamente.');
+      alert('Programacao aprovada com sucesso!');
     } catch (error) {
       console.error('Erro ao aprovar:', error);
-      alert('Erro ao aprovar programação. Tente novamente.');
+      alert('Erro ao aprovar programacao. Tente novamente.');
     } finally {
       setLoading(false);
     }
   }, [aprovar, onSuccess]);
 
-  const handleRejeitar = useCallback(async (programacao: ProgramacaoResponse, motivo?: string, sugestoes?: string) => {
-    if (programacao.status !== 'EM_ANALISE') {
-      alert('Apenas programações em análise podem ser rejeitadas');
+  const handleFinalizar = useCallback(async (programacao: ProgramacaoResponse, observacoes?: string) => {
+    if (programacao.status !== 'APROVADA') {
+      alert('Apenas programacoes aprovadas podem ser finalizadas');
       return;
     }
 
-    // Se não há motivo, abrir modal
-    if (!motivo) {
+    if (observacoes === undefined) {
       setSelectedProgramacao(programacao);
-      setWorkflowAction('rejeitar');
+      setWorkflowAction('finalizar');
       setShowWorkflowModal(true);
       return;
     }
 
     try {
       setLoading(true);
-      await rejeitar(programacao.id, motivo, sugestoes);
+      await finalizar(programacao.id, observacoes);
       onSuccess();
       setShowWorkflowModal(false);
-      alert('Programação rejeitada com sucesso!');
+      alert('Programacao finalizada com sucesso!');
     } catch (error) {
-      console.error('Erro ao rejeitar:', error);
-      alert('Erro ao rejeitar programação. Tente novamente.');
+      console.error('Erro ao finalizar:', error);
+      alert('Erro ao finalizar programacao. Tente novamente.');
     } finally {
       setLoading(false);
     }
-  }, [rejeitar, onSuccess]);
+  }, [finalizar, onSuccess]);
 
   const handleCancelar = useCallback(async (programacao: ProgramacaoResponse, motivo?: string) => {
-    if (['CANCELADA', 'APROVADA'].includes(programacao.status)) {
-      alert('Esta programação não pode ser cancelada');
+    if (!['PENDENTE', 'APROVADA'].includes(programacao.status)) {
+      alert('Esta programacao nao pode ser cancelada');
       return;
     }
 
-    // Se não há motivo, abrir modal
     if (!motivo) {
       setSelectedProgramacao(programacao);
       setWorkflowAction('cancelar');
@@ -204,10 +164,10 @@ export function useProgramacaoOSActions({
       await cancelar(programacao.id, motivo);
       onSuccess();
       setShowWorkflowModal(false);
-      alert('Programação cancelada com sucesso!');
+      alert('Programacao cancelada com sucesso!');
     } catch (error) {
       console.error('Erro ao cancelar:', error);
-      alert('Erro ao cancelar programação. Tente novamente.');
+      alert('Erro ao cancelar programacao. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -228,9 +188,8 @@ export function useProgramacaoOSActions({
     handleDelete,
 
     // Ações de workflow
-    handleAnalisar,
     handleAprovar,
-    handleRejeitar,
+    handleFinalizar,
     handleCancelar,
 
     // Controle do modal de workflow

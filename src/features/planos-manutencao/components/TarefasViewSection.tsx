@@ -1,17 +1,20 @@
-// src/features/planos-manutencao/components/TarefasViewSection.tsx - CORRIGIDO
+// src/features/planos-manutencao/components/TarefasViewSection.tsx
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
+import { Button } from '@/components/ui/button';
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
   AlertTriangle,
   Settings,
   Tag,
-  Hash
+  Hash,
+  Pencil,
+  Trash2,
+  Plus
 } from 'lucide-react';
 
-// 🔧 Interface mais flexível para receber diferentes tipos de tarefa
 interface TarefaFlexivel {
   id: string | number;
   nome: string;
@@ -28,6 +31,10 @@ interface TarefaFlexivel {
 interface TarefasViewSectionProps {
   tarefas?: TarefaFlexivel[] | any[];
   isVisible?: boolean;
+  mode?: 'view' | 'edit';
+  onEditTarefa?: (tarefa: any) => void;
+  onDeleteTarefa?: (tarefa: any) => void;
+  onAddTarefa?: () => void;
 }
 
 const getCriticidadeColor = (criticidade: number) => {
@@ -107,33 +114,36 @@ const normalizarTarefa = (tarefa: any): TarefaFlexivel => {
   };
 };
 
-export const TarefasViewSection: React.FC<TarefasViewSectionProps> = ({ 
-  tarefas, 
-  isVisible = true 
+export const TarefasViewSection: React.FC<TarefasViewSectionProps> = ({
+  tarefas,
+  isVisible = true,
+  mode = 'view',
+  onEditTarefa,
+  onDeleteTarefa,
+  onAddTarefa,
 }) => {
-  console.log('🔍 TarefasViewSection - props recebidas:', { tarefas, isVisible });
+  const isEditMode = mode === 'edit';
 
   if (!isVisible) {
     return null;
   }
 
-  // 🔧 Verificação mais robusta das tarefas
   if (!tarefas || !Array.isArray(tarefas) || tarefas.length === 0) {
-    console.log('⚠️ TarefasViewSection - Nenhuma tarefa válida encontrada');
     return (
       <div className="p-6 text-center">
         <Settings className="h-12 w-12 mx-auto text-gray-400 mb-3" />
         <p className="text-gray-500 dark:text-gray-400">Nenhuma tarefa encontrada neste plano de manutenção.</p>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-          As tarefas podem estar em outro formato ou não foram carregadas ainda.
-        </p>
+        {isEditMode && onAddTarefa && (
+          <Button type="button" variant="outline" size="sm" onClick={onAddTarefa} className="mt-3">
+            <Plus className="h-4 w-4 mr-1.5" />
+            Adicionar Tarefa
+          </Button>
+        )}
       </div>
     );
   }
 
-  // 🔧 Normalizar e ordenar tarefas
   const tarefasNormalizadas = tarefas.map(normalizarTarefa);
-  console.log('📋 TarefasViewSection - Tarefas normalizadas:', tarefasNormalizadas);
 
   const tarefasOrdenadas = [...tarefasNormalizadas].sort((a, b) => a.ordem - b.ordem);
 
@@ -146,11 +156,6 @@ export const TarefasViewSection: React.FC<TarefasViewSectionProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Debug Info - remover em produção */}
-      <div className="text-xs text-gray-400 p-2 bg-gray-50 dark:bg-gray-800 rounded">
-        Debug: {tarefasNormalizadas.length} tarefas processadas - {tarefasAtivas} ativas
-      </div>
-
       {/* Cabeçalho e Estatísticas */}
       <div className="flex items-center justify-between">
         <div>
@@ -161,8 +166,14 @@ export const TarefasViewSection: React.FC<TarefasViewSectionProps> = ({
             {tarefasAtivas} ativas • Tempo total estimado: {formatTempo(tempoTotal)}
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
+          {isEditMode && onAddTarefa && (
+            <Button type="button" variant="outline" size="sm" onClick={onAddTarefa}>
+              <Plus className="h-4 w-4 mr-1.5" />
+              Adicionar Tarefa
+            </Button>
+          )}
           <div className="text-center">
             <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
               {criticidadeMedia}
@@ -211,6 +222,32 @@ export const TarefasViewSection: React.FC<TarefasViewSectionProps> = ({
                       <XCircle className="h-3 w-3 mr-1" />
                       Inativo
                     </Badge>
+                  )}
+                  {isEditMode && (
+                    <div className="flex items-center gap-1 ml-1">
+                      {onEditTarefa && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => onEditTarefa(tarefas![index])}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {onDeleteTarefa && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => onDeleteTarefa(tarefas![index])}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

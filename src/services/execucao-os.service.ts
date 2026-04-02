@@ -5,7 +5,7 @@ import { api } from '@/config/api';
 // ENUMS E TIPOS BASE
 // ============================================================================
 
-export type StatusExecucaoOS = 'PROGRAMADA' | 'EM_EXECUCAO' | 'PAUSADA' | 'FINALIZADA' | 'CANCELADA';
+export type StatusExecucaoOS = 'PENDENTE' | 'EM_EXECUCAO' | 'PAUSADA' | 'EXECUTADA' | 'AUDITADA' | 'FINALIZADA' | 'CANCELADA';
 export type TipoOrdemServico = 'PREVENTIVA' | 'PREDITIVA' | 'CORRETIVA' | 'INSPECAO' | 'VISITA_TECNICA';
 export type PrioridadeExecucao = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA';
 export type StatusTarefaExecucao = 'PENDENTE' | 'EM_EXECUCAO' | 'PAUSADA' | 'FINALIZADA' | 'NAO_EXECUTADA';
@@ -63,6 +63,40 @@ export interface CancelarExecucaoApiData {
   motivo_cancelamento: string;
   observacoes_cancelamento?: string;
   cancelado_por?: string;
+}
+
+export interface ExecutarExecucaoApiData {
+  data_hora_fim_real: string; // ISO DateTime string
+  resultado_servico: string;
+  problemas_encontrados?: string;
+  recomendacoes?: string;
+  observacoes_execucao?: string;
+  executado_por?: string;
+  materiais_utilizados?: {
+    descricao: string;
+    quantidade: number;
+    unidade: string;
+    custo_unitario?: number;
+  }[];
+}
+
+export interface AuditarExecucaoApiData {
+  avaliacao_qualidade: number; // 1-5
+  observacoes_auditoria?: string;
+  auditado_por?: string;
+  aprovado: boolean;
+  recomendacoes_auditoria?: string;
+}
+
+export interface ReabrirExecucaoApiData {
+  motivo_reabertura: string;
+  observacoes_reabertura?: string;
+  reaberto_por?: string;
+}
+
+export interface FinalizarExecucaoOSApiData {
+  observacoes_finalizacao?: string;
+  finalizado_por?: string;
 }
 
 export interface AtualizarProgressoApiData {
@@ -335,8 +369,9 @@ export interface ExecucaoOSListApiResponse {
     page: number;
     limit: number;
     total: number;
-    pages: number;
+    totalPages: number;
   };
+  stats?: Record<string, number>;
 }
 
 // ============================================================================
@@ -464,17 +499,61 @@ export class ExecucaoOSApiService {
   }
 
   async cancelar(id: string, data: CancelarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
-    // console.log('🚫 EXECUCAO-OS API: Cancelando execução:', id, data);
-
     try {
       const response = await api.post<ExecucaoOSApiResponse>(
         `${this.baseEndpoint}/${id}/cancelar`,
         data
       );
-      // console.log('✅ EXECUCAO-OS API: Execução cancelada:', response.data);
       return response.data;
     } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao cancelar execução:', error);
+      throw error;
+    }
+  }
+
+  async executar(id: string, data: ExecutarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
+    try {
+      const response = await api.post<ExecucaoOSApiResponse>(
+        `${this.baseEndpoint}/${id}/executar`,
+        data
+      );
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  }
+
+  async auditar(id: string, data: AuditarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
+    try {
+      const response = await api.post<ExecucaoOSApiResponse>(
+        `${this.baseEndpoint}/${id}/auditar`,
+        data
+      );
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  }
+
+  async reabrir(id: string, data: ReabrirExecucaoApiData): Promise<ExecucaoOSApiResponse> {
+    try {
+      const response = await api.post<ExecucaoOSApiResponse>(
+        `${this.baseEndpoint}/${id}/reabrir`,
+        data
+      );
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  }
+
+  async finalizarOS(id: string, data: FinalizarExecucaoOSApiData): Promise<ExecucaoOSApiResponse> {
+    try {
+      const response = await api.post<ExecucaoOSApiResponse>(
+        `${this.baseEndpoint}/${id}/finalizar`,
+        data
+      );
+      return response.data;
+    } catch (error: any) {
       throw error;
     }
   }

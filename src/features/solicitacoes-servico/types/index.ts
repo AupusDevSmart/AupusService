@@ -1,12 +1,17 @@
 // src/features/solicitacoes-servico/types/index.ts
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
 
-// Enums baseados no backend
+// Enums baseados na validação da API (não no schema Prisma)
 export type TipoSolicitacaoServico =
   | 'INSTALACAO'
-  | 'MANUTENCAO_CORRETIVA'
   | 'MANUTENCAO_PREVENTIVA'
-  | 'MELHORIA'
+  | 'MANUTENCAO_CORRETIVA'
+  | 'INSPECAO'
+  | 'CALIBRACAO'
+  | 'MODIFICACAO'
+  | 'REMOCAO'
+  | 'CONSULTORIA'
+  | 'TREINAMENTO'
   | 'OUTRO';
 
 export type PrioridadeSolicitacao = 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE';
@@ -19,15 +24,7 @@ export type OrigemSolicitacao =
   | 'SISTEMA'
   | 'APLICATIVO';
 
-export type StatusSolicitacaoServico =
-  | 'RASCUNHO'
-  | 'AGUARDANDO'
-  | 'EM_ANALISE'
-  | 'APROVADA'
-  | 'REJEITADA'
-  | 'EM_EXECUCAO'
-  | 'CONCLUIDA'
-  | 'CANCELADA';
+export type StatusSolicitacaoServico = 'REGISTRADA' | 'PROGRAMADA' | 'FINALIZADA';
 
 // Interface principal da solicitação
 export interface SolicitacaoServico extends BaseEntity {
@@ -41,6 +38,8 @@ export interface SolicitacaoServico extends BaseEntity {
 
   // Localização
   planta_id?: string;
+  unidade_id?: string;
+  proprietario_id?: string;
   area?: string;
   local?: string;
   local_especifico?: string;
@@ -69,7 +68,7 @@ export interface SolicitacaoServico extends BaseEntity {
   riscos_nao_execucao?: string;
   requisitos_especiais?: string;
   riscos_identificados?: string;
-  observacoes?: string;
+  // observacoes?: string; // Campo removido - backend não aceita
 
   // Recursos necessários
   tempo_estimado?: number;
@@ -77,36 +76,6 @@ export interface SolicitacaoServico extends BaseEntity {
   materiais_necessarios?: string;
   ferramentas_necessarias?: string;
   mao_obra_necessaria?: string;
-
-  // Análise
-  analisado_por_id?: string;
-  analisado_por_nome?: string;
-  data_analise?: string;
-  observacoes_analise?: string;
-  parecer_tecnico?: string;
-
-  // Aprovação
-  aprovado_por_id?: string;
-  aprovado_por_nome?: string;
-  data_aprovacao?: string;
-  observacoes_aprovacao?: string;
-
-  // Rejeição
-  rejeitado_por_id?: string;
-  data_rejeicao?: string;
-  motivo_rejeicao?: string;
-  sugestoes_alternativas?: string;
-
-  // Cancelamento
-  cancelado_por_id?: string;
-  cancelado_por_nome?: string;
-  data_cancelamento?: string;
-  motivo_cancelamento?: string;
-
-  // Conclusão
-  concluido_por_id?: string;
-  data_conclusao?: string;
-  observacoes_conclusao?: string;
 
   // Relacionamentos
   programacao_os_id?: string;
@@ -117,6 +86,8 @@ export interface SolicitacaoServico extends BaseEntity {
 
   // Objetos relacionados
   planta?: any;
+  unidade?: any;
+  proprietario?: any;
   equipamento?: any;
   usuario?: any;
   historico?: HistoricoSolicitacao[];
@@ -137,7 +108,7 @@ export interface HistoricoSolicitacao {
   usuario_nome?: string;
   usuario_id?: string;
   data: string;
-  observacoes?: string;
+  // observacoes?: string; // Campo removido - backend não aceita
   status_anterior?: StatusSolicitacaoServico;
   status_novo?: StatusSolicitacaoServico;
   dados_extras?: any;
@@ -166,6 +137,8 @@ export interface SolicitacaoServicoFormData {
 
   // Localização
   planta_id?: string;
+  unidade_id?: string;
+  proprietario_id?: string;
   area?: string;
   local?: string;
   local_especifico?: string;
@@ -188,7 +161,7 @@ export interface SolicitacaoServicoFormData {
   beneficios_esperados?: string;
   riscos_nao_execucao?: string;
   requisitos_especiais?: string;
-  observacoes?: string;
+  // observacoes?: string; // Campo removido - backend não aceita
 
   // Recursos
   tempo_estimado?: number;
@@ -199,6 +172,9 @@ export interface SolicitacaoServicoFormData {
 
   // Anexos
   anexos?: File[];
+
+  // Instrucoes vinculadas
+  instrucoes_ids?: string[];
 }
 
 // Filtros para a página
@@ -226,33 +202,6 @@ export type Pagination = {
   total: number;
   totalPages: number;
 };
-
-// DTO para ações de workflow
-export interface EnviarSolicitacaoDto {
-  observacoes?: string;
-}
-
-export interface AnalisarSolicitacaoDto {
-  observacoes_analise: string;
-  parecer_tecnico?: string;
-}
-
-export interface AprovarSolicitacaoDto {
-  observacoes_aprovacao?: string;
-}
-
-export interface RejeitarSolicitacaoDto {
-  motivo_rejeicao: string;
-  sugestoes_alternativas?: string;
-}
-
-export interface CancelarSolicitacaoDto {
-  motivo_cancelamento: string;
-}
-
-export interface ConcluirSolicitacaoDto {
-  observacoes_conclusao?: string;
-}
 
 export interface AdicionarComentarioDto {
   comentario: string;

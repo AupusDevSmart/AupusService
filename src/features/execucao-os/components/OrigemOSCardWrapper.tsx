@@ -1,7 +1,7 @@
 // src/features/execucao-os/components/OrigemOSCardWrapper.tsx
 import React, { useState, useEffect } from 'react';
-// Usar nosso novo OrigemOSCard minimalista em vez do componente da programacao-os
-import { OrigemOSCard } from './OrigemOSCard';
+// Reutilizar o mesmo OrigemOSCard da programacao-os
+import { OrigemOSCard } from '@/features/programacao-os/components/OrigemOSCard';
 import { programacaoOSApi } from '@/services/programacao-os.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, AlertTriangle, FileText } from 'lucide-react';
@@ -57,21 +57,15 @@ export const OrigemOSCardWrapper: React.FC<OrigemOSCardWrapperProps> = (props) =
 
   useEffect(() => {
     const carregarProgramacao = async () => {
-      if (!programacaoId) {
-        console.log('⚠️ [OrigemOSCardWrapper] Nenhum programacao_id fornecido');
-        return;
-      }
+      if (!programacaoId) return;
 
-      console.log('🔍 [OrigemOSCardWrapper] Buscando programação:', programacaoId);
       setLoading(true);
       setError(null);
 
       try {
         const programacaoData = await programacaoOSApi.buscarPorId(programacaoId);
-        console.log('✅ [OrigemOSCardWrapper] Programação carregada:', programacaoData);
         setProgramacao(programacaoData);
       } catch (err) {
-        console.error('❌ [OrigemOSCardWrapper] Erro ao buscar programação:', err);
         setError('Erro ao carregar dados de origem');
       } finally {
         setLoading(false);
@@ -122,13 +116,6 @@ export const OrigemOSCardWrapper: React.FC<OrigemOSCardWrapperProps> = (props) =
 
   // Se temos dados diretos da execução, usar eles
   if (hasDirectOrigemData) {
-    console.log('🎯 [OrigemOSCardWrapper] Usando dados diretos da execução:', {
-      anomalia: anomaliaFromExecucao,
-      plano_manutencao: planoManutencaoFromExecucao,
-      origem: origemFromExecucao,
-      dados_origem: dadosOrigemFromExecucao
-    });
-
     // Determinar origem baseado nos dados disponíveis
     let origem = origemFromExecucao || 'MANUAL';
     if (anomaliaFromExecucao) {
@@ -140,10 +127,12 @@ export const OrigemOSCardWrapper: React.FC<OrigemOSCardWrapperProps> = (props) =
     return (
       <OrigemOSCard
         origem={origem}
+        dadosOrigem={dadosOrigemFromExecucao}
         anomalia={anomaliaFromExecucao}
+        tarefas={execucaoData?.tarefas_os || []}
         planoManutencao={planoManutencaoFromExecucao}
-        programacaoOrigem={execucaoData?.programacao}
-        tarefa={dadosOrigemFromExecucao?.tarefas?.[0]}
+        tarefasPorPlano={dadosOrigemFromExecucao?.tarefasPorPlano || {}}
+        solicitacaoServico={execucaoData?.programacao?.solicitacao_servico}
       />
     );
   }
@@ -175,24 +164,15 @@ export const OrigemOSCardWrapper: React.FC<OrigemOSCardWrapperProps> = (props) =
   // Usar dados da programação se disponível
   if (programacao) {
     const origem = programacao.origem || programacao.dados_origem?.tipo || 'MANUAL';
-    const dadosOrigem = programacao.dados_origem || {};
-
-    console.log('📋 [OrigemOSCardWrapper] Usando dados da programação:', {
-      origem,
-      dadosOrigem,
-      anomalia: programacao.anomalia,
-      tarefas: programacao.tarefas,
-      planoManutencao: programacao.plano_manutencao,
-      tarefasPorPlano: dadosOrigem.tarefasPorPlano
-    });
-
     return (
       <OrigemOSCard
         origem={origem}
+        dadosOrigem={programacao.dados_origem}
         anomalia={programacao.anomalia}
+        tarefas={programacao.tarefas || []}
         planoManutencao={programacao.plano_manutencao}
-        programacaoOrigem={programacao}
-        tarefa={programacao.tarefas?.[0]}
+        tarefasPorPlano={programacao.dados_origem?.tarefasPorPlano || {}}
+        solicitacaoServico={programacao.solicitacao_servico}
       />
     );
   }

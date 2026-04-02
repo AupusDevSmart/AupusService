@@ -35,14 +35,14 @@ export const programacaoOSTableColumns: TableColumn<ProgramacaoResponse>[] = [
         ANOMALIA: AlertTriangle,
         PLANO_MANUTENCAO: Calendar,
         TAREFA: FileText,
-        MANUAL: FileText,
+        SOLICITACAO_SERVICO: FileText,
       };
 
       const origemLabels = {
         ANOMALIA: 'Anomalia',
         PLANO_MANUTENCAO: 'Plano',
         TAREFA: 'Tarefa',
-        MANUAL: 'Manual',
+        SOLICITACAO_SERVICO: 'Solicitacao',
       };
 
       const Icon = origemIcons[item.origem as keyof typeof origemIcons] || FileText;
