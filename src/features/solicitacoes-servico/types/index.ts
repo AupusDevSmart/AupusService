@@ -157,7 +157,7 @@ export interface SolicitacaoServicoFormData {
   data_fim_previsto?: string;
 
   // Detalhes
-  justificativa: string;
+  justificativa?: string;
   beneficios_esperados?: string;
   riscos_nao_execucao?: string;
   requisitos_especiais?: string;

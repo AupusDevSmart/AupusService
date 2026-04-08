@@ -43,7 +43,7 @@ const SolicitanteRender = ({ value, onChange, disabled, mode }: any) => {
       <Input
         value={userName}
         disabled={true}
-        className="bg-gray-50 cursor-not-allowed"
+        className="bg-gray-50 dark:bg-gray-800 dark:text-gray-200 cursor-not-allowed"
         readOnly
       />
       <input type="hidden" name="solicitante_id" value={userId} />
@@ -137,15 +137,6 @@ export const solicitacoesFormFields: FormField[] = [
     required: true,
     colSpan: 2,
     placeholder: 'Informe o local',
-  },
-  {
-    key: 'justificativa',
-    label: 'Justificativa',
-    type: 'textarea',
-    required: true,
-    placeholder: 'Justifique a necessidade desta solicitação',
-    rows: 3,
-    colSpan: 2,
   },
   // Instrucoes vinculadas
   {

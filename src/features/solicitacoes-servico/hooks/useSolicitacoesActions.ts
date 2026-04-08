@@ -59,7 +59,7 @@ export function useSolicitacoesActions({
   const handleEdit = useCallback(
     async (solicitacao: SolicitacaoServico) => {
       if (solicitacao.status !== 'REGISTRADA') {
-        alert('Apenas solicitacoes registradas podem ser editadas.');
+        alert('Apenas solicitações registradas podem ser editadas.');
         return;
       }
       clearPendingAction();
@@ -77,7 +77,7 @@ export function useSolicitacoesActions({
   const handleDelete = useCallback(
     (solicitacao: SolicitacaoServico) => {
       if (solicitacao.status !== 'REGISTRADA') {
-        alert('Apenas solicitacoes registradas podem ser excluidas.');
+        alert('Apenas solicitações registradas podem ser excluídas.');
         return;
       }
       openViewWithAction(solicitacao, 'excluir');
@@ -98,8 +98,8 @@ export function useSolicitacoesActions({
         clearPendingAction();
         await onSuccess();
       } catch (error) {
-        console.error(`Erro ao executar acao ${pendingAction}:`, error);
-        alert('Erro ao executar acao. Tente novamente.');
+        console.error(`Erro ao executar ação ${pendingAction}:`, error);
+        alert('Erro ao executar ação. Tente novamente.');
       }
     },
     [pendingAction, actionEntity, deleteItem, closeModal, clearPendingAction, onSuccess]

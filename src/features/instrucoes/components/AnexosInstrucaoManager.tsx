@@ -59,12 +59,12 @@ export function AnexosInstrucaoManager({ instrucaoId, readonly = false, onFilesC
     ];
 
     if (file.size > maxSize) {
-      setError('Arquivo muito grande. Maximo 10MB.');
+      setError('Arquivo muito grande. Máximo 10MB.');
       return;
     }
 
     if (!allowedTypes.includes(file.type)) {
-      setError('Tipo de arquivo nao permitido.');
+      setError('Tipo de arquivo não permitido.');
       return;
     }
 
@@ -124,7 +124,7 @@ export function AnexosInstrucaoManager({ instrucaoId, readonly = false, onFilesC
     const labels: Record<string, string> = {
       MANUAL: 'Manual',
       PROCEDIMENTO: 'Procedimento',
-      MODELO_RELATORIO: 'Modelo Relatorio',
+      MODELO_RELATORIO: 'Modelo Relatório',
       OUTROS: 'Outros'
     };
     return labels[tipo] || 'Outros';
@@ -263,7 +263,7 @@ export function AnexosInstrucaoManager({ instrucaoId, readonly = false, onFilesC
 
       {!readonly && (
         <div className="text-xs text-muted-foreground space-y-1">
-          <p>Tamanho maximo: 10MB</p>
+          <p>Tamanho máximo: 10MB</p>
           <p>Tipos permitidos: PNG, PDF, JPG, DOC, DOCX, XLS, XLSX, TXT</p>
         </div>
       )}

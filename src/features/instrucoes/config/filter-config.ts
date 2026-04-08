@@ -5,7 +5,7 @@ export const instrucoesFilterConfig: FilterConfig[] = [
   {
     key: 'search',
     type: 'search',
-    placeholder: 'Buscar por TAG, nome ou descricao...',
+    placeholder: 'Buscar por TAG, nome ou descrição...',
     className: 'w-full'
   }
 ];

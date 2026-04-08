@@ -18,7 +18,7 @@ const actionConfig: Record<PendingAction, {
   inputRequired?: boolean;
 }> = {
   excluir: {
-    confirmLabel: 'Confirmar Exclusao',
+    confirmLabel: 'Confirmar Exclusão',
     icon: Trash2,
     variant: 'destructive',
   },
@@ -49,7 +49,7 @@ export function ActionConfirmPanel({ action, onConfirm }: ActionConfirmPanelProp
 
   return (
     <div className="border-t mt-6 pt-4 space-y-3">
-      <h3 className="text-sm font-medium">Confirmar acao</h3>
+      <h3 className="text-sm font-medium">Confirmar ação</h3>
 
       {config.inputLabel && (
         <div>

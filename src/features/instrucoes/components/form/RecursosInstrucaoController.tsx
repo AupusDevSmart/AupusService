@@ -48,7 +48,7 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium">Recursos Necessarios</label>
+        <label className="text-sm font-medium">Recursos Necessários</label>
         <Button type="button" variant="outline" size="sm" onClick={adicionar} disabled={disabled}>
           <Plus className="h-4 w-4 mr-1" />
           Adicionar
@@ -76,17 +76,17 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
                       disabled={disabled}
                       className="w-full p-2 text-sm border rounded bg-background text-foreground"
                     >
-                      <option value="PECA">Peca</option>
+                      <option value="PECA">Peça</option>
                       <option value="MATERIAL">Material</option>
                       <option value="FERRAMENTA">Ferramenta</option>
-                      <option value="TECNICO">Tecnico</option>
+                      <option value="TECNICO">Técnico</option>
                       <option value="VIATURA">Viatura</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-medium mb-1 block">Descricao</label>
+                    <label className="text-xs font-medium mb-1 block">Descrição</label>
                     <Input
-                      placeholder="Descricao do recurso..."
+                      placeholder="Descrição do recurso..."
                       value={recurso.descricao}
                       onChange={(e) => atualizar(index, 'descricao', e.target.value)}
                       disabled={disabled}
@@ -123,7 +123,7 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
                       onChange={(e) => atualizar(index, 'obrigatorio', e.target.checked)}
                       disabled={disabled}
                     />
-                    <span className="text-sm whitespace-nowrap">Obrigatorio</span>
+                    <span className="text-sm whitespace-nowrap">Obrigatório</span>
                   </label>
                 </div>
               </div>

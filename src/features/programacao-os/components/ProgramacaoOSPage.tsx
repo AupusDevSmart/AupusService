@@ -210,7 +210,13 @@ export function ProgramacaoOSPage() {
         ...(data.origem?.planoId && { plano_manutencao_id: data.origem.planoId }),
 
         // Dados de origem completos (sempre incluir para referência)
-        dados_origem: data.origem || null,
+        dados_origem: data.origem || {},
+
+        // Itens de orçamento (tabela própria)
+        itens_orcamento: (data.itens_orcamento || []).map((item: any) => ({
+          descricao: item.descricao,
+          valor: parseFloat(item.valor) || 0,
+        })).filter((item: any) => item.descricao),
 
         // Planejamento - campos atualizados para snake_case
         tempo_estimado: parseFloat(data.tempo_estimado || data.tempoEstimado) || 4,
@@ -219,7 +225,17 @@ export function ProgramacaoOSPage() {
           new Date(data.data_previsao_inicio || data.dataPrevisaoInicio).toISOString() : null,
         data_previsao_fim: data.data_previsao_fim || data.dataPrevisaoFim ?
           new Date(data.data_previsao_fim || data.dataPrevisaoFim).toISOString() : null,
-        orcamento_previsto: parseFloat(data.orcamento_previsto || data.orcamentoPrevisto) || null,
+        // Orcamento calculado automaticamente: materiais + equipe + itens extras
+        orcamento_previsto: (() => {
+          const custoMateriais = (data.materiais || []).reduce((acc: number, m: any) =>
+            acc + ((parseFloat(m.custo_unitario) || 0) * (parseFloat(m.quantidade_planejada) || 0)), 0);
+          const custoEquipe = (data.tecnicos || []).reduce((acc: number, t: any) =>
+            acc + ((parseFloat(t.custo_hora) || 0) * (parseFloat(t.horas_estimadas) || 0)), 0);
+          const custoOutros = (data.itens_orcamento || []).reduce((acc: number, i: any) =>
+            acc + (parseFloat(i.valor) || 0), 0);
+          const total = custoMateriais + custoEquipe + custoOutros;
+          return total > 0 ? total : null;
+        })(),
 
         // Programação - campos atualizados para snake_case
         data_hora_programada: data.data_hora_programada || data.dataHoraProgramada ?
@@ -479,7 +495,8 @@ export function ProgramacaoOSPage() {
         observacoes_veiculo: '',
         materiais: [],
         ferramentas: [],
-        tecnicos: []
+        tecnicos: [],
+        itens_orcamento: []
       };
 
       if (modalState.preselectedData) {
@@ -628,6 +645,9 @@ export function ProgramacaoOSPage() {
         })) || [],
         'planejamento' // Modo padrão
       ),
+
+      // Itens de orcamento (tabela própria)
+      itens_orcamento: (entity as any).itens_orcamento || [],
 
       // Dados da origem expandidos (para exibição no card)
       anomalia: (entity as any).anomalia || null,

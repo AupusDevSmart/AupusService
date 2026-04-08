@@ -1,6 +1,6 @@
 // src/features/programacao-os/components/ReservaViaturaField.tsx
 import React, { useState, useEffect } from 'react';
-import { Car, Calendar, Clock, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { Car, Calendar, Clock, AlertCircle, Info } from 'lucide-react';
 import { VeiculoSelector } from '@/features/reservas/components/VeiculoSelector';
 import { useVeiculos } from '@/features/veiculos/hooks/useVeiculos';
 import { useReservas } from '@/features/reservas/hooks/useReservas';
@@ -230,24 +230,6 @@ export const ReservaViaturaField: React.FC<ReservaViaturaFieldProps> = ({
         )}
       </div>
 
-      {/* Resumo da seleção */}
-      {localValue.veiculo_id && dadosCompletos && (
-        <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <h4 className="font-medium text-green-900 dark:text-green-100">Veículo Selecionado</h4>
-              <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                {veiculos?.find(v => v.id === localValue.veiculo_id)?.nome || 'Veículo selecionado'}
-              </p>
-              <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                Período: {localValue.reserva_data_inicio} às {localValue.reserva_hora_inicio} até{' '}
-                {localValue.reserva_data_fim} às {localValue.reserva_hora_fim}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

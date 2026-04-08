@@ -4,10 +4,10 @@ import { SubInstrucoesController } from '../components/form/SubInstrucoesControl
 import { RecursosInstrucaoController } from '../components/form/RecursosInstrucaoController';
 
 export const instrucoesFormFields: FormField[] = [
-  // Informacoes Basicas
+  // Informações Básicas
   {
     key: 'tag',
-    label: 'TAG da Instrucao',
+    label: 'TAG da Instrução',
     type: 'text',
     required: false,
     placeholder: 'Ex: INST-001 (auto-gerado se vazio)',
@@ -15,22 +15,22 @@ export const instrucoesFormFields: FormField[] = [
   } as any,
   {
     key: 'nome',
-    label: 'Nome da Instrucao',
+    label: 'Nome da Instrução',
     type: 'text',
     required: true,
-    placeholder: 'Ex: Lubrificacao Completa do Compressor',
+    placeholder: 'Ex: Lubrificação Completa do Compressor',
     colSpan: 1
   } as any,
   {
     key: 'descricao',
-    label: 'Descricao',
+    label: 'Descrição',
     type: 'textarea',
     required: true,
-    placeholder: 'Descreva detalhadamente a instrucao...',
+    placeholder: 'Descreva detalhadamente a instrução...',
     colSpan: 2
   } as any,
 
-  // Sub-instrucoes
+  // Sub-instruções
   {
     key: 'sub_instrucoes',
     label: '',
@@ -62,13 +62,13 @@ export const instrucoesFormFields: FormField[] = [
     )
   },
 
-  // Observacoes e Status
+  // Observações e Status
   {
     key: 'observacoes',
-    label: 'Observacoes',
+    label: 'Observações',
     type: 'textarea',
     required: false,
-    placeholder: 'Observacoes adicionais sobre a instrucao...',
+    placeholder: 'Observações adicionais sobre a instrução...',
     colSpan: 2
   },
   {
@@ -79,7 +79,7 @@ export const instrucoesFormFields: FormField[] = [
     options: [
       { value: 'ATIVA', label: 'Ativa' },
       { value: 'INATIVA', label: 'Inativa' },
-      { value: 'EM_REVISAO', label: 'Em Revisao' },
+      { value: 'EM_REVISAO', label: 'Em Revisão' },
       { value: 'ARQUIVADA', label: 'Arquivada' }
     ],
     colSpan: 2

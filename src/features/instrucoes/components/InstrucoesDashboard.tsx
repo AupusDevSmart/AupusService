@@ -16,7 +16,7 @@ export function InstrucoesDashboard({ data }: InstrucoesDashboardProps) {
             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {data.total_instrucoes}
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total de Instrucoes</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Total de Instruções</p>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 // src/features/execucao-os/types/index.ts - VERSÃO FINAL
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
-import { ProgramacaoResponse } from '../../programacao-os/types';
+import { ProgramacaoResponse, ItemOrcamento } from '../../programacao-os/types';
 
 // ========================================
 // ENUMS E TIPOS BASE (CONFORME SCHEMA)
@@ -233,6 +233,7 @@ export interface OrdemServico extends BaseEntity {
   materiais?: MaterialOS[];
   ferramentas?: FerramentaOS[];
   tecnicos?: TecnicoOS[];
+  itens_orcamento?: ItemOrcamento[];
   historico?: HistoricoOS[];
   checklist_atividades?: ChecklistAtividadeOS[];
   anexos?: AnexoOS[];

@@ -8,7 +8,7 @@ const formatarStatus = (status: StatusInstrucao) => {
   const configs = {
     ATIVA: { label: 'Ativa', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' },
     INATIVA: { label: 'Inativa', color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
-    EM_REVISAO: { label: 'Em Revisao', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
+    EM_REVISAO: { label: 'Em Revisão', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
     ARQUIVADA: { label: 'Arquivada', color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' }
   };
   return configs[status] || { label: status, color: 'bg-gray-100 text-gray-800' };
@@ -16,13 +16,13 @@ const formatarStatus = (status: StatusInstrucao) => {
 
 const formatarCategoria = (categoria: CategoriaTarefa) => {
   const labels: Record<string, string> = {
-    MECANICA: 'Mecanica',
-    ELETRICA: 'Eletrica',
-    INSTRUMENTACAO: 'Instrumentacao',
-    LUBRIFICACAO: 'Lubrificacao',
+    MECANICA: 'Mecânica',
+    ELETRICA: 'Elétrica',
+    INSTRUMENTACAO: 'Instrumentação',
+    LUBRIFICACAO: 'Lubrificação',
     LIMPEZA: 'Limpeza',
-    INSPECAO: 'Inspecao',
-    CALIBRACAO: 'Calibracao',
+    INSPECAO: 'Inspeção',
+    CALIBRACAO: 'Calibração',
     OUTROS: 'Outros'
   };
   return labels[categoria] || categoria;
@@ -33,8 +33,8 @@ const formatarTipoManutencao = (tipo: TipoManutencao) => {
     PREVENTIVA: 'Preventiva',
     PREDITIVA: 'Preditiva',
     CORRETIVA: 'Corretiva',
-    INSPECAO: 'Inspecao',
-    VISITA_TECNICA: 'Visita Tecnica'
+    INSPECAO: 'Inspeção',
+    VISITA_TECNICA: 'Visita Técnica'
   };
   return labels[tipo] || tipo;
 };
@@ -43,7 +43,7 @@ const formatarCriticidade = (criticidade: string) => {
   const configs: Record<string, { label: string; color: string }> = {
     '1': { label: 'Muito Baixa', color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
     '2': { label: 'Baixa', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
-    '3': { label: 'Media', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' },
+    '3': { label: 'Média', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' },
     '4': { label: 'Alta', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' },
     '5': { label: 'Muito Alta', color: 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100' }
   };
@@ -53,7 +53,7 @@ const formatarCriticidade = (criticidade: string) => {
 export const instrucoesTableColumns: TableColumn<InstrucaoApiResponse>[] = [
   {
     key: 'dados_principais',
-    label: 'Instrucao',
+    label: 'Instrução',
     sortable: true,
     render: (instrucao) => (
       <div className="space-y-1">
@@ -64,21 +64,15 @@ export const instrucoesTableColumns: TableColumn<InstrucaoApiResponse>[] = [
         <div className="text-sm font-medium truncate max-w-52" title={instrucao.nome}>
           {instrucao.nome}
         </div>
-        <div className="text-xs text-muted-foreground truncate max-w-52" title={instrucao.descricao}>
-          {instrucao.descricao}
-        </div>
       </div>
     )
   },
   {
-    key: 'classificacao',
-    label: 'Classificacao',
+    key: 'descricao',
+    label: 'Descrição',
     render: (instrucao) => (
-      <div className="space-y-1">
-        <div className="text-sm">{formatarCategoria(instrucao.categoria)}</div>
-        <div className="text-xs text-muted-foreground">
-          {formatarTipoManutencao(instrucao.tipo_manutencao)}
-        </div>
+      <div className="text-sm text-muted-foreground truncate max-w-64" title={instrucao.descricao}>
+        {instrucao.descricao}
       </div>
     )
   },
@@ -90,18 +84,6 @@ export const instrucoesTableColumns: TableColumn<InstrucaoApiResponse>[] = [
       return (
         <Badge className={`text-xs ${statusConfig.color}`}>
           {statusConfig.label}
-        </Badge>
-      );
-    }
-  },
-  {
-    key: 'criticidade',
-    label: 'Criticidade',
-    render: (instrucao) => {
-      const config = formatarCriticidade(String(instrucao.criticidade));
-      return (
-        <Badge className={`text-xs ${config.color}`}>
-          {config.label}
         </Badge>
       );
     }

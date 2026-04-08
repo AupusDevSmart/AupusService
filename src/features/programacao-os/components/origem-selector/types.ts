@@ -50,7 +50,10 @@ export interface AnomaliaDisponivel {
   local: string;
   ativo: string;
   equipamentoId?: string;
-  plantaId: string;
+  plantaId?: string;
+  unidadeId?: string;
+  plantaNome?: string;
+  unidadeNome?: string;
   dataDeteccao: string;
 }
 
@@ -80,7 +83,10 @@ export interface SolicitacaoDisponivel {
   prioridade: string;
   status: string;
   local: string;
-  plantaId: string;
+  plantaId?: string;
+  unidadeId?: string;
+  plantaNome?: string;
+  unidadeNome?: string;
   equipamentoId?: string;
   solicitanteNome: string;
   dataSolicitacao: string;

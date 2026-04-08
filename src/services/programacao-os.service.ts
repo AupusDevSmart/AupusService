@@ -34,6 +34,11 @@ export interface TecnicoProgramacaoDto {
   tecnico_id?: string;
 }
 
+export interface ItemOrcamentoProgramacaoDto {
+  descricao: string;
+  valor: number;
+}
+
 export interface CreateProgramacaoDto {
   descricao: string;
   local: string;
@@ -64,6 +69,7 @@ export interface CreateProgramacaoDto {
   materiais?: MaterialProgramacaoDto[];
   ferramentas?: FerramentaProgramacaoDto[];
   tecnicos?: TecnicoProgramacaoDto[];
+  itens_orcamento?: ItemOrcamentoProgramacaoDto[];
 }
 
 export interface UpdateProgramacaoDto extends Partial<CreateProgramacaoDto> {}
@@ -176,6 +182,15 @@ export interface TecnicoProgramacaoResponse {
   updated_at: string;
 }
 
+export interface ItemOrcamentoProgramacaoResponse {
+  id: string;
+  programacao_id: string;
+  descricao: string;
+  valor: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface HistoricoProgramacaoResponse {
   id: string;
   programacao_id: string;
@@ -248,6 +263,7 @@ export interface ProgramacaoResponse {
   materiais?: MaterialProgramacaoResponse[];
   ferramentas?: FerramentaProgramacaoResponse[];
   tecnicos?: TecnicoProgramacaoResponse[];
+  itens_orcamento?: ItemOrcamentoProgramacaoResponse[];
   historico?: HistoricoProgramacaoResponse[];
   ordem_servico?: any;
   reserva_veiculo?: {
@@ -268,6 +284,7 @@ export interface ProgramacaoDetalhesResponse extends ProgramacaoResponse {
   materiais: MaterialProgramacaoResponse[];
   ferramentas: FerramentaProgramacaoResponse[];
   tecnicos: TecnicoProgramacaoResponse[];
+  itens_orcamento: ItemOrcamentoProgramacaoResponse[];
   historico: HistoricoProgramacaoResponse[];
   ordem_servico?: any;
 }

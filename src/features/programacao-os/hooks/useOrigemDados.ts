@@ -12,6 +12,9 @@ interface AnomaliaDisponivel {
   data: string;
   equipamentoId?: string;
   plantaId?: string;
+  unidadeId?: string;
+  plantaNome?: string;
+  unidadeNome?: string;
   condicao?: string;
   origem?: string;
 }
@@ -36,7 +39,10 @@ interface SolicitacaoDisponivel {
   prioridade: string;
   status: string;
   local: string;
-  plantaId: string;
+  plantaId?: string;
+  unidadeId?: string;
+  plantaNome?: string;
+  unidadeNome?: string;
   equipamentoId?: string;
   solicitanteNome: string;
   dataSolicitacao: string;
@@ -48,74 +54,46 @@ export const useOrigemDados = () => {
   const [planosDisponiveis, setPlanosDisponiveis] = useState<PlanoDisponivel[]>([]);
   const [solicitacoesDisponiveis, setSolicitacoesDisponiveis] = useState<SolicitacaoDisponivel[]>([]);
 
-  // Carregar anomalias disponíveis (apenas pendentes/em análise)
-  const carregarAnomalias = useCallback(async (plantaId?: string, unidadeId?: string) => {
-    console.log('🔍 [useOrigemDados] Carregando anomalias disponíveis...', { plantaId, unidadeId });
-
+  // Carregar anomalias disponíveis (apenas registradas)
+  const carregarAnomalias = useCallback(async () => {
     setLoading(true);
     try {
-      // Criar filtros corretos baseados no tipo AnomaliasFilters
       const filtros = {
         page: 1,
         limit: 100,
         search: '',
         periodo: 'all',
-        status: 'REGISTRADA', // Apenas anomalias registradas podem gerar programação
+        status: 'REGISTRADA',
         prioridade: 'all',
         origem: 'all',
-        // ✅ NOVO: Filtrar por planta e unidade
-        planta: plantaId || 'all',
-        unidade: unidadeId || 'all'
+        planta: 'all',
+        unidade: 'all'
       };
-
-      console.log('📋 [useOrigemDados] Filtros aplicados:', filtros);
 
       const response = await anomaliasService.findAll(filtros);
 
-      console.log('📊 [useOrigemDados] Total de anomalias antes do filtro:', response.data.length);
-
       const anomaliasFiltradas = response.data
-        .filter(anomalia => {
-          // Apenas anomalias REGISTRADA podem gerar OS
-          const statusPermitido = anomalia.status === 'REGISTRADA';
+        .filter(anomalia => anomalia.status === 'REGISTRADA')
+        .map(anomalia => ({
+          id: String(anomalia.id),
+          descricao: anomalia.descricao,
+          local: anomalia.local,
+          ativo: anomalia.ativo,
+          prioridade: anomalia.prioridade,
+          status: anomalia.status,
+          data: anomalia.created_at || anomalia.data || new Date().toISOString(),
+          equipamentoId: anomalia.equipamento_id?.toString() || anomalia.equipamentoId?.toString(),
+          plantaId: anomalia.planta_id?.toString() || anomalia.plantaId?.toString(),
+          unidadeId: anomalia.unidade_id?.toString() || anomalia.unidadeId?.toString(),
+          plantaNome: anomalia.planta?.nome || anomalia.equipamento?.planta?.nome,
+          unidadeNome: anomalia.unidade?.nome || anomalia.equipamento?.unidade?.nome,
+          condicao: anomalia.condicao,
+          origem: anomalia.origem
+        }));
 
-          if (!statusPermitido) {
-            console.log('⚠️ [useOrigemDados] Anomalia bloqueada por status:', {
-              id: anomalia.id,
-              descricao: anomalia.descricao,
-              status: anomalia.status
-            });
-          }
-
-          return statusPermitido;
-        })
-        .map(anomalia => {
-          // console.log('🔄 [useOrigemDados] Mapeando anomalia:', {
-          //   id: anomalia.id,
-          //   idType: typeof anomalia.id,
-          //   descricao: anomalia.descricao
-          // });
-
-          return {
-            id: String(anomalia.id), // Garantir que seja string
-            descricao: anomalia.descricao,
-            local: anomalia.local,
-            ativo: anomalia.ativo,
-            prioridade: anomalia.prioridade,
-            status: anomalia.status,
-            data: anomalia.created_at || anomalia.data || new Date().toISOString(),
-            equipamentoId: anomalia.equipamento_id?.toString() || anomalia.equipamentoId?.toString(),
-            plantaId: anomalia.planta_id?.toString() || anomalia.plantaId?.toString(),
-            condicao: anomalia.condicao,
-            origem: anomalia.origem
-          };
-        });
-
-      // console.log('✅ [useOrigemDados] Anomalias carregadas:', anomaliasFiltradas.length);
       setAnomaliasDisponiveis(anomaliasFiltradas);
-      
+
     } catch (error) {
-      // console.error('❌ [useOrigemDados] Erro ao carregar anomalias:', error);
       setAnomaliasDisponiveis([]);
     } finally {
       setLoading(false);
@@ -243,24 +221,17 @@ export const useOrigemDados = () => {
     }
   }, []);
 
-  // Carregar solicitações de serviço disponíveis (apenas aprovadas)
-  const carregarSolicitacoes = useCallback(async (plantaId?: string, unidadeId?: string) => {
-    console.log('🔍 [useOrigemDados] Carregando solicitações de serviço disponíveis...', { plantaId, unidadeId });
-
+  // Carregar solicitações de serviço disponíveis (apenas registradas)
+  const carregarSolicitacoes = useCallback(async () => {
     setLoading(true);
     try {
-      // Importar o serviço de solicitações
       const { solicitacoesServicoService } = await import('@/services/solicitacoes-servico.service');
 
-      // Buscar solicitações aprovadas (prontas para gerar programação)
       const response = await solicitacoesServicoService.findAll({
         page: 1,
         limit: 100,
-        status: 'REGISTRADA', // Apenas registradas
-        plantaId: plantaId || undefined
+        status: 'REGISTRADA'
       });
-
-      console.log('📊 [useOrigemDados] Total de solicitações:', response.data.length);
 
       const solicitacoesFormatadas = response.data.map(solicitacao => ({
         id: solicitacao.id,
@@ -272,16 +243,17 @@ export const useOrigemDados = () => {
         status: solicitacao.status,
         local: solicitacao.local,
         plantaId: solicitacao.planta_id,
+        unidadeId: solicitacao.unidade_id,
+        plantaNome: solicitacao.planta?.nome,
+        unidadeNome: solicitacao.unidade?.nome,
         equipamentoId: solicitacao.equipamento_id,
         solicitanteNome: solicitacao.solicitante_nome,
         dataSolicitacao: solicitacao.data_solicitacao || solicitacao.created_at
       }));
 
-      console.log('✅ [useOrigemDados] Solicitações carregadas:', solicitacoesFormatadas.length);
       setSolicitacoesDisponiveis(solicitacoesFormatadas);
 
     } catch (error) {
-      console.error('❌ [useOrigemDados] Erro ao carregar solicitações:', error);
       setSolicitacoesDisponiveis([]);
     } finally {
       setLoading(false);

@@ -164,12 +164,12 @@ export function SolicitacoesPage() {
     setFilters(initialFilters);
   };
 
-  // Titulo do modal muda se tem acao pendente
+  // Título do modal muda se tem ação pendente
   const getModalTitle = () => {
-    if (modalState.mode === 'create') return 'Nova Solicitacao';
-    if (modalState.mode === 'edit') return 'Editar Solicitacao';
-    if (solicitacoesActions.pendingAction === 'excluir') return 'Excluir Solicitacao';
-    return 'Visualizar Solicitacao';
+    if (modalState.mode === 'create') return 'Nova Solicitação';
+    if (modalState.mode === 'edit') return 'Editar Solicitação';
+    if (solicitacoesActions.pendingAction === 'excluir') return 'Excluir Solicitação';
+    return 'Visualizar Solicitação';
   };
 
   return (
@@ -177,8 +177,8 @@ export function SolicitacoesPage() {
       <Layout.Main>
         <div className="flex flex-col h-full w-full">
           <TitleCard
-            title="Solicitacoes de Servico"
-            description="Gerencie e monitore solicitacoes de servico"
+            title="Solicitações de Serviço"
+            description="Gerencie e monitore solicitações de serviço"
           />
 
           <SolicitacoesDashboard data={stats} />
@@ -206,7 +206,7 @@ export function SolicitacoesPage() {
                   className="btn-minimal-primary w-full sm:w-auto whitespace-nowrap flex-shrink-0 justify-center"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  <span>Nova Solicitacao</span>
+                  <span>Nova Solicitação</span>
                 </button>
               </div>
             </div>
@@ -226,7 +226,7 @@ export function SolicitacoesPage() {
               onPageChange={handlePageChange}
               onView={solicitacoesActions.handleView}
               onEdit={solicitacoesActions.handleEdit}
-              emptyMessage="Nenhuma solicitacao encontrada."
+              emptyMessage="Nenhuma solicitação encontrada."
               emptyIcon={<FilePenLine className="h-8 w-8 text-muted-foreground/50" />}
               customActions={customActions}
             />
@@ -245,7 +245,7 @@ export function SolicitacoesPage() {
             onSubmit={handleSubmit}
             width="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[800px]"
           >
-            {/* Painel de confirmacao de acao - aparece no final do form em modo view */}
+            {/* Painel de confirmação de ação - aparece no final do form em modo view */}
             {solicitacoesActions.pendingAction && modalState.mode === 'view' && (
               <ActionConfirmPanel
                 action={solicitacoesActions.pendingAction}

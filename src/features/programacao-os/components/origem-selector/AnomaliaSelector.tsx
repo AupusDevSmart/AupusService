@@ -5,41 +5,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertTriangle, Search, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, Search, CheckCircle2, Loader2, MapPin } from 'lucide-react';
 import { AnomaliaDisponivel } from './types';
 
 interface AnomaliaSelectorProps {
   anomalias: AnomaliaDisponivel[];
   value?: string;
   onChange: (anomaliaId: string) => void;
-  plantaId?: string;
-  unidadeId?: string;
+  loading?: boolean;
   disabled?: boolean;
 }
 
-/**
- * Componente para seleção de anomalia
- * Mostra lista de anomalias disponíveis com busca, ou a anomalia selecionada
- */
 export const AnomaliaSelector: React.FC<AnomaliaSelectorProps> = ({
   anomalias,
   value,
   onChange,
-  plantaId,
-  unidadeId,
+  loading = false,
   disabled = false
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Validar se planta e unidade foram selecionadas
-  if (!plantaId || !unidadeId) {
-    return (
-      <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg bg-muted/30">
-        <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p>Selecione uma planta e unidade primeiro</p>
-      </div>
-    );
-  }
 
   const anomaliaSelecionada = anomalias.find(a => String(a.id).trim() === value);
 
@@ -47,7 +31,9 @@ export const AnomaliaSelector: React.FC<AnomaliaSelectorProps> = ({
   const anomaliasFiltradas = anomalias.filter(anomalia =>
     anomalia.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
     anomalia.local.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    anomalia.ativo.toLowerCase().includes(searchTerm.toLowerCase())
+    anomalia.ativo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (anomalia.plantaNome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (anomalia.unidadeNome || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -55,7 +41,7 @@ export const AnomaliaSelector: React.FC<AnomaliaSelectorProps> = ({
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium text-foreground flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-destructive" />
-          Passo 3: Selecione a Anomalia
+          Selecione a Anomalia
         </Label>
         {!anomaliaSelecionada && (
           <span className="text-xs text-muted-foreground">
@@ -86,6 +72,12 @@ export const AnomaliaSelector: React.FC<AnomaliaSelectorProps> = ({
                 <p className="text-xs text-muted-foreground mt-1">
                   {anomaliaSelecionada.local} - {anomaliaSelecionada.ativo}
                 </p>
+                {(anomaliaSelecionada.plantaNome || anomaliaSelecionada.unidadeNome) && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <MapPin className="h-3 w-3" />
+                    {[anomaliaSelecionada.plantaNome, anomaliaSelecionada.unidadeNome].filter(Boolean).join(' / ')}
+                  </p>
+                )}
               </div>
               <Button
                 type="button"
@@ -99,13 +91,18 @@ export const AnomaliaSelector: React.FC<AnomaliaSelectorProps> = ({
             </div>
           </CardContent>
         </Card>
+      ) : loading ? (
+        <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg bg-muted/30">
+          <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin opacity-50" />
+          <p>Carregando anomalias...</p>
+        </div>
       ) : (
         <>
           {/* Campo de busca */}
           <div className="flex items-center gap-2">
             <Search className="h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar anomalia..."
+              placeholder="Buscar por descrição, local, ativo, planta ou unidade..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               disabled={disabled}
@@ -151,9 +148,12 @@ export const AnomaliaSelector: React.FC<AnomaliaSelectorProps> = ({
                         <p className="text-xs text-muted-foreground mt-1">
                           {anomalia.local} - {anomalia.ativo}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          Data: {anomalia.dataDeteccao}
-                        </p>
+                        {(anomalia.plantaNome || anomalia.unidadeNome) && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <MapPin className="h-3 w-3" />
+                            {[anomalia.plantaNome, anomalia.unidadeNome].filter(Boolean).join(' / ')}
+                          </p>
+                        )}
                       </div>
                       {isSelected && (
                         <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0 ml-2" />
@@ -167,12 +167,11 @@ export const AnomaliaSelector: React.FC<AnomaliaSelectorProps> = ({
             {anomaliasFiltradas.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="font-medium">Nenhuma anomalia disponível</p>
+                <p className="font-medium">Nenhuma anomalia encontrada</p>
                 <p className="text-xs mt-2">
-                  Não há anomalias registradas para esta unidade.
-                </p>
-                <p className="text-xs mt-1">
-                  Apenas anomalias com status REGISTRADA aparecem aqui.
+                  {searchTerm
+                    ? 'Tente ajustar os termos da busca.'
+                    : 'Não há anomalias com status REGISTRADA disponíveis.'}
                 </p>
               </div>
             )}

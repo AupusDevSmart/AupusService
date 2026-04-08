@@ -1,28 +1,16 @@
-// src/features/programacao-os/components/OrigemOSSelector.tsx - VERSÃO REFATORADA
+// src/features/programacao-os/components/OrigemOSSelector.tsx
 import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { useOrigemDados } from '../hooks/useOrigemDados';
 import { MultiplePlanosSelector } from './MultiplePlanosSelector';
-import { usePlantas } from '@nexon/features/plantas/hooks/usePlantas';
-import { useUnidadesByPlanta } from '@nexon/features/unidades/hooks/useUnidades';
 
-// Importar os componentes refatorados
 import {
   TipoOrigemSelector,
-  PlantaSelector,
-  UnidadeSelector,
   AnomaliaSelector,
   SolicitacaoSelector,
   PlanoSelector,
   TarefasSelector,
-  HierarchyBreadcrumb,
-  type HierarchyBreadcrumbStep,
   type OrigemOSValue,
-  type PlantaDisponivel,
-  type UnidadeDisponivel,
-  type AnomaliaDisponivel,
-  type SolicitacaoDisponivel,
-  type PlanoDisponivel,
   type TarefaDisponivel
 } from './origem-selector';
 
@@ -39,10 +27,7 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
   onLocalAtivoChange,
   disabled = false
 }) => {
-  // ✅ DERIVAR VALORES DIRETAMENTE DAS PROPS
   const tipo = value.tipo || 'ANOMALIA';
-  const plantaId = value.plantaId?.toString().trim() || '';
-  const unidadeId = value.unidadeId?.toString().trim() || '';
   const anomaliaId = value.anomaliaId?.toString().trim() || '';
   const planoId = value.planoId?.toString().trim() || '';
   const solicitacaoServicoId = value.solicitacaoServicoId?.toString().trim() || '';
@@ -59,43 +44,24 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
     loading
   } = useOrigemDados();
 
-  // ✅ Hooks para carregar plantas e unidades
-  const {
-    plantas,
-    carregarPlantasSimples,
-    loading: loadingPlantas
-  } = usePlantas();
-
-  const {
-    unidades,
-    isLoading: loadingUnidades
-  } = useUnidadesByPlanta(plantaId || undefined);
-
-  // ✅ Estado local apenas para UI
   const [tarefasDoPlano, setTarefasDoPlano] = useState<TarefaDisponivel[]>([]);
   const [loadingTarefas, setLoadingTarefas] = useState(false);
 
-  // Carregar plantas ao montar
+  // Carregar anomalias quando tipo for ANOMALIA
   useEffect(() => {
-    carregarPlantasSimples();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Carregar anomalias quando planta e unidade forem selecionadas
-  useEffect(() => {
-    if (tipo === 'ANOMALIA' && plantaId && unidadeId) {
-      carregarAnomalias(plantaId, unidadeId);
+    if (tipo === 'ANOMALIA') {
+      carregarAnomalias();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tipo, plantaId, unidadeId]);
+  }, [tipo]);
 
-  // Carregar solicitações quando planta e unidade forem selecionadas
+  // Carregar solicitações quando tipo for SOLICITACAO_SERVICO
   useEffect(() => {
-    if (tipo === 'SOLICITACAO_SERVICO' && plantaId && unidadeId) {
-      carregarSolicitacoes(plantaId, unidadeId);
+    if (tipo === 'SOLICITACAO_SERVICO') {
+      carregarSolicitacoes();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tipo, plantaId, unidadeId]);
+  }, [tipo]);
 
   // Carregar planos quando tipo for PLANO_MANUTENCAO
   useEffect(() => {
@@ -113,8 +79,7 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
         .then((tarefas) => {
           setTarefasDoPlano(tarefas || []);
         })
-        .catch((err) => {
-          console.error('Erro ao carregar tarefas:', err);
+        .catch(() => {
           setTarefasDoPlano([]);
         })
         .finally(() => {
@@ -140,38 +105,17 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
     });
   };
 
-  const handlePlantaChange = (novaPlantaId: string) => {
-    onChange({
-      ...value,
-      plantaId: novaPlantaId,
-      unidadeId: '',
-      anomaliaId: undefined,
-      planoId: undefined,
-      solicitacaoServicoId: undefined,
-      tarefasSelecionadas: [],
-    });
-  };
-
-  const handleUnidadeChange = (novaUnidadeId: string) => {
-    onChange({
-      ...value,
-      unidadeId: novaUnidadeId,
-      anomaliaId: undefined,
-      planoId: undefined,
-      solicitacaoServicoId: undefined,
-      tarefasSelecionadas: [],
-    });
-  };
-
   const handleAnomaliaChange = (novaAnomaliaId: string) => {
     const anomalia = anomaliasDisponiveis.find(a => String(a.id).trim() === novaAnomaliaId);
 
     onChange({
       ...value,
       anomaliaId: novaAnomaliaId || undefined,
+      // Auto-preencher planta e unidade da anomalia selecionada
+      plantaId: anomalia?.plantaId || '',
+      unidadeId: anomalia?.unidadeId || '',
     });
 
-    // Callback para atualizar local e ativo
     if (anomalia && onLocalAtivoChange) {
       onLocalAtivoChange(anomalia.local, anomalia.ativo);
     }
@@ -183,9 +127,11 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
     onChange({
       ...value,
       solicitacaoServicoId: novaSolicitacaoId || undefined,
+      // Auto-preencher planta e unidade da solicitação selecionada
+      plantaId: solicitacao?.plantaId || '',
+      unidadeId: solicitacao?.unidadeId || '',
     });
 
-    // Callback para atualizar local
     if (solicitacao && onLocalAtivoChange) {
       onLocalAtivoChange(solicitacao.local, '');
     }
@@ -195,7 +141,7 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
     onChange({
       ...value,
       planoId: novoPlanoId || undefined,
-      tarefasSelecionadas: [], // Limpar tarefas ao trocar de plano
+      tarefasSelecionadas: [],
     });
   };
 
@@ -224,49 +170,6 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
     });
   };
 
-  // ==================== DADOS MAPEADOS ====================
-
-  const plantasDisponiveis: PlantaDisponivel[] = plantas.map(p => ({
-    id: p.id,
-    nome: p.nome,
-    localizacao: p.localizacao
-  }));
-
-  const unidadesDisponiveis: UnidadeDisponivel[] = unidades.map(u => ({
-    id: u.id,
-    nome: u.nome,
-    tipo: u.tipo,
-    planta_id: u.planta_id
-  }));
-
-  // ==================== BREADCRUMB STEPS ====================
-
-  const getBreadcrumbSteps = (): HierarchyBreadcrumbStep[] => {
-    if (tipo === 'ANOMALIA' || tipo === 'SOLICITACAO_SERVICO') {
-      return [
-        {
-          stepNumber: 1,
-          label: 'Planta',
-          isActive: !plantaId,
-          isCompleted: !!plantaId
-        },
-        {
-          stepNumber: 2,
-          label: 'Unidade',
-          isActive: !!plantaId && !unidadeId,
-          isCompleted: !!unidadeId
-        },
-        {
-          stepNumber: 3,
-          label: tipo === 'ANOMALIA' ? 'Anomalia' : 'Solicitação',
-          isActive: !!plantaId && !!unidadeId && (tipo === 'ANOMALIA' ? !anomaliaId : !solicitacaoServicoId),
-          isCompleted: tipo === 'ANOMALIA' ? !!anomaliaId : !!solicitacaoServicoId
-        }
-      ];
-    }
-    return [];
-  };
-
   // ==================== RENDER ====================
 
   return (
@@ -284,90 +187,31 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
       {/* Divider */}
       <div className="border-t border-border" />
 
-      {/* ANOMALIA Flow */}
+      {/* ANOMALIA Flow - pesquisa direta */}
       {tipo === 'ANOMALIA' && (
-        <div className="space-y-6">
-          {/* Breadcrumb */}
-          <HierarchyBreadcrumb steps={getBreadcrumbSteps()} />
-
-          {/* Planta */}
-          <PlantaSelector
-            plantas={plantasDisponiveis}
-            value={plantaId}
-            onChange={handlePlantaChange}
-            loading={loadingPlantas}
-            disabled={disabled}
-          />
-
-          {/* Unidade */}
-          {plantaId && (
-            <UnidadeSelector
-              unidades={unidadesDisponiveis}
-              value={unidadeId}
-              onChange={handleUnidadeChange}
-              loading={loadingUnidades}
-              disabled={disabled}
-            />
-          )}
-
-          {/* Anomalia */}
-          {plantaId && unidadeId && (
-            <AnomaliaSelector
-              anomalias={anomaliasDisponiveis}
-              value={anomaliaId}
-              onChange={handleAnomaliaChange}
-              plantaId={plantaId}
-              unidadeId={unidadeId}
-              disabled={disabled}
-            />
-          )}
-        </div>
+        <AnomaliaSelector
+          anomalias={anomaliasDisponiveis}
+          value={anomaliaId}
+          onChange={handleAnomaliaChange}
+          loading={loading}
+          disabled={disabled}
+        />
       )}
 
-      {/* SOLICITACAO_SERVICO Flow */}
+      {/* SOLICITACAO_SERVICO Flow - pesquisa direta */}
       {tipo === 'SOLICITACAO_SERVICO' && (
-        <div className="space-y-6">
-          {/* Breadcrumb */}
-          <HierarchyBreadcrumb steps={getBreadcrumbSteps()} />
-
-          {/* Planta */}
-          <PlantaSelector
-            plantas={plantasDisponiveis}
-            value={plantaId}
-            onChange={handlePlantaChange}
-            loading={loadingPlantas}
-            disabled={disabled}
-          />
-
-          {/* Unidade */}
-          {plantaId && (
-            <UnidadeSelector
-              unidades={unidadesDisponiveis}
-              value={unidadeId}
-              onChange={handleUnidadeChange}
-              loading={loadingUnidades}
-              disabled={disabled}
-            />
-          )}
-
-          {/* Solicitação */}
-          {plantaId && unidadeId && (
-            <SolicitacaoSelector
-              solicitacoes={solicitacoesDisponiveis}
-              value={solicitacaoServicoId}
-              onChange={handleSolicitacaoChange}
-              plantaId={plantaId}
-              unidadeId={unidadeId}
-              disabled={disabled}
-            />
-          )}
-        </div>
+        <SolicitacaoSelector
+          solicitacoes={solicitacoesDisponiveis}
+          value={solicitacaoServicoId}
+          onChange={handleSolicitacaoChange}
+          loading={loading}
+          disabled={disabled}
+        />
       )}
 
       {/* PLANO_MANUTENCAO Flow */}
       {tipo === 'PLANO_MANUTENCAO' && (
         <div className="space-y-6">
-          {/* Plano */}
           <PlanoSelector
             planos={planosDisponiveis}
             value={planoId}
@@ -375,7 +219,6 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
             disabled={disabled}
           />
 
-          {/* Tarefas */}
           {planoId && (
             <TarefasSelector
               tarefas={tarefasDoPlano}
@@ -389,7 +232,6 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
           )}
         </div>
       )}
-
     </div>
   );
 };

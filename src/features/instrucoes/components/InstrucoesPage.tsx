@@ -235,8 +235,8 @@ export function InstrucoesPage() {
           <InstrucoesBreadcrumb />
 
           <TitleCard
-            title="Instrucoes de Manutencao"
-            description="Gerencie templates de instrucoes para tarefas de manutencao"
+            title="Instruções de Manutenção"
+            description="Gerencie templates de instruções para tarefas de manutenção"
           />
 
           <InstrucoesDashboard data={dashboardData} />
@@ -247,7 +247,7 @@ export function InstrucoesPage() {
             </div>
             <button onClick={() => openModal('create')} className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap">
               <Plus className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Nova Instrucao</span>
+              <span className="hidden sm:inline">Nova Instrução</span>
               <span className="sm:hidden">Nova</span>
             </button>
           </div>
@@ -266,7 +266,7 @@ export function InstrucoesPage() {
               onPageChange={handlePageChange}
               onView={handleView}
               onEdit={handleEdit}
-              emptyMessage="Nenhuma instrucao encontrada."
+              emptyMessage="Nenhuma instrução encontrada."
               emptyIcon={<FileText className="h-8 w-8 text-muted-foreground/50" />}
               customActions={customActions}
             />

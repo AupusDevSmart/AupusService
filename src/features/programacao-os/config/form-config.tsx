@@ -5,6 +5,7 @@ import { OrigemOSCard } from '../components/OrigemOSCard';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
 import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManager';
+import { OrcamentoCardManager } from '@/components/common/cards/OrcamentoCardManager';
 import { ReservaViaturaField } from '../components/ReservaViaturaField';
 import { ReservaVinculadaCard } from '../components/ReservaVinculadaCard';
 
@@ -18,6 +19,7 @@ export const programacaoOSFormFields: FormField[] = [
     disabled: true,
     group: 'identificacao',
     colSpan: 2,
+    showOnlyOnMode: ['view', 'edit'],
   },
   {
     key: 'status',
@@ -150,17 +152,6 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'number',
     required: true,
     placeholder: 'Ex: 6',
-    group: 'planejamento',
-    width: 'half', // 50% em desktop
-    computeDisabled: (entity: any) => {
-      return entity?.status && entity.status !== 'PENDENTE';
-    }
-  },
-  {
-    key: 'orcamento_previsto',
-    label: 'Orçamento Previsto (R$)',
-    type: 'number',
-    placeholder: 'Ex: 1500.00',
     group: 'planejamento',
     width: 'half', // 50% em desktop
     computeDisabled: (entity: any) => {
@@ -347,6 +338,33 @@ export const programacaoOSFormFields: FormField[] = [
     }
   },
 
+  // Orçamento - GRUPO: orcamento
+  {
+    key: 'itens_orcamento',
+    label: 'Orçamento',
+    type: 'custom',
+    component: OrcamentoCardManager,
+    componentProps: (formData: any) => {
+      const custoMateriais = (formData?.materiais || []).reduce((acc: number, m: any) => {
+        return acc + ((m.custo_unitario || 0) * (m.quantidade_planejada || 0));
+      }, 0);
+      const custoEquipe = (formData?.tecnicos || []).reduce((acc: number, t: any) => {
+        return acc + ((t.custo_hora || 0) * (t.horas_estimadas || 0));
+      }, 0);
+      return {
+        title: 'Outros Custos',
+        custoMateriais,
+        custoEquipe
+      };
+    },
+    defaultValue: [],
+    group: 'orcamento',
+    colSpan: 2,
+    computeDisabled: (entity: any) => {
+      return entity?.status && entity.status !== 'PENDENTE';
+    }
+  },
+
   // Observações - GRUPO: observacoes
   {
     key: 'observacoes',
@@ -354,23 +372,7 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Observações adicionais sobre a programação',
     group: 'observacoes',
-    width: 'full', // 100% - campo de texto longo
-    computeDisabled: (entity: any) => {
-      return entity?.status && entity.status !== 'PENDENTE';
-    }
-  },
-  {
-    key: 'justificativa',
-    label: 'Justificativa',
-    type: 'textarea',
-    placeholder: 'Justificativa para a execução desta OS',
-    group: 'observacoes',
-    width: 'full', // 100% - campo de texto longo
-    condition: (entity: any) => {
-      // Mostrar justificativa apenas em modo view quando já foi preenchida
-      // ou em modo create/edit quando ainda está em rascunho/pendente
-      return entity?.justificativa || ['PENDENTE', undefined].includes(entity?.status);
-    },
+    colSpan: 2,
     computeDisabled: (entity: any) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
@@ -387,9 +389,9 @@ export const programacaoOSFormFields: FormField[] = [
   // Campos de aprovacao - mostrar quando aprovada ou finalizada
   {
     key: 'observacoes_aprovacao',
-    label: 'Observacoes da Aprovacao',
+    label: 'Observações da Aprovação',
     type: 'textarea',
-    placeholder: 'Observacoes da aprovacao',
+    placeholder: 'Observações da aprovação',
     disabled: true,
     group: 'workflow',
     colSpan: 2,
@@ -402,9 +404,9 @@ export const programacaoOSFormFields: FormField[] = [
   // Campos de finalizacao - mostrar quando finalizada
   {
     key: 'observacoes_finalizacao',
-    label: 'Observacoes da Finalizacao',
+    label: 'Observações da Finalização',
     type: 'textarea',
-    placeholder: 'Sem observacoes',
+    placeholder: 'Sem observações',
     disabled: true,
     group: 'workflow',
     colSpan: 2,
@@ -429,7 +431,7 @@ export const programacaoOSFormFields: FormField[] = [
   },
   {
     key: 'data_finalizacao',
-    label: 'Data da Finalizacao',
+    label: 'Data da Finalização',
     type: 'datetime-local',
     disabled: true,
     group: 'workflow',
@@ -538,7 +540,7 @@ export const programacaoOSFormGroups = [
   {
     key: 'planejamento',
     title: 'Planejamento',
-    fields: ['duracao_estimada', 'data_previsao_inicio', 'data_previsao_fim', 'orcamento_previsto']
+    fields: ['duracao_estimada', 'data_previsao_inicio', 'data_previsao_fim']
   },
   // TODO: Descomentar quando implementar programação detalhada
   /*
@@ -559,9 +561,14 @@ export const programacaoOSFormGroups = [
     fields: ['materiais', 'ferramentas', 'tecnicos']
   },
   {
+    key: 'orcamento',
+    title: 'Orçamento',
+    fields: ['itens_orcamento']
+  },
+  {
     key: 'observacoes',
-    title: 'Observações e Justificativas',
-    fields: ['observacoes', 'justificativa']
+    title: 'Observações',
+    fields: ['observacoes']
   },
   {
     key: 'workflow',

@@ -15,7 +15,7 @@ export function InstrucoesBreadcrumb() {
         Dashboard
       </button>
       <span className="text-gray-400">/</span>
-      <span className="text-gray-600 dark:text-gray-400">Instrucoes</span>
+      <span className="text-gray-600 dark:text-gray-400">Instruções</span>
     </div>
   );
 }

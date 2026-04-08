@@ -117,7 +117,7 @@ export function InstrucoesSelector({ value, onChange, disabled, entity }: Instru
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium">Instrucoes Vinculadas</label>
+        <label className="text-sm font-medium">Instruções Vinculadas</label>
         {!disabled && (
           <Button type="button" variant="outline" size="sm" onClick={() => setAdding(true)} disabled={!loaded || availableOptions.length === 0}>
             <Plus className="h-4 w-4 mr-1" />
@@ -133,9 +133,9 @@ export function InstrucoesSelector({ value, onChange, disabled, entity }: Instru
               options={availableOptions}
               value={undefined}
               onValueChange={(val) => { if (val) handleAdd(val); else setAdding(false); }}
-              placeholder="Buscar instrucao..."
+              placeholder="Buscar instrução..."
               searchPlaceholder="Digite para buscar..."
-              emptyText="Nenhuma instrucao disponivel"
+              emptyText="Nenhuma instrução disponível"
             />
           </div>
           <Button type="button" variant="ghost" size="sm" onClick={() => setAdding(false)}>
@@ -147,7 +147,7 @@ export function InstrucoesSelector({ value, onChange, disabled, entity }: Instru
       {selectedIds.length === 0 && !adding && (
         <div className="text-center p-6 border-2 border-dashed border-muted-foreground/25 rounded-lg">
           <FileText className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Nenhuma instrucao vinculada</p>
+          <p className="text-sm text-muted-foreground">Nenhuma instrução vinculada</p>
         </div>
       )}
 

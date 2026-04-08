@@ -5,41 +5,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { FilePenLine, Search, CheckCircle2 } from 'lucide-react';
+import { FilePenLine, Search, CheckCircle2, Loader2, MapPin } from 'lucide-react';
 import { SolicitacaoDisponivel } from './types';
 
 interface SolicitacaoSelectorProps {
   solicitacoes: SolicitacaoDisponivel[];
   value?: string;
   onChange: (solicitacaoId: string) => void;
-  plantaId?: string;
-  unidadeId?: string;
+  loading?: boolean;
   disabled?: boolean;
 }
 
-/**
- * Componente para seleção de solicitação de serviço
- * Mostra lista de solicitações disponíveis com busca, ou a solicitação selecionada
- */
 export const SolicitacaoSelector: React.FC<SolicitacaoSelectorProps> = ({
   solicitacoes,
   value,
   onChange,
-  plantaId,
-  unidadeId,
+  loading = false,
   disabled = false
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Validar se planta e unidade foram selecionadas
-  if (!plantaId || !unidadeId) {
-    return (
-      <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg bg-muted/30">
-        <FilePenLine className="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p>Selecione uma planta e unidade primeiro</p>
-      </div>
-    );
-  }
 
   const solicitacaoSelecionada = solicitacoes.find(s => String(s.id).trim() === value);
 
@@ -48,7 +32,10 @@ export const SolicitacaoSelector: React.FC<SolicitacaoSelectorProps> = ({
     solicitacao.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
     solicitacao.numero.toLowerCase().includes(searchTerm.toLowerCase()) ||
     solicitacao.local.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    solicitacao.tipo.toLowerCase().includes(searchTerm.toLowerCase())
+    solicitacao.tipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (solicitacao.plantaNome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (solicitacao.unidadeNome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    solicitacao.solicitanteNome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -56,7 +43,7 @@ export const SolicitacaoSelector: React.FC<SolicitacaoSelectorProps> = ({
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium text-foreground flex items-center gap-2">
           <FilePenLine className="h-4 w-4 text-orange-600" />
-          Passo 3: Selecione a Solicitação de Serviço
+          Selecione a Solicitação de Serviço
         </Label>
         {!solicitacaoSelecionada && (
           <span className="text-xs text-muted-foreground">
@@ -85,8 +72,14 @@ export const SolicitacaoSelector: React.FC<SolicitacaoSelectorProps> = ({
                 </div>
                 <h4 className="font-medium text-sm">{solicitacaoSelecionada.titulo}</h4>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {solicitacaoSelecionada.local} • {solicitacaoSelecionada.tipo}
+                  {solicitacaoSelecionada.local} - {solicitacaoSelecionada.tipo}
                 </p>
+                {(solicitacaoSelecionada.plantaNome || solicitacaoSelecionada.unidadeNome) && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <MapPin className="h-3 w-3" />
+                    {[solicitacaoSelecionada.plantaNome, solicitacaoSelecionada.unidadeNome].filter(Boolean).join(' / ')}
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">
                   Solicitante: {solicitacaoSelecionada.solicitanteNome}
                 </p>
@@ -103,13 +96,18 @@ export const SolicitacaoSelector: React.FC<SolicitacaoSelectorProps> = ({
             </div>
           </CardContent>
         </Card>
+      ) : loading ? (
+        <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg bg-muted/30">
+          <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin opacity-50" />
+          <p>Carregando solicitações...</p>
+        </div>
       ) : (
         <>
           {/* Campo de busca */}
           <div className="flex items-center gap-2">
             <Search className="h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar solicitação..."
+              placeholder="Buscar por título, número, local, planta ou solicitante..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               disabled={disabled}
@@ -153,8 +151,14 @@ export const SolicitacaoSelector: React.FC<SolicitacaoSelectorProps> = ({
                         </div>
                         <h4 className="font-medium text-sm text-foreground">{solicitacao.titulo}</h4>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {solicitacao.local} • {solicitacao.tipo}
+                          {solicitacao.local} - {solicitacao.tipo}
                         </p>
+                        {(solicitacao.plantaNome || solicitacao.unidadeNome) && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <MapPin className="h-3 w-3" />
+                            {[solicitacao.plantaNome, solicitacao.unidadeNome].filter(Boolean).join(' / ')}
+                          </p>
+                        )}
                         <p className="text-xs text-muted-foreground">
                           Solicitante: {solicitacao.solicitanteNome}
                         </p>
@@ -171,9 +175,11 @@ export const SolicitacaoSelector: React.FC<SolicitacaoSelectorProps> = ({
             {solicitacoesFiltradas.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 <FilePenLine className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="font-medium">Nenhuma solicitação disponível</p>
+                <p className="font-medium">Nenhuma solicitação encontrada</p>
                 <p className="text-xs mt-2">
-                  Não há solicitações aprovadas para esta planta/unidade.
+                  {searchTerm
+                    ? 'Tente ajustar os termos da busca.'
+                    : 'Não há solicitações com status REGISTRADA disponíveis.'}
                 </p>
               </div>
             )}

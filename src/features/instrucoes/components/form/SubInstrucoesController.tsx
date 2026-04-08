@@ -46,7 +46,7 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium">Sub-instrucoes (Checklist)</label>
+        <label className="text-sm font-medium">Sub-instruções (Checklist)</label>
         <Button type="button" variant="outline" size="sm" onClick={adicionar} disabled={disabled}>
           <Plus className="h-4 w-4 mr-1" />
           Adicionar
@@ -56,7 +56,7 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
       {subInstrucoes.length === 0 && (
         <div className="text-center p-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
           <CheckSquare className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Nenhuma sub-instrucao adicionada</p>
+          <p className="text-sm text-muted-foreground">Nenhuma sub-instrução adicionada</p>
         </div>
       )}
 
@@ -66,7 +66,7 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
             <div className="flex flex-col sm:flex-row items-start gap-3">
               <div className="flex-1 w-full space-y-3">
                 <Input
-                  placeholder="Descricao da sub-instrucao..."
+                  placeholder="Descrição da sub-instrução..."
                   value={item.descricao}
                   onChange={(e) => atualizar(index, 'descricao', e.target.value)}
                   disabled={disabled}
@@ -79,7 +79,7 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
                       onChange={(e) => atualizar(index, 'obrigatoria', e.target.checked)}
                       disabled={disabled}
                     />
-                    <span className="text-sm whitespace-nowrap">Obrigatoria</span>
+                    <span className="text-sm whitespace-nowrap">Obrigatória</span>
                   </label>
                   <div className="flex items-center gap-2">
                     <span className="text-sm whitespace-nowrap">Tempo (min):</span>

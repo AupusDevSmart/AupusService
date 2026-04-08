@@ -1,6 +1,6 @@
 // src/features/reservas/components/VeiculoSelector.tsx
-import { useMemo } from 'react';
-import { Car, Users, Fuel, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { Car, Users, Fuel, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
 import { Veiculo, ReservaVeiculo, FiltrosDisponibilidade } from '../types';
 
 interface VeiculoSelectorProps {
@@ -20,6 +20,12 @@ export function VeiculoSelector({
   onVeiculoChange,
   disabled = false
 }: VeiculoSelectorProps) {
+  const [mostrarLista, setMostrarLista] = useState(!veiculoSelecionado);
+
+  // Quando o modal abre com um veículo já selecionado (edit/view), colapsar
+  useEffect(() => {
+    setMostrarLista(!veiculoSelecionado);
+  }, []);
 
   // Verifica disponibilidade de cada veículo
   const veiculosComDisponibilidade = useMemo(() => {
@@ -97,6 +103,12 @@ export function VeiculoSelector({
   const veiculosDisponiveis = veiculosComDisponibilidade.filter(v => v.disponivel);
   const veiculosIndisponiveis = veiculosComDisponibilidade.filter(v => !v.disponivel);
 
+  // Encontrar o veículo selecionado
+  const veiculoAtual = useMemo(() => {
+    if (!veiculoSelecionado) return null;
+    return veiculos.find(v => v.id.toString() === veiculoSelecionado.toString()) || null;
+  }, [veiculos, veiculoSelecionado]);
+
   // Handler para seleção de veículo
   const handleVeiculoClick = (veiculo: any) => {
     if (!veiculo.disponivel || disabled) {
@@ -104,6 +116,7 @@ export function VeiculoSelector({
     }
 
     onVeiculoChange(veiculo.id);
+    setMostrarLista(false);
   };
 
   // Função para verificar se o veículo está selecionado
@@ -119,6 +132,59 @@ export function VeiculoSelector({
         <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
           <AlertTriangle className="w-4 h-4" />
           <span className="text-sm">Selecione as datas para verificar disponibilidade dos veículos</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Veículo selecionado - mostrar resumo compacto
+  if (veiculoAtual && !mostrarLista) {
+    return (
+      <div className="space-y-4">
+        <div className="p-4 border border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded ring-2 ring-blue-200 dark:ring-blue-800 relative">
+          <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 dark:bg-blue-400 rounded-full flex items-center justify-center shadow-md">
+            <CheckCircle className="w-4 h-4 text-white dark:text-gray-900" />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Car className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div>
+                <h3 className="font-medium text-blue-900 dark:text-blue-100">
+                  {veiculoAtual.nome}
+                </h3>
+                <div className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">
+                  {veiculoAtual.marca} {veiculoAtual.modelo} • {veiculoAtual.placa}
+                </div>
+                <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-1">
+                    <Users className="w-3 h-3" />
+                    <span>{veiculoAtual.capacidadePassageiros || 0} passageiros</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Fuel className="w-3 h-3" />
+                    <span className="capitalize">{veiculoAtual.tipoCombustivel}</span>
+                  </div>
+                  {veiculoAtual.valorDiaria && (
+                    <span className="font-medium text-green-600 dark:text-green-400">
+                      R$ {veiculoAtual.valorDiaria.toFixed(2)}/dia
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {!disabled && (
+              <button
+                type="button"
+                onClick={() => setMostrarLista(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground border border-border rounded transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Trocar
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );

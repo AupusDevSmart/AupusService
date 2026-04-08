@@ -4,6 +4,7 @@ import { ProgramacaoSelector } from '../components/ProgramacaoSelector';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
 import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManager';
+import { OrcamentoCardManager } from '@/components/common/cards/OrcamentoCardManager';
 import { OrigemOSCardWrapper } from '../components/OrigemOSCardWrapper';
 import { ReservaVeiculoCard } from '../components/ReservaVeiculoCard';
 import { StatusTransitionHelper } from '../components/StatusTransitionHelper';
@@ -28,6 +29,7 @@ export const execucaoOSFormFields: FormField[] = [
     disabled: true,
     group: 'identificacao',
     colSpan: 2,
+    showOnlyOnMode: ['view', 'edit'],
   },
   {
     key: 'tipoOS',
@@ -347,6 +349,33 @@ export const execucaoOSFormFields: FormField[] = [
     }
   },
 
+  // Orçamento - GRUPO: orcamento
+  {
+    key: 'itens_orcamento',
+    label: 'Orçamento',
+    type: 'custom',
+    component: OrcamentoCardManager,
+    componentProps: (formData: any) => {
+      const materiais = formData?.materiaisConsumidos || formData?.materiais || [];
+      const tecnicos = formData?.tecnicos || formData?.tecnicosPresentes || [];
+      const custoMateriais = materiais.reduce((acc: number, m: any) => {
+        return acc + ((Number(m.custo_unitario) || 0) * (Number(m.quantidade_planejada) || Number(m.quantidade_consumida) || 0));
+      }, 0);
+      const custoEquipe = tecnicos.reduce((acc: number, t: any) => {
+        return acc + ((Number(t.custo_hora) || 0) * (Number(t.horas_estimadas) || Number(t.horas_trabalhadas) || 0));
+      }, 0);
+      return {
+        title: 'Outros Custos',
+        custoMateriais,
+        custoEquipe,
+        disabled: true
+      };
+    },
+    defaultValue: [],
+    group: 'orcamento',
+    colSpan: 2,
+  },
+
   // Condições de Segurança - GRUPO: seguranca
   // ⚠️ MOVIDO PARA FinalizarExecucaoModal - Só mostra em visualização de execuções finalizadas
   {
@@ -606,6 +635,11 @@ export const execucaoOSFormGroups = [
     key: 'recursos',
     title: 'Recursos Consumidos',
     fields: ['materiaisConsumidos', 'ferramentasUtilizadas', 'custosAdicionais'] // ✅ ADICIONADO: mapping explícito
+  },
+  {
+    key: 'orcamento',
+    title: 'Orçamento',
+    fields: ['itens_orcamento']
   },
   {
     key: 'seguranca',

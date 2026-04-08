@@ -44,6 +44,12 @@ export type OrigemProgramacao = OrigemOS;
 // INTERFACES PARA RECURSOS (CONFORME SCHEMA)
 // ========================================
 
+export interface ItemOrcamento {
+  id?: string;
+  descricao: string;
+  valor: number;
+}
+
 export interface MaterialProgramacaoOS {
   id?: string;
   programacao_id?: string;
@@ -166,6 +172,7 @@ export interface ProgramacaoOS extends BaseEntity {
   materiais?: MaterialProgramacaoOS[];
   ferramentas?: FerramentaProgramacaoOS[];
   tecnicos?: TecnicoProgramacaoOS[];
+  itens_orcamento?: ItemOrcamento[];
   historico?: HistoricoProgramacaoOS[];
   tarefas_programacao?: TarefaProgramacaoOS[];
 
@@ -242,6 +249,7 @@ export interface CreateProgramacaoDto {
   materiais?: Omit<MaterialProgramacaoOS, 'id' | 'programacao_id'>[];
   ferramentas?: Omit<FerramentaProgramacaoOS, 'id' | 'programacao_id'>[];
   tecnicos?: Omit<TecnicoProgramacaoOS, 'id' | 'programacao_id'>[];
+  itens_orcamento?: Omit<ItemOrcamento, 'id'>[];
 }
 
 export interface UpdateProgramacaoDto extends Partial<CreateProgramacaoDto> {}

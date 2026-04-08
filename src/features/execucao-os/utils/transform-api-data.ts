@@ -123,6 +123,7 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     // Custos
     orcamento_previsto: apiData.orcamento_previsto,
     custo_real: apiData.custo_real,
+    itens_orcamento: apiData.itens_orcamento || [],
 
     // Observações
     observacoes: apiData.observacoes,

@@ -28,11 +28,11 @@ export function InstrucoesModal({
 }: InstrucoesModalProps) {
   const getModalTitle = () => {
     const titles = {
-      create: 'Nova Instrucao',
-      edit: 'Editar Instrucao',
-      view: 'Visualizar Instrucao'
+      create: 'Nova Instrução',
+      edit: 'Editar Instrução',
+      view: 'Visualizar Instrução'
     };
-    return titles[mode] || 'Instrucao';
+    return titles[mode] || 'Instrução';
   };
 
   const modalEntity = useMemo(() => {
@@ -80,12 +80,12 @@ export function InstrucoesModal({
       groups={[
         {
           key: 'informacoes_basicas',
-          title: 'Informacoes Basicas',
+          title: 'Informações Básicas',
           fields: ['tag', 'nome', 'descricao']
         },
         {
           key: 'classificacao',
-          title: 'Classificacao',
+          title: 'Classificação',
           fields: ['categoria', 'tipo_manutencao', 'criticidade', 'condicao_ativo']
         },
         {
@@ -95,17 +95,17 @@ export function InstrucoesModal({
         },
         {
           key: 'atividades',
-          title: 'Sub-instrucoes',
+          title: 'Sub-instruções',
           fields: ['sub_instrucoes']
         },
         {
           key: 'recursos',
-          title: 'Recursos Necessarios',
+          title: 'Recursos Necessários',
           fields: ['recursos']
         },
         {
           key: 'observacoes',
-          title: 'Observacoes & Status',
+          title: 'Observações & Status',
           fields: ['observacoes', 'status']
         }
       ]}

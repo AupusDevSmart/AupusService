@@ -18,7 +18,7 @@ interface AdicionarAoPlanoModalProps {
 }
 
 const frequenciaOptions = [
-  { value: 'DIARIA', label: 'Diaria' },
+  { value: 'DIARIA', label: 'Diária' },
   { value: 'SEMANAL', label: 'Semanal' },
   { value: 'QUINZENAL', label: 'Quinzenal' },
   { value: 'MENSAL', label: 'Mensal' },
@@ -108,13 +108,13 @@ export function AdicionarAoPlanoModal({ isOpen, instrucaoId, instrucaoNome, onCl
 
         {instrucaoNome && (
           <p className="text-sm text-muted-foreground mb-4">
-            Instrucao: <span className="font-medium text-foreground">{instrucaoNome}</span>
+            Instrução: <span className="font-medium text-foreground">{instrucaoNome}</span>
           </p>
         )}
 
         <div className="space-y-4">
           <div>
-            <Label className="text-sm font-medium mb-1.5 block">Plano de Manutencao *</Label>
+            <Label className="text-sm font-medium mb-1.5 block">Plano de Manutenção *</Label>
             <Combobox
               options={planosOptions}
               value={planoId || undefined}
@@ -126,7 +126,7 @@ export function AdicionarAoPlanoModal({ isOpen, instrucaoId, instrucaoNome, onCl
           </div>
 
           <div>
-            <Label className="text-sm font-medium mb-1.5 block">Frequencia *</Label>
+            <Label className="text-sm font-medium mb-1.5 block">Frequência *</Label>
             <select
               value={frequencia}
               onChange={(e) => setFrequencia(e.target.value as FrequenciaTarefa)}
@@ -140,7 +140,7 @@ export function AdicionarAoPlanoModal({ isOpen, instrucaoId, instrucaoNome, onCl
 
           {frequencia === 'PERSONALIZADA' && (
             <div>
-              <Label className="text-sm font-medium mb-1.5 block">Frequencia Personalizada (dias)</Label>
+              <Label className="text-sm font-medium mb-1.5 block">Frequência Personalizada (dias)</Label>
               <Input
                 type="number"
                 value={frequenciaPersonalizada}
