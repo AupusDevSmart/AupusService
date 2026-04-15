@@ -2,7 +2,7 @@
 // Dashboard minimalista com design clean e performance otimizada
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
@@ -92,9 +92,9 @@ const MetricCard = ({
 }) => {
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700">
-        <Skeleton className="h-4 w-24 mb-3" />
-        <Skeleton className="h-8 w-32 mb-2" />
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
+        <Skeleton className="h-4 w-24 mb-2" />
+        <Skeleton className="h-7 w-32 mb-1" />
         <Skeleton className="h-3 w-20" />
       </div>
     );
@@ -105,12 +105,12 @@ const MetricCard = ({
       whileHover={{ scale: onClick ? 1.02 : 1 }}
       whileTap={{ scale: onClick ? 0.98 : 1 }}
       className={cn(
-        "bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700 transition-all duration-200",
+        "bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 transition-all duration-200",
         onClick && "cursor-pointer hover:shadow-lg dark:hover:shadow-gray-900/50"
       )}
       onClick={onClick}
     >
-      <div className="flex items-start justify-between mb-3">
+      <div className="flex items-start justify-between mb-2">
         <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           {title}
         </p>
@@ -165,12 +165,14 @@ const ChartCard = ({
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col min-h-0">
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{title}</h3>
         {action}
       </div>
-      {children}
+      <div className="flex-1 min-h-0 flex flex-col justify-center">
+        {children}
+      </div>
     </div>
   );
 };
@@ -207,8 +209,8 @@ const CircularMetric = ({
   size?: number;
 }) => {
   return (
-    <div className="flex flex-col items-center">
-      <div style={{ width: size, height: size }}>
+    <div className="flex flex-col items-center h-full justify-center">
+      <div className="w-[80px] h-[80px] lg:w-[90px] lg:h-[90px] xl:w-[100px] xl:h-[100px]">
         <CircularProgressbar
           value={value}
           maxValue={maxValue}
@@ -223,7 +225,7 @@ const CircularMetric = ({
           })}
         />
       </div>
-      <p className="text-xs text-gray-600 dark:text-gray-400 mt-3 font-medium">{label}</p>
+      <p className="text-[10px] text-gray-600 dark:text-gray-400 mt-1 font-medium">{label}</p>
     </div>
   );
 };
@@ -261,13 +263,6 @@ export function MinimalistDashboard() {
       });
     }
   }, [data, isLoading, error]);
-
-  // Score visual com gradiente - tonalidades de cinza e azul escuro
-  const scoreGradient = useMemo(() => {
-    if (!data || !data.metrics) return 'from-slate-600 to-slate-700';
-    // Sempre usar tons de cinza e azul escuro para manter aspecto profissional
-    return 'from-slate-700 to-blue-900';
-  }, [data]);
 
   // Dados para gráficos
   const anomaliasTrendData = useMemo(() => {
@@ -346,7 +341,7 @@ export function MinimalistDashboard() {
 
   if (error) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-gray-700 dark:text-gray-300 mb-4">Erro ao carregar dashboard</p>
@@ -360,13 +355,13 @@ export function MinimalistDashboard() {
   }
 
   return (
-    <div className="h-screen overflow-y-auto bg-gray-50 dark:bg-gray-900">
+    <div className="h-full flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
       {/* Header Minimalista */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-50">
-        <div className="px-6 py-4">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex-shrink-0 z-50">
+        <div className="px-6 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Dashboard Operacional
               </h1>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -411,63 +406,10 @@ export function MinimalistDashboard() {
         </div>
       </header>
 
-      {/* Score Executivo - Compacto */}
-      <AnimatePresence>
-        {data && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="px-6 py-3"
-          >
-            <div className={cn(
-              "bg-gradient-to-r p-4 rounded-xl text-white shadow-lg",
-              scoreGradient
-            )}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white/80 text-xs mb-1">Score Operacional</p>
-                  <div className="flex items-baseline gap-3">
-                    <h2 className="text-3xl font-bold">{Math.round(data?.metrics?.saudeOperacional || 0)}</h2>
-                    <div className="flex items-center gap-1.5">
-                      {(data?.metrics?.saudeOperacional || 0) > 70 ? (
-                        <>
-                          <TrendingUp className="h-4 w-4" />
-                          <span className="text-xs">Melhorando</span>
-                        </>
-                      ) : (data?.metrics?.saudeOperacional || 0) < 50 ? (
-                        <>
-                          <TrendingDown className="h-4 w-4" />
-                          <span className="text-xs">Atenção</span>
-                        </>
-                      ) : (
-                        <>
-                          <Minus className="h-4 w-4" />
-                          <span className="text-xs">Estável</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-right">
-                    <p className="text-white/80 text-xs">Anomalias Abertas</p>
-                    <p className="text-xl font-bold">{data?.anomalias?.abertas || 0}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-white/80 text-xs">OS Pendentes</p>
-                    <p className="text-xl font-bold">{data?.ordensServico?.abertas || 0}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Métricas Principais */}
-      <div className="px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
+      {/* Conteúdo - ocupa exatamente o espaço restante, sem scroll */}
+      <div className="flex-1 min-h-0 overflow-hidden px-6 py-3 flex flex-col gap-3">
+        {/* Métricas Principais - altura fixa */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3 flex-shrink-0">
           <MetricCard
             title="Anomalias Ativas"
             value={(() => {
@@ -528,61 +470,63 @@ export function MinimalistDashboard() {
           />
         </div>
 
-        {/* Gráficos Principais */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+        {/* Gráficos Principais - flex para preencher */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 flex-1 min-h-0">
           {/* Taxa de Resolução - Gráfico Circular Moderno */}
           <ChartCard title="Taxa de Resolução" loading={isLoading}>
-            <div className="flex justify-center py-4">
+            <div className="flex justify-center py-2">
               <CircularMetric
                 value={data?.metrics?.taxaResolucao || 0}
                 label="Anomalias Resolvidas"
                 color="#10b981"
-                size={140}
+                size={110}
               />
             </div>
           </ChartCard>
 
           {/* Eficiência de Manutenção - Gráfico Circular Moderno */}
           <ChartCard title="Eficiência Manutenção" loading={isLoading}>
-            <div className="flex justify-center py-4">
+            <div className="flex justify-center py-2">
               <CircularMetric
                 value={data?.metrics?.eficienciaManutencao || 0}
                 label="Tarefas Eficientes"
                 color="#3b82f6"
-                size={140}
+                size={110}
               />
             </div>
           </ChartCard>
 
           {/* Status OS - Donut Chart */}
           <ChartCard title="Status Ordens de Serviço" loading={isLoading}>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={statusOSDonutData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={70}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {statusOSDonutData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="grid grid-cols-3 gap-2 mt-3">
+            <div className="flex-1 min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusOSDonutData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius="40%"
+                    outerRadius="65%"
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {statusOSDonutData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="grid grid-cols-3 gap-1 flex-shrink-0">
               {statusOSDonutData.map((item, i) => (
                 <div key={i} className="flex flex-col items-center text-xs">
                   <div
-                    className="w-3 h-3 rounded-full mb-1"
+                    className="w-2.5 h-2.5 rounded-full mb-0.5"
                     style={{ backgroundColor: item.fill }}
                   />
-                  <span className="text-gray-600 dark:text-gray-400">{item.name}</span>
-                  <span className="text-gray-900 dark:text-gray-100 font-medium">{item.value}</span>
+                  <span className="text-gray-600 dark:text-gray-400 text-[10px]">{item.name}</span>
+                  <span className="text-gray-900 dark:text-gray-100 font-medium text-[10px]">{item.value}</span>
                 </div>
               ))}
             </div>
@@ -590,44 +534,46 @@ export function MinimalistDashboard() {
 
           {/* Disponibilidade de Equipamentos - Gráfico Circular Moderno */}
           <ChartCard title="Disponibilidade de Equipamentos" loading={isLoading}>
-            <div className="flex justify-center py-4">
+            <div className="flex justify-center py-2">
               <CircularMetric
                 value={data?.metrics?.disponibilidade || 0}
                 label="Equipamentos Disponíveis"
                 color="#10b981"
-                size={140}
+                size={110}
               />
             </div>
           </ChartCard>
         </div>
 
-        {/* Seção de Detalhes */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+        {/* Seção de Detalhes - flex para preencher */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 flex-1 min-h-0">
           {/* Distribuição por Criticidade */}
           <ChartCard title="Equipamentos por Criticidade" loading={isLoading}>
-            <ResponsiveContainer width="100%" height={160}>
-              <PieChart>
-                <Pie
-                  data={distribuicaoCriticidadeData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={60}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {distribuicaoCriticidadeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="grid grid-cols-2 gap-2 mt-3">
+            <div className="flex-1 min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={distribuicaoCriticidadeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius="35%"
+                    outerRadius="60%"
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {distribuicaoCriticidadeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="grid grid-cols-2 gap-1 flex-shrink-0">
               {distribuicaoCriticidadeData.map((item, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs">
+                <div key={i} className="flex items-center gap-1.5 text-[10px]">
                   <div
-                    className="w-3 h-3 rounded-full"
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: item.fill }}
                   />
                   <span className="text-gray-600 dark:text-gray-400">{item.name}: {item.value}</span>
@@ -637,11 +583,11 @@ export function MinimalistDashboard() {
           </ChartCard>
 
           {/* Top Equipamentos Problemáticos */}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col min-h-0">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex-shrink-0">
               Equipamentos Críticos
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-2 flex-1 min-h-0 overflow-hidden">
               {data?.equipamentosCriticos?.slice(0, 4).map((eq, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <span className="text-xs text-gray-600 dark:text-gray-400 truncate mr-2">
@@ -658,11 +604,11 @@ export function MinimalistDashboard() {
           </div>
 
           {/* Próximas Manutenções */}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col min-h-0">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex-shrink-0">
               Próximas Manutenções
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-2 flex-1 min-h-0 overflow-hidden">
               {data?.proximasManutencoes?.slice(0, 4).map((m, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <div>
@@ -684,12 +630,12 @@ export function MinimalistDashboard() {
             </div>
           </div>
 
-          {/* Top Técnicos */}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+          {/* Status Tarefas */}
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col min-h-0">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex-shrink-0">
               Status Tarefas
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-2 flex-1 min-h-0 overflow-hidden">
               {(data?.tarefas?.concluidas || 0) > 0 ? (
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -724,49 +670,6 @@ export function MinimalistDashboard() {
           </div>
         </div>
 
-        {/* Análise de Tendências */}
-        {data?.equipamentosCriticos && data.equipamentosCriticos.length > 0 && data.equipamentosCriticos.filter(eq => eq.criticidade === 'CRITICA').length > 0 && (
-          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-950/30 dark:to-yellow-950/30 p-6 rounded-xl border border-orange-100 dark:border-orange-900/50 mb-6">
-            <h3 className="text-sm font-medium text-orange-900 dark:text-orange-100 mb-4">
-              ⚠️ Equipamentos com Criticidade Alta
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.equipamentosCriticos
-                .filter(eq => eq.criticidade === 'CRITICA' || eq.criticidade === 'ALTA')
-                .slice(0, 6)
-                .map((eq, i) => (
-                  <div key={i} className="bg-white/70 dark:bg-gray-800/70 p-4 rounded-lg">
-                    <div className="flex items-start justify-between mb-2">
-                      <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
-                        {eq.nome}
-                      </p>
-                      <span className={cn(
-                        "text-xs font-bold px-2 py-1 rounded",
-                        eq.criticidade === 'CRITICA' ? "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300" :
-                        eq.criticidade === 'ALTA' ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300" :
-                        "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300"
-                      )}>
-                        {eq.criticidade}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      {eq.numeroAnomalias} anomalias • {eq.numeroManutencoes} manutenções
-                    </p>
-                  </div>
-                ))}
-            </div>
-            <div className="mt-4 pt-4 border-t border-orange-100 dark:border-orange-900/50">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-orange-700 dark:text-orange-300">
-                  Total de equipamentos críticos: <strong>{data.equipamentosCriticos.filter(eq => eq.criticidade === 'CRITICA' || eq.criticidade === 'ALTA').length}</strong>
-                </span>
-                <span className="text-gray-700 dark:text-gray-300">
-                  Próximas manutenções: <strong>{data.proximasManutencoes.length}</strong>
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
