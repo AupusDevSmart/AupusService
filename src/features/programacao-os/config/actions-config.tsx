@@ -1,7 +1,7 @@
 // src/features/programacao-os/config/actions-config.tsx
 
 import { Eye, Edit, CheckCircle, Ban, Trash2 } from 'lucide-react';
-import type { TableAction } from '@nexon/components/common/base-table/types';
+import type { TableAction } from '@aupus/shared-pages';
 import type { ProgramacaoResponse } from '@/services/programacao-os.service';
 
 interface CreateProgramacaoOSActionsProps {
@@ -26,6 +26,7 @@ export function createProgramacaoOSTableActions({
 
   const allActions: Record<string, TableAction<ProgramacaoResponse>> = {
     view: {
+      key: 'view',
       label: 'Visualizar',
       icon: Eye,
       onClick: onView,
@@ -33,6 +34,7 @@ export function createProgramacaoOSTableActions({
     },
 
     edit: {
+      key: 'edit',
       label: 'Editar',
       icon: Edit,
       onClick: onEdit,
@@ -41,6 +43,7 @@ export function createProgramacaoOSTableActions({
     },
 
     aprovar: {
+      key: 'aprovar',
       label: 'Aprovar',
       icon: CheckCircle,
       onClick: onAprovar,
@@ -49,6 +52,7 @@ export function createProgramacaoOSTableActions({
     },
 
     cancelar: {
+      key: 'cancelar',
       label: 'Cancelar',
       icon: Ban,
       onClick: onCancelar,
@@ -60,11 +64,11 @@ export function createProgramacaoOSTableActions({
     },
 
     delete: {
+      key: 'delete',
       label: 'Excluir',
       icon: Trash2,
       onClick: onDelete,
       variant: 'destructive',
-      requiresConfirmation: false,
       condition: (item) => item.status?.toUpperCase() === 'PENDENTE',
     },
   };

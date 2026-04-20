@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { useOrigemDados } from '../hooks/useOrigemDados';
-import { MultiplePlanosSelector } from './MultiplePlanosSelector';
 
 import {
   TipoOrigemSelector,
@@ -77,7 +76,7 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
       setLoadingTarefas(true);
       gerarTarefasDoPlano(planoId)
         .then((tarefas) => {
-          setTarefasDoPlano(tarefas || []);
+          setTarefasDoPlano((tarefas || []) as any);
         })
         .catch(() => {
           setTarefasDoPlano([]);
@@ -190,7 +189,7 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
       {/* ANOMALIA Flow - pesquisa direta */}
       {tipo === 'ANOMALIA' && (
         <AnomaliaSelector
-          anomalias={anomaliasDisponiveis}
+          anomalias={anomaliasDisponiveis as any}
           value={anomaliaId}
           onChange={handleAnomaliaChange}
           loading={loading}
@@ -213,7 +212,7 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
       {tipo === 'PLANO_MANUTENCAO' && (
         <div className="space-y-6">
           <PlanoSelector
-            planos={planosDisponiveis}
+            planos={planosDisponiveis as any}
             value={planoId}
             onChange={handlePlanoChange}
             disabled={disabled}

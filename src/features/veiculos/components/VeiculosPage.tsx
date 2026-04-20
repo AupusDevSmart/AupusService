@@ -1,10 +1,10 @@
 // src/features/veiculos/components/VeiculosPage.tsx
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable } from '@nexon/components/common/base-table/BaseTable';
-import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
-import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
+import { BaseTable } from '@aupus/shared-pages';
+import { BaseFilters } from '@aupus/shared-pages';
+import { BaseModal } from '@aupus/shared-pages';
 import { Plus, Car, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { useVeiculos } from '../hooks/useVeiculos';
@@ -13,7 +13,7 @@ import { veiculosFilterConfig } from '../config/filter-config';
 import { veiculosFormFields } from '../config/form-config';
 import { veiculosTableColumns } from '../config/table-config';
 import { toast } from '@/hooks/use-toast';
-import { VeiculoResponse, CreateVeiculoRequest, VeiculosFilters } from '../types';
+import { CreateVeiculoRequest, VeiculosFilters } from '../types';
 
 const initialFilters: VeiculosFilters = {
   search: '',
@@ -37,7 +37,6 @@ export function VeiculosPage() {
     fetchVeiculos,
     createVeiculo,
     updateVeiculo,
-    updateStatus,
     clearError
   } = useVeiculos({ autoFetch: false });
 
@@ -121,10 +120,11 @@ export function VeiculosPage() {
         let documentosUploadados = 0;
         let totalDocumentos = 0;
 
-        if (data.documentos && Array.isArray(data.documentos) && data.documentos.length > 0) {
-          totalDocumentos = data.documentos.length;
+        const documentos = (data as CreateVeiculoRequest & { documentos?: Array<{ file: File; categoria: any; descricao?: string; dataVencimento?: string }> }).documentos;
+        if (documentos && Array.isArray(documentos) && documentos.length > 0) {
+          totalDocumentos = documentos.length;
 
-          for (const documento of data.documentos) {
+          for (const documento of documentos) {
             try {
               await uploadDocumento(novoVeiculo.id, {
                 file: documento.file,

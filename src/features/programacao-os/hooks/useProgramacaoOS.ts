@@ -1,6 +1,7 @@
 // src/features/programacao-os/hooks/useProgramacaoOS.ts
 import { useState, useCallback } from 'react';
 import { programacaoOSApi, type ProgramacaoResponse, type ProgramacaoDetalhesResponse, type CreateProgramacaoDto } from '@/services/programacao-os.service';
+import { api } from '@/config/api';
 
 interface IniciarExecucaoData {
   equipePresente: string[];
@@ -187,7 +188,7 @@ export const useProgramacaoOS = () => {
   }, [handleError]);
 
   // Funções de compatibilidade para transição (simulam execução de OS)
-  const planejarOS = useCallback(async (id: string, dados: any) => {
+  const planejarOS = useCallback(async (_id: string, _dados: any) => {
     // console.log('🔧 Planejando OS:', id, dados);
     // Aqui você chamaria a API de execução de OS quando ela estiver pronta
     // Por enquanto, simula o comportamento
@@ -207,7 +208,7 @@ export const useProgramacaoOS = () => {
 
     try {
       // ✅ Chamada real para a API de execução-os
-      const response = await programacaoOSApi.post(
+      const response = await api.post(
         `/execucao-os/iniciar-de-programacao/${programacaoId}`,
         {
           responsavel_execucao: dados.responsavelExecucao,
@@ -233,7 +234,7 @@ export const useProgramacaoOS = () => {
     }
   }, []);
 
-  const finalizarOS = useCallback(async (id: string, observacoes?: string) => {
+  const finalizarOS = useCallback(async (_id: string, _observacoes?: string) => {
     // console.log('🏁 Finalizando OS:', id, observacoes);
     setLoading(true);
     
@@ -246,7 +247,7 @@ export const useProgramacaoOS = () => {
     }
   }, []);
 
-  const cancelarOS = useCallback(async (id: string, motivo: string) => {
+  const cancelarOS = useCallback(async (_id: string, _motivo: string) => {
     // console.log('🚫 Cancelando OS:', id, 'Motivo:', motivo);
     setLoading(true);
     
@@ -259,7 +260,7 @@ export const useProgramacaoOS = () => {
     }
   }, []);
 
-  const exportarOS = useCallback(async (filters: any) => {
+  const exportarOS = useCallback(async (_filters: any) => {
     // console.log('📄 Exportando OS com filtros:', filters);
     setLoading(true);
     

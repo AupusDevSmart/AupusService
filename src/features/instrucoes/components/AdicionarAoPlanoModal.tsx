@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Combobox } from '@nexon/components/ui/combobox';
+import { Combobox } from '@aupus/shared-pages';
 import { X, Layers } from 'lucide-react';
 import { useUserStore } from '@/store/useUserStore';
 import { instrucoesApi, AdicionarAoPlanoApiData, FrequenciaTarefa } from '@/services/instrucoes.services';

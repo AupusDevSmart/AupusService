@@ -70,9 +70,15 @@ export const execucaoOSFormFields: FormField[] = [
     key: 'origemCard',
     label: '', // Remover label duplicada - o card já tem título interno
     type: 'custom',
-    component: OrigemOSCardWrapper,
     group: 'origem',
-    colSpan: 2 // ✅ Ocupa 2 colunas (largura total)
+    colSpan: 2, // ✅ Ocupa 2 colunas (largura total)
+    render: (props: any) => (
+      <OrigemOSCardWrapper
+        value={props.value}
+        entity={props.entity}
+        formData={props.formData}
+      />
+    )
   },
 
   // Reserva de Veículo - GRUPO: reserva

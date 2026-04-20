@@ -1,5 +1,5 @@
 // src/features/programacao-os/components/MultiplePlanosSelector.tsx
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,8 +18,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useOrigemDados } from '../hooks/useOrigemDados';
-import { usePlantas } from '@nexon/features/plantas/hooks/usePlantas';
-import { useUnidadesByPlanta } from '@nexon/features/unidades/hooks/useUnidades';
+import { usePlantas } from '@/features/plantas/hooks/usePlantas';
+import { useUnidadesByPlanta } from '@/features/unidades/hooks/useUnidades';
 
 interface TarefasPorPlano {
   [planoId: string]: {
@@ -101,8 +101,8 @@ export const MultiplePlanosSelector: React.FC<MultiplePlanosSelectorProps> = ({
         unidadeChanged
       });
 
-      lastPlantaIdRef.current = value.plantaId;
-      lastUnidadeIdRef.current = value.unidadeId;
+      lastPlantaIdRef.current = value.plantaId ?? null;
+      lastUnidadeIdRef.current = value.unidadeId ?? null;
 
       // Prioridade: unidade > planta
       if (value.unidadeId) {

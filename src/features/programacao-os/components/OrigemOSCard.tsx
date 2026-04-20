@@ -94,14 +94,14 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
   dadosOrigem,
   anomalia,
   tarefas = [],
-  planoManutencao,
-  planosSelecionados = [],
+  planoManutencao: _planoManutencao,
+  planosSelecionados: _planosSelecionados = [],
   tarefasPorPlano = {},
   solicitacaoServico
 }) => {
   const [expanded, setExpanded] = useState(false);
   const { obterAnomalia, loading: anomaliaLoading, error: anomaliaError } = useAnomalias();
-  const [anomaliaFromAPI, setAnomaliaFromAPI] = useState(null);
+  const [anomaliaFromAPI, setAnomaliaFromAPI] = useState<any>(null);
   const [solicitacaoFromAPI, setSolicitacaoFromAPI] = useState<any>(null);
   const [solicitacaoLoading, setSolicitacaoLoading] = useState(false);
   const [tarefasFromAPI, setTarefasFromAPI] = useState<TarefaApiResponse[]>([]);

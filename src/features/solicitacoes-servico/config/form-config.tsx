@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 // Render function para o campo de solicitante - mostra o usuário logado como readonly
-const SolicitanteRender = ({ value, onChange, disabled, mode }: any) => {
+const SolicitanteRender = ({ value: _value, onChange, disabled: _disabled, mode }: any) => {
   const [userName, setUserName] = useState<string>('Carregando...');
   const [userId, setUserId] = useState<string>('');
   const [loaded, setLoaded] = useState(false);

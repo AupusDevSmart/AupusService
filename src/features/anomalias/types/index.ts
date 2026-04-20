@@ -39,6 +39,7 @@ export interface Anomalia extends BaseEntity {
   
   // Support for related objects from API
   planta?: any;
+  unidade?: any;
   equipamento?: any;
   usuario?: any;
   

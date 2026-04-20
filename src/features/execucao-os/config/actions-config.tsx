@@ -9,7 +9,7 @@ import {
   RotateCcw,
   Ban,
 } from 'lucide-react';
-import type { TableAction } from '@nexon/components/common/base-table/types';
+import type { TableAction } from '@aupus/shared-pages';
 import type { ExecucaoOS } from '../types';
 
 interface CreateExecucaoOSActionsProps {
@@ -47,6 +47,7 @@ export function createExecucaoOSTableActions({
 
   const allActions: Record<string, TableAction<ExecucaoOS>> = {
     iniciar: {
+      key: 'iniciar',
       label: 'Iniciar',
       icon: Play,
       onClick: onIniciar,
@@ -54,6 +55,7 @@ export function createExecucaoOSTableActions({
       condition: (item) => getStatus(item) === 'PENDENTE',
     },
     pausar: {
+      key: 'pausar',
       label: 'Pausar',
       icon: Pause,
       onClick: onPausar,
@@ -61,6 +63,7 @@ export function createExecucaoOSTableActions({
       condition: (item) => getStatus(item) === 'EM_EXECUCAO',
     },
     retomar: {
+      key: 'retomar',
       label: 'Retomar',
       icon: RotateCcw,
       onClick: onRetomar,
@@ -68,6 +71,7 @@ export function createExecucaoOSTableActions({
       condition: (item) => getStatus(item) === 'PAUSADA',
     },
     executar: {
+      key: 'executar',
       label: 'Executar',
       icon: CheckCircle,
       onClick: onExecutar,
@@ -78,6 +82,7 @@ export function createExecucaoOSTableActions({
       },
     },
     auditar: {
+      key: 'auditar',
       label: 'Auditar',
       icon: Shield,
       onClick: onAuditar,
@@ -85,6 +90,7 @@ export function createExecucaoOSTableActions({
       condition: (item) => getStatus(item) === 'EXECUTADA',
     },
     finalizar: {
+      key: 'finalizar',
       label: 'Finalizar',
       icon: CheckCircle2,
       onClick: onFinalizar,
@@ -92,6 +98,7 @@ export function createExecucaoOSTableActions({
       condition: (item) => getStatus(item) === 'AUDITADA',
     },
     cancelar: {
+      key: 'cancelar',
       label: 'Cancelar',
       icon: Ban,
       onClick: onCancelar,

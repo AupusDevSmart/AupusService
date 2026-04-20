@@ -5,8 +5,7 @@ import { AnomaliasFilters } from '../types';
 import { anomaliasFormFields } from '../config/form-config';
 import { InstrucoesSelector } from '@/features/solicitacoes-servico/components/InstrucoesSelector';
 
-export function useAnomaliasFilters(initialFilters: Partial<AnomaliasFilters>) {
-  const [plantas, setPlantas] = useState<Array<{ value: string; label: string }>>([]);
+export function useAnomaliasFilters(_initialFilters: Partial<AnomaliasFilters>) {
   const [unidades, setUnidades] = useState<Array<{ value: string; label: string }>>([]);
 
   // Carregar opções de filtros da API
@@ -34,9 +33,9 @@ export function useAnomaliasFilters(initialFilters: Partial<AnomaliasFilters>) {
     }
 
     try {
-      const { UnidadesService } = await import('@/services/unidades.services');
-      const unidadesResponse = await UnidadesService.getAllUnidades({
-        planta_id: plantaId,
+      const { unidadesService } = await import('@/services/unidades.services');
+      const unidadesResponse = await unidadesService.listarUnidades({
+        plantaId,
         limit: 100,
       });
 

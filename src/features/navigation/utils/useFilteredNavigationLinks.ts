@@ -1,4 +1,3 @@
-import { useUserStore } from '@/store/useUserStore';
 import { NavigationLink, navigationLinks } from './navigation-links';
 
 export function useFilteredNavigationLinks() {

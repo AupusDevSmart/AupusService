@@ -2,9 +2,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable, CustomAction } from '@nexon/components/common/base-table/BaseTable';
-import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
-import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
+import { BaseTable, CustomAction } from '@aupus/shared-pages';
+import { BaseFilters } from '@aupus/shared-pages';
+import { BaseModal } from '@aupus/shared-pages';
 import { Button } from '@/components/ui/button';
 import { Plus, Wrench, AlertTriangle, CheckCircle, Calendar, Settings, Package } from 'lucide-react';
 import { useGenericTable } from '@/hooks/useGenericTable';
@@ -391,7 +391,7 @@ export function FerramentasPage() {
         <BaseModal
           isOpen={modalState.isOpen}
           mode={modalState.mode}
-          entity={getModalEntity()}
+          entity={getModalEntity() as any}
           title={getModalTitle()}
           icon={getModalIcon()}
           formFields={ferramentasFormFields}

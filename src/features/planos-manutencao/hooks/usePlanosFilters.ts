@@ -5,9 +5,9 @@ import { QueryPlanosApiParams } from '@/services/planos-manutencao.services';
 import { planosFilterConfig } from '../config/filter-config';
 import { planosFormFields } from '../config/form-config';
 
-export function usePlanosFilters(initialFilters: QueryPlanosApiParams) {
-  const [filterConfig, setFilterConfig] = useState<FilterConfig[]>(planosFilterConfig);
-  const [formFields, setFormFields] = useState(planosFormFields);
+export function usePlanosFilters(_initialFilters: QueryPlanosApiParams) {
+  const [filterConfig] = useState<FilterConfig[]>(planosFilterConfig);
+  const [formFields] = useState(planosFormFields);
 
   const loadFilterOptions = useCallback(async () => {
     try {

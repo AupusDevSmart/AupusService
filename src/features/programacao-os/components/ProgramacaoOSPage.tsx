@@ -3,9 +3,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable } from '@nexon/components/common/base-table/BaseTable';
-import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
-import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
+import { BaseTable } from '@aupus/shared-pages';
+import { BaseFilters } from '@aupus/shared-pages';
+import { BaseModal } from '@aupus/shared-pages';
 import { Plus, FileText, Calendar, CheckCircle, Clock } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { programacaoOSTableColumns } from '../config/table-config';
@@ -75,7 +75,7 @@ const initialFilters: ProgramacaoFiltersDto = {
 export function ProgramacaoOSPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useUserStore(); // Hook para obter usuário logado
+  useUserStore(); // Hook para obter usuário logado
 
   // Estados principais
   const [programacoes, setProgramacoes] = useState<ProgramacaoResponse[]>([]);
@@ -115,7 +115,6 @@ export function ProgramacaoOSPage() {
     aprovarProgramacao,
     cancelarProgramacao,
     deletarProgramacao,
-    iniciarExecucao,
     exportarOS,
     buscarProgramacao
   } = useProgramacaoOS();
@@ -436,7 +435,7 @@ export function ProgramacaoOSPage() {
     }
   };
 
-  const handleExportar = async () => {
+  const _handleExportar = async () => {
     try {
       const blob = await exportarOS(filters);
 
@@ -453,6 +452,7 @@ export function ProgramacaoOSPage() {
       alert('Erro ao exportar dados. Tente novamente.');
     }
   };
+  void _handleExportar;
 
   // Criar ações da tabela
   const tableActions = createProgramacaoOSTableActions({
@@ -656,7 +656,7 @@ export function ProgramacaoOSPage() {
 
       // ✅ LOGGING: Verificar estrutura das tarefas na API
       _debug_entity_keys: Object.keys(entity || {}),
-      _debug_tarefas_ids: entity.tarefas_ids,
+      _debug_tarefas_ids: (entity as any).tarefas_ids,
       _debug_tarefas_programacao: (entity as any).tarefas_programacao,
       _debug_dados_origem: entity.dados_origem,
 

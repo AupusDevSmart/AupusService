@@ -206,7 +206,7 @@ export const useOrigemDados = () => {
 
       setPlanosDisponiveis(planosFormatados);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [useOrigemDados] ERRO ao carregar planos:', {
         error,
         message: error?.message,
@@ -248,10 +248,10 @@ export const useOrigemDados = () => {
         unidadeNome: solicitacao.unidade?.nome,
         equipamentoId: solicitacao.equipamento_id,
         solicitanteNome: solicitacao.solicitante_nome,
-        dataSolicitacao: solicitacao.data_solicitacao || solicitacao.created_at
+        dataSolicitacao: solicitacao.data_solicitacao || solicitacao.created_at || ''
       }));
 
-      setSolicitacoesDisponiveis(solicitacoesFormatadas);
+      setSolicitacoesDisponiveis(solicitacoesFormatadas as unknown as SolicitacaoDisponivel[]);
 
     } catch (error) {
       setSolicitacoesDisponiveis([]);
@@ -429,11 +429,11 @@ export const useOrigemDados = () => {
         tipo: solicitacao.tipo,
         prioridade: solicitacao.prioridade,
         status: solicitacao.status,
-        local: solicitacao.local,
+        local: solicitacao.local || '',
         plantaId: solicitacao.planta_id,
         equipamentoId: solicitacao.equipamento_id,
         solicitanteNome: solicitacao.solicitante_nome,
-        dataSolicitacao: solicitacao.data_solicitacao || solicitacao.created_at
+        dataSolicitacao: solicitacao.data_solicitacao || solicitacao.created_at || ''
       };
 
       console.log('✅ [useOrigemDados] Solicitação encontrada:', solicitacaoFormatada);

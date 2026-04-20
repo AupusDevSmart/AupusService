@@ -1,29 +1,16 @@
 //@ts-nocheck
-import { ChartColumnBig } from '@/components/icons/ChartColumnBig';
-import { ChartNoAxesColumn } from '@/components/icons/ChartNoAxesColumn';
 import { Permissao } from '@/types/dtos/usuarios-dto';
 import {
   type LucideIcon,
-  Activity,
-  BookUser,
   Building2,
-  Component,
-  DollarSign,
-  Folder,
-  Handshake,
-  Magnet,
-  SquareActivity,
   Users,
-  UtilityPole,
   Zap,
   Factory,
   Wrench,
   Settings,
   Calendar,
   FileText,
-  ClipboardList,
   Truck,
-  Hammer,
   Building,
   AlertTriangle,
   CheckSquare,
@@ -32,19 +19,11 @@ import {
   Layers,
   Tag,
   LayoutDashboard,
-  Gauge,
-  SquareLibrary,
-  SquareUser,
-  SquareUserRound,
-  CircleUserRound,
-  OctagonAlert,
   CalendarDays,
   Clock,
   FilePenLine
 } from 'lucide-react';
 
-import { FileUser } from '@/components/icons/FileUser';
-import { HousePlugIcon } from '@/components/icons/HousePlugIcon';
 
 export type NavigationLink = {
   key: string;

@@ -1,7 +1,7 @@
 // src/features/execucao-os/components/ReservaVeiculoCard.tsx
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Car, Calendar, Clock, MapPin, FileText } from 'lucide-react';
+import { Car } from 'lucide-react';
 
 interface ReservaVeiculoCardProps {
   value?: {

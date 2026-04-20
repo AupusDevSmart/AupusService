@@ -6,8 +6,8 @@ const config = {
 		'./pages/**/*.{ts,tsx}',
 		'./components/**/*.{ts,tsx}',
 		'./src/**/*.{ts,tsx}',
-		// ✅ CRÍTICO: Incluir arquivos do NexOn para gerar classes CSS
-		'../../AupusNexOn/src/**/*.{ts,tsx}',
+		// ✅ CRÍTICO: Incluir shared-pages src para o Tailwind gerar todas as classes CSS usadas
+		'../../shared-pages/src/**/*.{ts,tsx}',
 	],
 	prefix: '',
 	theme: {

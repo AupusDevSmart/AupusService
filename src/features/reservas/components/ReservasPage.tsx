@@ -2,9 +2,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable, CustomAction } from '@nexon/components/common/base-table/BaseTable';
-import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
-import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
+import { BaseTable, CustomAction } from '@aupus/shared-pages';
+import { BaseFilters } from '@aupus/shared-pages';
+import { BaseModal } from '@aupus/shared-pages';
 import { ReservaModal } from './ReservaModal';
 import { Plus, Calendar, CheckCircle, XCircle, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
@@ -388,7 +388,7 @@ export function ReservasPage() {
         <ReservaModal
           isOpen={modalState.isOpen}
           mode={modalState.mode as 'create' | 'edit' | 'view'}
-          entity={getModalEntity()}
+          entity={getModalEntity() as any}
           onClose={closeModal}
           onSubmit={handleSubmit}
           veiculos={veiculos}

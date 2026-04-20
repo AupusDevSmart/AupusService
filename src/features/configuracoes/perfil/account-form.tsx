@@ -95,7 +95,8 @@ const profileFormSchema = z.object({
   path: ["confirmPassword"],
 });
 
-type ProfileFormValues = z.infer<typeof profileFormSchema>
+type ProfileFormValues = z.output<typeof profileFormSchema>
+type ProfileFormInput = z.input<typeof profileFormSchema>
 
 export function AccountForm() {
   const { user } = useUserStore()
@@ -115,9 +116,9 @@ export function AccountForm() {
     phone: user?.telefone || '',
   }
 
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues,
+  const form = useForm<ProfileFormInput>({
+    resolver: zodResolver(profileFormSchema) as any,
+    defaultValues: defaultValues as Partial<ProfileFormInput>,
   })
 
   // Atualizar formulario quando usuario carregar
@@ -211,7 +212,7 @@ export function AccountForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+      <form onSubmit={form.handleSubmit(onSubmit as any)} className="w-full">
         <div className="flex flex-col gap-6">
           <div className="w-full">
             <Card>
@@ -223,7 +224,7 @@ export function AccountForm() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name='image'
                   render={() => (
                     <FormItem>
@@ -282,7 +283,7 @@ export function AccountForm() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <FormField
-                    control={form.control}
+                    control={form.control as any}
                     name='name'
                     render={({ field }) => (
                       <FormItem>
@@ -299,7 +300,7 @@ export function AccountForm() {
                   />
 
                   <FormField
-                    control={form.control}
+                    control={form.control as any}
                     name='cpf'
                     render={({ field }) => (
                       <FormItem>
@@ -328,7 +329,7 @@ export function AccountForm() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <FormField
-                    control={form.control}
+                    control={form.control as any}
                     name='email'
                     render={({ field }) => (
                       <FormItem>
@@ -345,7 +346,7 @@ export function AccountForm() {
                   />
 
                   <FormField
-                    control={form.control}
+                    control={form.control as any}
                     name='phone'
                     render={({ field }) => (
                       <FormItem>
@@ -375,7 +376,7 @@ export function AccountForm() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name='password'
                   render={({ field }) => (
                     <FormItem>
@@ -405,7 +406,7 @@ export function AccountForm() {
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name='newPassword'
                   render={({ field }) => (
                     <FormItem>
@@ -435,7 +436,7 @@ export function AccountForm() {
                 />
 
                 <FormField
-                  control={form.control}
+                  control={form.control as any}
                   name='confirmPassword'
                   render={({ field }) => (
                     <FormItem>

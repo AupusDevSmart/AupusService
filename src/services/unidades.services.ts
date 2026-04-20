@@ -1,8 +1,11 @@
 import { api } from '@/config/api';
 import {
-  UnidadeNexon,
   CreateUnidadeDto,
   UpdateUnidadeDto,
+  Unidade as UnidadeCompleta,
+} from '../features/unidades/types';
+import {
+  UnidadeNexon,
   FilterUnidadeDto,
   PaginatedUnidadeResponse,
   UnidadeStats,
@@ -18,37 +21,30 @@ class UnidadesService {
       const params = new URLSearchParams();
 
       if (filtros?.search) params.append('search', filtros.search);
+      if (filtros?.plantaId) params.append('plantaId', filtros.plantaId);
+      if (filtros?.proprietarioId) params.append('proprietarioId', filtros.proprietarioId); // ✅ ADICIONADO
       if (filtros?.tipo) params.append('tipo', filtros.tipo);
       if (filtros?.status) params.append('status', filtros.status);
       if (filtros?.estado) params.append('estado', filtros.estado);
       if (filtros?.page) params.append('page', filtros.page.toString());
       if (filtros?.limit) params.append('limit', filtros.limit.toString());
+      if (filtros?.orderBy) params.append('orderBy', filtros.orderBy);
+      if (filtros?.orderDirection) params.append('orderDirection', filtros.orderDirection);
+
+      console.log('🔍 [UnidadesService] Enviando requisição com params:', params.toString());
+      console.log('🔍 [UnidadesService] proprietarioId no filtro:', filtros?.proprietarioId);
 
       const response = await api.get(`${this.baseUrl}?${params.toString()}`);
 
       console.log('📨 [UnidadesService] Resposta da API:', {
         status: response.status,
         hasData: !!response.data,
-        hasNestedData: !!response.data?.data,
+        hasNestedData: !!response.data,
         dataKeys: response.data ? Object.keys(response.data) : []
       });
 
-      // O interceptor Axios desempacota: { success, data: { data: [], pagination: {} } } → { data: [], pagination: {} }
-      // Então response.data já é { data: [], pagination: {} }
-      if (response.data && 'data' in response.data && 'pagination' in response.data) {
-        return response.data as PaginatedUnidadeResponse;
-      }
-
-      // Fallback: se a estrutura for diferente, criar uma resposta válida
-      return {
-        data: Array.isArray(response.data) ? response.data : [],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: Array.isArray(response.data) ? response.data.length : 0,
-          totalPages: 1
-        }
-      };
+      // A API retorna { success: true, data: { data: [], pagination: {} } }
+      return response.data;
     } catch (error) {
       console.error('❌ [UnidadesService] Erro ao listar unidades:', error);
       throw error;
@@ -60,7 +56,7 @@ class UnidadesService {
     try {
       const response = await api.get(`${this.baseUrl}/${id}`);
       // Busca por ID retorna o objeto diretamente dentro de data
-      return response.data.data || response.data;
+      return response.data;
     } catch (error) {
       console.error('❌ [UnidadesService] Erro ao buscar unidade:', error);
       throw error;
@@ -70,12 +66,26 @@ class UnidadesService {
   // Criar nova unidade
   async criarUnidade(dados: CreateUnidadeDto): Promise<UnidadeNexon> {
     try {
+      // 🔍 LOG DETALHADO - Dados antes de enviar
+      console.log('🏁 [FRONTEND SERVICE - CREATE] ===== INÍCIO =====');
+      console.log('📦 [FRONTEND SERVICE - CREATE] DTO completo:', JSON.stringify(dados, null, 2));
+      console.log('🔑 [FRONTEND SERVICE - CREATE] concessionaria_id:', dados.concessionaria_id);
+      console.log('🔍 [FRONTEND SERVICE - CREATE] Tipo:', typeof dados.concessionaria_id);
+      console.log('📝 [FRONTEND SERVICE - CREATE] É undefined?', dados.concessionaria_id === undefined);
+      console.log('📝 [FRONTEND SERVICE - CREATE] É null?', dados.concessionaria_id === null);
+      console.log('📝 [FRONTEND SERVICE - CREATE] É string vazia?', dados.concessionaria_id === '');
+
       const response = await api.post(this.baseUrl, dados);
+
+      console.log('✅ [FRONTEND SERVICE - CREATE] Resposta recebida');
+      const result = response.data;
+      console.log('🔑 [FRONTEND SERVICE - CREATE] concessionariaId na resposta:', result.concessionariaId);
+      console.log('🏁 [FRONTEND SERVICE - CREATE] ===== FIM =====');
 
       // Exibir sucesso
       alert('Unidade cadastrada com sucesso!');
 
-      return response.data.data || response.data;
+      return result;
     } catch (error) {
       console.error('❌ [UnidadesService] Erro ao criar unidade:', error);
       throw error;
@@ -85,12 +95,12 @@ class UnidadesService {
   // Atualizar unidade
   async atualizarUnidade(id: string, dados: UpdateUnidadeDto): Promise<UnidadeNexon> {
     try {
-      const response = await api.patch(`${this.baseUrl}/${id}`, dados);
+      const response = await api.put(`${this.baseUrl}/${id}`, dados);
 
       // Exibir sucesso
       alert('Unidade atualizada com sucesso!');
 
-      return response.data.data || response.data;
+      return response.data;
     } catch (error) {
       console.error('❌ [UnidadesService] Erro ao atualizar unidade:', error);
       throw error;
@@ -114,7 +124,7 @@ class UnidadesService {
   async obterEstatisticas(): Promise<UnidadeStats> {
     try {
       const response = await api.get(`${this.baseUrl}/stats`);
-      return response.data.data || response.data;
+      return response.data;
     } catch (error) {
       console.error('❌ [UnidadesService] Erro ao obter estatísticas:', error);
       throw error;
@@ -126,7 +136,7 @@ class UnidadesService {
     try {
       const response = await api.post(`${this.baseUrl}/import`, unidades);
 
-      const result = (response.data.data || response.data) as ImportResult;
+      const result = response.data as ImportResult;
 
       // Exibir resultado da importação
       const message = `Importação concluída!\n` +
@@ -187,21 +197,18 @@ class UnidadesService {
       return false;
     }
 
-    if ('localizacao' in dados && dados.localizacao) {
-      const { latitude, longitude } = dados.localizacao;
-      if (latitude < -90 || latitude > 90) {
+    if ('latitude' in dados && dados.latitude !== undefined) {
+      if (dados.latitude < -90 || dados.latitude > 90) {
         alert('Latitude deve estar entre -90 e 90.');
-        return false;
-      }
-      if (longitude < -180 || longitude > 180) {
-        alert('Longitude deve estar entre -180 e 180.');
         return false;
       }
     }
 
-    if ('pontosMedicao' in dados && dados.pontosMedicao && dados.pontosMedicao.length === 0) {
-      alert('Pelo menos um ponto de medição é obrigatório.');
-      return false;
+    if ('longitude' in dados && dados.longitude !== undefined) {
+      if (dados.longitude < -180 || dados.longitude > 180) {
+        alert('Longitude deve estar entre -180 e 180.');
+        return false;
+      }
     }
 
     return true;
@@ -222,22 +229,79 @@ class UnidadesService {
       // Tentar endpoint específico primeiro
       try {
         const response = await api.get(`${this.baseUrl}/planta/${cleanPlantaId}`);
-        const data = response.data.data || response.data;
+        const data = response.data;
         return Array.isArray(data) ? data : [];
       } catch (err) {
         // Fallback: usar endpoint geral com filtro
         console.log('⚠️ [UnidadesService] Endpoint /planta não disponível, usando filtro');
         const response = await api.get(`${this.baseUrl}?plantaId=${cleanPlantaId}&limit=100`);
 
-        const responseData = response.data.data || response.data;
+        const responseData = response.data;
         const data = responseData.data || responseData || [];
 
         return Array.isArray(data) ? data : [];
       }
     } catch (error: any) {
-      console.error(`❌ [UnidadesService] Erro ao buscar unidades por planta ${cleanPlantaId}:`, error);
+      console.error(`❌ [UnidadesService] Erro ao buscar unidades por planta ${plantaId}:`, error);
       // Retornar array vazio em vez de throw para não quebrar o UI
       return [];
+    }
+  }
+
+  // Buscar unidades por proprietário
+  async buscarUnidadesPorProprietario(proprietarioId: string): Promise<UnidadeNexon[]> {
+    try {
+      const cleanProprietarioId = proprietarioId?.trim();
+      console.log(`📡 [UnidadesService] Buscando unidades do proprietário ${cleanProprietarioId}`);
+
+      // Usar endpoint geral com filtro de proprietário
+      const response = await api.get(`${this.baseUrl}?proprietarioId=${cleanProprietarioId}&limit=1000`);
+
+      const responseData = response.data;
+      const data = responseData.data || responseData || [];
+
+      console.log(`✅ [UnidadesService] ${Array.isArray(data) ? data.length : 0} unidades encontradas`);
+      return Array.isArray(data) ? data : [];
+    } catch (error: any) {
+      console.error(`❌ [UnidadesService] Erro ao buscar unidades por proprietário ${proprietarioId}:`, error);
+      // Retornar array vazio em vez de throw para não quebrar o UI
+      return [];
+    }
+  }
+
+  // Buscar estatísticas de uma unidade específica
+  async buscarEstatisticasUnidade(id: string): Promise<UnidadeStats> {
+    try {
+      const cleanId = id?.trim();
+      console.log(`📡 [UnidadesService] Buscando estatísticas da unidade ${cleanId}`);
+
+      const response = await api.get(`${this.baseUrl}/${cleanId}/estatisticas`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`❌ [UnidadesService] Erro ao buscar estatísticas da unidade ${id}:`, error);
+      throw error;
+    }
+  }
+
+  // Buscar equipamentos de uma unidade específica
+  async buscarEquipamentosUnidade(
+    id: string,
+    filters?: { page?: number; limit?: number; search?: string }
+  ): Promise<any> {
+    try {
+      const cleanId = id?.trim();
+      console.log(`📡 [UnidadesService] Buscando equipamentos da unidade ${cleanId}`);
+
+      const params = new URLSearchParams();
+      if (filters?.page) params.append('page', filters.page.toString());
+      if (filters?.limit) params.append('limit', filters.limit.toString());
+      if (filters?.search) params.append('search', filters.search);
+
+      const response = await api.get(`${this.baseUrl}/${cleanId}/equipamentos?${params.toString()}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`❌ [UnidadesService] Erro ao buscar equipamentos da unidade ${id}:`, error);
+      throw error;
     }
   }
 }
@@ -253,6 +317,10 @@ export const createUnidade = (dados: CreateUnidadeDto) => unidadesService.criarU
 export const updateUnidade = (id: string, dados: UpdateUnidadeDto) => unidadesService.atualizarUnidade(id, dados);
 export const deleteUnidade = (id: string) => unidadesService.excluirUnidade(id);
 export const getUnidadesByPlanta = (plantaId: string) => unidadesService.buscarUnidadesPorPlanta(plantaId);
+export const getUnidadesByProprietario = (proprietarioId: string) => unidadesService.buscarUnidadesPorProprietario(proprietarioId);
+export const getUnidadeEstatisticas = (id: string) => unidadesService.buscarEstatisticasUnidade(id);
+export const getUnidadeEquipamentos = (id: string, filters?: { page?: number; limit?: number; search?: string }) =>
+  unidadesService.buscarEquipamentosUnidade(id, filters);
 
 // ✅ TIPOS RE-EXPORTADOS
-export type { UnidadeNexon as Unidade, FilterUnidadeDto as UnidadeFilters };
+export type { UnidadeCompleta as Unidade, FilterUnidadeDto as UnidadeFilters };

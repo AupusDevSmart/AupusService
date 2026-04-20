@@ -9,7 +9,7 @@ import { tarefasFormFields } from '../config/form-config';
 import { FilterConfig } from '@/types/base';
 import { QueryTarefasApiParams } from '@/services/tarefas.services';
 
-export function useTarefasFilters(initialFilters: QueryTarefasApiParams, onAnexosCopied?: (files: File[]) => void) {
+export function useTarefasFilters(_initialFilters: QueryTarefasApiParams, onAnexosCopied?: (files: File[]) => void) {
   const [filterConfig, setFilterConfig] = useState<FilterConfig[]>(tarefasFilterConfig);
   const [formFields, setFormFields] = useState(tarefasFormFields);
   const { fetchPlanos } = usePlanosManutencaoApi();

@@ -81,14 +81,14 @@ class SolicitacoesServicoApiService {
     if (filters.prioridade && filters.prioridade !== 'all')
       params.append('prioridade', filters.prioridade);
     if (filters.origem && filters.origem !== 'all') params.append('origem', filters.origem);
-    if (filters.planta_id && filters.planta_id !== 'all') params.append('planta_id', filters.planta_id);
+    if (filters.planta && filters.planta !== 'all') params.append('planta_id', filters.planta);
 
     const url = `${this.baseUrl}?${params}`;
     console.log('[SERVICE] Parâmetros enviados para API:', params.toString());
     const response = await api.get(url);
 
     // Debug: verificar o que está vindo do backend
-    if (response.data?.data?.length > 0) {
+    if (response.data?.length > 0) {
       console.log('[SERVICE] Primeira solicitação recebida do backend:', response.data.data[0]);
       console.log('[SERVICE] unidade_id:', response.data.data[0].unidade_id);
       console.log('[SERVICE] unidade:', response.data.data[0].unidade);
@@ -125,7 +125,7 @@ class SolicitacoesServicoApiService {
       solicitante_email: data.solicitante_email,
       solicitante_telefone: data.solicitante_telefone,
       solicitante_departamento: data.solicitante_departamento,
-      justificativa: data.justificativa,
+      justificativa: data.justificativa ?? '',
       beneficios_esperados: data.beneficios_esperados,
       riscos_nao_execucao: data.riscos_nao_execucao,
       requisitos_especiais: data.requisitos_especiais,

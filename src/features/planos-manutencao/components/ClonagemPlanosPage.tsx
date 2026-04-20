@@ -5,13 +5,12 @@ import { TitleCard } from '@/components/common/title-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useEquipamentos } from '@nexon/features/equipamentos/hooks/useEquipamentos';
+import { useEquipamentos } from '@/features/equipamentos/hooks/useEquipamentos';
 import { ClonarPlanoLoteResponseDto, PlanoManutencaoApiResponse } from '@/services/planos-manutencao.services';
 import {
   AlertCircle,
   AlertTriangle,
   ArrowRight,
-  Building,
   CheckCircle,
   ChevronLeft,
   Copy,
@@ -41,7 +40,7 @@ export function ClonagemPlanosPage() {
   const [searchParams] = useSearchParams();
   const planoIdInicial = searchParams.get('planoId');
 
-  const { equipamentos, fetchEquipamentos, loading: loadingEquipamentos } = useEquipamentos();
+  const { equipamentos, fetchEquipamentos } = useEquipamentos();
   const {
     planos,
     loading: loadingPlanos,
@@ -160,7 +159,7 @@ export function ClonagemPlanosPage() {
 
         const [planosResult, equipamentosResult] = await Promise.all([
           fetchPlanos({ limit: 100 }), // Carregar todos os planos (ativos e inativos)
-          fetchEquipamentos({ limit: 100 }) // Backend limita a 100 equipamentos por página
+          fetchEquipamentos({ limit: 100 } as any) // Backend limita a 100 equipamentos por página
         ]);
 
         console.log('✅ Planos carregados:', planosResult?.data?.length || 0);

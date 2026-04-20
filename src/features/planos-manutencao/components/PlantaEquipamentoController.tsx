@@ -150,7 +150,7 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
           semPlano: true,
           limit: 100
         });
-        setEquipamentos(response.data);
+        setEquipamentos(response.data.data || []);
       } catch (error) {
         console.error('Erro ao carregar equipamentos:', error);
         setEquipamentos([]);

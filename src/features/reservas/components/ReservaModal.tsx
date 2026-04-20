@@ -65,7 +65,7 @@ export function ReservaModal({
         };
 
         setFormData(processedData);
-        setVeiculoSelecionado(entity.veiculoId);
+        setVeiculoSelecionado(entity.veiculoId?.toString());
       }
       setErrors({});
     }

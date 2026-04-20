@@ -5,6 +5,14 @@ import { api } from '@/config/api';
 // TIPOS
 // ============================================================================
 
+export interface CategoriaEquipamento {
+  id: string;
+  nome: string;
+  _count?: {
+    modelos: number;
+  };
+}
+
 export interface CampoTecnico {
   nome: string;
   tipo: 'text' | 'number' | 'select' | 'boolean';
@@ -19,7 +27,9 @@ export interface TipoEquipamento {
   codigo: string;
   nome: string;
   descricao?: string;
-  categoria: string;
+  categoriaId: string;
+  categoria: CategoriaEquipamento;
+  fabricante: string;
   propriedadesSchema?: {  // ✅ CORRIGIDO: backend retorna camelCase
     campos?: CampoTecnico[];
   };
@@ -49,38 +59,23 @@ class TiposEquipamentosApiService {
   private readonly baseEndpoint = '/tipos-equipamentos';
 
   /**
-   * Buscar todos os tipos de equipamentos ativos
+   * Buscar todos os tipos de equipamentos (modelos)
+   * @param params.categoria_id - Filtrar por ID da categoria
+   * @param params.ativo - Filtrar por tipos ativos
+   * @param params.search - Buscar por código, nome ou fabricante
    */
-  async getAll(params?: { categoria?: string; ativo?: boolean }): Promise<TipoEquipamento[]> {
+  async getAll(params?: { categoria_id?: string; ativo?: boolean; search?: string }): Promise<TipoEquipamento[]> {
     try {
       const response = await api.get<TipoEquipamentoResponse>(this.baseEndpoint, {
         params: {
-          ativo: params?.ativo !== undefined ? params.ativo : true,
-          categoria: params?.categoria,
+          categoria_id: params?.categoria_id,
+          search: params?.search,
         },
       });
 
-      console.log('📦 [TIPOS-EQUIPAMENTOS] Resposta da API:', response.data);
-
-      // A resposta tem estrutura: { success, data: { data: [...], meta }, meta }
-      // Precisamos acessar response.data.data.data
-      let data: TipoEquipamento[] = [];
-
-      if (Array.isArray(response.data)) {
-        // Se response.data já é array
-        data = response.data;
-      } else if (Array.isArray(response.data?.data)) {
-        // Se response.data.data é array
-        data = response.data.data;
-      } else if (Array.isArray(response.data?.data?.data)) {
-        // Se response.data.data.data é array (estrutura aninhada)
-        data = response.data.data.data;
-      }
-
+      const data: TipoEquipamento[] = Array.isArray(response.data) ? response.data : [];
       console.log('✅ [TIPOS-EQUIPAMENTOS] Tipos carregados da API:', data.length);
-
-      // Garantir que sempre retorna array
-      return Array.isArray(data) ? data : [];
+      return data;
     } catch (error) {
       console.error('❌ [TIPOS-EQUIPAMENTOS] Erro ao carregar tipos:', error);
       return []; // Retornar array vazio em caso de erro ao invés de throw
@@ -105,10 +100,10 @@ class TiposEquipamentosApiService {
    */
   async findById(id: string): Promise<TipoEquipamento | null> {
     try {
-      const response = await api.get<{ success: boolean; data: TipoEquipamento }>(
+      const response = await api.get<TipoEquipamento>(
         `${this.baseEndpoint}/${id}`
       );
-      return response.data.data || null;
+      return response.data || null;
     } catch (error) {
       console.error('❌ [TIPOS-EQUIPAMENTOS] Erro ao buscar tipo por ID:', error);
       return null;
@@ -116,13 +111,13 @@ class TiposEquipamentosApiService {
   }
 
   /**
-   * Buscar categorias únicas
+   * @deprecated Use categoriasEquipamentosApi.getAll() instead
+   * Buscar categorias únicas (mantido para compatibilidade)
    */
-  async getCategorias(): Promise<string[]> {
+  async getCategorias(): Promise<CategoriaEquipamento[]> {
     try {
-      const tipos = await this.getAll();
-      const categorias = [...new Set(tipos.map((t) => t.categoria))];
-      return categorias.sort();
+      const response = await api.get<CategoriaEquipamento[]>(`${this.baseEndpoint}/categorias`);
+      return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
       console.error('❌ [TIPOS-EQUIPAMENTOS] Erro ao buscar categorias:', error);
       return [];
@@ -130,14 +125,33 @@ class TiposEquipamentosApiService {
   }
 
   /**
-   * Buscar tipos por categoria
+   * Buscar tipos (modelos) por categoria_id
    */
-  async findByCategoria(categoria: string): Promise<TipoEquipamento[]> {
+  async findByCategoriaId(categoria_id: string): Promise<TipoEquipamento[]> {
     try {
-      return await this.getAll({ categoria });
+      return await this.getAll({ categoria_id });
     } catch (error) {
       console.error('❌ [TIPOS-EQUIPAMENTOS] Erro ao buscar tipos por categoria:', error);
       return [];
+    }
+  }
+
+  /**
+   * Criar novo tipo de equipamento (modelo)
+   */
+  async create(data: {
+    codigo: string;
+    nome: string;
+    categoriaId: string;
+    fabricante: string;
+    descricao?: string;
+  }): Promise<TipoEquipamento | null> {
+    try {
+      const response = await api.post<TipoEquipamento>(this.baseEndpoint, data);
+      return response.data || null;
+    } catch (error) {
+      console.error('❌ [TIPOS-EQUIPAMENTOS] Erro ao criar tipo:', error);
+      throw error; // Re-throw para mostrar erro ao usuário
     }
   }
 }
@@ -169,7 +183,7 @@ export const convertToModalFormat = (tipo: TipoEquipamento): TipoEquipamentoModa
   return {
     value: tipo.codigo,
     label: tipo.nome,
-    categoria: tipo.categoria,
+    categoria: typeof tipo.categoria === 'string' ? tipo.categoria : tipo.categoria?.nome || '',
     camposTecnicos: campos.map((campo) => ({
       campo: campo.nome,
       tipo: campo.tipo === 'boolean' ? 'select' : campo.tipo,
@@ -199,7 +213,91 @@ export const getTiposEquipamentos = async (): Promise<TipoEquipamentoModal[]> =>
 };
 
 // ============================================================================
-// EXPORTAÇÃO DA INSTÂNCIA
+// SERVIÇO API - CATEGORIAS DE EQUIPAMENTOS
+// ============================================================================
+
+class CategoriasEquipamentosApiService {
+  private readonly baseEndpoint = '/categorias-equipamentos';
+
+  /**
+   * Buscar todas as categorias de equipamentos
+   */
+  async getAll(): Promise<CategoriaEquipamento[]> {
+    try {
+      const response = await api.get<{ success: boolean; data: CategoriaEquipamento[] }>(this.baseEndpoint);
+
+      console.log('📦 [CATEGORIAS-EQUIPAMENTOS] Resposta da API:', response.data);
+
+      // ✅ CORRIGIDO: Extrair array de response.data
+      const categorias = response.data || [];
+      console.log('✅ [CATEGORIAS-EQUIPAMENTOS] Categorias extraídas:', categorias);
+
+      // Garantir que sempre retorna array
+      return Array.isArray(categorias) ? categorias : [];
+    } catch (error) {
+      console.error('❌ [CATEGORIAS-EQUIPAMENTOS] Erro ao carregar categorias:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Buscar categoria por ID com modelos
+   */
+  async findById(id: string): Promise<CategoriaEquipamento & { modelos?: TipoEquipamento[] } | null> {
+    try {
+      const response = await api.get<CategoriaEquipamento & { modelos?: TipoEquipamento[] }>(
+        `${this.baseEndpoint}/${id}`
+      );
+      return response.data || null;
+    } catch (error) {
+      console.error('❌ [CATEGORIAS-EQUIPAMENTOS] Erro ao buscar categoria por ID:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Criar nova categoria
+   */
+  async create(nome: string): Promise<CategoriaEquipamento | null> {
+    try {
+      const response = await api.post<CategoriaEquipamento>(this.baseEndpoint, { nome });
+      return response.data || null;
+    } catch (error) {
+      console.error('❌ [CATEGORIAS-EQUIPAMENTOS] Erro ao criar categoria:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Atualizar categoria
+   */
+  async update(id: string, nome: string): Promise<CategoriaEquipamento | null> {
+    try {
+      const response = await api.patch<CategoriaEquipamento>(`${this.baseEndpoint}/${id}`, { nome });
+      return response.data || null;
+    } catch (error) {
+      console.error('❌ [CATEGORIAS-EQUIPAMENTOS] Erro ao atualizar categoria:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Excluir categoria (somente se não tiver modelos)
+   */
+  async delete(id: string): Promise<boolean> {
+    try {
+      await api.delete(`${this.baseEndpoint}/${id}`);
+      return true;
+    } catch (error) {
+      console.error('❌ [CATEGORIAS-EQUIPAMENTOS] Erro ao excluir categoria:', error);
+      return false;
+    }
+  }
+}
+
+// ============================================================================
+// EXPORTAÇÃO DAS INSTÂNCIAS
 // ============================================================================
 
 export const tiposEquipamentosApi = new TiposEquipamentosApiService();
+export const categoriasEquipamentosApi = new CategoriasEquipamentosApiService();

@@ -29,6 +29,10 @@ export interface UnidadeNexon {
   pontosMedicao: string[];
   dataCadastro: string;
   ultimaAtualizacao: string;
+  planta?: {
+    id: string;
+    nome: string;
+  };
 }
 
 // DTOs para requisições
@@ -55,17 +59,27 @@ export interface FilterUnidadeDto {
   tipo?: TipoUnidadeNexon;
   status?: StatusUnidadeNexon;
   estado?: string;
+  plantaId?: string;
+  proprietarioId?: string;
   page?: number;
   limit?: number;
+  orderBy?: string;
+  orderDirection?: 'asc' | 'desc';
 }
 
 // Resposta paginada
 export interface PaginatedUnidadeResponse {
   data: UnidadeNexon[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 // Estatísticas

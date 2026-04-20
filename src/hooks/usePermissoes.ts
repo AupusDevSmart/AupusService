@@ -146,7 +146,7 @@ export function usePermissoesGrouped() {
       // Converter para formato esperado pelo frontend usando dados do backend
       const groupedData: Record<string, PermissaoOption[]> = {};
       
-      Object.entries(response.data).forEach(([categoria, permissions]: [string, any[]]) => {
+      Object.entries(response.data).forEach(([categoria, permissions]: [string, unknown]) => {
         if (Array.isArray(permissions)) {
           groupedData[categoria] = permissions.map((permission: any) => ({
             value: permission.name,

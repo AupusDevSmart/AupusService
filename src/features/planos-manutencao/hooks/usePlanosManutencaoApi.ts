@@ -270,9 +270,9 @@ export function usePlanosManutencaoApi(): UsePlanosManutencaoApiReturn {
     } catch (err) {
       console.error('❌ HOOK API: Erro em fetchPlanosByPlanta:', {
         error: err,
-        message: err?.message,
-        response: err?.response?.data,
-        status: err?.response?.status
+        message: (err as any)?.message,
+        response: (err as any)?.response?.data,
+        status: (err as any)?.response?.status
       });
 
       handleError(err, 'fetchPlanosByPlanta');

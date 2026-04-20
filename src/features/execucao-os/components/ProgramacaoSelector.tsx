@@ -1,17 +1,15 @@
 // src/features/execucao-os/components/ProgramacaoSelector.tsx
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Search,
   Calendar,
   Clock,
   User,
   Settings,
-  AlertTriangle,
   CheckCircle2,
   Filter
 } from 'lucide-react';
@@ -23,11 +21,11 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { programacaoOSApi } from '@/services/programacao-os.service';
-import type { ProgramacaoOSApiData, StatusProgramacao, PrioridadeProgramacao } from '@/services/programacao-os.service';
+import type { ProgramacaoResponse, StatusProgramacao, PrioridadeProgramacao } from '@/services/programacao-os.service';
 
 interface ProgramacaoSelectorProps {
   value?: string;
-  onChange: (programacaoId: string, programacao: ProgramacaoOSApiData) => void;
+  onChange: (programacaoId: string, programacao: ProgramacaoResponse) => void;
   disabled?: boolean;
 }
 
@@ -36,7 +34,7 @@ export const ProgramacaoSelector: React.FC<ProgramacaoSelectorProps> = ({
   onChange,
   disabled = false
 }) => {
-  const [programacoes, setProgramacoes] = useState<ProgramacaoOSApiData[]>([]);
+  const [programacoes, setProgramacoes] = useState<ProgramacaoResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusProgramacao | 'ALL'>('APROVADA');
@@ -56,7 +54,7 @@ export const ProgramacaoSelector: React.FC<ProgramacaoSelectorProps> = ({
         limit: 100
       };
 
-      const response = await programacaoOSApi.findAll(filters);
+      const response = await programacaoOSApi.listar(filters as any);
       setProgramacoes(response.data || []);
     } catch (error) {
       console.error('Erro ao carregar programações:', error);
@@ -66,18 +64,19 @@ export const ProgramacaoSelector: React.FC<ProgramacaoSelectorProps> = ({
     }
   };
 
-  const handleProgramacaoSelect = (programacao: ProgramacaoOSApiData) => {
+  const handleProgramacaoSelect = (programacao: ProgramacaoResponse) => {
     if (!disabled) {
       onChange(programacao.id, programacao);
     }
   };
 
   // Filtrar programações baseado na busca
-  const programacoesFiltradas = programacoes.filter(programacao => {
+  const programacoesFiltradas = programacoes.filter((p) => {
+    const programacao = p as any;
     const searchLower = searchTerm.toLowerCase();
     return (
-      programacao.nome.toLowerCase().includes(searchLower) ||
-      programacao.descricao.toLowerCase().includes(searchLower) ||
+      programacao.nome?.toLowerCase().includes(searchLower) ||
+      programacao.descricao?.toLowerCase().includes(searchLower) ||
       programacao.responsavel?.toLowerCase().includes(searchLower) ||
       programacao.numero_os?.toLowerCase().includes(searchLower)
     );
@@ -93,7 +92,7 @@ export const ProgramacaoSelector: React.FC<ProgramacaoSelectorProps> = ({
     }
   };
 
-  const getStatusColor = (status: StatusProgramacao) => {
+  const getStatusColor = (status: StatusProgramacao | string) => {
     switch (status) {
       case 'APROVADA': return 'bg-green-100 text-green-700';
       case 'PROGRAMADA': return 'bg-blue-100 text-blue-700';
@@ -173,7 +172,9 @@ export const ProgramacaoSelector: React.FC<ProgramacaoSelectorProps> = ({
 
       {/* Lista de Programações */}
       <div className="max-h-96 overflow-y-auto space-y-3">
-        {programacoesFiltradas.map((programacao) => (
+        {programacoesFiltradas.map((_programacao: any) => {
+          const programacao = _programacao as any;
+          return (
           <Card
             key={programacao.id}
             className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
@@ -258,7 +259,8 @@ export const ProgramacaoSelector: React.FC<ProgramacaoSelectorProps> = ({
               </div>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
 
         {programacoesFiltradas.length === 0 && (
           <div className="text-center py-8 text-gray-500">
@@ -279,7 +281,7 @@ export const ProgramacaoSelector: React.FC<ProgramacaoSelectorProps> = ({
             </span>
           </div>
           {(() => {
-            const selectedProgramacao = programacoes.find(p => p.id === value);
+            const selectedProgramacao = programacoes.find(p => p.id === value) as any;
             return selectedProgramacao && (
               <p className="text-xs text-blue-700 mt-1">
                 {selectedProgramacao.nome} - {selectedProgramacao.status}

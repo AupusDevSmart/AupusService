@@ -1,6 +1,6 @@
 // src/features/programacao-os/components/ReservaVinculadaCard.tsx
 import React from 'react';
-import { Car, Calendar, Clock, User, FileText, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Car, Calendar, User, FileText, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 interface ReservaVinculada {
   id: string;

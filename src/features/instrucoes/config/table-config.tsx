@@ -14,7 +14,7 @@ const formatarStatus = (status: StatusInstrucao) => {
   return configs[status] || { label: status, color: 'bg-gray-100 text-gray-800' };
 };
 
-const formatarCategoria = (categoria: CategoriaTarefa) => {
+const _formatarCategoria = (categoria: CategoriaTarefa) => {
   const labels: Record<string, string> = {
     MECANICA: 'Mecânica',
     ELETRICA: 'Elétrica',
@@ -28,7 +28,7 @@ const formatarCategoria = (categoria: CategoriaTarefa) => {
   return labels[categoria] || categoria;
 };
 
-const formatarTipoManutencao = (tipo: TipoManutencao) => {
+const _formatarTipoManutencao = (tipo: TipoManutencao) => {
   const labels: Record<string, string> = {
     PREVENTIVA: 'Preventiva',
     PREDITIVA: 'Preditiva',
@@ -39,7 +39,7 @@ const formatarTipoManutencao = (tipo: TipoManutencao) => {
   return labels[tipo] || tipo;
 };
 
-const formatarCriticidade = (criticidade: string) => {
+const _formatarCriticidade = (criticidade: string) => {
   const configs: Record<string, { label: string; color: string }> = {
     '1': { label: 'Muito Baixa', color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
     '2': { label: 'Baixa', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
@@ -49,6 +49,11 @@ const formatarCriticidade = (criticidade: string) => {
   };
   return configs[criticidade] || { label: criticidade, color: 'bg-gray-100 text-gray-800' };
 };
+
+// Keep references to prevent TS6133 - these are kept for future use
+void _formatarCategoria;
+void _formatarTipoManutencao;
+void _formatarCriticidade;
 
 export const instrucoesTableColumns: TableColumn<InstrucaoApiResponse>[] = [
   {

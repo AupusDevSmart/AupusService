@@ -13,7 +13,7 @@ export const profileService = {
    */
   async updateProfile(userId: string, data: UpdateUsuarioDto): Promise<UsuarioDTO> {
     const response = await api.patch<any>(`/usuarios/${userId}`, data);
-    return response.data?.data || response.data;
+    return response.data;
   },
 
   /**
@@ -27,7 +27,7 @@ export const profileService = {
     data: ChangePasswordDto
   ): Promise<{ message: string }> {
     const response = await api.patch<any>(`/usuarios/${userId}/change-password`, data);
-    return response.data?.data || response.data;
+    return response.data;
   },
 
   /**
@@ -46,6 +46,6 @@ export const profileService = {
       },
     });
 
-    return response.data?.data || response.data;
+    return response.data;
   },
 };

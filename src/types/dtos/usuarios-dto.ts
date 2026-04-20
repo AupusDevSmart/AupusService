@@ -20,6 +20,9 @@ export interface UsuarioDTO {
 
   roles: Role[];
 
+  proprietarioId?: string;
+  token?: string;
+
   created_at: Date;
   updated_at: Date;
 }

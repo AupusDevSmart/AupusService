@@ -1,6 +1,6 @@
 // src/features/programacao-os/config/table-config.tsx
 
-import type { TableColumn } from '@nexon/components/common/base-table/types';
+import type { TableColumn } from '@aupus/shared-pages';
 import type { ProgramacaoResponse } from '@/services/programacao-os.service';
 import { ProgramacaoInfoCell } from '../components/table-cells/ProgramacaoInfoCell';
 import { StatusCell } from '../components/table-cells/StatusCell';

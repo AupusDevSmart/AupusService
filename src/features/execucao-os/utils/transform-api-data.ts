@@ -1,7 +1,6 @@
 // src/features/execucao-os/utils/transform-api-data.ts
 
 import { ExecucaoOS, ChecklistAtividade } from '../types';
-import { ExecucaoOSApiResponse } from '@/services/execucao-os.service';
 
 /**
  * Transforma a resposta da API para o formato esperado pelo frontend
@@ -56,7 +55,7 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
   }));
 
   // Construir o objeto transformado com TODOS os campos
-  const transformed: ExecucaoOS = {
+  const transformed = {
     // Campos base (BaseEntity)
     id: apiData.id,
     criado_em: apiData.criado_em,
@@ -239,10 +238,10 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
         modelo: apiData.reserva_veiculo.modelo || '',
         placa: apiData.reserva_veiculo.placa || '',
       } : undefined,
-    },
+    } as any,
   };
 
-  return transformed;
+  return transformed as unknown as ExecucaoOS;
 }
 
 /**

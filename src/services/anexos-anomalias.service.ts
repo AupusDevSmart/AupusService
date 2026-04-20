@@ -1,8 +1,7 @@
 // src/services/anexos-anomalias.service.ts
 import { api } from '@/config/api';
 import { 
-  AnexoAnomaliaResponse, 
-  UploadAnexoDto,
+  AnexoAnomaliaResponse,
   validarTipoArquivo,
   validarTamanhoArquivo,
   TAMANHO_MAXIMO_ANEXO,

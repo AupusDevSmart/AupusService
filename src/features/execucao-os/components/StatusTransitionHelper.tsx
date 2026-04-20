@@ -1,5 +1,4 @@
 // src/features/execucao-os/components/StatusTransitionHelper.tsx
-import React from 'react';
 import {
   ArrowRight,
   Play,
@@ -9,7 +8,6 @@ import {
   Shield,
   X,
   Clock,
-  RotateCcw,
 } from 'lucide-react';
 
 interface StatusTransitionHelperProps {

@@ -67,11 +67,11 @@ export class SelectionDataService {
         }
       });
 
-      const usuariosData = response.data.data || response.data;
+      const usuariosData = response.data;
       const usuarios = usuariosData.data || usuariosData || [];
 
       if (usuarios.length === 0) {
-        // console.warn('⚠️ [SELECTION] Nenhum usuário encontrado.');
+        console.warn('⚠️ [SELECTION] Nenhum proprietário cadastrado no sistema. Cadastre usuários com roles admin/gerente/proprietario.');
         return [];
       }
 
@@ -136,7 +136,7 @@ export class SelectionDataService {
       }
 
       if (todasPlantas.length === 0) {
-        // console.warn(`⚠️ [SELECTION] Nenhuma planta encontrada para proprietário ${proprietarioId}`);
+        console.warn(`⚠️ [SELECTION] Nenhuma planta cadastrada para o proprietário ${proprietarioId}. Cadastre pelo menos uma planta antes de criar equipamentos.`);
         return [];
       }
 
@@ -170,32 +170,53 @@ export class SelectionDataService {
   }
 
   // ============================================================================
-  // HIERARQUIA - TODO: Integrar com API
+  // HIERARQUIA - MOCK (TEMPORÁRIO - AGUARDANDO IMPLEMENTAÇÃO DA API)
   // ============================================================================
   async getHierarquiaNivel(nivel: string, parentId?: string): Promise<any[]> {
-    try {
-      // TODO: Implementar chamada para API real de hierarquia
-      const response = await api.get(`/hierarquia/${nivel}`, {
-        params: { parent_id: parentId }
-      });
+    console.warn(`⚠️ [SELECTION] USANDO DADOS MOCKADOS para hierarquia ${nivel}. Implementar endpoint real na API.`);
 
-      return (response.data || []).map((item: any) => ({
-        ...item,
-        label: item.nome
-      }));
-    } catch (error) {
-      console.error(`❌ [SELECTION] Erro ao carregar hierarquia ${nivel}:`, error);
-      // Retornar array vazio em caso de erro
-      return [];
-    }
+    const mockData: Record<string, any[]> = {
+      'area': [
+        { id: '1', nome: 'Produção', parent_id: parentId },
+        { id: '2', nome: 'Logística', parent_id: parentId },
+        { id: '3', nome: 'Administrativo', parent_id: parentId },
+        { id: '4', nome: 'Manutenção', parent_id: parentId }
+      ],
+      'subarea': [
+        { id: '1', nome: 'Linha A', parent_id: parentId },
+        { id: '2', nome: 'Linha B', parent_id: parentId },
+        { id: '3', nome: 'Expedição', parent_id: parentId },
+        { id: '4', nome: 'Recebimento', parent_id: parentId }
+      ],
+      'linha': [
+        { id: '1', nome: 'Montagem Principal', parent_id: parentId },
+        { id: '2', nome: 'Montagem Secundária', parent_id: parentId },
+        { id: '3', nome: 'Linha de Embalagem', parent_id: parentId }
+      ],
+      'conjunto': [
+        { id: '1', nome: 'Conjunto Motor Principal', parent_id: parentId },
+        { id: '2', nome: 'Conjunto Hidráulico', parent_id: parentId },
+        { id: '3', nome: 'Conjunto Pneumático', parent_id: parentId }
+      ],
+      'maquina': [
+        { id: '1', nome: 'Motor Elétrico 01', parent_id: parentId },
+        { id: '2', nome: 'Bomba Hidráulica Principal', parent_id: parentId },
+        { id: '3', nome: 'Compressor de Ar', parent_id: parentId }
+      ]
+    };
+    
+    return (mockData[nivel] || []).map(item => ({
+      ...item,
+      label: item.nome
+    }));
   }
 
   // ============================================================================
-  // TIPOS DE EQUIPAMENTOS - MANTIDO COMO ESTAVA
+  // TIPOS DE EQUIPAMENTOS - MOCK (TEMPORÁRIO - AGUARDANDO IMPLEMENTAÇÃO DA API)
   // ============================================================================
   async getTiposEquipamentos(): Promise<TipoEquipamento[]> {
-    // console.log('🔍 [SELECTION] Carregando tipos de equipamentos...');
-    
+    console.warn('⚠️ [SELECTION] USANDO DADOS MOCKADOS para tipos de equipamentos genéricos. Use a API /tipos-equipamentos para dados reais.');
+
     return [
       {
         value: 'motor_inducao',
@@ -259,7 +280,7 @@ export class SelectionDataService {
       const response = await api.get('/equipamentos/ucs-disponiveis', { params });
       
       if (!response.data || !Array.isArray(response.data)) {
-        // console.warn('⚠️ [SELECTION] Resposta de equipamentos UC inválida');
+        console.warn('⚠️ [SELECTION] Nenhum equipamento UC disponível. Resposta da API inválida ou vazia.');
         return [];
       }
 

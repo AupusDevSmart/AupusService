@@ -2,9 +2,9 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable } from '@nexon/components/common/base-table/BaseTable';
-import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
-import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
+import { BaseTable } from '@aupus/shared-pages';
+import { BaseFilters } from '@aupus/shared-pages';
+import { BaseModal } from '@aupus/shared-pages';
 import { Plus, Clock, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { toast } from '@/hooks/use-toast';

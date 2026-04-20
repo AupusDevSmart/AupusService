@@ -1,3 +1,4 @@
+import { env } from '@/config/env';
 /**
  * Converts a relative avatar URL to an absolute URL.
  * If the URL is already absolute (starts with http:// or https://), returns it as-is.
@@ -20,7 +21,7 @@ export function getAvatarUrl(avatarUrl: string | null | undefined): string | nul
   }
 
   // Build complete URL from relative path
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+  const apiUrl = env.VITE_API_URL;
 
   // Remove only trailing slashes, keep /api/v1 (files are served under /api/v1/uploads)
   const baseUrl = apiUrl.replace(/\/+$/, '');

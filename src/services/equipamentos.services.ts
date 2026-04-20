@@ -8,15 +8,18 @@ import { api } from '@/config/api';
 export interface CreateEquipamentoApiData {
   nome: string;
   classificacao: 'UC' | 'UAR';
-  unidade_id?: string; // ✅ NOVO: Equipamentos UC agora pertencem a unidades
-  planta_id?: string; // Mantido para compatibilidade
+  unidade_id?: string;
+  planta_id?: string;
   proprietario_id?: string;
   equipamento_pai_id?: string;
   fabricante?: string;
   modelo?: string;
   numero_serie?: string;
+  tag?: string;
+  status?: string;
   criticidade: '1' | '2' | '3' | '4' | '5';
   tipo_equipamento?: string;
+  tipo_equipamento_id?: string;
   em_operacao?: 'sim' | 'nao';
   tipo_depreciacao?: 'linear' | 'uso';
   data_imobilizacao?: string;
@@ -32,6 +35,8 @@ export interface CreateEquipamentoApiData {
   localizacao_especifica?: string;
   observacoes?: string;
   mcpse?: boolean;
+  mqtt_habilitado?: boolean;
+  topico_mqtt?: string;
   tuc?: string;
   a1?: string;
   a2?: string;
@@ -53,15 +58,18 @@ export interface EquipamentoApiResponse {
   id: string;
   nome: string;
   classificacao: 'UC' | 'UAR';
-  unidade_id?: string; // ✅ NOVO: Equipamentos UC agora pertencem a unidades
-  planta_id?: string; // Mantido para compatibilidade
+  unidade_id?: string;
+  planta_id?: string;
   proprietario_id?: string;
   equipamento_pai_id?: string;
   fabricante?: string;
   modelo?: string;
   numero_serie?: string;
+  tag?: string;
+  status?: string;
   criticidade: '1' | '2' | '3' | '4' | '5';
   tipo_equipamento?: string;
+  tipo_equipamento_id?: string;
   em_operacao?: string;
   tipo_depreciacao?: string;
   data_imobilizacao?: Date;
@@ -77,6 +85,8 @@ export interface EquipamentoApiResponse {
   localizacao_especifica?: string;
   observacoes?: string;
   mcpse?: boolean;
+  mqtt_habilitado?: boolean;
+  topico_mqtt?: string;
   tuc?: string;
   a1?: string;
   a2?: string;
@@ -87,8 +97,22 @@ export interface EquipamentoApiResponse {
   created_at: Date;
   updated_at: Date;
   deleted_at?: Date;
-  
+
   // Relacionamentos
+  unidade?: {
+    id: string;
+    nome: string;
+    planta?: {
+      id: string;
+      nome: string;
+      proprietario?: {
+        id: string;
+        nome: string;
+        cpf_cnpj?: string;
+        tipo?: string;
+      };
+    };
+  };
   planta?: {
     id: string;
     nome: string;
@@ -98,6 +122,10 @@ export interface EquipamentoApiResponse {
     nome: string;
     cpf_cnpj: string;
   };
+  equipamentos_filhos?: Array<{
+    id: string;
+    nome: string;
+  }>;
   equipamento_pai?: {
     id: string;
     nome: string;
@@ -117,6 +145,26 @@ export interface EquipamentoApiResponse {
     unidade?: string;
   }[];
   totalComponentes?: number;
+
+  // ✅ Tipo de equipamento (via relação tipo_equipamento_rel)
+  tipoEquipamento?: {
+    id: string;
+    codigo: string;  // Ex: "INVERSOR_FRONIUS", "M160_SCHNEIDER"
+    nome: string;
+    categoria?: any;
+    largura_padrao?: number;
+    altura_padrao?: number;
+    icone_svg?: string;
+  };
+  tipo_equipamento_rel?: {
+    id: string;
+    codigo: string;
+    nome: string;
+    categoria?: any;
+    largura_padrao?: number;
+    altura_padrao?: number;
+    icone_svg?: string;
+  };
 }
 
 export interface EquipamentosQueryParams {
@@ -125,28 +173,41 @@ export interface EquipamentosQueryParams {
   search?: string;
   unidade_id?: string;
   planta_id?: string;
+  proprietario_id?: string;
   classificacao?: 'UC' | 'UAR';
   criticidade?: '1' | '2' | '3' | '4' | '5';
   equipamento_pai_id?: string;
+  semPlano?: boolean;
+  mqtt_habilitado?: boolean;
   orderBy?: 'nome' | 'criticidade' | 'created_at' | 'fabricante' | 'valor_contabil';
   orderDirection?: 'asc' | 'desc';
 }
 
+export interface EquipamentosPaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+// Hook acessa: response.data.data (ou response.data como fallback) e response.data.pagination
 export interface EquipamentosListApiResponse {
-  data: EquipamentoApiResponse[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
+  data: {
+    data: EquipamentoApiResponse[];
+    pagination?: EquipamentosPaginationMeta;
+    [key: string]: any;
   };
 }
 
-export interface PlantaEquipamentosResponse extends EquipamentosListApiResponse {
-  planta: {
-    id: string;
-    nome: string;
-    localizacao: string;
+export interface PlantaEquipamentosResponse {
+  data: {
+    data: EquipamentoApiResponse[];
+    pagination: EquipamentosPaginationMeta;
+    planta: {
+      id: string;
+      nome: string;
+      localizacao: string;
+    };
   };
 }
 
@@ -167,7 +228,7 @@ export interface EstatisticasPlantaResponse {
   };
 }
 
-export interface ComponentesGerenciamentoResponse {
+export interface ComponentesGerenciamentoData {
   equipamentoUC: {
     id: string;
     nome: string;
@@ -185,6 +246,13 @@ export interface ComponentesGerenciamentoResponse {
   componentes: EquipamentoApiResponse[];
 }
 
+// A API retorna envelope { success, data, meta } — aqui o dado fica em response.data
+export interface ComponentesGerenciamentoResponse {
+  data?: ComponentesGerenciamentoData;
+  equipamentoUC?: ComponentesGerenciamentoData['equipamentoUC'];
+  componentes?: EquipamentoApiResponse[];
+}
+
 // ============================================================================
 // SERVIÇO DE API
 // ============================================================================
@@ -199,7 +267,7 @@ export class EquipamentosApiService {
   async create(data: CreateEquipamentoApiData): Promise<EquipamentoApiResponse> {
   // console.log('🚀 API SERVICE: create iniciado');
   // console.log('🚀 API SERVICE: Dados para enviar:', JSON.stringify(data, null, 2));
-  
+
   try {
     const response = await api.post<EquipamentoApiResponse>(this.baseEndpoint, data);
     // console.log('✅ API SERVICE: Resposta recebida:', response.data);
@@ -211,6 +279,34 @@ export class EquipamentosApiService {
     throw error;
   }
 }
+
+  /**
+   * Cria um equipamento rapidamente com dados mínimos
+   * Ideal para adicionar equipamentos durante a edição do diagrama
+   * @param unidadeId ID da unidade onde o equipamento será criado
+   * @param tipoEquipamentoId ID do tipo de equipamento (ex: MEDIDOR, TRANSFORMADOR)
+   * @param nome Nome opcional (será gerado automaticamente se não fornecido)
+   * @param tag TAG opcional de identificação
+   * @returns Promise com dados do equipamento criado
+   */
+  async criarEquipamentoRapido(
+    unidadeId: string,
+    tipoEquipamentoId: string,
+    nome?: string,
+    tag?: string
+  ): Promise<{ success: boolean; message: string; data: EquipamentoApiResponse }> {
+    const response = await api.post<{ success: boolean; message: string; data: EquipamentoApiResponse }>(
+      `${this.baseEndpoint}/rapido`,
+      {
+        unidade_id: unidadeId?.trim(),
+        tipo_equipamento_id: tipoEquipamentoId?.trim(),
+        nome: nome?.trim() || undefined,
+        tag: tag?.trim() || undefined,
+        classificacao: 'UC'
+      }
+    );
+    return response.data;
+  }
 
   async findAll(params?: EquipamentosQueryParams): Promise<EquipamentosListApiResponse> {
     const response = await api.get<EquipamentosListApiResponse>(this.baseEndpoint, {
@@ -224,10 +320,19 @@ export class EquipamentosApiService {
   }
 
   async findOne(id: string): Promise<EquipamentoApiResponse> {
-    const response = await api.get<{ success: boolean; data: EquipamentoApiResponse; meta?: any }>(`${this.baseEndpoint}/${id}`);
+    console.log('🌐 [API SERVICE] findOne chamado para ID:', id);
+    const response = await api.get<EquipamentoApiResponse>(`${this.baseEndpoint}/${id}`);
+    console.log('🌐 [API SERVICE] Resposta completa (response):', response);
+    console.log('🌐 [API SERVICE] response.data:', response.data);
+    console.log('🌐 [API SERVICE] response.data (os dados reais):', response.data);
 
     // ✅ CORRIGIDO: A API retorna { success, data, meta }, precisamos retornar apenas o "data" interno
-    const equipamento = response.data.data || response.data;
+    const equipamento = response.data;
+    console.log('✅ [API SERVICE] Equipamento extraído:', equipamento);
+    console.log('✅ [API SERVICE] equipamento.id:', equipamento?.id);
+    console.log('✅ [API SERVICE] equipamento.nome:', equipamento?.nome);
+    console.log('✅ [API SERVICE] equipamento.tipo_equipamento:', equipamento?.tipo_equipamento);
+    console.log('✅ [API SERVICE] equipamento.dados_tecnicos:', equipamento?.dados_tecnicos);
 
     return equipamento;
   }
@@ -299,6 +404,22 @@ export class EquipamentosApiService {
   async getEstatisticasPlanta(plantaId: string): Promise<EstatisticasPlantaResponse> {
     const response = await api.get<EstatisticasPlantaResponse>(
       `${this.baseEndpoint}/plantas/${plantaId}/estatisticas`
+    );
+    return response.data;
+  }
+
+  // ============================================================================
+  // COMPONENTES VISUAIS (BARRAMENTO/PONTO)
+  // ============================================================================
+
+  async criarComponenteVisual(
+    unidadeId: string,
+    tipo: 'BARRAMENTO' | 'PONTO',
+    nome?: string
+  ): Promise<{ success: boolean; data: EquipamentoApiResponse; meta?: any }> {
+    const response = await api.post<{ success: boolean; data: EquipamentoApiResponse; meta?: any }>(
+      `${this.baseEndpoint}/virtual/${unidadeId}/${tipo}`,
+      nome ? { nome } : {}
     );
     return response.data;
   }

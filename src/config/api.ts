@@ -36,7 +36,7 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 export const api = axios.create({
-  baseURL: "http://127.0.0.1:3000/api/v1", // ✅ Usar 127.0.0.1 em vez de localhost (evita DNS lookup)
+  baseURL: env.VITE_API_URL,
   withCredentials: true,
   withXSRFToken: true,
 

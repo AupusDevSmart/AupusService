@@ -15,8 +15,7 @@ import {
   User,
   FileText,
   Wrench,
-  Package,
-  Users
+  Package
 } from 'lucide-react';
 import { tarefasApi, TarefaApiResponse } from '@/services/tarefas.services';
 import { planosManutencaoApi, PlanoManutencaoApiResponse } from '@/services/planos-manutencao.services';

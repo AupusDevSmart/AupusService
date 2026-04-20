@@ -1,6 +1,6 @@
 // src/features/tarefas/components/TarefasModal.tsx
 import { useMemo } from 'react';
-import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
+import { BaseModal } from '@aupus/shared-pages';
 import { Tag } from 'lucide-react';
 import { TarefaApiResponse } from '@/services/tarefas.services';
 import { AnexosManager } from './AnexosManager';
@@ -22,7 +22,7 @@ export function TarefasModal({
   mode,
   entity,
   formFields,
-  pendingFiles,
+  pendingFiles: _pendingFiles,
   onClose,
   onSubmit,
   onFilesChange
@@ -121,14 +121,12 @@ export function TarefasModal({
         {
           key: 'atividades',
           title: 'Sub-tarefas',
-          fields: ['sub_tarefas'],
-          fullWidth: true
+          fields: ['sub_tarefas']
         },
         {
           key: 'recursos',
           title: 'Recursos Necessários',
-          fields: ['recursos'],
-          fullWidth: true
+          fields: ['recursos']
         },
         {
           key: 'observacoes',

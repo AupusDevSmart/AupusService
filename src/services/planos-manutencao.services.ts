@@ -70,6 +70,8 @@ export interface EquipamentoResumoDto {
   fabricante?: string;
   modelo?: string;
   criticidade?: string;
+  codigo?: string;
+  tipo_equipamento?: string;
   planta?: {
     id: string;
     nome: string;
@@ -357,7 +359,7 @@ export class PlanosManutencaoApiService {
     console.log('📡 SERVIÇO API: Fazendo requisição:', {
       url: url,
       params: finalParams,
-      fullUrl: `/api${url}?${new URLSearchParams(finalParams).toString()}`
+      fullUrl: `/api${url}?${new URLSearchParams(finalParams as any).toString()}`
     });
 
     try {
@@ -368,7 +370,7 @@ export class PlanosManutencaoApiService {
       console.log('✅ SERVIÇO API: Resposta HTTP recebida:', {
         status: response.status,
         headers: response.headers,
-        dataLength: response.data?.data?.length || 0,
+        dataLength: (response.data as any)?.length || 0,
         pagination: response.data?.pagination
       });
 

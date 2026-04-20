@@ -1,6 +1,6 @@
 // src/features/instrucoes/components/InstrucoesModal.tsx
 import { useMemo } from 'react';
-import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
+import { BaseModal } from '@aupus/shared-pages';
 import { FileText } from 'lucide-react';
 import { InstrucaoApiResponse } from '@/services/instrucoes.services';
 import { AnexosInstrucaoManager } from './AnexosInstrucaoManager';

@@ -52,7 +52,7 @@ const initialStats: AnomaliasStats = {
   resolvida: 0,
   cancelada: 0,
   criticas: 0,
-};
+} as unknown as AnomaliasStats;
 
 export function useAnomaliasTable(): UseAnomaliasTableReturn {
   // Estados

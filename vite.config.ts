@@ -71,6 +71,8 @@ export default defineConfig({
     alias: {
       // Alias explícito para importar do NexOn
       '@nexon': path.resolve(__dirname, '../../AupusNexOn/src'),
+      '@aupus/shared-pages/style.css': path.resolve(__dirname, '../../shared-pages/dist/style.css'),
+      '@aupus/shared-pages': path.resolve(__dirname, '../../shared-pages/dist/index.js'),
     },
     // Forçar uma única instância de React e Radix UI no bundle
     // Sem isso, NexOn resolve de seu próprio node_modules/ criando

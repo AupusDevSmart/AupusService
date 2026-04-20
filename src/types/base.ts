@@ -101,9 +101,11 @@ export interface FormFieldProps {
 
 export interface FilterConfig {
   key: string;
-  type: 'search' | 'select' | 'date' | 'custom';
+  type: 'search' | 'select' | 'date' | 'custom' | 'combobox';
   label?: string;
   placeholder?: string;
+  searchPlaceholder?: string;
+  emptyText?: string;
   options?: Array<{ value: string; label: string }>;
   className?: string;
   disabled?: boolean;
@@ -124,6 +126,7 @@ export interface TableColumn<T = any> {
   hideOnTablet?: boolean;
   render?: (item: T) => React.ReactElement | string;
   className?: string;
+  width?: string;
 }
 
 // ✅ ADICIONADO: Tipos para estados de loading
@@ -246,7 +249,8 @@ export interface UseModalResult<T> {
 }
 
 // ✅ ADICIONADO: Tipos para componentes de modal (legados)
-export interface ModalEntity<T = any> extends BaseEntity {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export interface ModalEntity<_T = any> extends BaseEntity {
   [key: string]: any;
 }
 

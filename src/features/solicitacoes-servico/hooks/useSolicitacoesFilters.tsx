@@ -5,7 +5,7 @@ import { SolicitacoesFilters } from '../types';
 import { solicitacoesFormFields } from '../config/form-config';
 import { InstrucoesSelector } from '../components/InstrucoesSelector';
 
-export function useSolicitacoesFilters(initialFilters: Partial<SolicitacoesFilters>) {
+export function useSolicitacoesFilters(_initialFilters: Partial<SolicitacoesFilters>) {
   const [plantas, setPlantas] = useState<Array<{ value: string; label: string }>>([]);
 
   const loadFilterOptions = useCallback(async () => {

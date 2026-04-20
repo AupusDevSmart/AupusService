@@ -1,7 +1,5 @@
 // src/features/programacao-os/components/table-cells/TipoCell.tsx
 
-import React from 'react';
-
 interface TipoCellProps {
   tipo: string;
   prioridade: string;
@@ -25,19 +23,19 @@ const tipoConfig = {
 const prioridadeConfig = {
   BAIXA: {
     label: 'Baixa',
-    className: 'text-gray-600 dark:text-gray-400',
+    className: 'text-gray-500 dark:text-gray-400',
   },
   MEDIA: {
     label: 'Média',
-    className: 'text-amber-600 dark:text-amber-500',
+    className: 'text-gray-500 dark:text-gray-400',
   },
   ALTA: {
     label: 'Alta',
-    className: 'text-orange-600 dark:text-orange-500',
+    className: 'text-gray-600 dark:text-gray-300',
   },
   CRITICA: {
     label: 'Crítica',
-    className: 'text-red-600 dark:text-red-500 font-semibold',
+    className: 'text-gray-700 dark:text-gray-300',
   },
 };
 

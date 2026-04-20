@@ -76,8 +76,8 @@ class AnomaliasApiService {
     const response = await api.get(url);
     console.log('📨 [AnomaliasService] Resposta:', {
       total: response.data?.pagination?.total || 0,
-      quantidade: response.data?.data?.length || 0,
-      primeiraAnomalia: response.data?.data?.[0] || null
+      quantidade: response.data?.length || 0,
+      primeiraAnomalia: response.data?.[0] || null
     });
 
     return response.data;
@@ -96,11 +96,17 @@ class AnomaliasApiService {
     // Criar anomalia sem anexos - anexos são enviados separadamente depois
     const createDto: CreateAnomaliaDto = {
       descricao: data.descricao,
-      localizacao: data.localizacao || {
-        equipamentoId: data.equipamentoId?.toString() || '',
-        local: data.local || '',
-        ativo: data.ativo || ''
-      },
+      localizacao: (data.localizacao
+        ? {
+            equipamentoId: data.localizacao.equipamentoId?.toString() || '',
+            local: data.localizacao.local || '',
+            ativo: data.localizacao.ativo || '',
+          }
+        : {
+            equipamentoId: data.equipamentoId?.toString() || '',
+            local: data.local || '',
+            ativo: data.ativo || '',
+          }),
       condicao: data.condicao,
       origem: data.origem,
       prioridade: data.prioridade,
@@ -121,7 +127,7 @@ class AnomaliasApiService {
     }
   }
 
-  private async createWithAttachments(data: AnomaliaFormData): Promise<Anomalia> {
+  public async _createWithAttachments(data: AnomaliaFormData): Promise<Anomalia> {
     // // console.log('📎 [AnomaliasService] Criando anomalia com anexos:', data.anexos?.length);
 
     const formData = new FormData();

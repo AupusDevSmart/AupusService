@@ -150,10 +150,10 @@ export class UsuariosService {
         usuariosFiltrados = usuariosBasicos.filter(u => u.status === params.status);
       } else {
         // Por padrão, apenas usuários ativos
-        usuariosFiltrados = usuariosBasicos.filter(u => 
-          u.status === UsuarioStatus.ATIVO || 
-          u.status === 'ativo' || // Fallback para lowercase
-          u.status === 'Ativo'    // Fallback para capitalize
+        usuariosFiltrados = usuariosBasicos.filter(u =>
+          u.status === UsuarioStatus.ATIVO ||
+          (u.status as string) === 'ativo' || // Fallback para lowercase
+          (u.status as string) === 'Ativo'    // Fallback para capitalize
         );
       }
 
@@ -175,13 +175,13 @@ export class UsuariosService {
       // console.log('🔌 [USUARIOS SERVICE] Testando conexão...');
       
       // Tentar buscar sem filtros
-      const response = await api.get(this.BASE_PATH, { 
-        params: { 
+      await api.get(this.BASE_PATH, {
+        params: {
           limit: 1,
           page: 1
         }
       });
-      
+
       // console.log('✅ [USUARIOS SERVICE] Conexão OK:', response.status);
       return true;
     } catch (error: any) {
@@ -304,14 +304,12 @@ export class UsuariosService {
   static getStatusEmoji(status: UsuarioStatus | string): string {
     const statusEmojis: Record<string, string> = {
       [UsuarioStatus.ATIVO]: '✅',
-      [UsuarioStatus.INATIVO]: '❌', 
+      [UsuarioStatus.INATIVO]: '❌',
       [UsuarioStatus.PENDENTE]: '⏳',
       [UsuarioStatus.BLOQUEADO]: '🚫',
-      // Fallbacks
+      // Fallbacks (lowercase)
       'ativo': '✅',
-      'Ativo': '✅',
-      'inativo': '❌',
-      'Inativo': '❌'
+      'inativo': '❌'
     };
     
     return statusEmojis[status as string] || '❓';
@@ -326,11 +324,9 @@ export class UsuariosService {
       [UsuarioStatus.INATIVO]: 'text-red-600',
       [UsuarioStatus.PENDENTE]: 'text-yellow-600',
       [UsuarioStatus.BLOQUEADO]: 'text-red-800',
-      // Fallbacks
+      // Fallbacks (lowercase)
       'ativo': 'text-green-600',
-      'Ativo': 'text-green-600',
-      'inativo': 'text-red-600',
-      'Inativo': 'text-red-600'
+      'inativo': 'text-red-600'
     };
     
     return statusColors[status as string] || 'text-gray-600';

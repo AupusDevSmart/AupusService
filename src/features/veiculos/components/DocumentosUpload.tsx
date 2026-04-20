@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { useDocumentosVeiculos } from '../hooks/useDocumentosVeiculos';
 import {
-  DocumentoVeiculoResponse,
   TipoDocumento,
   CATEGORIAS_DOCUMENTOS,
   formatarTamanhoArquivo
@@ -71,7 +70,6 @@ export const DocumentosUpload = ({
     removerDocumento,
     listarDocumentos,
     error: documentosError,
-    clearError
   } = useDocumentosVeiculos();
 
   const onChangeRef = useRef(onChange);

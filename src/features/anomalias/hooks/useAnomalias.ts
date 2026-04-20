@@ -125,7 +125,7 @@ export function useAnomalias(): UseAnomaliasReturn {
     setError(null);
     
     try {
-      const anomalia = await anomaliasService.gerarOS(anomaliaId);
+      const anomalia = await (anomaliasService as any).gerarOS(anomaliaId);
       //console.log('✅ [useAnomalias] OS gerada com sucesso:', anomalia);
       return anomalia;
     } catch (err) {
@@ -146,7 +146,7 @@ export function useAnomalias(): UseAnomaliasReturn {
     setError(null);
     
     try {
-      const anomalia = await anomaliasService.resolver(anomaliaId, observacoes);
+      const anomalia = await (anomaliasService as any).resolver(anomaliaId, observacoes);
       //console.log('✅ [useAnomalias] Anomalia resolvida com sucesso:', anomalia);
       return anomalia;
     } catch (err) {
@@ -167,7 +167,7 @@ export function useAnomalias(): UseAnomaliasReturn {
     setError(null);
     
     try {
-      const anomalia = await anomaliasService.cancelar(anomaliaId, motivo);
+      const anomalia = await (anomaliasService as any).cancelar(anomaliaId, motivo);
       //console.log('❌ [useAnomalias] Anomalia cancelada com sucesso:', anomalia);
       return anomalia;
     } catch (err) {

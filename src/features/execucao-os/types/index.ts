@@ -25,12 +25,19 @@ export type TipoAnexoOS =
   | 'MANUAL';
 
 // Imports dos tipos base da programação
-export type { 
-  TipoOS, 
-  PrioridadeOS, 
-  CondicaoOS, 
-  OrigemOS 
+import type {
+  TipoOS,
+  PrioridadeOS,
+  CondicaoOS,
+  OrigemOS
 } from '../../programacao-os/types';
+
+export type {
+  TipoOS,
+  PrioridadeOS,
+  CondicaoOS,
+  OrigemOS
+};
 
 // ========================================
 // INTERFACES PARA RECURSOS (CONFORME SCHEMA)
@@ -309,6 +316,7 @@ export interface ExecucaoOS extends OrdemServico {
     prioridade: PrioridadeOS;
     dataProgramada: string;
     horaProgramada: string;
+    status?: StatusExecucaoOS | string;
   };
 }
 

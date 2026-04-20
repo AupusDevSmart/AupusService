@@ -1,4 +1,5 @@
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
+import { env } from '@/config/env';
 import axios from 'axios';
 import { useUserStore } from '../store/useUserStore';
 import { toast } from 'sonner';
@@ -125,7 +126,7 @@ export interface DashboardAdvancedData {
   ultimaAtualizacao: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
+const API_BASE_URL = env.VITE_API_URL;
 
 export const useAdvancedDashboard = (
   filters?: DashboardFilters,

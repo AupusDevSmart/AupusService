@@ -66,7 +66,7 @@ export const tarefasFormFields: FormField[] = [
     required: false,
     excludeFromSubmit: true,
     width: 'half',
-    render: ({ entity, mode }) => {
+    render: ({ entity }) => {
       if (!entity?.planta) {
         return (
           <div className="p-3 border border-dashed border-muted-foreground/25 rounded-md bg-muted/10">
@@ -94,7 +94,7 @@ export const tarefasFormFields: FormField[] = [
     required: false,
     excludeFromSubmit: true,
     width: 'half',
-    render: ({ entity, mode }) => {
+    render: ({ entity }) => {
       if (!entity?.equipamento) {
         return (
           <div className="p-3 border border-dashed border-muted-foreground/25 rounded-md bg-muted/10">

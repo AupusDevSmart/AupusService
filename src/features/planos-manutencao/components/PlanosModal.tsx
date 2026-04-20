@@ -1,6 +1,6 @@
 // src/features/planos-manutencao/components/PlanosModal.tsx
 import { useMemo } from 'react';
-import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
+import { BaseModal } from '@aupus/shared-pages';
 import { Layers } from 'lucide-react';
 import { PlanoManutencaoApiResponse } from '@/services/planos-manutencao.services';
 import { FormField } from '@/types/base';

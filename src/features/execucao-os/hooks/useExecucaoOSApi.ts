@@ -11,10 +11,6 @@ import type {
   RetomarExecucaoApiData,
   FinalizarExecucaoApiData,
   CancelarExecucaoApiData,
-  ExecutarExecucaoApiData,
-  AuditarExecucaoApiData,
-  ReabrirExecucaoApiData,
-  FinalizarExecucaoOSApiData,
   DashboardExecucaoOSDto,
 } from '@/services/execucao-os.service';
 import { transformApiArrayToExecucaoOS } from '../utils/transform-api-data';
@@ -163,7 +159,7 @@ export function useExecucaoOSApi() {
       setLoading(true);
       setError(null);
 
-      const response = await execucaoOSTransitionsService.finalizar(id, data);
+      const response = await execucaoOSTransitionsService.finalizar(id, data as any);
       return response;
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao finalizar execução';

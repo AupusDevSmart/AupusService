@@ -1,6 +1,6 @@
 // src/features/programacao-os/components/ReservaViaturaField.tsx
 import React, { useState, useEffect } from 'react';
-import { Car, Calendar, Clock, AlertCircle, Info } from 'lucide-react';
+import { Car, Calendar, Clock, AlertCircle } from 'lucide-react';
 import { VeiculoSelector } from '@/features/reservas/components/VeiculoSelector';
 import { useVeiculos } from '@/features/veiculos/hooks/useVeiculos';
 import { useReservas } from '@/features/reservas/hooks/useReservas';

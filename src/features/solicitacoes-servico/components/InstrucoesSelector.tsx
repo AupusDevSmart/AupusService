@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, X, FileText } from 'lucide-react';
-import { Combobox } from '@nexon/components/ui/combobox';
+import { Combobox } from '@aupus/shared-pages';
 import { instrucoesApi } from '@/services/instrucoes.services';
 import { InstrucaoExpandableCard } from '@/components/common/InstrucaoExpandableCard';
 

@@ -1,7 +1,5 @@
 // src/features/programacao-os/components/table-cells/StatusCell.tsx
 
-import React from 'react';
-
 interface StatusCellProps {
   status: string;
 }
@@ -9,19 +7,19 @@ interface StatusCellProps {
 const statusConfig = {
   PENDENTE: {
     label: 'Pendente',
-    className: 'text-amber-600 dark:text-amber-500',
+    className: 'text-gray-600 dark:text-gray-400',
   },
   APROVADA: {
     label: 'Aprovada',
-    className: 'text-emerald-600 dark:text-emerald-500',
+    className: 'text-gray-700 dark:text-gray-300',
   },
   FINALIZADA: {
     label: 'Finalizada',
-    className: 'text-blue-600 dark:text-blue-400',
+    className: 'text-gray-500 dark:text-gray-500',
   },
   CANCELADA: {
     label: 'Cancelada',
-    className: 'text-gray-500 dark:text-gray-500',
+    className: 'text-gray-400 dark:text-gray-600',
   },
 };
 

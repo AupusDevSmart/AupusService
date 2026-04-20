@@ -25,7 +25,7 @@ export const planosFormFields: FormField[] = [
             }
           }}
           disabled={props.disabled}
-          mode={props.mode}
+          mode={props.mode as 'view' | 'create' | 'edit' | undefined}
         />
       );
     }

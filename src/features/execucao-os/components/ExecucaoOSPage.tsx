@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable } from '@nexon/components/common/base-table/BaseTable';
-import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
-import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
+import { BaseTable } from '@aupus/shared-pages';
+import { BaseFilters } from '@aupus/shared-pages';
+import { BaseModal } from '@aupus/shared-pages';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Download, Eye } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
@@ -108,7 +108,7 @@ export function ExecucaoOSPage() {
           await execucaoOSTransitionsService.retomar(entity.id, data);
           break;
         case 'executar':
-          await execucaoOSTransitionsService.executar(entity.id, data);
+          await execucaoOSTransitionsService.executar(entity.id, data as any);
           break;
         case 'auditar':
           await execucaoOSTransitionsService.auditar(entity.id, {

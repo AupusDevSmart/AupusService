@@ -2,9 +2,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable } from '@nexon/components/common/base-table/BaseTable';
-import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
-import { BaseModal } from '@nexon/components/common/base-modal/BaseModal';
+import { BaseTable } from '@aupus/shared-pages';
+import { BaseFilters } from '@aupus/shared-pages';
+import { BaseModal } from '@aupus/shared-pages';
 import { Plus, FilePenLine, RotateCcw } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { SolicitacaoServico, SolicitacaoServicoFormData } from '../types';
@@ -74,7 +74,7 @@ export function SolicitacoesPage() {
     return tableActions
       .filter((action) => action.label !== 'Visualizar' && action.label !== 'Editar')
       .map((action) => {
-        const Icon = action.icon;
+        const Icon = action.icon as any;
         return {
           key: action.label.toLowerCase().replace(/\s+/g, '_'),
           label: action.label,

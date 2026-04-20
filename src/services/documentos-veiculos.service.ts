@@ -73,7 +73,7 @@ class DocumentosVeiculosApiService {
       const formData = new FormData();
       formData.append('file', uploadData.file);
 
-      const uploadResponse = await api.post(
+      await api.post(
         `${this.baseUrl}/${veiculoId}/documentacao/${documentacaoId}/upload`,
         formData,
         {

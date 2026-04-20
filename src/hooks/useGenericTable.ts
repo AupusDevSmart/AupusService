@@ -62,17 +62,23 @@ export function useGenericTable<T extends BaseEntity, F extends BaseFilters>({
 
   // Paginar dados
   const paginatedData = useMemo(() => {
-    const startIndex = (filters.page - 1) * filters.limit;
-    const endIndex = startIndex + filters.limit;
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
     return filteredData.slice(startIndex, endIndex);
   }, [filteredData, filters.page, filters.limit]);
 
-  const pagination = useMemo<Pagination>(() => ({
-    page: filters.page,
-    limit: filters.limit,
-    total: filteredData.length,
-    totalPages: Math.ceil(filteredData.length / filters.limit)
-  }), [filteredData.length, filters.page, filters.limit]);
+  const pagination = useMemo<Pagination>(() => {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
+    return {
+      page,
+      limit,
+      total: filteredData.length,
+      totalPages: Math.ceil(filteredData.length / limit)
+    };
+  }, [filteredData.length, filters.page, filters.limit]);
 
   const handleFilterChange = useCallback((newFilters: Partial<F>) => {
     setFilters(prev => ({

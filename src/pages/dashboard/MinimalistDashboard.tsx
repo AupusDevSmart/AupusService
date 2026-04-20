@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Calendar,
-  Filter,
   RefreshCw,
   TrendingUp,
   TrendingDown,
@@ -26,31 +25,15 @@ import {
   CheckCircle,
   Clock,
   Wrench,
-  Package,
-  Users,
-  BarChart3,
   Activity,
   Zap
 } from 'lucide-react';
 import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
   ResponsiveContainer,
-  XAxis,
-  YAxis,
-  CartesianGrid,
   Tooltip,
-  RadialBarChart,
-  RadialBar,
-  PolarGrid,
-  PolarAngleAxis,
 } from 'recharts';
 import { useAdvancedDashboard } from '@/hooks/useAdvancedDashboard';
 import { useUserStore } from '@/store/useUserStore';
@@ -200,7 +183,6 @@ const CircularMetric = ({
   maxValue = 100,
   label,
   color,
-  size = 160
 }: {
   value: number;
   maxValue?: number;
@@ -250,7 +232,7 @@ export function MinimalistDashboard() {
   } = useAdvancedDashboard({
     ...filters,
     usuarioId: user?.id,
-    proprietarioId: user?.proprietarioId
+    proprietarioId: (user as any)?.proprietarioId
   });
 
   // DEBUG: Log dos dados recebidos
@@ -265,7 +247,7 @@ export function MinimalistDashboard() {
   }, [data, isLoading, error]);
 
   // Dados para gráficos
-  const anomaliasTrendData = useMemo(() => {
+  const _anomaliasTrendData = useMemo(() => {
     if (!data || !data.anomalias) return [];
     // Usar últimos 7 dias da tendência
     return data.anomalias.tendenciaUltimos30Dias.slice(-7).map((quantidade, i) => ({
@@ -274,7 +256,7 @@ export function MinimalistDashboard() {
     }));
   }, [data]);
 
-  const osEvolutionData = useMemo(() => {
+  const _osEvolutionData = useMemo(() => {
     if (!data || !data.manutencoes) return [];
     return data.manutencoes.porMes.map(d => ({
       mes: d.mes,
@@ -284,7 +266,7 @@ export function MinimalistDashboard() {
     }));
   }, [data]);
 
-  const equipamentosRadialData = useMemo(() => {
+  const _equipamentosRadialData = useMemo(() => {
     if (!data || !data.metrics) return [];
     return [{
       name: 'Disponibilidade',
@@ -308,7 +290,7 @@ export function MinimalistDashboard() {
   }, [data]);
 
   // Taxa de Resolução Radial
-  const taxaResolucaoRadialData = useMemo(() => {
+  const _taxaResolucaoRadialData = useMemo(() => {
     if (!data || !data.metrics) return [];
     return [{
       name: 'Taxa Resolução',
@@ -319,7 +301,7 @@ export function MinimalistDashboard() {
   }, [data]);
 
   // Eficiência Manutenção Radial
-  const eficienciaManutencaoRadialData = useMemo(() => {
+  const _eficienciaManutencaoRadialData = useMemo(() => {
     if (!data || !data.metrics) return [];
     return [{
       name: 'Eficiência',
@@ -328,6 +310,13 @@ export function MinimalistDashboard() {
             data.metrics.eficienciaManutencao >= 60 ? colors.warning : colors.danger
     }];
   }, [data]);
+
+  // Mark unused memos as used (preserved for future UI)
+  void _anomaliasTrendData;
+  void _osEvolutionData;
+  void _equipamentosRadialData;
+  void _taxaResolucaoRadialData;
+  void _eficienciaManutencaoRadialData;
 
   // Status OS em Donut
   const statusOSDonutData = useMemo(() => {
@@ -345,7 +334,7 @@ export function MinimalistDashboard() {
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-gray-700 dark:text-gray-300 mb-4">Erro ao carregar dashboard</p>
-          <Button onClick={refetch} variant="outline" size="sm">
+          <Button onClick={() => { void refetch(); }} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             Tentar novamente
           </Button>
@@ -390,7 +379,7 @@ export function MinimalistDashboard() {
 
 
               <Button
-                onClick={refetch}
+                onClick={() => { void refetch(); }}
                 variant="outline"
                 size="sm"
                 className="h-9"

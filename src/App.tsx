@@ -9,10 +9,9 @@ import { Toaster as SonnerToaster } from './components/ui/sonner';
 import { TooltipProvider } from './components/ui/tooltip';
 
 import { appRoutes } from './AppRoutes';
-import { FIFTEEN_MINUTES, FIVE_MINUTES, isDev } from './config/constants';
+import { FIFTEEN_MINUTES, FIVE_MINUTES } from './config/constants';
 import { ThemeProvider } from './components/theme-provider';
-import React from 'react';
-import { configureAxios } from './config/api';
+import { ServiceSharedPagesProvider } from './shared-pages-adapter';
 
 
 const queryClient = new QueryClient({
@@ -42,11 +41,13 @@ export default function App() {
               buttonPosition="bottom-right"
             />
           )} */}
-          <TooltipProvider>
-            <RouterProvider router={appRoutes} />
-            <Toaster />
-            <SonnerToaster richColors position="top-right" />
-          </TooltipProvider>
+          <ServiceSharedPagesProvider>
+            <TooltipProvider>
+              <RouterProvider router={appRoutes} />
+              <Toaster />
+              <SonnerToaster richColors position="top-right" />
+            </TooltipProvider>
+          </ServiceSharedPagesProvider>
         </QueryClientProvider>
       </ThemeProvider>
     </>

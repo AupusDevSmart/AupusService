@@ -3,8 +3,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable } from '@nexon/components/common/base-table/BaseTable';
-import { BaseFilters } from '@nexon/components/common/base-filters/BaseFilters';
+import { BaseTable } from '@aupus/shared-pages';
+import { BaseFilters } from '@aupus/shared-pages';
 import { Plus, Tag } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { useUserStore } from '@/store/useUserStore';
@@ -318,7 +318,7 @@ export function TarefasPage() {
         {/* Modal */}
         <TarefasModal
           isOpen={modalState.isOpen}
-          mode={modalState.mode}
+          mode={modalState.mode as 'view' | 'create' | 'edit'}
           entity={modalState.entity}
           formFields={formFields}
           pendingFiles={pendingFiles}

@@ -40,7 +40,7 @@ export function useLogin() {
 
       // Extrai permissões (all_permissions pode ser array ou undefined)
       const permissoes = Array.isArray(response.user.all_permissions)
-        ? response.user.all_permissions.map((p) => p.name)
+        ? response.user.all_permissions.map((p: any) => p.name || p)
         : [];
 
       // Atualiza o store com dados do usuário e permissões

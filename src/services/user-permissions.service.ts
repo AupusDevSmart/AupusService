@@ -1,299 +1,394 @@
 // src/services/user-permissions.service.ts
+
 import { api } from '@/config/api';
 
-export interface UserPermission {
+export interface Permission {
   id: number;
   name: string;
-  guard_name: string;
+  display_name?: string;
+  description?: string;
+  guard_name?: string;
   source?: 'role' | 'direct';
 }
 
-export interface UserRole {
+export interface Role {
   id: number;
   name: string;
-  guard_name: string;
-  permissions?: UserPermission[];
+  display_name?: string;
+  description?: string;
+  guard_name?: string;
 }
 
 export interface UserPermissionsResponse {
-  role: UserRole | null;
-  permissions: UserPermission[];
-}
-
-export interface UserPermissionsDetailedResponse extends UserPermissionsResponse {
-  permissionNames: string[];
+  userId: string;
+  roles: Role[];
+  permissions: Permission[];
+  allPermissions: Permission[];
 }
 
 export interface UserPermissionsSummary {
-  role: string | null;
-  totalPermissions: number;
-  rolePermissions: number;
-  directPermissions: number;
-  categories: string[];
-}
-
-export interface UserPermissionsCategorized {
-  [category: string]: UserPermission[];
-}
-
-export interface PermissionCheckRequest {
-  permissionName: string;
-}
-
-export interface MultiplePermissionsCheckRequest {
+  userId: string;
+  roleNames: string[];
   permissionNames: string[];
-  mode: 'any' | 'all';
+  totalPermissions: number;
+  totalRoles: number;
 }
 
-export interface PermissionCheckResponse {
+export interface CheckPermissionResponse {
   hasPermission: boolean;
+  source?: 'role' | 'direct' | 'none';
 }
 
-export interface MultiplePermissionsCheckResponse {
-  hasPermissions: boolean;
-  details: Record<string, boolean>;
-}
+// Aliases de compatibilidade para hooks externos
+export type UserPermission = Permission;
+export type UserRole = Role;
+export type UserPermissionsCategorized = Record<string, Permission[]>;
 
-export interface AssignRoleRequest {
-  roleId: number;
-}
-
-export interface AssignPermissionRequest {
-  permissionId: number;
-}
-
-export interface SyncPermissionsRequest {
-  permissionIds: number[];
-}
-
-export interface BulkAssignRolesRequest {
-  assignments: Array<{
-    userId: string;
-    roleId: number;
-  }>;
-}
-
-export interface BulkAssignPermissionsRequest {
-  assignments: Array<{
-    userId: string;
-    permissionIds: number[];
-  }>;
-}
-
-export class UserPermissionsService {
-  private baseUrl = '/usuarios';
-
-  // ==========================================
-  // 🔵 1. CONSULTA DE DADOS
-  // ==========================================
+class UserPermissionsService {
+  private cache: Map<string, { data: any; timestamp: number }> = new Map();
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   /**
-   * 1.2 Buscar Permissões Detalhadas
-   * ENDPOINT NECESSÁRIO: GET /usuarios/{id}/permissions
+   * Get user's cache key
+   */
+  private getCacheKey(userId: string, type: string): string {
+    return `user_${userId}_${type}`;
+  }
+
+  /**
+   * Get data from cache if still valid
+   */
+  private getFromCache<T>(key: string): T | null {
+    const cached = this.cache.get(key);
+    if (!cached) return null;
+
+    const now = Date.now();
+    if (now - cached.timestamp > this.CACHE_DURATION) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return cached.data as T;
+  }
+
+  /**
+   * Save data to cache
+   */
+  private saveToCache(key: string, data: any): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * Get all permissions for a user (from roles and direct permissions)
    */
   async getUserPermissions(userId: string): Promise<UserPermissionsResponse> {
-    const response = await api.get(`${this.baseUrl}/${userId}/permissions`);
-    return response.data;
-  }
+    const cacheKey = this.getCacheKey(userId, 'permissions');
+    const cached = this.getFromCache<UserPermissionsResponse>(cacheKey);
 
-  /**
-   * 1.3 Buscar Permissões com Detalhes Extras
-   * ENDPOINT NECESSÁRIO: GET /usuarios/{id}/permissions/detailed
-   */
-  async getUserPermissionsDetailed(userId: string): Promise<UserPermissionsDetailedResponse> {
-    const response = await api.get(`${this.baseUrl}/${userId}/permissions/detailed`);
-    return response.data;
-  }
-
-  /**
-   * 1.4 Buscar Resumo das Permissões
-   * ENDPOINT NECESSÁRIO: GET /usuarios/{id}/permissions/summary
-   */
-  async getUserPermissionsSummary(userId: string): Promise<UserPermissionsSummary> {
-    const response = await api.get(`${this.baseUrl}/${userId}/permissions/summary`);
-    return response.data;
-  }
-
-  /**
-   * 1.5 Buscar Permissões Categorizadas
-   * ENDPOINT NECESSÁRIO: GET /usuarios/{id}/permissions/categorized
-   */
-  async getUserPermissionsCategorized(userId: string): Promise<UserPermissionsCategorized> {
-    const response = await api.get(`${this.baseUrl}/${userId}/permissions/categorized`);
-    return response.data;
-  }
-
-  // ==========================================
-  // 🟠 2. VERIFICAÇÃO DE ACESSO
-  // ==========================================
-
-  /**
-   * 2.1 Verificar Uma Permissão
-   * ENDPOINT NECESSÁRIO: POST /usuarios/{id}/check-permission
-   */
-  async checkUserPermission(userId: string, permissionName: string): Promise<PermissionCheckResponse> {
-    const response = await api.post(`${this.baseUrl}/${userId}/check-permission`, {
-      permissionName
-    });
-    return response.data;
-  }
-
-  /**
-   * 2.2 Verificar Múltiplas Permissões
-   * ENDPOINT NECESSÁRIO: POST /usuarios/{id}/check-permissions
-   */
-  async checkUserPermissions(
-    userId: string, 
-    permissionNames: string[], 
-    mode: 'any' | 'all' = 'any'
-  ): Promise<MultiplePermissionsCheckResponse> {
-    const response = await api.post(`${this.baseUrl}/${userId}/check-permissions`, {
-      permissionNames,
-      mode
-    });
-    return response.data;
-  }
-
-  // ==========================================
-  // 🟢 3. GESTÃO DE ROLES
-  // ==========================================
-
-  /**
-   * 3.1 Atribuir Role
-   * ENDPOINT NECESSÁRIO: POST /usuarios/{id}/assign-role
-   */
-  async assignUserRole(userId: string, roleId: number): Promise<void> {
-    await api.post(`${this.baseUrl}/${userId}/assign-role`, { roleId });
-  }
-
-  // ==========================================
-  // 🔴 4. GESTÃO DE PERMISSÕES DIRETAS
-  // ==========================================
-
-  /**
-   * 4.1 Adicionar Permissão Direta
-   * ENDPOINT NECESSÁRIO: POST /usuarios/{id}/assign-permission
-   */
-  async assignUserPermission(userId: string, permissionId: number): Promise<void> {
-    await api.post(`${this.baseUrl}/${userId}/assign-permission`, { permissionId });
-  }
-
-  /**
-   * 4.2 Remover Permissão Direta
-   * ENDPOINT NECESSÁRIO: DELETE /usuarios/{id}/remove-permission/{permissionId}
-   */
-  async removeUserPermission(userId: string, permissionId: number): Promise<void> {
-    await api.delete(`${this.baseUrl}/${userId}/remove-permission/${permissionId}`);
-  }
-
-  /**
-   * 4.3 Sincronizar Permissões Diretas
-   * ENDPOINT NECESSÁRIO: POST /usuarios/{id}/sync-permissions
-   */
-  async syncUserPermissions(userId: string, permissionIds: number[]): Promise<void> {
-    await api.post(`${this.baseUrl}/${userId}/sync-permissions`, { permissionIds });
-  }
-
-  // ==========================================
-  // 🟡 5. OPERAÇÕES EM LOTE
-  // ==========================================
-
-  /**
-   * 5.1 Atribuir Roles em Lote
-   * ENDPOINT NECESSÁRIO: POST /usuarios/bulk/assign-roles
-   */
-  async bulkAssignRoles(assignments: BulkAssignRolesRequest['assignments']): Promise<void> {
-    await api.post(`${this.baseUrl}/bulk/assign-roles`, { assignments });
-  }
-
-  /**
-   * 5.2 Sincronizar Permissões em Lote
-   * ENDPOINT NECESSÁRIO: POST /usuarios/bulk/assign-permissions
-   */
-  async bulkAssignPermissions(assignments: BulkAssignPermissionsRequest['assignments']): Promise<void> {
-    await api.post(`${this.baseUrl}/bulk/assign-permissions`, { assignments });
-  }
-
-  // ==========================================
-  // 🔵 6. DADOS AUXILIARES
-  // ==========================================
-
-  /**
-   * 6.1 Listar Roles Disponíveis
-   * ENDPOINT NECESSÁRIO: GET /usuarios/available/roles
-   */
-  async getAvailableRoles(): Promise<UserRole[]> {
-    const response = await api.get(`${this.baseUrl}/available/roles`);
-    return response.data;
-  }
-
-  /**
-   * 6.2 Listar Permissões Disponíveis
-   * ENDPOINT NECESSÁRIO: GET /usuarios/available/permissions
-   */
-  async getAvailablePermissions(): Promise<UserPermission[]> {
-    const response = await api.get(`${this.baseUrl}/available/permissions`);
-    return response.data;
-  }
-
-  /**
-   * 6.3 Listar Permissões Agrupadas
-   * ENDPOINT NECESSÁRIO: GET /usuarios/available/permissions/grouped
-   */
-  async getAvailablePermissionsGrouped(): Promise<UserPermissionsCategorized> {
-    const response = await api.get(`${this.baseUrl}/available/permissions/grouped`);
-    return response.data;
-  }
-
-  // ==========================================
-  // 🔧 UTILITÁRIOS E CACHE
-  // ==========================================
-
-  /**
-   * Cache inteligente para verificações de permissão
-   */
-  private permissionCache = new Map<string, { result: boolean; timestamp: number }>();
-  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutos
-
-  async checkPermissionCached(userId: string, permissionName: string): Promise<boolean> {
-    const cacheKey = `${userId}:${permissionName}`;
-    const cached = this.permissionCache.get(cacheKey);
-
-    if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
-      return cached.result;
+    if (cached) {
+      console.log(`🔍 [UserPermissionsService] Usando cache para permissões do usuário ${userId}`);
+      return cached;
     }
 
     try {
-      const result = await this.checkUserPermission(userId, permissionName);
-      this.permissionCache.set(cacheKey, {
-        result: result.hasPermission,
-        timestamp: Date.now()
-      });
-      return result.hasPermission;
-    } catch (error) {
-      // console.error(`Erro ao verificar permissão ${permissionName} para usuário ${userId}:`, error);
-      return false; // Failsafe: negar acesso em caso de erro
+      console.log(`📡 [UserPermissionsService] Buscando permissões do usuário ${userId}`);
+      const response = await api.get(`/usuarios/${userId}/permissions`);
+      const data = response.data;
+
+      const result: UserPermissionsResponse = {
+        userId,
+        roles: data.roles || [],
+        permissions: data.permissions || [],
+        allPermissions: data.all_permissions || data.allPermissions || [],
+      };
+
+      this.saveToCache(cacheKey, result);
+      return result;
+    } catch (error: any) {
+      console.error(`❌ [UserPermissionsService] Erro ao buscar permissões:`, error);
+      // Return empty permissions if endpoint doesn't exist
+      if (error.response?.status === 404) {
+        return {
+          userId,
+          roles: [],
+          permissions: [],
+          allPermissions: [],
+        };
+      }
+      throw error;
     }
   }
 
   /**
-   * Invalidar cache de um usuário
+   * Get summary of user's permissions
+   */
+  async getUserPermissionsSummary(userId: string): Promise<UserPermissionsSummary> {
+    const cacheKey = this.getCacheKey(userId, 'summary');
+    const cached = this.getFromCache<UserPermissionsSummary>(cacheKey);
+
+    if (cached) {
+      console.log(`🔍 [UserPermissionsService] Usando cache para resumo do usuário ${userId}`);
+      return cached;
+    }
+
+    try {
+      console.log(`📡 [UserPermissionsService] Buscando resumo de permissões do usuário ${userId}`);
+      const response = await api.get(`/usuarios/${userId}/permissions/summary`);
+      const data = response.data;
+
+      const result: UserPermissionsSummary = {
+        userId,
+        roleNames: data.roles || data.roleNames || [],
+        permissionNames: data.permissions || data.permissionNames || [],
+        totalPermissions: data.totalPermissions || data.permissions?.length || 0,
+        totalRoles: data.totalRoles || data.roles?.length || 0,
+      };
+
+      this.saveToCache(cacheKey, result);
+      return result;
+    } catch (error: any) {
+      console.error(`❌ [UserPermissionsService] Erro ao buscar resumo:`, error);
+      // Fallback: build summary from full permissions
+      if (error.response?.status === 404) {
+        try {
+          const fullPermissions = await this.getUserPermissions(userId);
+          const result: UserPermissionsSummary = {
+            userId,
+            roleNames: fullPermissions.roles.map((r) => r.name),
+            permissionNames: fullPermissions.allPermissions.map((p) => p.name),
+            totalPermissions: fullPermissions.allPermissions.length,
+            totalRoles: fullPermissions.roles.length,
+          };
+          this.saveToCache(cacheKey, result);
+          return result;
+        } catch {
+          return {
+            userId,
+            roleNames: [],
+            permissionNames: [],
+            totalPermissions: 0,
+            totalRoles: 0,
+          };
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Check if user has a specific permission
+   */
+  async checkUserPermission(
+    userId: string,
+    permissionName: string
+  ): Promise<CheckPermissionResponse> {
+    try {
+      console.log(
+        `🔍 [UserPermissionsService] Verificando permissão "${permissionName}" para usuário ${userId}`
+      );
+
+      // Try to use dedicated endpoint first
+      try {
+        const response = await api.get(`/usuarios/${userId}/permissions/check`, {
+          params: { permission: permissionName },
+        });
+        return {
+          hasPermission: response.data.hasPermission || response.data.has_permission || false,
+          source: response.data.source,
+        };
+      } catch (error: any) {
+        // If endpoint doesn't exist, check permissions manually
+        if (error.response?.status === 404) {
+          const permissions = await this.getUserPermissions(userId);
+          const hasPermission = permissions.allPermissions.some(
+            (p) => p.name === permissionName
+          );
+          return { hasPermission, source: hasPermission ? 'role' : 'none' };
+        }
+        throw error;
+      }
+    } catch (error: any) {
+      console.error(
+        `❌ [UserPermissionsService] Erro ao verificar permissão "${permissionName}":`,
+        error
+      );
+      return { hasPermission: false, source: 'none' };
+    }
+  }
+
+  /**
+   * Assign a role to a user
+   */
+  async assignUserRole(userId: string, roleId: number): Promise<void> {
+    try {
+      console.log(`📝 [UserPermissionsService] Atribuindo role ${roleId} ao usuário ${userId}`);
+      await api.post(`/usuarios/${userId}/roles`, { roleId });
+      this.invalidateUserCache(userId);
+    } catch (error: any) {
+      console.error(`❌ [UserPermissionsService] Erro ao atribuir role:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync user permissions (replace all direct permissions)
+   */
+  async syncUserPermissions(userId: string, permissionIds: number[]): Promise<void> {
+    try {
+      console.log(
+        `📝 [UserPermissionsService] Sincronizando ${permissionIds.length} permissões para usuário ${userId}`
+      );
+      await api.post(`/usuarios/${userId}/permissions/sync`, { permissions: permissionIds });
+      this.invalidateUserCache(userId);
+    } catch (error: any) {
+      console.error(`❌ [UserPermissionsService] Erro ao sincronizar permissões:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get permissions categorized by group
+   */
+  async getUserPermissionsCategorized(userId: string): Promise<UserPermissionsCategorized> {
+    try {
+      const response = await api.get(`/usuarios/${userId}/permissions/categorized`);
+      return (response.data || {}) as UserPermissionsCategorized;
+    } catch (error: any) {
+      console.error(`❌ [UserPermissionsService] Erro ao buscar permissões categorizadas:`, error);
+      return {};
+    }
+  }
+
+  /**
+   * Assign a direct permission to a user
+   */
+  async assignUserPermission(userId: string, permissionId: number): Promise<void> {
+    try {
+      await api.post(`/usuarios/${userId}/permissions`, { permissionId });
+      this.invalidateUserCache(userId);
+    } catch (error: any) {
+      console.error(`❌ [UserPermissionsService] Erro ao atribuir permissão:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a direct permission from a user
+   */
+  async removeUserPermission(userId: string, permissionId: number): Promise<void> {
+    try {
+      await api.delete(`/usuarios/${userId}/permissions/${permissionId}`);
+      this.invalidateUserCache(userId);
+    } catch (error: any) {
+      console.error(`❌ [UserPermissionsService] Erro ao remover permissão:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check a permission using cache (boolean result)
+   */
+  async checkPermissionCached(userId: string, permissionName: string): Promise<boolean> {
+    const cacheKey = this.getCacheKey(userId, `check_${permissionName}`);
+    const cached = this.getFromCache<boolean>(cacheKey);
+    if (cached !== null) return cached;
+
+    const result = await this.checkUserPermission(userId, permissionName);
+    this.saveToCache(cacheKey, result.hasPermission);
+    return result.hasPermission;
+  }
+
+  /**
+   * Check multiple permissions at once
+   */
+  async checkUserPermissions(
+    userId: string,
+    permissionNames: string[],
+    mode: 'any' | 'all' = 'any'
+  ): Promise<{ hasPermissions: boolean; details: Record<string, boolean> }> {
+    try {
+      const response = await api.post(`/usuarios/${userId}/permissions/check-multiple`, {
+        permissions: permissionNames,
+        mode,
+      });
+      return {
+        hasPermissions: response.data?.hasPermissions ?? false,
+        details: response.data?.details ?? {},
+      };
+    } catch (error: any) {
+      // Fallback: iterar localmente
+      const details: Record<string, boolean> = {};
+      for (const name of permissionNames) {
+        const res = await this.checkUserPermission(userId, name);
+        details[name] = res.hasPermission;
+      }
+      const values = Object.values(details);
+      const hasPermissions = mode === 'all' ? values.every(Boolean) : values.some(Boolean);
+      return { hasPermissions, details };
+    }
+  }
+
+  /**
+   * Get all available roles in the system
+   */
+  async getAvailableRoles(): Promise<Role[]> {
+    try {
+      const response = await api.get('/roles');
+      return (response.data || []) as Role[];
+    } catch (error: any) {
+      console.error(`❌ [UserPermissionsService] Erro ao buscar roles:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all available permissions in the system
+   */
+  async getAvailablePermissions(): Promise<Permission[]> {
+    try {
+      const response = await api.get('/permissions');
+      return (response.data || []) as Permission[];
+    } catch (error: any) {
+      console.error(`❌ [UserPermissionsService] Erro ao buscar permissões:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all available permissions grouped
+   */
+  async getAvailablePermissionsGrouped(): Promise<UserPermissionsCategorized> {
+    try {
+      const response = await api.get('/permissions/grouped');
+      return (response.data || {}) as UserPermissionsCategorized;
+    } catch (error: any) {
+      console.error(`❌ [UserPermissionsService] Erro ao buscar permissões agrupadas:`, error);
+      return {};
+    }
+  }
+
+  /**
+   * Invalidate all cache entries for a user
    */
   invalidateUserCache(userId: string): void {
-    for (const key of this.permissionCache.keys()) {
-      if (key.startsWith(`${userId}:`)) {
-        this.permissionCache.delete(key);
-      }
-    }
+    console.log(`🗑️ [UserPermissionsService] Invalidando cache do usuário ${userId}`);
+    const keysToDelete = Array.from(this.cache.keys()).filter((key) =>
+      key.startsWith(`user_${userId}_`)
+    );
+    keysToDelete.forEach((key) => this.cache.delete(key));
   }
 
   /**
-   * Invalidar todo o cache
+   * Clear all cache
    */
-  clearCache(): void {
-    this.permissionCache.clear();
+  clearAllCache(): void {
+    console.log(`🗑️ [UserPermissionsService] Limpando todo o cache`);
+    this.cache.clear();
   }
 }
 
-// Instância singleton
+// Export singleton instance
 export const userPermissionsService = new UserPermissionsService();

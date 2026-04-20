@@ -1,8 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
 import { FeatureWrapper } from './components/common/FeatureWrapper';
 import { ConfiguracoesDiasUteisPage, FeriadosPage } from './features/agenda';
-// Páginas exclusivas do Service
+// Paginas exclusivas do Service
 import { ExecucaoOSPage } from './features/execucao-os';
 import { FerramentasPage } from './features/ferramentas/components/FerramentasPage';
 import { FornecedoresPage } from './features/fornecedores/components/FornecedoresPage';
@@ -22,32 +21,14 @@ import { Settings } from './pages/settings';
 import { LoginPage } from './pages/login/LoginPage';
 import { useUserStore } from './store/useUserStore';
 
-// ✅ Lazy load para Cadastros (importando direto do NexOn)
-const CadastroUsuariosPage = lazy(() =>
-  import('@nexon/pages/cadastros/usuarios')
-);
-
-const CadastroPlantasPage = lazy(() =>
-  import('@nexon/features/plantas/components/PlantasPage').then((module) => ({
-    default: module.PlantasPage,
-  }))
-);
-
-const CadastroUnidadesPage = lazy(() =>
-  import('@nexon/pages/cadastros/unidades')
-);
-
-const CadastroEquipamentosPage = lazy(() =>
-  import('@nexon/features/equipamentos/components/EquipamentosPage').then((module) => ({
-    default: module.EquipamentosPage,
-  }))
-);
-
-const CadastroConcessionariasPage = lazy(() =>
-  import('@nexon/features/concessionarias/components/ConcessionariasPage').then((module) => ({
-    default: module.ConcessionariasPage,
-  }))
-);
+// Shared pages (previously from @nexon, now from @aupus/shared-pages)
+import {
+  EquipamentosPage,
+  UnidadesPage,
+  UsuariosPage,
+  PlantasPage,
+  ConcessionariasPage,
+} from '@aupus/shared-pages';
 
 /**
  * Componente de rota protegida
@@ -101,14 +82,12 @@ export const appRoutes = createBrowserRouter([
           </FeatureWrapper>
         )
       },
-      // ✅ Rotas de Cadastros (mesmo padrão do NexOn)
+      // Rotas de Cadastros (from @aupus/shared-pages)
       {
         path: 'cadastros/usuarios',
         element: (
           <FeatureWrapper feature="Usuarios">
-            <Suspense fallback={<div>Carregando...</div>}>
-              <CadastroUsuariosPage />
-            </Suspense>
+            <UsuariosPage />
           </FeatureWrapper>
         ),
       },
@@ -116,9 +95,7 @@ export const appRoutes = createBrowserRouter([
         path: 'cadastros/plantas',
         element: (
           <FeatureWrapper feature="Plantas">
-            <Suspense fallback={<div>Carregando...</div>}>
-              <CadastroPlantasPage />
-            </Suspense>
+            <PlantasPage />
           </FeatureWrapper>
         ),
       },
@@ -126,9 +103,7 @@ export const appRoutes = createBrowserRouter([
         path: 'cadastros/unidades',
         element: (
           <FeatureWrapper feature="Unidades">
-            <Suspense fallback={<div>Carregando...</div>}>
-              <CadastroUnidadesPage />
-            </Suspense>
+            <UnidadesPage />
           </FeatureWrapper>
         ),
       },
@@ -136,9 +111,7 @@ export const appRoutes = createBrowserRouter([
         path: 'cadastros/equipamentos',
         element: (
           <FeatureWrapper feature="Equipamentos">
-            <Suspense fallback={<div>Carregando...</div>}>
-              <CadastroEquipamentosPage />
-            </Suspense>
+            <EquipamentosPage />
           </FeatureWrapper>
         ),
       },
@@ -146,9 +119,7 @@ export const appRoutes = createBrowserRouter([
         path: 'cadastros/concessionarias',
         element: (
           <FeatureWrapper feature="Concessionarias">
-            <Suspense fallback={<div>Carregando...</div>}>
-              <CadastroConcessionariasPage />
-            </Suspense>
+            <ConcessionariasPage />
           </FeatureWrapper>
         ),
       },

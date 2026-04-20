@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ComboboxField, ComboboxOption } from '@/components/ui/combobox-field';
 import { PlantasService } from '@/services/plantas.services';
 import { getUnidadesByPlanta } from '@/services/unidades.services';
-import { useEquipamentos } from '@nexon/features/equipamentos/hooks/useEquipamentos';
+import { useEquipamentos } from '@/features/equipamentos/hooks/useEquipamentos';
 
 interface LocalizacaoValue {
   plantaId?: string | number;
