@@ -15,8 +15,9 @@ dist
 dist-ssr
 *.local
 
-# Environment variables (NÃO commitar!)
-.env
+# Environment variables
+# .env e .env.production sao commitados de proposito: tudo em VITE_* vai para o bundle publico.
+# Overrides locais ficam em .env.local (nao commitar).
 .env.local
 .env.*.local
 
