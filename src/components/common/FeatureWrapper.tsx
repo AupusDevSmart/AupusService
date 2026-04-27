@@ -6,17 +6,26 @@ import { useNavigate } from 'react-router-dom';
 type FeatureWrapperProps = {
   feature: Permissao;
   children: ReactNode;
+  fallbackPath?: string;
 };
 
-export function FeatureWrapper({ feature, children }: FeatureWrapperProps) {
+/**
+ * Protege uma rota exigindo que o usuario tenha a permissao `feature`.
+ * Redireciona para `fallbackPath` (ou /dashboard) caso nao tenha.
+ */
+export function FeatureWrapper({ feature, children, fallbackPath = '/dashboard' }: FeatureWrapperProps) {
   const navigate = useNavigate();
-  const { acessivel } = useUserStore();
+  const { acessivel, user } = useUserStore();
+
+  const allowed = acessivel.includes(feature);
 
   useEffect(() => {
-    // if (acessivel && !acessivel.includes(feature)) {
-    //   navigate('/', { replace: true });
-    // }
-  }, [acessivel, feature, navigate]);
+    if (!user) return;
+    if (!allowed) {
+      navigate(fallbackPath, { replace: true });
+    }
+  }, [allowed, feature, navigate, fallbackPath, user]);
 
-  return children;
+  if (!allowed) return null;
+  return <>{children}</>;
 }

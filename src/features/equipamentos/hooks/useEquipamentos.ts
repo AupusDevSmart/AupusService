@@ -95,7 +95,10 @@ export const transformApiToFrontend = (apiEquipamento: EquipamentoApiResponse): 
     a4: apiEquipamento.a4,
     a5: apiEquipamento.a5,
     a6: apiEquipamento.a6,
-    
+
+    // Foto
+    fotoUrl: apiEquipamento.foto_url,
+
     // Relacionamentos
     unidade: apiEquipamento.unidade ? {
       id: apiEquipamento.unidade.id,
@@ -250,6 +253,9 @@ export const transformFrontendToApi = (equipamento: any): CreateEquipamentoApiDa
     a5: equipamento.a5,
     a6: equipamento.a6,
 
+    // Foto (aceita ambos os nomes)
+    foto_url: equipamento.foto_url || equipamento.fotoUrl,
+
     // Dados técnicos
     dados_tecnicos: equipamento.dados_tecnicos || equipamento.dadosTecnicos
   };
@@ -310,6 +316,8 @@ export interface UseEquipamentosReturn {
   
   // Estatísticas
   getEstatisticasPlanta: (plantaId: string) => Promise<EstatisticasPlantaResponse>;
+  uploadFoto: (id: string, file: File) => Promise<{ fotoUrl: string }>;
+  removeFoto: (id: string) => Promise<{ fotoUrl: null }>;
   
   // Utilitários
   clearError: () => void;
@@ -488,9 +496,9 @@ export function useEquipamentos(): UseEquipamentosReturn {
       
       const response = await equipamentosApi.findAll(params);
 
-      // A API retorna: { success: true, data: { data: [], pagination: {} }, meta: {} }
-      // Então precisamos acessar response.data.data
-      const equipamentosArray = response.data.data || response.data;
+      // Apos o interceptor desempacotar { success, data: X }, `response` = X = { data: [], pagination: {}, meta: {} }
+      // response.data eh o array de equipamentos; response.pagination tem page/limit/total/pages.
+      const equipamentosArray = Array.isArray(response.data) ? response.data : ((response.data as any)?.data || []);
 
       // DEBUG: Verificar primeiro equipamento UC para ver campos disponíveis
       // const primeiroUC = equipamentosArray.find((eq: any) => eq.classificacao === 'UC');
@@ -510,13 +518,16 @@ export function useEquipamentos(): UseEquipamentosReturn {
         return tipoId !== 'PONTO' && tipoId !== 'BARRAMENTO';
       });
 
+      const pagination = (response as any).pagination || (response.data as any)?.pagination;
+      console.log('🔢 [DEBUG PAGINACAO] pagination:', pagination, 'array:', equipamentosArray.length, 'filtrado:', equipamentosFiltrados.length);
+
       setEquipamentos(equipamentosFiltrados);
-      setTotalPages(response.data.pagination?.pages || 0);
-      setCurrentPage(response.data.pagination?.page || 1);
-      setTotal(equipamentosFiltrados.length); // Atualizar total com a quantidade filtrada
+      setTotalPages(pagination?.pages || 0);
+      setCurrentPage(pagination?.page || 1);
+      setTotal(pagination?.total ?? equipamentosFiltrados.length);
 
       return equipamentosFiltrados;
-      
+
     } catch (err) {
       handleError(err, 'fetchEquipamentos');
       return [];
@@ -664,14 +675,42 @@ export function useEquipamentos(): UseEquipamentosReturn {
     try {
       setLoading(true);
       setError(null);
-      
+
       return await equipamentosApi.getEstatisticasPlanta(plantaId);
-      
+
     } catch (err) {
       handleError(err, 'getEstatisticasPlanta');
       throw err;
     } finally {
       setLoading(false);
+    }
+  }, [handleError]);
+
+  const uploadFoto = useCallback(async (id: string, file: File): Promise<{ fotoUrl: string }> => {
+    try {
+      setError(null);
+      const result = await equipamentosApi.uploadFoto(id, file);
+      setEquipamentos((prev) =>
+        prev.map((eq) => (eq.id?.trim() === id.trim() ? { ...eq, fotoUrl: result.fotoUrl } : eq))
+      );
+      return result;
+    } catch (err) {
+      handleError(err, 'uploadFoto');
+      throw err;
+    }
+  }, [handleError]);
+
+  const removeFoto = useCallback(async (id: string): Promise<{ fotoUrl: null }> => {
+    try {
+      setError(null);
+      const result = await equipamentosApi.removeFoto(id);
+      setEquipamentos((prev) =>
+        prev.map((eq) => (eq.id?.trim() === id.trim() ? { ...eq, fotoUrl: undefined } : eq))
+      );
+      return result;
+    } catch (err) {
+      handleError(err, 'removeFoto');
+      throw err;
     }
   }, [handleError]);
 
@@ -708,7 +747,11 @@ export function useEquipamentos(): UseEquipamentosReturn {
     
     // Estatísticas
     getEstatisticasPlanta,
-    
+
+    // Foto
+    uploadFoto,
+    removeFoto,
+
     // Utilitários
     clearError,
     refreshData

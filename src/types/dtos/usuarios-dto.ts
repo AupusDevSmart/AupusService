@@ -16,9 +16,13 @@ export interface UsuarioDTO {
   telefone?: string;
   avatar_url?: string;
 
+  // Campos de permissoes retornados pelo /auth/me e /auth/login
+  role: UsuarioRole | null;
+  role_details?: { id: number; name: string; guard_name: string } | null;
   all_permissions: Permissao[];
+  plantas_vinculadas?: string[];
 
-  roles: Role[];
+  roles?: Role[];
 
   proprietarioId?: string;
   token?: string;
@@ -32,21 +36,23 @@ export enum UsuarioStatus {
   INATIVO = 'Inativo',
 }
 
-export enum UsuarioRole {
-  SUPER_ADMIN = 'super-admin',
-  ADMIN = 'admin',
-  CATIVO = 'cativo',
-  PROPIETARIO = 'propietario',
-  LOCATARIO = 'associado',
-  AUPUS = 'aupus',
-}
+/**
+ * Roles do sistema, em ordem crescente de privilegio.
+ */
+export type UsuarioRole =
+  | 'operador'
+  | 'proprietario'
+  | 'analista'
+  | 'gerente'
+  | 'admin'
+  | 'super_admin';
 
 interface Role {
   id: string;
   name: string;
-  description: string;
-  created_at: Date;
-  updated_at: Date;
+  description?: string;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface UpdateUsuarioDto {
@@ -61,30 +67,24 @@ export interface ChangePasswordDto {
   novaSenha: string;
 }
 
+/**
+ * Permissoes do sistema - sincronizadas com o backend (permissions-structure.ts).
+ * Total: 28 permissoes.
+ */
 export type Permissao =
-  | 'MonitoramentoConsumo'
-  | 'GeracaoEnergia'
-  | 'GestaoOportunidades'
-  | 'Financeiro'
-  | 'Oportunidades'
-  | 'Prospeccao'
-  | 'ProspeccaoListagem'
-  | 'MonitoramentoClientes'
-  | 'ClubeAupus'
-  | 'Usuarios'
-  | 'Organizacoes'
-  | 'AreaDoProprietario'
-  | 'UnidadesConsumidoras'
-  | 'Configuracoes'
-  | 'AreaDoAssociado'
-  | 'Documentos'
-  | 'Associados'
-  | 'MinhasUsinas'
-  | 'Dashboard'
-  | 'Financeiro'
-  | 'Proprietarios'
-  | 'Equipamentos'
-  | 'Plantas'
-  | 'Unidades'
-  | 'Concessionarias'
-  | 'Agenda'
+  | 'dashboard.view'
+  | 'plantas.view' | 'plantas.manage' | 'plantas.manage_operadores'
+  | 'unidades.view' | 'unidades.manage'
+  | 'equipamentos.view' | 'equipamentos.manage'
+  | 'anomalias.view' | 'anomalias.manage'
+  | 'usuarios.view' | 'usuarios.manage'
+  | 'usuarios.create_operador' | 'usuarios.create_proprietario'
+  | 'usuarios.create_analista' | 'usuarios.create_admin'
+  | 'programacao_os.view' | 'programacao_os.manage'
+  | 'programacao_os.aprovar' | 'programacao_os.cancelar'
+  | 'execucao_os.view' | 'execucao_os.manage'
+  | 'execucao_os.aprovar' | 'execucao_os.cancelar'
+  | 'manutencao.manage'
+  | 'recursos.manage'
+  | 'agenda.manage'
+  | 'admin.impersonate';

@@ -1,6 +1,5 @@
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
-import { env } from '@/config/env';
-import axios from 'axios';
+import { api } from '@/config/api';
 import { useUserStore } from '../store/useUserStore';
 import { toast } from 'sonner';
 
@@ -126,48 +125,32 @@ export interface DashboardAdvancedData {
   ultimaAtualizacao: string;
 }
 
-const API_BASE_URL = env.VITE_API_URL;
-
 export const useAdvancedDashboard = (
   filters?: DashboardFilters,
   options?: UseQueryOptions<DashboardAdvancedData>
 ) => {
-  const { user } = useUserStore();
-
   return useQuery<DashboardAdvancedData>({
     queryKey: ['dashboard-advanced', filters],
     queryFn: async () => {
       try {
-        const enhancedFilters: DashboardFilters = {
-          ...filters,
-          usuarioId: user?.id || undefined,
-          proprietarioId: user?.proprietarioId || filters?.proprietarioId,
-        };
-
-        const { data } = await axios.get<{ success: boolean; data: DashboardAdvancedData }>(
-          `${API_BASE_URL}/dashboard/advanced`,
-          {
-            params: enhancedFilters,
-            headers: {
-              Authorization: `Bearer ${user?.token}`,
-            },
-          }
-        );
-
-        console.log('🔍 [HOOK] Raw axios response:', data);
-
-        // Backend retorna { success: true, data: {...} }, então precisamos acessar data.data
-        return data.data;
+        // Usa instance `api` (interceptor injeta JWT + desempacota response.data.data).
+        // Backend filtra por escopo a partir do usuario do JWT - nao precisamos mandar usuarioId.
+        const response = await api.get<DashboardAdvancedData>('/dashboard/advanced', {
+          params: filters,
+        });
+        console.log('[DASHBOARD HOOK] response:', response);
+        console.log('[DASHBOARD HOOK] response.data:', response.data);
+        return response.data;
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast.error('Erro ao carregar dados do dashboard');
         throw error;
       }
     },
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 60000,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    staleTime: 30000, // Consider data stale after 30 seconds
+    staleTime: 30000,
     ...options,
   });
 };
@@ -179,22 +162,11 @@ export const useAvailablePlants = () => {
   return useQuery({
     queryKey: ['available-plants', user?.id],
     queryFn: async () => {
-      const { data } = await axios.get(
-        `${API_BASE_URL}/plantas`,
-        {
-          headers: {
-            Authorization: `Bearer ${user?.token}`,
-          },
-          params: {
-            usuarioId: user?.id,
-            proprietarioId: user?.proprietarioId,
-          },
-        }
-      );
-      return data;
+      const response = await api.get('/plantas');
+      return response.data;
     },
     enabled: !!user?.id,
-    staleTime: 300000, // Cache for 5 minutes
+    staleTime: 300000,
   });
 };
 
@@ -205,21 +177,10 @@ export const useAvailableUnits = (plantaId?: string) => {
   return useQuery({
     queryKey: ['available-units', plantaId],
     queryFn: async () => {
-      const { data } = await axios.get(
-        `${API_BASE_URL}/unidades`,
-        {
-          headers: {
-            Authorization: `Bearer ${user?.token}`,
-          },
-          params: {
-            plantaId,
-            usuarioId: user?.id,
-          },
-        }
-      );
-      return data;
+      const response = await api.get('/unidades', { params: { plantaId } });
+      return response.data;
     },
     enabled: !!plantaId && !!user?.id,
-    staleTime: 300000, // Cache for 5 minutes
+    staleTime: 300000,
   });
 };

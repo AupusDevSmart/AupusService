@@ -1,14 +1,16 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { UsuarioDTO } from '@/types/dtos/usuarios-dto';
+import type { UsuarioDTO, Permissao, UsuarioRole } from '@/types/dtos/usuarios-dto';
 
 type UserStoreState = {
   user: UsuarioDTO | null;
-  acessivel: string[];
+  acessivel: Permissao[];
+  plantasVinculadas: string[];
   setUser: (newUser: UsuarioDTO) => void;
   updateUser: (partialUser: Partial<UsuarioDTO>) => void;
   clearUser: () => void;
-  getUserRole: () => string;
+  getUserRole: () => UsuarioRole | '';
+  hasPermission: (...perms: Permissao[]) => boolean;
   isSuperAdmin: () => boolean;
   isAdmin: () => boolean;
 };
@@ -18,27 +20,39 @@ export const useUserStore = create(
     (set, get) => ({
       user: null,
       acessivel: [],
+      plantasVinculadas: [],
 
       setUser: (newUser: UsuarioDTO) =>
         set({
           user: newUser,
-          acessivel: newUser.all_permissions || [],
+          acessivel: (newUser.all_permissions || []) as Permissao[],
+          plantasVinculadas: newUser.plantas_vinculadas || [],
         }),
 
       updateUser: (partialUser: Partial<UsuarioDTO>) =>
         set((state) => {
-          if (!state.user) return { user: null, acessivel: [] };
+          if (!state.user) return { user: null, acessivel: [], plantasVinculadas: [] };
           const updatedUser = { ...state.user, ...partialUser };
-          const newAcessivel =
+          const acessivel =
             partialUser.all_permissions !== undefined
-              ? partialUser.all_permissions
+              ? (partialUser.all_permissions as Permissao[])
               : state.acessivel;
-          return { user: updatedUser, acessivel: newAcessivel };
+          const plantasVinculadas =
+            partialUser.plantas_vinculadas !== undefined
+              ? partialUser.plantas_vinculadas
+              : state.plantasVinculadas;
+          return { user: updatedUser, acessivel, plantasVinculadas };
         }),
 
-      clearUser: () => set({ user: null, acessivel: [] }),
+      clearUser: () => set({ user: null, acessivel: [], plantasVinculadas: [] }),
 
-      getUserRole: () => get().user?.roles?.[0]?.name || '',
+      getUserRole: () => (get().user?.role ?? '') as UsuarioRole | '',
+
+      hasPermission: (...perms: Permissao[]) => {
+        if (perms.length === 0) return true;
+        const acessivel = get().acessivel;
+        return perms.some((p) => acessivel.includes(p));
+      },
 
       isSuperAdmin: () => get().getUserRole() === 'super_admin',
 
@@ -48,8 +62,8 @@ export const useUserStore = create(
       },
     }),
     {
-      name: 'service-user-storage', // Prefixo 'service-' para evitar conflito com NexOn
-      version: 3,
+      name: 'service-user-storage',
+      version: 4,
       storage: createJSONStorage(() => localStorage),
     },
   ),

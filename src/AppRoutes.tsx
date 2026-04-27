@@ -17,6 +17,7 @@ import { AppTemplate } from './pages/AppTemplate';
 import { AnomaliaPage } from './pages/anomalias';
 import SolicitacoesServicoPage from './pages/solicitacoes-servico';
 import { DashboardPage } from './pages/dashboard';
+import PlantaOperadoresPage from './pages/plantas-operadores';
 import { Settings } from './pages/settings';
 import { LoginPage } from './pages/login/LoginPage';
 import { useUserStore } from './store/useUserStore';
@@ -68,7 +69,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'dashboard',
         element: (
-          <FeatureWrapper feature="Dashboard">
+          <FeatureWrapper feature="dashboard.view">
             <DashboardPage />
           </FeatureWrapper>
         ),
@@ -77,7 +78,7 @@ export const appRoutes = createBrowserRouter([
         path: 'configuracoes/perfil',
         index: true,
         element: (
-          <FeatureWrapper feature="Configuracoes">
+          <FeatureWrapper feature="dashboard.view">
             <Settings />
           </FeatureWrapper>
         )
@@ -86,7 +87,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'cadastros/usuarios',
         element: (
-          <FeatureWrapper feature="Usuarios">
+          <FeatureWrapper feature="usuarios.view">
             <UsuariosPage />
           </FeatureWrapper>
         ),
@@ -94,15 +95,23 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'cadastros/plantas',
         element: (
-          <FeatureWrapper feature="Plantas">
+          <FeatureWrapper feature="plantas.view">
             <PlantasPage />
+          </FeatureWrapper>
+        ),
+      },
+      {
+        path: 'cadastros/plantas/:plantaId/operadores',
+        element: (
+          <FeatureWrapper feature="plantas.manage_operadores">
+            <PlantaOperadoresPage />
           </FeatureWrapper>
         ),
       },
       {
         path: 'cadastros/unidades',
         element: (
-          <FeatureWrapper feature="Unidades">
+          <FeatureWrapper feature="unidades.view">
             <UnidadesPage />
           </FeatureWrapper>
         ),
@@ -110,7 +119,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'cadastros/equipamentos',
         element: (
-          <FeatureWrapper feature="Equipamentos">
+          <FeatureWrapper feature="equipamentos.view">
             <EquipamentosPage />
           </FeatureWrapper>
         ),
@@ -118,7 +127,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'cadastros/concessionarias',
         element: (
-          <FeatureWrapper feature="Concessionarias">
+          <FeatureWrapper feature="equipamentos.manage">
             <ConcessionariasPage />
           </FeatureWrapper>
         ),
@@ -126,7 +135,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'veiculos',
         element: (
-          <FeatureWrapper feature="Equipamentos">
+          <FeatureWrapper feature="recursos.manage">
             <VeiculosPage />
           </FeatureWrapper>
         ),
@@ -134,7 +143,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'ferramentas',
         element: (
-          <FeatureWrapper feature="Equipamentos">
+          <FeatureWrapper feature="recursos.manage">
             <FerramentasPage />
           </FeatureWrapper>
         ),
@@ -142,7 +151,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'fornecedores',
         element: (
-          <FeatureWrapper feature="Equipamentos">
+          <FeatureWrapper feature="recursos.manage">
             <FornecedoresPage />
           </FeatureWrapper>
         ),
@@ -150,7 +159,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'anomalias',
         element: (
-          <FeatureWrapper feature="Equipamentos">
+          <FeatureWrapper feature="anomalias.view">
             <AnomaliaPage />
           </FeatureWrapper>
         ),
@@ -158,7 +167,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'solicitacoes-servico',
         element: (
-          <FeatureWrapper feature="Equipamentos">
+          <FeatureWrapper feature="manutencao.manage">
             <SolicitacoesServicoPage />
           </FeatureWrapper>
         ),
@@ -166,7 +175,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'tarefas',
         element: (
-          <FeatureWrapper feature="Equipamentos">
+          <FeatureWrapper feature="manutencao.manage">
             <TarefasPage />
           </FeatureWrapper>
         ),
@@ -174,7 +183,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'instrucoes',
         element: (
-          <FeatureWrapper feature="Equipamentos">
+          <FeatureWrapper feature="manutencao.manage">
             <InstrucoesPage />
           </FeatureWrapper>
         ),
@@ -182,7 +191,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'programacao-os',
         element: (
-          <FeatureWrapper feature="Equipamentos">
+          <FeatureWrapper feature="programacao_os.view">
             <ProgramacaoOSPage />
           </FeatureWrapper>
         ),
@@ -190,7 +199,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'reservas',
         element: (
-          <FeatureWrapper feature="Equipamentos">
+          <FeatureWrapper feature="recursos.manage">
             <ReservasPage />
           </FeatureWrapper>
         ),
@@ -198,7 +207,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'execucao-os',
         element: (
-          <FeatureWrapper feature="Equipamentos">
+          <FeatureWrapper feature="execucao_os.view">
             <ExecucaoOSPage />
           </FeatureWrapper>
         ),
@@ -206,7 +215,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'planos-manutencao',
         element: (
-          <FeatureWrapper feature="Equipamentos">
+          <FeatureWrapper feature="manutencao.manage">
             <PlanosManutencaoPage />
           </FeatureWrapper>
         ),
@@ -214,7 +223,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'planos-manutencao/associar',
         element: (
-          <FeatureWrapper feature="Equipamentos">
+          <FeatureWrapper feature="manutencao.manage">
             <AssociacaoEquipamentosPage />
           </FeatureWrapper>
         ),
@@ -222,7 +231,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'planos-manutencao/clonar',
         element: (
-          <FeatureWrapper feature="Equipamentos">
+          <FeatureWrapper feature="manutencao.manage">
             <ClonagemPlanosPage />
           </FeatureWrapper>
         ),
@@ -231,7 +240,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'agenda/feriados',
         element: (
-          <FeatureWrapper feature="Agenda">
+          <FeatureWrapper feature="agenda.manage">
             <FeriadosPage />
           </FeatureWrapper>
         ),
@@ -239,7 +248,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'agenda/configuracoes-dias-uteis',
         element: (
-          <FeatureWrapper feature="Agenda">
+          <FeatureWrapper feature="agenda.manage">
             <ConfiguracoesDiasUteisPage />
           </FeatureWrapper>
         ),

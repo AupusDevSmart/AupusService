@@ -6,8 +6,8 @@ const config = {
 		'./pages/**/*.{ts,tsx}',
 		'./components/**/*.{ts,tsx}',
 		'./src/**/*.{ts,tsx}',
-		// ✅ CRÍTICO: Incluir shared-pages src para o Tailwind gerar todas as classes CSS usadas
-		'../../shared-pages/src/**/*.{ts,tsx}',
+		// Incluir shared-pages dist para Tailwind gerar classes (funciona em dev via symlink e em prod via git URL)
+		'./node_modules/@aupus/shared-pages/dist/**/*.{js,mjs}',
 	],
 	prefix: '',
 	theme: {

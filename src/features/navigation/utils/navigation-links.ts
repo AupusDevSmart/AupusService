@@ -1,4 +1,3 @@
-//@ts-nocheck
 import { Permissao } from '@/types/dtos/usuarios-dto';
 import {
   type LucideIcon,
@@ -36,29 +35,25 @@ export type NavigationLink = {
 };
 
 export const navigationLinks: Array<NavigationLink> = [
-  // 📊 DASHBOARD
   {
     key: 'dashboard',
-    featureKey: 'Dashboard',
+    featureKey: 'dashboard.view',
     path: '/dashboard',
     icon: LayoutDashboard,
     label: 'Dashboard Operacional',
     hint: 'Dashboard Operacional Unificado',
   },
 
-  // 🏭 INFRAESTRUTURA
   {
     key: 'cadastros',
-    featureKey: 'Plantas',
     path: '/cadastros',
     icon: Building2,
     label: 'Cadastros',
     hint: 'Cadastros',
     links: [
-      // 👥 USUÁRIOS
       {
         key: 'usuarios',
-        featureKey: 'Usuarios',
+        featureKey: 'usuarios.view',
         path: '/cadastros/usuarios',
         icon: Users,
         label: 'Usuários',
@@ -66,7 +61,7 @@ export const navigationLinks: Array<NavigationLink> = [
       },
       {
         key: 'plantas',
-        featureKey: 'Plantas',
+        featureKey: 'plantas.view',
         path: '/cadastros/plantas',
         icon: Factory,
         label: 'Plantas',
@@ -74,7 +69,7 @@ export const navigationLinks: Array<NavigationLink> = [
       },
       {
         key: 'unidades',
-        featureKey: 'Plantas',
+        featureKey: 'unidades.view',
         path: '/cadastros/unidades',
         icon: Building,
         label: 'Unidades',
@@ -82,7 +77,7 @@ export const navigationLinks: Array<NavigationLink> = [
       },
       {
         key: 'equipamentos',
-        featureKey: 'Equipamentos',
+        featureKey: 'equipamentos.view',
         path: '/cadastros/equipamentos',
         icon: Wrench,
         label: 'Equipamentos',
@@ -90,7 +85,7 @@ export const navigationLinks: Array<NavigationLink> = [
       },
       {
         key: 'concessionarias',
-        featureKey: 'Concessionarias',
+        featureKey: 'equipamentos.manage',
         path: '/cadastros/concessionarias',
         icon: Zap,
         label: 'Concessionárias',
@@ -99,10 +94,8 @@ export const navigationLinks: Array<NavigationLink> = [
     ]
   },
 
-  // 🔧 MANUTENÇÃO
   {
     key: 'manutencao',
-    featureKey: 'Equipamentos',
     path: '/manutencao',
     icon: Settings,
     label: 'Manutenção',
@@ -110,7 +103,7 @@ export const navigationLinks: Array<NavigationLink> = [
     links: [
       {
         key: 'planos-manutencao',
-        featureKey: 'Equipamentos',
+        featureKey: 'manutencao.manage',
         path: '/planos-manutencao',
         icon: Layers,
         label: 'Planos de Manutenção',
@@ -118,7 +111,7 @@ export const navigationLinks: Array<NavigationLink> = [
       },
       {
         key: 'tarefas',
-        featureKey: 'Equipamentos',
+        featureKey: 'manutencao.manage',
         path: '/tarefas',
         icon: Tag,
         label: 'Tarefas',
@@ -126,7 +119,7 @@ export const navigationLinks: Array<NavigationLink> = [
       },
       {
         key: 'instrucoes',
-        featureKey: 'Equipamentos',
+        featureKey: 'manutencao.manage',
         path: '/instrucoes',
         icon: FileText,
         label: 'Instruções',
@@ -134,7 +127,7 @@ export const navigationLinks: Array<NavigationLink> = [
       },
       {
         key: 'programacao-os',
-        featureKey: 'Equipamentos',
+        featureKey: 'programacao_os.view',
         path: '/programacao-os',
         icon: Calendar,
         label: 'Programação OS',
@@ -142,7 +135,7 @@ export const navigationLinks: Array<NavigationLink> = [
       },
       {
         key: 'execucao-os',
-        featureKey: 'Equipamentos',
+        featureKey: 'execucao_os.view',
         path: '/execucao-os',
         icon: PlayCircle,
         label: 'Execução OS',
@@ -150,7 +143,7 @@ export const navigationLinks: Array<NavigationLink> = [
       },
       {
         key: 'anomalias',
-        featureKey: 'Equipamentos',
+        featureKey: 'anomalias.view',
         path: '/anomalias',
         icon: AlertTriangle,
         label: 'Anomalias',
@@ -158,7 +151,7 @@ export const navigationLinks: Array<NavigationLink> = [
       },
       {
         key: 'solicitacoes-servico',
-        featureKey: 'Equipamentos',
+        featureKey: 'manutencao.manage',
         path: '/solicitacoes-servico',
         icon: FilePenLine,
         label: 'Solicitações de Serviço',
@@ -167,10 +160,8 @@ export const navigationLinks: Array<NavigationLink> = [
     ]
   },
 
-  // 📦 RECURSOS
   {
     key: 'recursos',
-    featureKey: 'Equipamentos',
     path: '/recursos',
     icon: Package,
     label: 'Recursos',
@@ -178,23 +169,15 @@ export const navigationLinks: Array<NavigationLink> = [
     links: [
       {
         key: 'veiculos',
-        featureKey: 'Equipamentos',
+        featureKey: 'recursos.manage',
         path: '/veiculos',
         icon: Truck,
         label: 'Veículos',
         hint: 'Veículos',
       },
-      // {
-      //   key: 'ferramentas',
-      //   featureKey: 'Equipamentos',
-      //   path: '/ferramentas',
-      //   icon: Hammer,
-      //   label: 'Ferramentas',
-      //   hint: 'Ferramentas',
-      // },
       {
         key: 'reservas',
-        featureKey: 'Equipamentos',
+        featureKey: 'recursos.manage',
         path: '/reservas',
         icon: CheckSquare,
         label: 'Reservas',
@@ -203,20 +186,8 @@ export const navigationLinks: Array<NavigationLink> = [
     ]
   },
 
-  // 🤝 FORNECEDORES
-  // {
-  //   key: 'fornecedores',
-  //   featureKey: 'Equipamentos',
-  //   path: '/fornecedores',
-  //   icon: Handshake,
-  //   label: 'Fornecedores',
-  //   hint: 'Fornecedores',
-  // },
-
-  // 📅 AGENDA
   {
     key: 'agenda',
-    featureKey: 'Agenda',
     path: '#',
     icon: CalendarDays,
     label: 'Agenda',
@@ -224,7 +195,7 @@ export const navigationLinks: Array<NavigationLink> = [
     links: [
       {
         key: 'feriados',
-        featureKey: 'Agenda',
+        featureKey: 'agenda.manage',
         path: '/agenda/feriados',
         icon: Calendar,
         label: 'Feriados',
@@ -232,7 +203,7 @@ export const navigationLinks: Array<NavigationLink> = [
       },
       {
         key: 'configuracoes-dias-uteis',
-        featureKey: 'Agenda',
+        featureKey: 'agenda.manage',
         path: '/agenda/configuracoes-dias-uteis',
         icon: Clock,
         label: 'Configurações de Dias Úteis',
