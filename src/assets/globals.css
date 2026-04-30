@@ -243,6 +243,22 @@
     @apply border-border;
   }
 
+  /* Placeholders sempre suaves — `--muted-foreground` em globals.css esta no
+     formato hsl(...) wrapped, o que invalida o `hsl(var(--muted-foreground))`
+     usado pelo Tailwind. Definimos a cor diretamente aqui para nao depender
+     da variavel. Light/dark seguem a mesma ideia (40-55% lightness). */
+  input::placeholder,
+  textarea::placeholder {
+    color: hsl(0, 0%, 45%);
+    opacity: 1;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: hsl(0, 0%, 50%);
+    opacity: 1;
+  }
+
   body {
     @apply flex overflow-hidden bg-background text-foreground h-screen w-screen;
   }

@@ -7,6 +7,7 @@ export interface Role {
   value: string;
   label: string;
   description?: string;
+  permissions?: string[];
 }
 
 interface UseRolesReturn {
@@ -53,20 +54,41 @@ export function useRoles(): UseRolesReturn {
           'super_admin': 'Super Administrador',
           'admin': 'Administrador',
           'gerente': 'Gerente',
+          'analista': 'Analista',
+          'operador': 'Operador',
           'vendedor': 'Vendedor',
           'consultor': 'Consultor',
           'proprietario': 'Proprietário',
+          'propietario': 'Proprietário',
           'corretor': 'Corretor',
           'cativo': 'Cativo',
           'associado': 'Associado',
         };
 
         // Transform backend data to expected format
-        const formattedRoles = data.map((role: any) => ({
-          value: role.name || role.value || role.id,
-          label: role.label || role.display_name || labelMapping[role.name] || role.name || role.value,
-          description: role.description || `Role ${role.name}`,
-        }));
+        const formattedRoles = data.map((role: any) => {
+          const rolePermissions: string[] = [];
+
+          if (Array.isArray(role.role_has_permissions)) {
+            role.role_has_permissions.forEach((rhp: any) => {
+              const name = rhp?.permissions?.name;
+              if (name) rolePermissions.push(name);
+            });
+          }
+          if (rolePermissions.length === 0 && Array.isArray(role.permissions)) {
+            role.permissions.forEach((p: any) => {
+              if (typeof p === 'string') rolePermissions.push(p);
+              else if (p?.name) rolePermissions.push(p.name);
+            });
+          }
+
+          return {
+            value: role.name || role.value || role.id,
+            label: role.label || role.display_name || labelMapping[role.name] || role.name || role.value,
+            description: role.description || `Role ${role.name}`,
+            permissions: rolePermissions,
+          };
+        });
 
         console.log('✅ [useRoles] Roles formatados:', formattedRoles);
 
