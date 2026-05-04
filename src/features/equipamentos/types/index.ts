@@ -76,6 +76,9 @@ export interface Equipamento extends BaseEntity {
   nome: string;
   classificacao: 'UC' | 'UAR';
 
+  // Foto do equipamento (camelCase espelha foto_url da API)
+  fotoUrl?: string;
+
   // Relacionamentos hierárquicos - TODOS CORRIGIDOS PARA STRING
   unidadeId?: string; // NOVO: Equipamentos UC agora pertencem a Unidades
   plantaId?: string; // Mantido para compatibilidade

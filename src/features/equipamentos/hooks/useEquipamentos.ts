@@ -513,7 +513,7 @@ export function useEquipamentos(): UseEquipamentosReturn {
       const equipamentosTransformados = equipamentosArray.map(transformApiToFrontend);
 
       // Filtrar para ocultar PONTOS e BARRAMENTOS
-      const equipamentosFiltrados = equipamentosTransformados.filter(eq => {
+      const equipamentosFiltrados = equipamentosTransformados.filter((eq: Equipamento) => {
         const tipoId = eq.tipo?.toUpperCase() || eq.tipoEquipamento?.toUpperCase() || '';
         return tipoId !== 'PONTO' && tipoId !== 'BARRAMENTO';
       });
@@ -555,7 +555,7 @@ export function useEquipamentos(): UseEquipamentosReturn {
       const equipamentosTransformados = response.data.data.map(transformApiToFrontend);
 
       // Filtrar para ocultar PONTOS e BARRAMENTOS
-      const equipamentosFiltrados = equipamentosTransformados.filter(eq => {
+      const equipamentosFiltrados = equipamentosTransformados.filter((eq: Equipamento) => {
         const tipoId = eq.tipo?.toUpperCase() || eq.tipoEquipamento?.toUpperCase() || '';
         return tipoId !== 'PONTO' && tipoId !== 'BARRAMENTO';
       });
