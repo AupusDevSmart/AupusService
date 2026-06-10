@@ -1,5 +1,6 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Link } from 'react-router-dom';
 import { loginSchema, LoginFormData } from '../schemas/login.schema';
 import { useLogin } from '../hooks/useLogin';
 import { Button } from '@/components/ui/button';
@@ -125,6 +126,16 @@ export function LoginForm({ redirectTo = '/dashboard' }: LoginFormProps) {
                 {errors.senha.message}
               </p>
             )}
+          </div>
+
+          {/* Link de esqueci senha */}
+          <div className="text-right">
+            <Link
+              to="/esqueci-senha"
+              className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+            >
+              Esqueceu a senha?
+            </Link>
           </div>
         </CardContent>
 

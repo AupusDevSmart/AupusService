@@ -20,6 +20,8 @@ import { DashboardPage } from './pages/dashboard';
 import PlantaOperadoresPage from './pages/plantas-operadores';
 import { Settings } from './pages/settings';
 import { LoginPage } from './pages/login/LoginPage';
+import { EsqueciSenhaPage } from './pages/esqueci-senha/EsqueciSenhaPage';
+import { RedefinirSenhaPage } from './pages/redefinir-senha/RedefinirSenhaPage';
 import { useUserStore } from './store/useUserStore';
 
 // Shared pages (previously from @nexon, now from @aupus/shared-pages)
@@ -51,6 +53,16 @@ export const appRoutes = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+  },
+
+  // ✅ Rotas públicas de redefinição de senha
+  {
+    path: '/esqueci-senha',
+    element: <EsqueciSenhaPage />,
+  },
+  {
+    path: '/redefinir-senha',
+    element: <RedefinirSenhaPage />,
   },
 
   // ✅ Rotas protegidas
