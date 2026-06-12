@@ -150,7 +150,12 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
           semPlano: true,
           limit: 100
         });
-        setEquipamentos(response.data.data || []);
+        // Apos o interceptor desempacotar { success, data: X }, `response` = X = { data: [...], pagination }.
+        // O array de equipamentos fica em response.data (mesmo padrao de useEquipamentos.ts).
+        const equipamentosArray = Array.isArray(response.data)
+          ? response.data
+          : ((response.data as any)?.data || []);
+        setEquipamentos(equipamentosArray);
       } catch (error) {
         console.error('Erro ao carregar equipamentos:', error);
         setEquipamentos([]);
