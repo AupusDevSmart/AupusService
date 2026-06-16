@@ -25,13 +25,13 @@ export const veiculosFormFields: FormField[] = [
     label: 'Placa',
     type: 'text',
     required: true,
-    placeholder: 'ABC-1234',
+    placeholder: 'ABC-1234 ou ABC1D23',
     width: 'half',
     validation: (value) => {
       if (!value) return 'Placa é obrigatória';
-      const placaRegex = /^[A-Z]{3}-\d{4}$/;
+      const placaRegex = /^([A-Z]{3}-\d{4}|[A-Z]{3}\d[A-Z]\d{2})$/;
       if (!placaRegex.test(value.toUpperCase())) {
-        return 'Formato de placa inválido (ABC-1234)';
+        return 'Formato de placa inválido (ABC-1234 ou ABC1D23)';
       }
       return null;
     }
