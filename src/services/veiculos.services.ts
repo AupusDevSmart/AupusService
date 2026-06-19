@@ -10,24 +10,23 @@ export type StatusVeiculo = 'disponivel' | 'em_uso' | 'manutencao' | 'inativo';
 export type TipoCombustivel = 'gasolina' | 'etanol' | 'diesel' | 'gnv' | 'eletrico' | 'hibrido' | 'flex';
 export type TipoVeiculo = 'carro' | 'van' | 'caminhonete' | 'caminhao' | 'onibus' | 'moto';
 
-// Base interface for Veiculo
+// Base interface for Veiculo (campos de create/update — alinhado ao CreateVeiculoDto do backend)
 export interface BaseVeiculo {
   nome: string;
   placa: string;
   marca: string;
   modelo: string;
-  ano: number;
+  anoFabricacao: number;
+  anoModelo?: number;
   cor?: string;
-  status: StatusVeiculo;
   tipo?: TipoVeiculo;
   tipoCombustivel: TipoCombustivel;
   capacidadePassageiros?: number;
   capacidadeCarga?: number; // em kg
-  kmAtual?: number;
+  quilometragem?: number;
   proximaRevisao?: string; // YYYY-MM-DD
-  responsavelManutencao?: string;
+  responsavel?: string;
   localizacaoAtual: string;
-  valorDiaria?: number;
   observacoes?: string;
   chassi?: string;
   renavam?: string;
@@ -38,8 +37,9 @@ export interface BaseVeiculo {
 // Response interface
 export interface VeiculoResponse extends BaseVeiculo {
   id: number;
-  createdAt: string;
-  updatedAt: string;
+  status: StatusVeiculo;
+  criadoEm: string;
+  atualizadoEm: string;
   // Relacionamentos
   reservasAtivas?: number;
   proximaReserva?: {
@@ -76,7 +76,7 @@ export interface QueryVeiculosParams extends BaseFilters {
   capacidadePassageirosMax?: number;
   disponivel?: boolean; // Filter only available vehicles
   localizacao?: string;
-  orderBy?: 'nome' | 'placa' | 'marca' | 'modelo' | 'ano' | 'status' | 'kmAtual' | 'createdAt';
+  orderBy?: 'nome' | 'placa' | 'marca' | 'modelo' | 'anoFabricacao' | 'quilometragem' | 'criadoEm';
   orderDirection?: 'asc' | 'desc';
 }
 
@@ -513,7 +513,7 @@ export const veiculosUtils = {
 
   // Format vehicle details for display
   formatVeiculoDetails: (veiculo: VeiculoResponse): string => {
-    const ano = veiculo.ano;
+    const ano = veiculo.anoFabricacao;
     const marca = veiculo.marca;
     const modelo = veiculo.modelo;
     return `${marca} ${modelo} ${ano}`;

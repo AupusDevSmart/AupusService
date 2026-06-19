@@ -96,21 +96,21 @@ export function VeiculosPage() {
         placa: data.placa,
         marca: data.marca,
         modelo: data.modelo,
-        ano: data.ano,
-        status: data.status || 'disponivel',
+        anoFabricacao: data.anoFabricacao,
         tipo: data.tipo,
         tipoCombustivel: data.tipoCombustivel,
         capacidadePassageiros: data.capacidadePassageiros,
         capacidadeCarga: data.capacidadeCarga,
         localizacaoAtual: data.localizacaoAtual,
         ...(data.cor && { cor: data.cor }),
-        ...(data.kmAtual !== undefined && { kmAtual: data.kmAtual }),
+        ...(data.quilometragem !== undefined && { quilometragem: data.quilometragem }),
         ...(data.proximaRevisao && { proximaRevisao: data.proximaRevisao }),
-        ...(data.responsavelManutencao && { responsavelManutencao: data.responsavelManutencao }),
+        ...(data.responsavel && { responsavel: data.responsavel }),
         ...(data.observacoes && { observacoes: data.observacoes }),
         ...(data.chassi && { chassi: data.chassi }),
         ...(data.renavam && { renavam: data.renavam }),
-        ...(data.seguradora && { seguradora: data.seguradora })
+        ...(data.seguradora && { seguradora: data.seguradora }),
+        ...(data.vencimentoSeguro && { vencimentoSeguro: data.vencimentoSeguro })
       };
 
       if (modalState.mode === 'create') {
@@ -155,17 +155,20 @@ export function VeiculosPage() {
           placa: data.placa,
           marca: data.marca,
           modelo: data.modelo,
+          anoFabricacao: data.anoFabricacao,
           tipoCombustivel: data.tipoCombustivel,
           capacidadePassageiros: data.capacidadePassageiros,
           capacidadeCarga: data.capacidadeCarga,
           localizacaoAtual: data.localizacaoAtual,
           ...(data.cor && { cor: data.cor }),
+          ...(data.quilometragem !== undefined && { quilometragem: data.quilometragem }),
           ...(data.proximaRevisao && { proximaRevisao: data.proximaRevisao }),
-          ...(data.responsavelManutencao && { responsavelManutencao: data.responsavelManutencao }),
+          ...(data.responsavel && { responsavel: data.responsavel }),
           ...(data.observacoes && { observacoes: data.observacoes }),
           ...(data.chassi && { chassi: data.chassi }),
           ...(data.renavam && { renavam: data.renavam }),
-          ...(data.seguradora && { seguradora: data.seguradora })
+          ...(data.seguradora && { seguradora: data.seguradora }),
+          ...(data.vencimentoSeguro && { vencimentoSeguro: data.vencimentoSeguro })
         };
 
         await updateVeiculo(modalState.entity.id, updateData);
@@ -203,21 +206,22 @@ export function VeiculosPage() {
         placa: '',
         marca: '',
         modelo: '',
-        ano: new Date().getFullYear(),
+        anoFabricacao: new Date().getFullYear(),
         cor: '',
         status: 'disponivel' as const,
         tipo: 'carro' as const,
         tipoCombustivel: 'gasolina' as const,
         capacidadePassageiros: 5,
         capacidadeCarga: 0,
-        kmAtual: 0,
+        quilometragem: 0,
         proximaRevisao: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        responsavelManutencao: '',
+        responsavel: '',
         localizacaoAtual: 'Garagem Principal',
         observacoes: '',
         chassi: '',
         renavam: '',
         seguradora: '',
+        vencimentoSeguro: '',
         documentos: []
       };
     }
@@ -229,22 +233,24 @@ export function VeiculosPage() {
         placa: entity.placa || '',
         marca: entity.marca || '',
         modelo: entity.modelo || '',
-        ano: entity.ano || new Date().getFullYear(),
+        anoFabricacao: entity.anoFabricacao || new Date().getFullYear(),
         cor: entity.cor || '',
         status: entity.status || 'disponivel',
         tipo: entity.tipo || 'carro',
         tipoCombustivel: entity.tipoCombustivel || 'gasolina',
         capacidadePassageiros: entity.capacidadePassageiros || 5,
         capacidadeCarga: entity.capacidadeCarga || 0,
-        kmAtual: entity.kmAtual || entity.quilometragem || 0,
+        quilometragem: entity.quilometragem || 0,
         proximaRevisao: entity.proximaRevisao ?
           new Date(entity.proximaRevisao).toISOString().split('T')[0] : '',
-        responsavelManutencao: entity.responsavelManutencao || '',
+        responsavel: entity.responsavel || '',
         localizacaoAtual: entity.localizacaoAtual || 'Garagem Principal',
         observacoes: entity.observacoes || '',
         chassi: entity.chassi || '',
         renavam: entity.renavam || '',
         seguradora: entity.seguradora || '',
+        vencimentoSeguro: entity.vencimentoSeguro ?
+          new Date(entity.vencimentoSeguro).toISOString().split('T')[0] : '',
         documentos: []
       };
     }

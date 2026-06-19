@@ -55,8 +55,8 @@ export const veiculosFormFields: FormField[] = [
     width: 'half'
   },
   {
-    key: 'ano',
-    label: 'Ano Modelo',
+    key: 'anoFabricacao',
+    label: 'Ano de Fabricação',
     type: 'number',
     required: true,
     width: 'third',
@@ -139,7 +139,7 @@ export const veiculosFormFields: FormField[] = [
 
   // ========== SEÇÃO 4: MANUTENÇÃO E LOCALIZAÇÃO ==========
   {
-    key: 'kmAtual',
+    key: 'quilometragem',
     label: 'Quilometragem Atual',
     type: 'number',
     required: true,
@@ -160,8 +160,8 @@ export const veiculosFormFields: FormField[] = [
     width: 'half'
   },
   {
-    key: 'responsavelManutencao',
-    label: 'Responsável pela Manutenção',
+    key: 'responsavel',
+    label: 'Responsável',
     type: 'text',
     required: false,
     placeholder: 'Nome do responsável pelo veículo',
@@ -199,6 +199,13 @@ export const veiculosFormFields: FormField[] = [
     type: 'text',
     required: false,
     placeholder: 'Nome da seguradora',
+    width: 'half'
+  },
+  {
+    key: 'vencimentoSeguro',
+    label: 'Vencimento do Seguro',
+    type: 'date',
+    required: false,
     width: 'half'
   },
 

@@ -81,7 +81,7 @@ export const veiculosTableColumns: TableColumn<VeiculoResponse>[] = [
             </div>
           </div>
           <div className="text-sm text-muted-foreground">
-            {veiculo.marca} {veiculo.modelo} {veiculo.ano}
+            {veiculo.marca} {veiculo.modelo} {veiculo.anoFabricacao}
           </div>
           <div className="text-xs font-mono text-muted-foreground">
             {veiculo.placa}
@@ -118,7 +118,7 @@ export const veiculosTableColumns: TableColumn<VeiculoResponse>[] = [
         </div>
         
         <div className="text-xs text-muted-foreground">
-          {(veiculo.kmAtual || 0).toLocaleString('pt-BR')} km
+          {(veiculo.quilometragem || 0).toLocaleString('pt-BR')} km
         </div>
       </div>
     )
@@ -137,8 +137,8 @@ export const veiculosTableColumns: TableColumn<VeiculoResponse>[] = [
         </div>
         <div className="flex items-center gap-2">
           <Wrench className="h-3 w-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground truncate max-w-40" title={veiculo.responsavelManutencao}>
-            {veiculo.responsavelManutencao || 'Não informado'}
+          <span className="text-xs text-muted-foreground truncate max-w-40" title={veiculo.responsavel}>
+            {veiculo.responsavel || 'Não informado'}
           </span>
         </div>
       </div>

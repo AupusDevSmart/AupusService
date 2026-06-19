@@ -165,11 +165,6 @@ export function VeiculoSelector({
                     <Fuel className="w-3 h-3" />
                     <span className="capitalize">{veiculoAtual.tipoCombustivel}</span>
                   </div>
-                  {veiculoAtual.valorDiaria && (
-                    <span className="font-medium text-green-600 dark:text-green-400">
-                      R$ {veiculoAtual.valorDiaria.toFixed(2)}/dia
-                    </span>
-                  )}
                 </div>
               </div>
             </div>
@@ -277,11 +272,6 @@ export function VeiculoSelector({
                         <Fuel className="w-3 h-3" />
                         <span className="capitalize">{veiculo.tipoCombustivel}</span>
                       </div>
-                      {veiculo.valorDiaria && (
-                        <span className="font-medium text-green-600 dark:text-green-400">
-                          R$ {veiculo.valorDiaria.toFixed(2)}/dia
-                        </span>
-                      )}
                     </div>
 
                     {!veiculo.disponivel && veiculo.motivo && (
