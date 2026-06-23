@@ -250,11 +250,41 @@ export interface SolicitacaoAssociadaResponse {
 export class InstrucoesApiService {
   private readonly baseEndpoint = '/instrucoes';
 
+  // Mantem apenas os campos de conteudo aceitos pelos DTOs aninhados do backend.
+  // O backend faz replace (deleteMany + createMany) das sub-estruturas, entao
+  // campos gerenciados pelo servidor (id, instrucao_id, created_at, updated_at)
+  // sao lixo no payload e o ValidationPipe (forbidNonWhitelisted) rejeita com 400.
+  private sanitizeSubInstrucoes(subs?: CreateSubInstrucaoApiData[]): CreateSubInstrucaoApiData[] | undefined {
+    if (!subs) return subs;
+    return subs.map(sub => ({
+      descricao: sub.descricao,
+      obrigatoria: sub.obrigatoria,
+      tempo_estimado: sub.tempo_estimado,
+      ordem: sub.ordem,
+    }));
+  }
+
+  private sanitizeRecursos(recursos?: CreateRecursoInstrucaoApiData[]): CreateRecursoInstrucaoApiData[] | undefined {
+    if (!recursos) return recursos;
+    return recursos.map(recurso => ({
+      tipo: recurso.tipo,
+      descricao: recurso.descricao,
+      quantidade: recurso.quantidade,
+      unidade: recurso.unidade,
+      obrigatorio: recurso.obrigatorio,
+    }));
+  }
+
   // CRUD
 
   async create(data: CreateInstrucaoApiData): Promise<InstrucaoApiResponse> {
     try {
-      const response = await api.post<InstrucaoApiResponse>(this.baseEndpoint, data);
+      const payload: CreateInstrucaoApiData = {
+        ...data,
+        ...(data.sub_instrucoes !== undefined && { sub_instrucoes: this.sanitizeSubInstrucoes(data.sub_instrucoes) }),
+        ...(data.recursos !== undefined && { recursos: this.sanitizeRecursos(data.recursos) }),
+      };
+      const response = await api.post<InstrucaoApiResponse>(this.baseEndpoint, payload);
       return response.data;
     } catch (error: any) {
       throw error;
@@ -301,7 +331,12 @@ export class InstrucoesApiService {
 
   async update(id: string, data: UpdateInstrucaoApiData): Promise<InstrucaoApiResponse> {
     try {
-      const response = await api.put<InstrucaoApiResponse>(`${this.baseEndpoint}/${id}`, data);
+      const payload: UpdateInstrucaoApiData = {
+        ...data,
+        ...(data.sub_instrucoes !== undefined && { sub_instrucoes: this.sanitizeSubInstrucoes(data.sub_instrucoes) }),
+        ...(data.recursos !== undefined && { recursos: this.sanitizeRecursos(data.recursos) }),
+      };
+      const response = await api.put<InstrucaoApiResponse>(`${this.baseEndpoint}/${id}`, payload);
       return response.data;
     } catch (error: any) {
       throw error;
