@@ -45,6 +45,7 @@ export function TarefasModal({
         categoria: 'MECANICA',
         tipo_manutencao: 'PREVENTIVA',
         frequencia: 'MENSAL',
+        frequencia_personalizada: 30,
         condicao_ativo: 'PARADO',
         criticidade: '3',
         status: 'ATIVA',
@@ -103,20 +104,12 @@ export function TarefasModal({
         {
           key: 'classificacao',
           title: 'Classificação',
-          fields: ['categoria', 'tipo_manutencao', 'criticidade', 'condicao_ativo']
+          fields: ['classificacao_grid']
         },
         {
           key: 'planejamento',
           title: 'Planejamento',
-          fields: [
-            'frequencia',
-            'frequencia_personalizada',
-            'duracao_estimada',
-            'planejador',
-            'responsavel',
-            'data_ultima_execucao',
-            'numero_execucoes'
-          ]
+          fields: ['planejamento_grid']
         },
         {
           key: 'atividades',
@@ -129,16 +122,18 @@ export function TarefasModal({
           fields: ['recursos']
         },
         {
-          key: 'observacoes',
-          title: 'Observações & Status',
-          fields: ['observacoes', 'status']
+          key: 'status',
+          title: 'Status',
+          fields: ['status']
         }
       ]}
     >
       {/* Seção de Anexos */}
       {isOpen && (
-        <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Anexos</h3>
+        <div className="mt-2">
+          <div className="mb-4">
+            <h3 className="text-base font-semibold text-foreground border-b pb-2 capitalize">Anexos</h3>
+          </div>
           {mode === 'create' ? (
             <AnexosManager
               tarefaId={null}

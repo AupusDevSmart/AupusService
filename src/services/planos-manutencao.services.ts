@@ -16,22 +16,10 @@ export interface CreatePlanoManutencaoApiData {
   nome: string;                     // Obrigatório - Nome do plano (máx 200 chars)
   descricao?: string;               // Opcional - Descrição do plano
   versao?: string;                  // Opcional - Versão (máx 20 chars, padrão: "1.0")
-  status?: StatusPlano;             // Opcional - Status do plano (padrão: ATIVO)
-  ativo?: boolean;                  // Opcional - Flag ativo (padrão: true)
-  data_vigencia_inicio?: string;    // Opcional - Data de início (ISO string)
-  data_vigencia_fim?: string;       // Opcional - Data de fim (ISO string)
-  observacoes?: string;             // Opcional - Observações
   criado_por?: string;              // Opcional - ID do usuário criador
 }
 
 export interface UpdatePlanoManutencaoApiData extends Partial<CreatePlanoManutencaoApiData> {}
-
-export interface UpdateStatusPlanoApiData {
-  status: StatusPlano;
-  // NOTA: Campo 'ativo' removido pois a API não aceita mais este campo
-  // O status do campo 'ativo' é inferido automaticamente pelo backend baseado no 'status'
-  atualizado_por?: string;
-}
 
 export interface DuplicarPlanoApiData {
   equipamento_destino_id: string;   // Obrigatório - ID do equipamento destino
@@ -111,11 +99,6 @@ export interface PlanoManutencaoApiResponse {
   nome: string;
   descricao?: string;
   versao: string;
-  status: StatusPlano;
-  ativo: boolean;
-  data_vigencia_inicio?: Date;
-  data_vigencia_fim?: Date;
-  observacoes?: string;
   criado_por?: string;
   atualizado_por?: string;
   created_at: Date;
@@ -140,8 +123,6 @@ export interface PlanoResumoDto {
   id: string;
   nome: string;
   versao: string;
-  status: StatusPlano;
-  ativo: boolean;
   total_tarefas: number;
   tarefas_ativas: number;
   tarefas_inativas: number;
@@ -172,10 +153,6 @@ export interface PlanoResumoDto {
 
 export interface DashboardPlanosDto {
   total_planos: number;
-  planos_ativos: number;
-  planos_inativos: number;
-  planos_em_revisao: number;
-  planos_arquivados: number;
   equipamentos_com_plano: number;
   
   // Estatísticas gerais
@@ -197,11 +174,7 @@ export interface DashboardPlanosDto {
 export interface QueryPlanosApiParams {
   search?: string;                  // Busca em nome, descrição, nome do equipamento
   equipamento_id?: string;          // Filtrar por ID do equipamento
-  status?: StatusPlano;             // Filtrar por status
-  ativo?: boolean;                  // Filtrar por flag ativo
   criado_por?: string;              // Filtrar por usuário criador
-  data_vigencia_inicio?: string;    // Filtrar por data de vigência início
-  data_vigencia_fim?: string;       // Filtrar por data de vigência fim
   page?: number;                    // Página (padrão: 1)
   limit?: number;                   // Itens por página (1-100, padrão: 10)
   sort_by?: string;                 // Campo de ordenação (padrão: 'created_at')
@@ -212,7 +185,6 @@ export interface QueryPlanosApiParams {
 // Parâmetros específicos para busca por planta
 export interface QueryPlanosPorPlantaParams {
   incluir_tarefas?: boolean;        // Incluir tarefas na resposta (padrão: false)
-  status?: StatusPlano;             // Filtrar por status (padrão: ATIVO)
   page?: number;                    // Página (padrão: 1)
   limit?: number;                   // Itens por página (1-100, padrão: 10)
 }
@@ -349,7 +321,6 @@ export class PlanosManutencaoApiService {
 
     const finalParams = {
       incluir_tarefas: params?.incluir_tarefas || false,
-      status: params?.status || 'ATIVO',
       page: params?.page || 1,
       limit: params?.limit || 10
     };
@@ -397,7 +368,6 @@ export class PlanosManutencaoApiService {
 
     const finalParams = {
       incluir_tarefas: params?.incluir_tarefas || false,
-      status: params?.status || 'ATIVO',
       page: params?.page || 1,
       limit: params?.limit || 10
     };
@@ -424,22 +394,6 @@ export class PlanosManutencaoApiService {
       return response.data;
     } catch (error: any) {
       // console.error('💥 PLANOS API: Erro ao obter resumo:', error);
-      throw error;
-    }
-  }
-
-  async updateStatus(id: string, data: UpdateStatusPlanoApiData): Promise<PlanoManutencaoApiResponse> {
-    // console.log('🔄 PLANOS API: Atualizando status do plano:', id, data);
-    
-    try {
-      const response = await api.put<PlanoManutencaoApiResponse>(
-        `${this.baseEndpoint}/${id}/status`, 
-        data
-      );
-      // console.log('✅ PLANOS API: Status atualizado:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 PLANOS API: Erro ao atualizar status:', error);
       throw error;
     }
   }

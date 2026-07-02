@@ -50,10 +50,6 @@ export function PlanosModal({
         nome: '',
         descricao: '',
         versao: '1.0',
-        status: 'ATIVO',
-        data_vigencia_inicio: '',
-        data_vigencia_fim: '',
-        observacoes: '',
         criado_por: '',
         planta_equipamento: {
           planta_id: '',
@@ -72,14 +68,6 @@ export function PlanosModal({
 
       return {
         ...entity,
-        // Mapear datas (tratar null)
-        data_vigencia_inicio: entity.data_vigencia_inicio
-          ? new Date(entity.data_vigencia_inicio).toISOString().split('T')[0]
-          : '',
-        data_vigencia_fim: entity.data_vigencia_fim
-          ? new Date(entity.data_vigencia_fim).toISOString().split('T')[0]
-          : '',
-
         // Campo para o controlador planta/equipamento
         planta_equipamento: {
           planta_id: plantaId,
@@ -102,10 +90,6 @@ export function PlanosModal({
       nome: '',
       descricao: '',
       versao: '1.0',
-      status: 'ATIVO',
-      data_vigencia_inicio: '',
-      data_vigencia_fim: '',
-      observacoes: '',
       criado_por: '',
       planta_equipamento: {
         planta_id: '',
@@ -130,11 +114,6 @@ export function PlanosModal({
           key: 'informacoes_basicas',
           title: 'Informações Básicas',
           fields: ['planta_equipamento', 'nome', 'descricao', 'versao']
-        },
-        {
-          key: 'configuracoes',
-          title: 'Configurações',
-          fields: ['status', 'data_vigencia_inicio', 'data_vigencia_fim', 'observacoes']
         }
       ]}
     >

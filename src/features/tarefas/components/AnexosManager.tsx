@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   Upload,
   Download,
   FileText,
@@ -54,7 +54,7 @@ export function AnexosManager({ tarefaId, readonly = false, onFilesChange }: Ane
 
     // Validações
     const maxSize = 10 * 1024 * 1024; // 10MB
-    const allowedTypes = ['image/png', 'application/pdf', 'image/jpeg', 'image/jpg', 
+    const allowedTypes = ['image/png', 'application/pdf', 'image/jpeg', 'image/jpg',
       'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'text/plain'];
@@ -74,8 +74,6 @@ export function AnexosManager({ tarefaId, readonly = false, onFilesChange }: Ane
       const newFiles = [...localFiles, file];
       setLocalFiles(newFiles);
       onFilesChange?.(newFiles);
-
-      // Limpar input
       event.target.value = '';
     } else {
       // Modo edit: fazer upload imediato
@@ -84,8 +82,6 @@ export function AnexosManager({ tarefaId, readonly = false, onFilesChange }: Ane
         setError(null);
         await uploadAnexo(tarefaId!, file, `Anexo: ${file.name}`);
         await loadAnexos();
-
-        // Limpar input
         event.target.value = '';
       } catch (err: any) {
         setError(err.message || 'Erro ao fazer upload do arquivo');
@@ -98,8 +94,6 @@ export function AnexosManager({ tarefaId, readonly = false, onFilesChange }: Ane
   const handleDownload = async (anexo: AnexoTarefaDetalhesDto) => {
     try {
       const blob = await downloadAnexo(tarefaId!, anexo.id);
-      
-      // Criar URL para download
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -151,170 +145,120 @@ export function AnexosManager({ tarefaId, readonly = false, onFilesChange }: Ane
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-4">
+      <div className="flex items-center justify-center p-4 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-        <span>Carregando anexos...</span>
+        Carregando anexos...
       </div>
     );
   }
 
-  const totalFiles = isCreateMode ? localFiles.length : anexos.length;
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium">Anexos ({totalFiles})</h4>
-        
-        {!readonly && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            disabled={uploading}
-            asChild
-          >
-            <label className="cursor-pointer">
-              {uploading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              ) : (
-                <Upload className="h-4 w-4 mr-1" />
-              )}
-              Upload
-              <input
-                type="file"
-                className="hidden"
-                onChange={handleFileUpload}
-                accept=".png,.pdf,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
-              />
-            </label>
-          </Button>
-        )}
-      </div>
-
+    <div className="space-y-2">
       {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/30 rounded-md text-red-700 dark:text-red-400">
-          <AlertCircle className="h-4 w-4" />
+        <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/30 rounded text-red-700 dark:text-red-400">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
           <span className="text-sm">{error}</span>
         </div>
       )}
 
-      {/* Renderizar arquivos baseado no modo */}
-      {isCreateMode ? (
-        // Modo Create: mostrar arquivos locais
-        localFiles.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Nenhum arquivo selecionado</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {localFiles.map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 bg-muted/50 border rounded-md hover:bg-muted/80"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {file.name}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-xs">
-                        Novo
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {(file.size / 1024).toFixed(1)} KB
-                      </span>
-                    </div>
+      {isCreateMode
+        ? localFiles.length > 0 && (
+            <div className="space-y-1.5">
+              {localFiles.map((file, index) => (
+                <div key={index} className="flex items-center justify-between gap-3 p-2 border rounded bg-muted/30">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm truncate">{file.name}</span>
+                    <Badge variant="secondary" className="text-xs flex-shrink-0">Novo</Badge>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">{(file.size / 1024).toFixed(1)} KB</span>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-1">
                   {!readonly && (
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
                       onClick={() => handleRemoveLocalFile(index)}
                       title="Remover"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   )}
                 </div>
-              </div>
-            ))}
-          </div>
-        )
-      ) : (
-        // Modo Edit/View: mostrar anexos existentes
-        anexos.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Nenhum anexo encontrado</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {anexos.map((anexo) => (
-              <div
-                key={anexo.id}
-                className="flex items-center justify-between p-3 bg-muted/50 border rounded-md hover:bg-muted/80"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {anexo.nome}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-xs">
-                        {getTipoLabel(anexo.tipo)}
-                      </Badge>
-                      {anexo.tamanho && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatFileSize(anexo.tamanho)}
-                        </span>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(anexo.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
+              ))}
+            </div>
+          )
+        : anexos.length > 0 && (
+            <div className="space-y-1.5">
+              {anexos.map((anexo) => (
+                <div key={anexo.id} className="flex items-center justify-between gap-3 p-2 border rounded bg-muted/30">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm truncate">{anexo.nome}</span>
+                    <Badge variant="secondary" className="text-xs flex-shrink-0">{getTipoLabel(anexo.tipo)}</Badge>
+                    {anexo.tamanho && (
+                      <span className="text-xs text-muted-foreground flex-shrink-0">{formatFileSize(anexo.tamanho)}</span>
+                    )}
                   </div>
-                </div>
-                
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDownload(anexo)}
-                    title="Download"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  
-                  {!readonly && (
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
                     <Button
                       variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(anexo)}
-                      title="Excluir"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      size="icon"
+                      onClick={() => handleDownload(anexo)}
+                      title="Download"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Download className="h-3.5 w-3.5" />
                     </Button>
-                  )}
+                    {!readonly && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(anexo)}
+                        title="Excluir"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )
+              ))}
+            </div>
+          )}
+
+      {readonly && anexos.length === 0 && (
+        <div className="text-xs text-muted-foreground">Nenhum anexo encontrado</div>
       )}
 
       {!readonly && (
-        <div className="text-xs text-muted-foreground space-y-1">
-          <p>• Tamanho máximo: 10MB</p>
-          <p>• Tipos permitidos: PNG, PDF, JPG, DOC, DOCX, XLS, XLSX, TXT</p>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={uploading}
+          asChild
+          className="w-full h-8 border-dashed text-muted-foreground"
+        >
+          <label className="cursor-pointer">
+            {uploading ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4 mr-1.5" />
+            )}
+            Adicionar anexo
+            <input
+              type="file"
+              className="hidden"
+              onChange={handleFileUpload}
+              accept=".png,.pdf,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+            />
+          </label>
+        </Button>
+      )}
+
+      {!readonly && (
+        <p className="text-xs text-muted-foreground">
+          Máx. 10MB · PNG, PDF, JPG, DOC, DOCX, XLS, XLSX, TXT
+        </p>
       )}
     </div>
   );

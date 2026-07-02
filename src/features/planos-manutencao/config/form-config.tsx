@@ -56,44 +56,5 @@ export const planosFormFields: FormField[] = [
     group: 'informacoes_basicas',
     colSpan: 2,
     placeholder: 'Descrição detalhada do plano de manutenção...'
-  },
-  
-  // Configurações
-  {
-    key: 'status',
-    label: 'Status',
-    type: 'select',
-    required: true,
-    group: 'configuracoes',
-    colSpan: 2,
-    options: [
-      { value: 'ATIVO', label: 'Ativo' },
-      { value: 'INATIVO', label: 'Inativo' },
-      { value: 'EM_REVISAO', label: 'Em Revisão' },
-      { value: 'SUSPENSO', label: 'Suspenso' }
-    ]
-  },
-  {
-    key: 'data_vigencia_inicio',
-    label: 'Data de Início da Vigência',
-    type: 'date',
-    required: false,
-    group: 'configuracoes'
-  },
-  {
-    key: 'data_vigencia_fim',
-    label: 'Data de Fim da Vigência',
-    type: 'date',
-    required: false,
-    group: 'configuracoes'
-  },
-  {
-    key: 'observacoes',
-    label: 'Observações',
-    type: 'textarea',
-    required: false,
-    group: 'configuracoes',
-    colSpan: 2,
-    placeholder: 'Observações gerais sobre o plano...'
   }
 ];

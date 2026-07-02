@@ -2,7 +2,6 @@
 
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@aupus/shared-pages';
 import { useEquipamentos } from '@/features/equipamentos/hooks/useEquipamentos';
@@ -195,7 +194,7 @@ export function AssociacaoEquipamentosPage() {
 
     setStats({
       equipamentosSelecionados: associacao.equipamentos.length,
-      planosDisponiveis: planos.filter(p => p.ativo).length,
+      planosDisponiveis: planos.length,
       tarefasQueSerao
     });
   }, [associacao, planos]);
@@ -279,11 +278,6 @@ export function AssociacaoEquipamentosPage() {
           nome: data.nome,
           descricao: data.descricao,
           versao: data.versao || '1.0',
-          status: data.status || 'ATIVO',
-          ativo: data.ativo ?? true,
-          data_vigencia_inicio: data.data_vigencia_inicio,
-          data_vigencia_fim: data.data_vigencia_fim,
-          observacoes: data.observacoes,
           criado_por: data.criado_por || user?.id
         };
         novoPlano = await createPlano(createData);
@@ -706,9 +700,9 @@ ${resultado.detalhes.map(det =>
                       Plano de Manutenção
                     </label>
                     <Combobox
-                      options={planos.filter(p => p.ativo).map(plano => ({
+                      options={planos.map(plano => ({
                         value: plano.id,
-                        label: `${plano.nome} (v${plano.versao}) - ${plano.status}`
+                        label: `${plano.nome} (v${plano.versao})`
                       }))}
                       value={associacao.planoSelecionado}
                       onValueChange={(value) => setAssociacao(prev => ({ ...prev, planoSelecionado: value }))}
@@ -730,9 +724,6 @@ ${resultado.detalhes.map(det =>
                   </h4>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm">
-                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                        {planoSelecionadoDetalhes.status}
-                      </Badge>
                       <span className="text-green-700 dark:text-green-300">
                         {planoSelecionadoDetalhes.total_tarefas || 0} tarefas template
                       </span>

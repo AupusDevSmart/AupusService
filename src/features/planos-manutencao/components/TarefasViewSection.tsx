@@ -1,19 +1,7 @@
 // src/features/planos-manutencao/components/TarefasViewSection.tsx
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  CheckCircle,
-  XCircle,
-  Clock,
-  AlertTriangle,
-  Settings,
-  Tag,
-  Hash,
-  Pencil,
-  Trash2,
-  Plus
-} from 'lucide-react';
+import { Settings, Pencil, Trash2, Plus } from 'lucide-react';
 
 interface TarefaFlexivel {
   id: string | number;
@@ -37,23 +25,6 @@ interface TarefasViewSectionProps {
   onAddTarefa?: () => void;
 }
 
-const getCriticidadeColor = (criticidade: number) => {
-  switch (criticidade) {
-    case 1:
-      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-    case 2:
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-    case 3:
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-    case 4:
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-    case 5:
-      return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-    default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
-  }
-};
-
 const getCriticidadeLabel = (criticidade: number) => {
   switch (criticidade) {
     case 1: return 'Muito Baixa';
@@ -65,31 +36,9 @@ const getCriticidadeLabel = (criticidade: number) => {
   }
 };
 
-const getCategoriaColor = (categoria: string) => {
-  const cat = categoria?.toUpperCase() || '';
-  switch (cat) {
-    case 'MECANICA':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-    case 'ELETRICA':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-    case 'INSTRUMENTACAO':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
-    case 'LUBRIFICACAO':
-      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-    case 'LIMPEZA':
-      return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300';
-    case 'INSPECAO':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-    case 'CALIBRACAO':
-      return 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300';
-    default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
-  }
-};
-
 const formatTempo = (minutos: number): string => {
   if (!minutos || isNaN(minutos)) return '0min';
-  
+
   if (minutos < 60) {
     return `${minutos}min`;
   }
@@ -131,8 +80,8 @@ export const TarefasViewSection: React.FC<TarefasViewSectionProps> = ({
   if (!tarefas || !Array.isArray(tarefas) || tarefas.length === 0) {
     return (
       <div className="p-6 text-center">
-        <Settings className="h-12 w-12 mx-auto text-gray-400 mb-3" />
-        <p className="text-gray-500 dark:text-gray-400">Nenhuma tarefa encontrada neste plano de manutenção.</p>
+        <Settings className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+        <p className="text-sm text-muted-foreground">Nenhuma tarefa encontrada neste plano de manutenção.</p>
         {isEditMode && onAddTarefa && (
           <Button type="button" variant="outline" size="sm" onClick={onAddTarefa} className="mt-3">
             <Plus className="h-4 w-4 mr-1.5" />
@@ -144,202 +93,92 @@ export const TarefasViewSection: React.FC<TarefasViewSectionProps> = ({
   }
 
   const tarefasNormalizadas = tarefas.map(normalizarTarefa);
-
   const tarefasOrdenadas = [...tarefasNormalizadas].sort((a, b) => a.ordem - b.ordem);
 
-  // Calcular estatísticas
+  // Estatísticas
   const tarefasAtivas = tarefasNormalizadas.filter(t => t.ativo).length;
   const tempoTotal = tarefasNormalizadas.reduce((acc, t) => acc + (t.tempo_estimado || 0), 0);
-  const criticidadeMedia = tarefasNormalizadas.length > 0 
+  const criticidadeMedia = tarefasNormalizadas.length > 0
     ? Math.round(tarefasNormalizadas.reduce((acc, t) => acc + (t.criticidade || 3), 0) / tarefasNormalizadas.length)
     : 0;
 
   return (
-    <div className="space-y-6">
-      {/* Cabeçalho e Estatísticas */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+    <div className="space-y-3">
+      {/* Cabeçalho */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-foreground">
             Tarefas do Plano ({tarefasNormalizadas.length})
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {tarefasAtivas} ativas • Tempo total estimado: {formatTempo(tempoTotal)}
+          <p className="text-xs text-muted-foreground">
+            {tarefasAtivas} ativa{tarefasAtivas !== 1 ? 's' : ''} · {formatTempo(tempoTotal)} · Crit. média {getCriticidadeLabel(criticidadeMedia)}
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {isEditMode && onAddTarefa && (
-            <Button type="button" variant="outline" size="sm" onClick={onAddTarefa}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Adicionar Tarefa
-            </Button>
-          )}
-          <div className="text-center">
-            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-              {criticidadeMedia}
-            </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">
-              Criticidade Média
-            </div>
-          </div>
-        </div>
+        {isEditMode && onAddTarefa && (
+          <Button type="button" variant="outline" size="sm" onClick={onAddTarefa} className="flex-shrink-0">
+            <Plus className="h-4 w-4 mr-1.5" />
+            Adicionar Tarefa
+          </Button>
+        )}
       </div>
 
       {/* Lista de Tarefas */}
-      <div className="grid gap-4">
+      <div className="space-y-2">
         {tarefasOrdenadas.map((tarefa, index) => (
-          <div 
-            key={`tarefa-${tarefa.id}-${index}`} 
-            className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800"
+          <div
+            key={`tarefa-${tarefa.id}-${index}`}
+            className="border border-border rounded p-3"
           >
-            <div className="space-y-3">
-              {/* Linha 1: TAG, Nome e Status */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge variant="outline" className="text-xs font-mono">
-                      <Tag className="h-3 w-3 mr-1" />
-                      {tarefa.tag}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      <Hash className="h-3 w-3 mr-1" />
-                      #{tarefa.ordem}
-                    </Badge>
-                  </div>
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                    {tarefa.nome}
-                  </h4>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-0.5">
+                  <span className="font-mono">{tarefa.tag}</span>
+                  <span>#{tarefa.ordem}</span>
+                  <span className="flex items-center gap-1">
+                    <span className={`h-1.5 w-1.5 rounded-full ${tarefa.ativo ? 'bg-emerald-500' : 'bg-muted-foreground/40'}`} />
+                    {tarefa.ativo ? 'Ativo' : 'Inativo'}
+                  </span>
                 </div>
-                
-                <div className="flex items-center gap-2">
-                  {tarefa.ativo ? (
-                    <Badge className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Ativo
-                    </Badge>
-                  ) : (
-                    <Badge className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
-                      <XCircle className="h-3 w-3 mr-1" />
-                      Inativo
-                    </Badge>
-                  )}
-                  {isEditMode && (
-                    <div className="flex items-center gap-1 ml-1">
-                      {onEditTarefa && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => onEditTarefa(tarefas![index])}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                      {onDeleteTarefa && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive"
-                          onClick={() => onDeleteTarefa(tarefas![index])}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                    </div>
-                  )}
+
+                <h4 className="text-sm font-medium text-foreground truncate">
+                  {tarefa.nome}
+                </h4>
+
+                <div className="mt-1 text-xs text-muted-foreground truncate">
+                  {tarefa.categoria} · {(tarefa.tipo_manutencao || '').replace('_', ' ')} · {formatTempo(tarefa.tempo_estimado)} · Crit. {getCriticidadeLabel(tarefa.criticidade)}
                 </div>
               </div>
 
-              {/* Linha 2: Categoria, Tipo, Tempo e Criticidade */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                <div>
-                  <div className="text-gray-600 dark:text-gray-400 text-xs mb-1">Categoria</div>
-                  <Badge className={`text-xs ${getCategoriaColor(tarefa.categoria)}`}>
-                    {tarefa.categoria}
-                  </Badge>
-                </div>
-                
-                <div>
-                  <div className="text-gray-600 dark:text-gray-400 text-xs mb-1">Tipo</div>
-                  <Badge variant="outline" className="text-xs">
-                    {(tarefa.tipo_manutencao || '').replace('_', ' ')}
-                  </Badge>
-                </div>
-                
-                <div>
-                  <div className="text-gray-600 dark:text-gray-400 text-xs mb-1">Tempo</div>
-                  <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-gray-100">
-                    <Clock className="h-3 w-3" />
-                    {formatTempo(tarefa.tempo_estimado)}
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="text-gray-600 dark:text-gray-400 text-xs mb-1">Criticidade</div>
-                  <Badge className={`text-xs ${getCriticidadeColor(tarefa.criticidade)}`}>
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    {getCriticidadeLabel(tarefa.criticidade)}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Status da Tarefa */}
-              {tarefa.status && tarefa.status !== 'ATIVA' && (
-                <div>
-                  <Badge 
-                    variant="outline" 
-                    className="text-xs"
-                  >
-                    Status: {tarefa.status}
-                  </Badge>
+              {isEditMode && (
+                <div className="flex items-center gap-0.5 flex-shrink-0">
+                  {onEditTarefa && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => onEditTarefa(tarefas![index])}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  {onDeleteTarefa && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={() => onDeleteTarefa(tarefas![index])}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Resumo Final */}
-      <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div>
-            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-              {tarefasNormalizadas.length}
-            </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">
-              Total de Tarefas
-            </div>
-          </div>
-          
-          <div>
-            <div className="text-lg font-bold text-green-600 dark:text-green-400">
-              {tarefasAtivas}
-            </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">
-              Tarefas Ativas
-            </div>
-          </div>
-          
-          <div>
-            <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-              {formatTempo(tempoTotal)}
-            </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">
-              Tempo Total
-            </div>
-          </div>
-          
-          <div>
-            <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
-              {getCriticidadeLabel(criticidadeMedia)}
-            </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">
-              Criticidade Média
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

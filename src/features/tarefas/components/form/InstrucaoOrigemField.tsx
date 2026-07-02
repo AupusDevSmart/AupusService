@@ -92,7 +92,6 @@ export const InstrucaoOrigemField: React.FC<InstrucaoOrigemFieldProps> = ({
         condicao_ativo: instrucao.condicao_ativo || 'PARADO',
         criticidade: String(instrucao.criticidade || 3),
         duracao_estimada: instrucao.duracao_estimada || 1,
-        observacoes: instrucao.observacoes || '',
         sub_tarefas: subTarefas,
         recursos: recursos,
       });

@@ -3,6 +3,7 @@ import { FormField } from '@/types/base';
 import { SubTarefasController } from '../components/form/SubTarefasController';
 import { RecursosController } from '../components/form/RecursosController';
 import { InstrucaoOrigemField } from '../components/form/InstrucaoOrigemField';
+import { FormFieldsGrid } from '../components/form/FormFieldsGrid';
 
 export const tarefasFormFields: FormField[] = [
   // Plano de Manutenção (obrigatório)
@@ -121,143 +122,103 @@ export const tarefasFormFields: FormField[] = [
     }
   },
 
-  // Classificação
+  // Classificação (4 campos por linha no desktop)
   {
-    key: 'categoria',
-    label: 'Categoria',
-    type: 'select',
-    required: true,
-    options: [
-      { value: 'MECANICA', label: 'Mecânica' },
-      { value: 'ELETRICA', label: 'Elétrica' },
-      { value: 'INSTRUMENTACAO', label: 'Instrumentação' },
-      { value: 'LUBRIFICACAO', label: 'Lubrificação' },
-      { value: 'LIMPEZA', label: 'Limpeza' },
-      { value: 'INSPECAO', label: 'Inspeção' },
-      { value: 'CALIBRACAO', label: 'Calibração' },
-      { value: 'OUTROS', label: 'Outros' }
-    ],
-    width: 'half', // 50% em desktop
-  },
-  {
-    key: 'tipo_manutencao',
-    label: 'Tipo de Manutenção',
-    type: 'select',
-    required: true,
-    options: [
-      { value: 'PREVENTIVA', label: 'Preventiva' },
-      { value: 'PREDITIVA', label: 'Preditiva' },
-      { value: 'CORRETIVA', label: 'Corretiva' },
-      { value: 'INSPECAO', label: 'Inspeção' },
-      { value: 'VISITA_TECNICA', label: 'Visita Técnica' }
-    ],
-    width: 'half', // 50% em desktop
-  },
-  {
-    key: 'criticidade',
-    label: 'Criticidade',
-    type: 'select',
-    required: true,
-    options: [
-      { value: '1', label: 'Muito Baixa' },
-      { value: '2', label: 'Baixa' },
-      { value: '3', label: 'Média' },
-      { value: '4', label: 'Alta' },
-      { value: '5', label: 'Muito Alta' }
-    ],
-    width: 'half', // 50% em desktop
-  },
-  {
-    key: 'condicao_ativo',
-    label: 'Condição do Ativo',
-    type: 'select',
-    required: true,
-    options: [
-      { value: 'PARADO', label: 'Parado' },
-      { value: 'FUNCIONANDO', label: 'Funcionando' },
-      { value: 'QUALQUER', label: 'Qualquer' }
-    ],
-    width: 'half', // 50% em desktop
-  },
-
-  // Planejamento
-  {
-    key: 'frequencia',
-    label: 'Frequência',
-    type: 'select',
-    required: false,
-    options: [
-      { value: 'DIARIA', label: 'Diária' },
-      { value: 'SEMANAL', label: 'Semanal' },
-      { value: 'QUINZENAL', label: 'Quinzenal' },
-      { value: 'MENSAL', label: 'Mensal' },
-      { value: 'BIMESTRAL', label: 'Bimestral' },
-      { value: 'TRIMESTRAL', label: 'Trimestral' },
-      { value: 'SEMESTRAL', label: 'Semestral' },
-      { value: 'ANUAL', label: 'Anual' },
-      { value: 'PERSONALIZADA', label: 'Personalizada' }
-    ],
-    width: 'half', // 50% em desktop
-  },
-  {
-    key: 'frequencia_personalizada',
-    label: 'Frequência Personalizada (dias)',
-    type: 'number',
-    required: false,
-    placeholder: 'Ex: 45',
-    min: 1,
-    max: 9999,
-    defaultValue: 30, // ✅ NOVO: Valor padrão para evitar erro de validação
-    width: 'half', // 50% em desktop
-    showOnlyWhen: {
-      field: 'frequencia',
-      value: 'PERSONALIZADA'
-    }
-  },
-  {
-    key: 'duracao_estimada',
-    label: 'Duração Estimada (horas)',
-    type: 'number',
-    required: true,
-    placeholder: 'Ex: 2.5',
+    key: 'classificacao_grid',
+    label: '',
+    type: 'custom',
+    excludeFromSubmit: true,
     colSpan: 2,
-  },
-  {
-    key: 'planejador',
-    label: 'Planejador',
-    type: 'text',
-    required: false,
-    placeholder: 'Nome do planejador responsável',
-    width: 'half', // 50% em desktop
-  },
-  {
-    key: 'responsavel',
-    label: 'Responsável pela Execução',
-    type: 'text',
-    required: false,
-    placeholder: 'Nome do responsável pela execução',
-    width: 'half', // 50% em desktop
-  },
+    render: ({ formData, onMultipleChange, disabled }: any) => (
+      <FormFieldsGrid
+        cols={4}
+        formData={formData}
+        onMultipleChange={onMultipleChange}
+        disabled={disabled}
+        subFields={[
+          {
+            key: 'categoria', label: 'Categoria', type: 'select', required: true, options: [
+              { value: 'MECANICA', label: 'Mecânica' },
+              { value: 'ELETRICA', label: 'Elétrica' },
+              { value: 'INSTRUMENTACAO', label: 'Instrumentação' },
+              { value: 'LUBRIFICACAO', label: 'Lubrificação' },
+              { value: 'LIMPEZA', label: 'Limpeza' },
+              { value: 'INSPECAO', label: 'Inspeção' },
+              { value: 'CALIBRACAO', label: 'Calibração' },
+              { value: 'OUTROS', label: 'Outros' }
+            ]
+          },
+          {
+            key: 'tipo_manutencao', label: 'Tipo de Manutenção', type: 'select', required: true, options: [
+              { value: 'PREVENTIVA', label: 'Preventiva' },
+              { value: 'PREDITIVA', label: 'Preditiva' },
+              { value: 'CORRETIVA', label: 'Corretiva' },
+              { value: 'INSPECAO', label: 'Inspeção' },
+              { value: 'VISITA_TECNICA', label: 'Visita Técnica' }
+            ]
+          },
+          {
+            key: 'criticidade', label: 'Criticidade', type: 'select', required: true, options: [
+              { value: '1', label: 'Muito Baixa' },
+              { value: '2', label: 'Baixa' },
+              { value: '3', label: 'Média' },
+              { value: '4', label: 'Alta' },
+              { value: '5', label: 'Muito Alta' }
+            ]
+          },
+          {
+            key: 'condicao_ativo', label: 'Condição do Ativo', type: 'select', required: true, options: [
+              { value: 'PARADO', label: 'Parado' },
+              { value: 'FUNCIONANDO', label: 'Funcionando' },
+              { value: 'QUALQUER', label: 'Qualquer' }
+            ]
+          }
+        ]}
+      />
+    ),
+  } as any,
 
-  // Controle de execuções
+  // Planejamento (3 campos por linha no desktop)
   {
-    key: 'data_ultima_execucao',
-    label: 'Data da Última Execução',
-    type: 'datetime-local',
-    required: true,
-    placeholder: 'Data e hora da última execução',
-    width: 'half', // 50% em desktop
-  },
-  {
-    key: 'numero_execucoes',
-    label: 'Número de Execuções',
-    type: 'number',
-    required: false,
-    placeholder: 'Ex: 5',
-    min: 0,
-    defaultValue: 0,
-    width: 'half', // 50% em desktop
-  },
+    key: 'planejamento_grid',
+    label: '',
+    type: 'custom',
+    excludeFromSubmit: true,
+    colSpan: 2,
+    render: ({ formData, onMultipleChange, disabled }: any) => (
+      <FormFieldsGrid
+        cols={3}
+        formData={formData}
+        onMultipleChange={onMultipleChange}
+        disabled={disabled}
+        subFields={[
+          {
+            key: 'frequencia', label: 'Frequência', type: 'select', options: [
+              { value: 'DIARIA', label: 'Diária' },
+              { value: 'SEMANAL', label: 'Semanal' },
+              { value: 'QUINZENAL', label: 'Quinzenal' },
+              { value: 'MENSAL', label: 'Mensal' },
+              { value: 'BIMESTRAL', label: 'Bimestral' },
+              { value: 'TRIMESTRAL', label: 'Trimestral' },
+              { value: 'SEMESTRAL', label: 'Semestral' },
+              { value: 'ANUAL', label: 'Anual' },
+              { value: 'PERSONALIZADA', label: 'Personalizada' }
+            ]
+          },
+          {
+            key: 'frequencia_personalizada', label: 'Frequência Personalizada (dias)', type: 'number',
+            placeholder: 'Ex: 45', min: 1, max: 9999,
+            showWhen: (d: any) => d?.frequencia === 'PERSONALIZADA'
+          },
+          { key: 'duracao_estimada', label: 'Duração Estimada (horas)', type: 'number', required: true, placeholder: 'Ex: 2.5' },
+          { key: 'planejador', label: 'Planejador', type: 'text', placeholder: 'Nome do planejador responsável' },
+          { key: 'responsavel', label: 'Responsável pela Execução', type: 'text', placeholder: 'Nome do responsável pela execução' },
+          { key: 'data_ultima_execucao', label: 'Data da Última Execução', type: 'datetime-local', required: true },
+          { key: 'numero_execucoes', label: 'Número de Execuções', type: 'number', placeholder: 'Ex: 5', min: 0 }
+        ]}
+      />
+    ),
+  } as any,
 
   // Sub-tarefas
   {
@@ -265,10 +226,11 @@ export const tarefasFormFields: FormField[] = [
     label: '',
     type: 'custom',
     required: false,
+    colSpan: 2,
     render: ({ value, onChange, disabled }) => (
-      <SubTarefasController 
-        value={value} 
-        onChange={onChange} 
+      <SubTarefasController
+        value={value}
+        onChange={onChange}
         disabled={disabled}
       />
     ),
@@ -280,27 +242,20 @@ export const tarefasFormFields: FormField[] = [
     label: '',
     type: 'custom',
     required: false,
+    colSpan: 2,
     render: ({ value, onChange, disabled }) => (
-      <RecursosController 
-        value={value} 
-        onChange={onChange} 
+      <RecursosController
+        value={value}
+        onChange={onChange}
         disabled={disabled}
       />
     ),
   },
 
-  // Observações e Status
-  {
-    key: 'observacoes',
-    label: 'Observações',
-    type: 'textarea',
-    required: false,
-    placeholder: 'Observações adicionais sobre a tarefa...',
-    colSpan: 2,
-  },
+  // Status
   {
     key: 'status',
-    label: 'Status',
+    label: '',
     type: 'select',
     required: true,
     options: [

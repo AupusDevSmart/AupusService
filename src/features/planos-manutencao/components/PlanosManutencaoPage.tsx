@@ -16,11 +16,8 @@ import { createPlanosTableActions } from '../config/actions-config';
 import {
   PlanoManutencaoApiResponse,
   CreatePlanoManutencaoApiData,
-  UpdatePlanoManutencaoApiData,
-  DashboardPlanosDto
+  UpdatePlanoManutencaoApiData
 } from '@/services/planos-manutencao.services';
-import { PlanosDashboard } from './PlanosDashboard';
-import { PlanosAlerts } from './PlanosAlerts';
 import { PlanosModal } from './PlanosModal';
 import { TarefasModal } from '@/features/tarefas/components/TarefasModal';
 import { tarefasFormFields } from '@/features/tarefas/config/form-config';
@@ -35,8 +32,6 @@ import { toast } from '@/hooks/use-toast';
 
 interface PlanosFiltersApi {
   search?: string;
-  status?: 'ATIVO' | 'INATIVO' | 'EM_REVISAO' | 'ARQUIVADO';
-  ativo?: boolean;
   page?: number;
   limit?: number;
 }
@@ -47,31 +42,11 @@ const initialFilters: PlanosFiltersApi = {
   limit: 10
 };
 
-const initialDashboard: DashboardPlanosDto = {
-  total_planos: 0,
-  planos_ativos: 0,
-  planos_inativos: 0,
-  planos_em_revisao: 0,
-  planos_arquivados: 0,
-  equipamentos_com_plano: 0,
-  total_tarefas_todos_planos: 0,
-  media_tarefas_por_plano: 0,
-  tempo_total_estimado_geral: 0,
-  distribuicao_tipos: {
-    preventiva: 0,
-    preditiva: 0,
-    corretiva: 0,
-    inspecao: 0,
-    visita_tecnica: 0
-  }
-};
-
 export function PlanosManutencaoPage() {
   const { user } = useUserStore();
 
   // Estados locais
   const [filters, setFilters] = useState<PlanosFiltersApi>(initialFilters);
-  const [dashboardData, setDashboardData] = useState<DashboardPlanosDto>(initialDashboard);
 
   // Estado do modal de tarefa (nested dentro do modal de plano)
   const [tarefaModal, setTarefaModal] = useState<{
@@ -98,8 +73,7 @@ export function PlanosManutencaoPage() {
     fetchPlanos,
     createPlano,
     updatePlano,
-    getPlano,
-    getDashboard
+    getPlano
   } = usePlanosManutencaoApi();
 
   const { modalState, openModal, closeModal: originalCloseModal } = useGenericModal<PlanoManutencaoApiResponse>();
@@ -135,24 +109,13 @@ export function PlanosManutencaoPage() {
     }
   };
 
-  const loadDashboard = async () => {
-    try {
-      const dashboard = await getDashboard();
-      setDashboardData(dashboard);
-    } catch (error) {
-      console.error('Erro ao carregar dashboard:', error);
-    }
-  };
-
   const reloadAll = async () => {
     await loadData();
-    await loadDashboard();
   };
 
   // Actions hook com callbacks
   const planosActions = usePlanosActions({
-    onSuccess: reloadAll,
-    onToggleStatus: reloadAll
+    onSuccess: reloadAll
   });
 
   // Wrapper para closeModal
@@ -165,7 +128,6 @@ export function PlanosManutencaoPage() {
   // Carregar dados iniciais
   useEffect(() => {
     loadData();
-    loadDashboard();
     loadFilterOptions();
   }, []);
 
@@ -202,11 +164,6 @@ export function PlanosManutencaoPage() {
           nome: data.nome,
           descricao: data.descricao,
           versao: data.versao || '1.0',
-          status: data.status || 'ATIVO',
-          ativo: data.status === 'ATIVO',
-          data_vigencia_inicio: data.data_vigencia_inicio,
-          data_vigencia_fim: data.data_vigencia_fim,
-          observacoes: data.observacoes,
           criado_por: user.id
         };
         const planoResult = await createPlano(createData);
@@ -239,12 +196,7 @@ export function PlanosManutencaoPage() {
         const updateData: UpdatePlanoManutencaoApiData = {
           nome: data.nome,
           descricao: data.descricao,
-          versao: data.versao,
-          status: data.status,
-          ativo: data.status === 'ATIVO',
-          data_vigencia_inicio: data.data_vigencia_inicio,
-          data_vigencia_fim: data.data_vigencia_fim,
-          observacoes: data.observacoes
+          versao: data.versao
         };
         await updatePlano(modalState.entity.id, updateData);
       }
@@ -430,9 +382,6 @@ export function PlanosManutencaoPage() {
             description="Gerencie templates de manutenção para equipamentos similares"
           />
 
-          {/* Dashboard */}
-          <PlanosDashboard data={dashboardData} />
-
           {/* Filtros e Ação */}
           <div className="flex flex-col lg:flex-row gap-3 md:gap-4 mb-4 md:mb-6 lg:items-start">
             <div className="flex-1">
@@ -444,9 +393,6 @@ export function PlanosManutencaoPage() {
               <span className="sm:hidden">Novo</span>
             </button>
           </div>
-
-          {/* Alertas */}
-          <PlanosAlerts planosInativos={dashboardData.planos_inativos} />
 
           {/* Tabela */}
           <div className="flex-1 min-h-0">

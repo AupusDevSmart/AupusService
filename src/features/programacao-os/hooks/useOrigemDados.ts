@@ -125,7 +125,6 @@ export const useOrigemDados = () => {
         console.log('🎯 [useOrigemDados] Usando endpoint POR UNIDADE - /por-unidade/' + cleanUnidadeId);
 
         response = await planosManutencaoApi.findByUnidade(cleanUnidadeId, {
-          status: 'ATIVO',
           limit: 100,
           page: 1,
           incluir_tarefas: false
@@ -142,7 +141,6 @@ export const useOrigemDados = () => {
         console.log('🎯 [useOrigemDados] Usando endpoint POR PLANTA - /por-planta/' + cleanPlantaId);
 
         response = await planosManutencaoApi.findByPlanta(cleanPlantaId, {
-          status: 'ATIVO',
           limit: 100,
           page: 1,
           incluir_tarefas: false
@@ -158,7 +156,6 @@ export const useOrigemDados = () => {
         console.log('📋 [useOrigemDados] Usando endpoint GERAL - /planos-manutencao');
 
         response = await planosManutencaoApi.findAll({
-          status: 'ATIVO',
           limit: 100,
           page: 1
         });
@@ -175,7 +172,6 @@ export const useOrigemDados = () => {
         console.log(`🔍 [useOrigemDados] Formatando plano ${index + 1}:`, {
           id: plano.id,
           nome: plano.nome,
-          status: plano.status,
           equipamento: plano.equipamento,
           total_tarefas: plano.total_tarefas,
           tarefasArray: plano.tarefas
@@ -187,7 +183,7 @@ export const useOrigemDados = () => {
           categoria: plano.equipamento?.tipo_equipamento || 'GERAL', // Usar tipo do equipamento como categoria
           totalTarefas: plano.total_tarefas || 0,
           totalEquipamentos: 1, // Cada plano tem 1 equipamento
-          ativo: plano.status === 'ATIVO',
+          ativo: true,
           tarefasTemplate: plano.tarefas || [],
           plantaId: plano.equipamento?.planta?.id
         };
@@ -307,7 +303,7 @@ export const useOrigemDados = () => {
           categoria: plano.equipamento?.tipo_equipamento || 'GERAL',
           totalTarefas: plano.total_tarefas || plano.tarefas?.length || 0,
           totalEquipamentos: 1,
-          ativo: plano.status === 'ATIVO',
+          ativo: true,
           tarefasTemplate: plano.tarefas || [],
           plantaId: plano.equipamento?.planta?.id
         };

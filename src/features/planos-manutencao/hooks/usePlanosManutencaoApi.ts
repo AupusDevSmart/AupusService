@@ -5,7 +5,6 @@ import {
   PlanoManutencaoApiResponse,
   CreatePlanoManutencaoApiData,
   UpdatePlanoManutencaoApiData,
-  UpdateStatusPlanoApiData,
   DuplicarPlanoApiData,
   ClonarPlanoLoteDto,
   ClonarPlanoLoteResponseDto,
@@ -40,7 +39,6 @@ export interface UsePlanosManutencaoApiReturn {
   fetchPlanosByUnidade: (unidadeId: string, params?: QueryPlanosPorPlantaParams) => Promise<PlanosListApiResponse>;
 
   // Operações específicas
-  updateStatus: (id: string, data: UpdateStatusPlanoApiData) => Promise<PlanoManutencaoApiResponse>;
   duplicarPlano: (id: string, data: DuplicarPlanoApiData) => Promise<PlanoManutencaoApiResponse>;
   clonarLote: (id: string, data: ClonarPlanoLoteDto) => Promise<ClonarPlanoLoteResponseDto>;
   getResumo: (id: string) => Promise<PlanoResumoDto>;
@@ -320,30 +318,6 @@ export function usePlanosManutencaoApi(): UsePlanosManutencaoApiReturn {
   // OPERAÇÕES ESPECÍFICAS
   // ============================================================================
 
-  const updateStatus = useCallback(async (id: string, data: UpdateStatusPlanoApiData): Promise<PlanoManutencaoApiResponse> => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      console.log('🔄 HOOK: Atualizando status do plano:', id, data);
-      
-      const response = await planosManutencaoApi.updateStatus(id, data);
-      console.log('✅ HOOK: Status atualizado:', response);
-      
-      // Atualizar lista local
-      setPlanos(prev => prev.map(plano => 
-        plano.id === id ? response : plano
-      ));
-      
-      return response;
-    } catch (err) {
-      handleError(err, 'updateStatus');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [handleError]);
-
   const duplicarPlano = useCallback(async (id: string, data: DuplicarPlanoApiData): Promise<PlanoManutencaoApiResponse> => {
     try {
       setLoading(true);
@@ -402,10 +376,6 @@ export function usePlanosManutencaoApi(): UsePlanosManutencaoApiReturn {
       // 🔧 Retornar dashboard padrão em caso de erro
       const defaultDashboard: DashboardPlanosDto = {
         total_planos: 0,
-        planos_ativos: 0,
-        planos_inativos: 0,
-        planos_em_revisao: 0,
-        planos_arquivados: 0,
         equipamentos_com_plano: 0,
         total_tarefas_todos_planos: 0,
         media_tarefas_por_plano: 0,
@@ -472,7 +442,6 @@ export function usePlanosManutencaoApi(): UsePlanosManutencaoApiReturn {
     fetchPlanosByUnidade,
 
     // Operações específicas
-    updateStatus,
     duplicarPlano,
     clonarLote,
     getResumo,

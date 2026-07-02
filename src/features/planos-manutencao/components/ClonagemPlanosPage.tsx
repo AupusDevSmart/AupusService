@@ -111,8 +111,6 @@ export function ClonagemPlanosPage() {
   useEffect(() => {
     console.log('📊 Debug Planos:', {
       totalPlanos: planos.length,
-      planosAtivos: planos.filter(p => p.ativo).length,
-      planosInativos: planos.filter(p => !p.ativo).length,
       planosFiltrados: planosFiltrados.length,
       buscaPlano
     });
@@ -430,7 +428,7 @@ export function ClonagemPlanosPage() {
                           planoOrigemId === plano.id
                             ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
                             : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 bg-white dark:bg-gray-800'
-                        } ${!plano.ativo ? 'opacity-60' : ''}`}
+                        }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
@@ -438,11 +436,6 @@ export function ClonagemPlanosPage() {
                               <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
                                 {plano.nome}
                               </h4>
-                              {!plano.ativo && (
-                                <Badge variant="outline" className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
-                                  Inativo
-                                </Badge>
-                              )}
                             </div>
                             {plano.equipamento && (
                               <div className="flex items-center gap-2 mt-1 text-sm text-gray-600 dark:text-gray-400">
@@ -478,9 +471,6 @@ export function ClonagemPlanosPage() {
                       <h4 className="font-semibold text-blue-900 dark:text-blue-100">
                         ✓ Plano Selecionado
                       </h4>
-                      <Badge className="bg-blue-600 text-white">
-                        {planoOrigem.status}
-                      </Badge>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="font-medium text-blue-800 dark:text-blue-200">

@@ -7,24 +7,12 @@ import { PlanoManutencaoApiResponse } from '@/services/planos-manutencao.service
 
 interface UsePlanosActionsParams {
   onSuccess?: () => void;
-  onToggleStatus?: () => void;
 }
 
-export function usePlanosActions({ onSuccess, onToggleStatus }: UsePlanosActionsParams = {}) {
+export function usePlanosActions({ onSuccess }: UsePlanosActionsParams = {}) {
   const navigate = useNavigate();
   const { user } = useUserStore();
-  const { updateStatus, duplicarPlano, deletePlano } = usePlanosManutencaoApi();
-
-  const handleToggleStatus = useCallback(async (plano: PlanoManutencaoApiResponse) => {
-    try {
-      const newStatus = plano.ativo ? 'INATIVO' : 'ATIVO';
-      await updateStatus(plano.id, { status: newStatus });
-      onToggleStatus?.();
-    } catch (error) {
-      console.error('Erro ao alterar status:', error);
-      alert('Erro ao alterar status do plano.');
-    }
-  }, [updateStatus, onToggleStatus]);
+  const { duplicarPlano, deletePlano } = usePlanosManutencaoApi();
 
   const handleDuplicar = useCallback(async (plano: PlanoManutencaoApiResponse) => {
     try {
@@ -73,7 +61,6 @@ export function usePlanosActions({ onSuccess, onToggleStatus }: UsePlanosActions
   }, [navigate]);
 
   return {
-    handleToggleStatus,
     handleDuplicar,
     handleDelete,
     handlePlanejarOS,
