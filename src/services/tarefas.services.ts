@@ -52,14 +52,16 @@ export interface CreateTarefaApiData {
   ativo?: boolean;                    // Opcional: Flag ativo (padrão: true)
   criado_por?: string;                // Opcional: ID do usuário criador
   equipamento_id?: string;            // Opcional: ID do equipamento
-  planta_id?: string;                 // Opcional: ID da planta
+  instrucao_id?: string;              // Opcional: ID da instrução de origem
   data_ultima_execucao?: Date;        // Opcional: Data da última execução
   numero_execucoes?: number;          // Opcional: Número de execuções (padrão: 0)
   sub_tarefas?: CreateSubTarefaApiData[]; // Opcional: Array de sub-tarefas
   recursos?: CreateRecursoTarefaApiData[]; // Opcional: Array de recursos
 }
 
-export interface UpdateTarefaApiData extends Partial<CreateTarefaApiData> {}
+export interface UpdateTarefaApiData extends Partial<CreateTarefaApiData> {
+  atualizado_por?: string;            // Opcional: ID do usuário que atualizou
+}
 
 export interface UpdateStatusTarefaApiData {
   status: StatusTarefa;
@@ -263,8 +265,100 @@ export interface TarefasListApiResponse {
 // SERVIÇO DE API PARA TAREFAS
 // ============================================================================
 
+// Campos aceitos pelo CreateTarefaDto do backend. O BaseModal semeia o formulario
+// com a entity inteira devolvida pela API (id, created_at, plano_manutencao,
+// equipamento, instrucao, anexos, totais) e devolve tudo isso no submit; o
+// ValidationPipe global usa forbidNonWhitelisted e rejeita com 400. Mesmo motivo
+// vale para as tarefas pendentes do modo create do plano, que carregam id/_tempId
+// locais. Por isso o payload e montado por whitelist em vez de spread.
+const CAMPOS_TAREFA = [
+  'plano_manutencao_id',
+  'tag',
+  'nome',
+  'descricao',
+  'categoria',
+  'tipo_manutencao',
+  'frequencia',
+  'frequencia_personalizada',
+  'condicao_ativo',
+  'criticidade',
+  'duracao_estimada',
+  'tempo_estimado',
+  'ordem',
+  'planejador',
+  'responsavel',
+  'observacoes',
+  'status',
+  'ativo',
+  'data_ultima_execucao',
+  'numero_execucoes',
+  'equipamento_id',
+  'instrucao_id',
+  'criado_por',
+] as const;
+
+// `atualizado_por` so existe no UpdateTarefaDto.
+const CAMPOS_TAREFA_UPDATE = [...CAMPOS_TAREFA, 'atualizado_por'] as const;
+
+// IDs frequentemente voltam do backend com espacos no fim.
+const CAMPOS_ID_TAREFA = new Set<string>([
+  'plano_manutencao_id',
+  'equipamento_id',
+  'instrucao_id',
+  'criado_por',
+  'atualizado_por',
+]);
+
 export class TarefasApiService {
   private readonly baseEndpoint = '/tarefas';
+
+  // O backend faz replace (deleteMany + createMany) das sub-estruturas, entao os
+  // campos gerenciados pelo servidor (id, tarefa_id, created_at, updated_at) sao
+  // lixo no payload e derrubam a validacao aninhada.
+  private sanitizeSubTarefas(subs?: CreateSubTarefaApiData[]): CreateSubTarefaApiData[] | undefined {
+    if (!subs) return subs;
+    return subs.map(sub => ({
+      descricao: sub.descricao,
+      obrigatoria: sub.obrigatoria,
+      tempo_estimado: sub.tempo_estimado,
+      ordem: sub.ordem,
+    }));
+  }
+
+  private sanitizeRecursos(recursos?: CreateRecursoTarefaApiData[]): CreateRecursoTarefaApiData[] | undefined {
+    if (!recursos) return recursos;
+    return recursos.map(recurso => ({
+      tipo: recurso.tipo,
+      descricao: recurso.descricao,
+      quantidade: recurso.quantidade,
+      unidade: recurso.unidade,
+      obrigatorio: recurso.obrigatorio,
+    }));
+  }
+
+  private montarPayload(
+    data: Partial<CreateTarefaApiData> & { atualizado_por?: string },
+    campos: readonly string[]
+  ): Record<string, unknown> {
+    const origem = data as Record<string, unknown>;
+    const payload: Record<string, unknown> = {};
+
+    campos.forEach(campo => {
+      const valor = origem[campo];
+      if (valor === undefined) return;
+      payload[campo] =
+        CAMPOS_ID_TAREFA.has(campo) && typeof valor === 'string' ? valor.trim() : valor;
+    });
+
+    if (data.sub_tarefas !== undefined) {
+      payload.sub_tarefas = this.sanitizeSubTarefas(data.sub_tarefas);
+    }
+    if (data.recursos !== undefined) {
+      payload.recursos = this.sanitizeRecursos(data.recursos);
+    }
+
+    return payload;
+  }
 
   // ============================================================================
   // CRUD BÁSICO
@@ -272,9 +366,10 @@ export class TarefasApiService {
 
   async create(data: CreateTarefaApiData): Promise<TarefaApiResponse> {
     // console.log('🚀 TAREFAS API: Criando tarefa:', data);
-    
+
     try {
-      const response = await api.post<TarefaApiResponse>(this.baseEndpoint, data);
+      const payload = this.montarPayload(data, CAMPOS_TAREFA);
+      const response = await api.post<TarefaApiResponse>(this.baseEndpoint, payload);
       // console.log('✅ TAREFAS API: Tarefa criada com sucesso:', response.data);
       return response.data;
     } catch (error: any) {
@@ -350,7 +445,8 @@ export class TarefasApiService {
     // console.log('🔄 TAREFAS API: Atualizando tarefa:', id, data);
     
     try {
-      const response = await api.put<TarefaApiResponse>(`${this.baseEndpoint}/${id}`, data);
+      const payload = this.montarPayload(data, CAMPOS_TAREFA_UPDATE);
+      const response = await api.put<TarefaApiResponse>(`${this.baseEndpoint}/${id.trim()}`, payload);
       // console.log('✅ TAREFAS API: Tarefa atualizada:', response.data);
       return response.data;
     } catch (error: any) {
