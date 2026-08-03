@@ -257,7 +257,6 @@ export const tarefasFormFields: FormField[] = [
     key: 'status',
     label: '',
     type: 'select',
-    required: true,
     options: [
       { value: 'ATIVA', label: 'Ativa' },
       { value: 'INATIVA', label: 'Inativa' },

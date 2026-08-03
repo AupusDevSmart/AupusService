@@ -1,9 +1,9 @@
 // src/features/instrucoes/components/form/RecursosInstrucaoController.tsx
 import React from 'react';
 import { FormFieldProps } from '@/types/base';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Package, Trash2 } from 'lucide-react';
+import { Package, CheckCircle2 } from 'lucide-react';
+import { ItensOrdenaveisTable, type ColunaItemOrdenavel } from '@/components/common/ItensOrdenaveisTable';
 
 interface Recurso {
   id?: string;
@@ -13,6 +13,19 @@ interface Recurso {
   unidade?: string;
   obrigatorio: boolean;
 }
+
+const tipoOptions = [
+  { value: 'PECA', label: 'Peça' },
+  { value: 'MATERIAL', label: 'Material' },
+  { value: 'FERRAMENTA', label: 'Ferramenta' },
+  { value: 'TECNICO', label: 'Técnico' },
+  { value: 'VIATURA', label: 'Viatura' }
+];
+
+// Mesmo raio e borda do Input padrao (rounded-[0.25rem]) para o select nao
+// destoar dos outros campos da linha.
+const selectClassName =
+  'h-8 w-full rounded-[0.25rem] border border-input bg-transparent px-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
 
 export function RecursosInstrucaoController({ value, onChange, disabled }: FormFieldProps) {
   const [recursos, setRecursos] = React.useState<Recurso[]>(
@@ -25,122 +38,135 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
     }
   }, [value]);
 
-  const adicionar = () => {
-    const novo: Recurso = { tipo: 'MATERIAL', descricao: '', quantidade: '1', unidade: '', obrigatorio: false };
-    const lista = [...recursos, novo];
+  const aplicar = (lista: Recurso[]) => {
     setRecursos(lista);
     onChange(lista);
+  };
+
+  const adicionar = () => {
+    aplicar([
+      ...recursos,
+      { tipo: 'MATERIAL', descricao: '', quantidade: '1', unidade: '', obrigatorio: false }
+    ]);
   };
 
   const remover = (index: number) => {
-    const lista = recursos.filter((_, i) => i !== index);
-    setRecursos(lista);
-    onChange(lista);
+    aplicar(recursos.filter((_, i) => i !== index));
   };
 
-  const atualizar = (index: number, campo: keyof Recurso, valor: any) => {
+  const atualizar = (index: number, campo: keyof Recurso, valor: unknown) => {
+    aplicar(recursos.map((item, i) => (i === index ? { ...item, [campo]: valor } : item)));
+  };
+
+  const reordenar = (origem: number, destino: number) => {
     const lista = [...recursos];
-    (lista[index] as any)[campo] = valor;
-    setRecursos(lista);
-    onChange(lista);
+    const [movido] = lista.splice(origem, 1);
+    lista.splice(destino, 0, movido);
+    aplicar(lista);
   };
 
+  const colunas: Array<ColunaItemOrdenavel<Recurso>> = [
+    {
+      key: 'tipo',
+      header: 'Tipo',
+      width: 'w-32',
+      render: (item, index) => (
+        <select
+          value={item.tipo}
+          onChange={(e) => atualizar(index, 'tipo', e.target.value)}
+          disabled={disabled}
+          className={selectClassName}
+        >
+          {tipoOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      )
+    },
+    {
+      key: 'descricao',
+      header: 'Descrição',
+      render: (item, index) => (
+        <Input
+          placeholder="Descrição do recurso..."
+          type="text"
+          value={item.descricao}
+          onChange={(e) => atualizar(index, 'descricao', e.target.value)}
+          disabled={disabled}
+          className="h-8"
+        />
+      )
+    },
+    {
+      key: 'quantidade',
+      header: 'Qtd',
+      width: 'w-20',
+      align: 'center',
+      render: (item, index) => (
+        <Input
+          placeholder="1"
+          type="text"
+          value={item.quantidade || ''}
+          onChange={(e) => atualizar(index, 'quantidade', e.target.value)}
+          disabled={disabled}
+          className="h-8 w-16 mx-auto text-center"
+        />
+      )
+    },
+    {
+      key: 'unidade',
+      header: 'Unidade',
+      width: 'w-24',
+      align: 'center',
+      render: (item, index) => (
+        <Input
+          placeholder="un"
+          type="text"
+          value={item.unidade || ''}
+          onChange={(e) => atualizar(index, 'unidade', e.target.value)}
+          disabled={disabled}
+          className="h-8 w-20 mx-auto text-center"
+        />
+      )
+    },
+    {
+      key: 'obrigatorio',
+      header: 'Obrigatório',
+      width: 'w-28',
+      align: 'center',
+      render: (item, index) => (
+        <input
+          type="checkbox"
+          checked={item.obrigatorio}
+          onChange={(e) => atualizar(index, 'obrigatorio', e.target.checked)}
+          disabled={disabled}
+          className="accent-foreground"
+          title="Obrigatório"
+        />
+      )
+    }
+  ];
+
+  // Sem título próprio: o BaseModal ja renderiza o cabecalho do grupo.
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-medium">Recursos Necessários</label>
-        <Button type="button" variant="outline" size="sm" onClick={adicionar} disabled={disabled}>
-          <Plus className="h-4 w-4 mr-1" />
-          Adicionar
-        </Button>
-      </div>
-
-      {recursos.length === 0 && (
-        <div className="text-center p-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
-          <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Nenhum recurso adicionado</p>
-        </div>
-      )}
-
-      <div className="space-y-3">
-        {recursos.map((recurso, index) => (
-          <div key={index} className="p-4 border rounded-lg bg-muted/20">
-            <div className="flex flex-col sm:flex-row items-start gap-3">
-              <div className="flex-1 w-full space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-medium mb-1 block">Tipo</label>
-                    <select
-                      value={recurso.tipo}
-                      onChange={(e) => atualizar(index, 'tipo', e.target.value)}
-                      disabled={disabled}
-                      className="w-full p-2 text-sm border rounded bg-background text-foreground"
-                    >
-                      <option value="PECA">Peça</option>
-                      <option value="MATERIAL">Material</option>
-                      <option value="FERRAMENTA">Ferramenta</option>
-                      <option value="TECNICO">Técnico</option>
-                      <option value="VIATURA">Viatura</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium mb-1 block">Descrição</label>
-                    <Input
-                      placeholder="Descrição do recurso..."
-                      value={recurso.descricao}
-                      onChange={(e) => atualizar(index, 'descricao', e.target.value)}
-                      disabled={disabled}
-                      className="text-sm"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm whitespace-nowrap">Qtd:</span>
-                    <Input
-                      type="text"
-                      value={recurso.quantidade || ''}
-                      onChange={(e) => atualizar(index, 'quantidade', e.target.value)}
-                      disabled={disabled}
-                      className="w-20 text-sm"
-                      placeholder="Ex: 25"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm whitespace-nowrap">Unidade:</span>
-                    <Input
-                      value={recurso.unidade || ''}
-                      onChange={(e) => atualizar(index, 'unidade', e.target.value)}
-                      disabled={disabled}
-                      className="w-24 text-sm"
-                      placeholder="Ex: un, kg, L"
-                    />
-                  </div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={recurso.obrigatorio}
-                      onChange={(e) => atualizar(index, 'obrigatorio', e.target.checked)}
-                      disabled={disabled}
-                    />
-                    <span className="text-sm whitespace-nowrap">Obrigatório</span>
-                  </label>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => remover(index)}
-                disabled={disabled}
-                className="text-red-600 hover:text-red-700 self-end sm:self-start"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+    <ItensOrdenaveisTable
+      itens={recursos}
+      colunas={colunas}
+      onReordenar={reordenar}
+      onRemover={remover}
+      onAdicionar={adicionar}
+      textoAdicionar="Adicionar"
+      vazioTexto="Nenhum recurso adicionado"
+      vazioIcone={<Package className="h-8 w-8" />}
+      disabled={disabled}
+      resumo={[
+        { icone: <Package className="h-3.5 w-3.5" />, label: 'Total de recursos', valor: recursos.length },
+        {
+          icone: <CheckCircle2 className="h-3.5 w-3.5" />,
+          label: 'Obrigatórios',
+          valor: recursos.filter((item) => item.obrigatorio).length
+        }
+      ]}
+    />
   );
 }

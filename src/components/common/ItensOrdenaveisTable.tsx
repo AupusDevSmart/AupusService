@@ -1,0 +1,203 @@
+// src/components/common/ItensOrdenaveisTable.tsx
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { GripVertical, Plus, Trash2 } from 'lucide-react';
+
+export interface ColunaItemOrdenavel<T> {
+  key: string;
+  header: string;
+  /** Classe de largura da coluna (ex: 'w-28'). Sem valor, a coluna estica. */
+  width?: string;
+  align?: 'left' | 'center';
+  render: (item: T, index: number) => React.ReactNode;
+}
+
+export interface ResumoItem {
+  icone: React.ReactNode;
+  label: string;
+  valor: React.ReactNode;
+}
+
+interface ItensOrdenaveisTableProps<T> {
+  itens: T[];
+  colunas: Array<ColunaItemOrdenavel<T>>;
+  onReordenar: (origem: number, destino: number) => void;
+  onRemover: (index: number) => void;
+  onAdicionar: () => void;
+  textoAdicionar: string;
+  vazioTexto: string;
+  vazioIcone?: React.ReactNode;
+  resumo?: ResumoItem[];
+  disabled?: boolean;
+}
+
+export function ItensOrdenaveisTable<T>({
+  itens,
+  colunas,
+  onReordenar,
+  onRemover,
+  onAdicionar,
+  textoAdicionar,
+  vazioTexto,
+  vazioIcone,
+  resumo,
+  disabled = false
+}: ItensOrdenaveisTableProps<T>) {
+  const [arrastando, setArrastando] = React.useState<number | null>(null);
+  const [alvo, setAlvo] = React.useState<number | null>(null);
+  // O draggable fica desligado até o mouse descer sobre a alça: com a linha
+  // inteira arrastável não dá para selecionar texto dentro dos inputs.
+  const [alcaAtiva, setAlcaAtiva] = React.useState(false);
+
+  const podeEditar = !disabled;
+  const totalColunas = colunas.length + (podeEditar ? 2 : 1);
+
+  const limparArraste = () => {
+    setArrastando(null);
+    setAlvo(null);
+    setAlcaAtiva(false);
+  };
+
+  const handleDrop = (destino: number) => {
+    if (arrastando !== null && arrastando !== destino) {
+      onReordenar(arrastando, destino);
+    }
+    limparArraste();
+  };
+
+  return (
+    <div className="space-y-2">
+      {podeEditar && (
+        <div className="flex justify-end">
+          {/* dark:bg-black: o variant outline usa bg-background (navy no dark) e
+              ficava destoando dos campos, que sao pretos. */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onAdicionar}
+            className="h-8 dark:bg-black"
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
+            {textoAdicionar}
+          </Button>
+        </div>
+      )}
+
+      {itens.length === 0 ? (
+        <div className="border border-dashed rounded-md py-8 text-center">
+          {vazioIcone && <div className="mb-2 flex justify-center text-muted-foreground/50">{vazioIcone}</div>}
+          <p className="text-sm text-muted-foreground">{vazioTexto}</p>
+        </div>
+      ) : (
+        <div className="border rounded-md overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/50 border-b">
+                  {podeEditar && <th className="w-8" />}
+                  <th className="w-10 px-2 py-2 text-center text-xs font-medium text-muted-foreground">#</th>
+                  {colunas.map((coluna) => (
+                    <th
+                      key={coluna.key}
+                      className={`px-2 py-2 text-xs font-medium text-muted-foreground ${
+                        coluna.align === 'center' ? 'text-center' : 'text-left'
+                      } ${coluna.width || ''}`}
+                    >
+                      {coluna.header}
+                    </th>
+                  ))}
+                  {podeEditar && (
+                    <th className="w-16 px-2 py-2 text-center text-xs font-medium text-muted-foreground">
+                      Ações
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {itens.map((item, index) => (
+                  <tr
+                    key={index}
+                    draggable={alcaAtiva && podeEditar}
+                    onDragStart={(event) => {
+                      setArrastando(index);
+                      event.dataTransfer.effectAllowed = 'move';
+                    }}
+                    onDragOver={(event) => {
+                      if (arrastando === null) return;
+                      event.preventDefault();
+                      setAlvo(index);
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      handleDrop(index);
+                    }}
+                    onDragEnd={limparArraste}
+                    className={`transition-colors ${
+                      arrastando === index ? 'opacity-40' : ''
+                    } ${alvo === index && arrastando !== index ? 'bg-muted' : 'hover:bg-muted/30'}`}
+                  >
+                    {podeEditar && (
+                      <td className="px-1 align-middle">
+                        <span
+                          onMouseDown={() => setAlcaAtiva(true)}
+                          onMouseUp={() => setAlcaAtiva(false)}
+                          className="flex cursor-grab justify-center text-muted-foreground/60 hover:text-muted-foreground active:cursor-grabbing"
+                          title="Arraste para reordenar"
+                        >
+                          <GripVertical className="h-4 w-4" />
+                        </span>
+                      </td>
+                    )}
+                    <td className="px-2 py-1.5 text-center text-xs text-muted-foreground">{index + 1}</td>
+                    {colunas.map((coluna) => (
+                      <td
+                        key={coluna.key}
+                        className={`px-2 py-1.5 align-middle ${coluna.align === 'center' ? 'text-center' : ''}`}
+                      >
+                        {coluna.render(item, index)}
+                      </td>
+                    ))}
+                    {podeEditar && (
+                      <td className="px-2 py-1.5 text-center align-middle">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => onRemover(index)}
+                          className="h-8 w-8 dark:bg-black text-muted-foreground hover:text-destructive"
+                          title="Remover"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+              {resumo && resumo.length > 0 && (
+                <tfoot>
+                  <tr className="bg-muted/30 border-t">
+                    <td colSpan={totalColunas} className="px-3 py-2">
+                      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
+                        {resumo.map((item) => (
+                          <span
+                            key={item.label}
+                            className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                          >
+                            <span className="text-muted-foreground/60">{item.icone}</span>
+                            {item.label}: <span className="font-medium text-foreground">{item.valor}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
