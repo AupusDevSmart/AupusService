@@ -16,7 +16,6 @@ import {
   Package,
   PlayCircle,
   Layers,
-  Tag,
   LayoutDashboard,
   CalendarDays,
   Clock,
@@ -109,14 +108,8 @@ export const navigationLinks: Array<NavigationLink> = [
         label: 'Planos de Manutenção',
         hint: 'Planos de Manutenção',
       },
-      {
-        key: 'tarefas',
-        featureKey: 'manutencao.manage',
-        path: '/tarefas',
-        icon: Tag,
-        label: 'Tarefas',
-        hint: 'Tarefas',
-      },
+      // Tarefas nao tem mais pagina propria: sao cadastradas e editadas dentro
+      // da linha expandida de cada plano em /planos-manutencao.
       {
         key: 'instrucoes',
         featureKey: 'manutencao.manage',
