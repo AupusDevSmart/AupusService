@@ -84,10 +84,6 @@ export function configureAxios() {
  */
 api.interceptors.response.use(
   (response) => {
-    // Log para debug de programacao-os
-    if (response.config.url?.includes('programacao-os')) {
-    }
-
     // Desempacotar resposta padrão da API: { success: true, data: {...}, meta: {...} }
     if (response.data && response.data.success && response.data.data !== undefined) {
       return { ...response, data: response.data.data };

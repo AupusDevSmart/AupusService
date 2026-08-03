@@ -256,17 +256,20 @@ export function getActiveFiltersCount(filters: Record<string, any>): number {
 
 export function formatFilterValue(key: string, value: string, plantas: PlantaResponse[]): string {
   switch (key) {
-    case 'tipo':
+    case 'tipo': {
       const tipo = TIPOS_FERIADO.find(t => t.value === value);
       return tipo?.label || value;
+    }
 
-    case 'plantaId':
+    case 'plantaId': {
       const planta = plantas.find(p => p.id === value);
       return planta?.nome || value;
+    }
 
-    case 'mes':
+    case 'mes': {
       const mes = MESES.find(m => m.value === value);
       return mes?.label || value;
+    }
 
     case 'geral':
       return value === 'true' ? 'Geral' : 'Específica';

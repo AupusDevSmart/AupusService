@@ -46,51 +46,9 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
   const isViewMode = mode === 'view';
   const isEditMode = mode === 'edit';
 
-  // ==============================================
-  // MODO VIEW/EDIT: Apenas exibir dados (SEM carregar listas)
-  // ==============================================
-  if (isViewMode || isEditMode) {
-    const plantaNome = value?.planta_nome || 'Planta não informada';
-    const unidadeNome = value?.unidade_nome || 'Unidade não informada';
-    const equipamentoNome = value?.equipamento_nome || 'Equipamento não informado';
-
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Planta */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Planta/Local</label>
-          <div className="p-3 border rounded-md bg-muted/30">
-            <div className="text-sm font-medium">{plantaNome}</div>
-          </div>
-        </div>
-
-        {/* Unidade */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Unidade</label>
-          <div className="p-3 border rounded-md bg-muted/30">
-            <div className="text-sm font-medium">{unidadeNome}</div>
-          </div>
-        </div>
-
-        {/* Equipamento */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Equipamento</label>
-          <div className="p-3 border rounded-md bg-muted/30">
-            <div className="text-sm font-medium">{equipamentoNome}</div>
-            {value?.equipamento_tipo && (
-              <div className="text-xs text-muted-foreground mt-1">
-                Tipo: {value.equipamento_tipo}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ==============================================
-  // MODO CREATE: Carregar listas e permitir seleção
-  // ==============================================
+  // Todos os hooks ficam antes de qualquer return: o retorno antecipado do modo
+  // view/edit vinha antes destes e mudava a quantidade de hooks entre renders,
+  // violando as regras de hooks. Cada efeito ja se protege com isCreateMode.
 
   // Carregar plantas (apenas no modo create)
   React.useEffect(() => {
@@ -226,6 +184,51 @@ export const PlantaEquipamentoController: React.FC<PlantaEquipamentoControllerPr
     [equipamentos],
   );
 
+  // ==============================================
+  // MODO VIEW/EDIT: Apenas exibir dados (SEM carregar listas)
+  // ==============================================
+  if (isViewMode || isEditMode) {
+    const plantaNome = value?.planta_nome || 'Planta não informada';
+    const unidadeNome = value?.unidade_nome || 'Unidade não informada';
+    const equipamentoNome = value?.equipamento_nome || 'Equipamento não informado';
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Planta */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Planta/Local</label>
+          <div className="p-3 border rounded-md bg-muted/30">
+            <div className="text-sm font-medium">{plantaNome}</div>
+          </div>
+        </div>
+
+        {/* Unidade */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Unidade</label>
+          <div className="p-3 border rounded-md bg-muted/30">
+            <div className="text-sm font-medium">{unidadeNome}</div>
+          </div>
+        </div>
+
+        {/* Equipamento */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Equipamento</label>
+          <div className="p-3 border rounded-md bg-muted/30">
+            <div className="text-sm font-medium">{equipamentoNome}</div>
+            {value?.equipamento_tipo && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Tipo: {value.equipamento_tipo}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ==============================================
+  // MODO CREATE: Selecao em cascata planta > unidade > equipamento
+  // ==============================================
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <ComboboxField

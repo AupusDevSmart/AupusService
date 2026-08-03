@@ -249,7 +249,6 @@ export interface UseModalResult<T> {
 }
 
 // ✅ ADICIONADO: Tipos para componentes de modal (legados)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export interface ModalEntity<_T = any> extends BaseEntity {
   [key: string]: any;
 }
