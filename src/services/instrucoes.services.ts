@@ -63,7 +63,8 @@ export interface AdicionarAoPlanoApiData {
   plano_manutencao_id: string;
   frequencia: FrequenciaTarefa;
   frequencia_personalizada?: number;
-  ordem: number;
+  ordem?: number;          // Omitida: backend usa a proxima ordem livre do plano
+  criticidade?: number;    // Omitida: herda a criticidade da instrucao
   criado_por?: string;
 }
 

@@ -19,6 +19,7 @@ import {
   UpdatePlanoManutencaoApiData
 } from '@/services/planos-manutencao.services';
 import { PlanosModal } from './PlanosModal';
+import { TarefasExpandedRow } from './TarefasExpandedRow';
 import { TarefasModal } from '@/features/tarefas/components/TarefasModal';
 import { tarefasFormFields } from '@/features/tarefas/config/form-config';
 import { InstrucoesApiService } from '@/services/instrucoes.services';
@@ -60,6 +61,10 @@ export function PlanosManutencaoPage() {
   const [tarefasPendentes, setTarefasPendentes] = useState<any[]>([]);
   // Opções de instruções para o modal de tarefa
   const [tarefaFormFieldsEnriched, setTarefaFormFieldsEnriched] = useState(tarefasFormFieldsFromPlano);
+  const [instrucoesOptions, setInstrucoesOptions] = useState<Array<{ value: string; label: string }>>([]);
+  // Linha expandida da tabela (uma por vez) + gatilho de recarga das tarefas
+  const [expandedPlanoId, setExpandedPlanoId] = useState<string | null>(null);
+  const [tarefasRefreshToken, setTarefasRefreshToken] = useState(0);
 
   // Hooks customizados
   const { filterConfig, formFields, loadFilterOptions } = usePlanosFilters(initialFilters);
@@ -92,6 +97,7 @@ export function PlanosManutencaoPage() {
           value: inst.id,
           label: `${inst.tag ? inst.tag + ' - ' : ''}${inst.nome}`
         }));
+      setInstrucoesOptions(options);
       setTarefaFormFieldsEnriched(
         tarefasFormFieldsFromPlano.map(f =>
           f.key === 'instrucao_id' ? { ...f, options, onAnexosCopied: handleAnexosCopied } : f
@@ -173,8 +179,13 @@ export function PlanosManutencaoPage() {
           let criadas = 0;
           for (const tarefaData of tarefasPendentes) {
             try {
+              // `tag` aqui e so o rotulo local da lista de pendentes ("Nova-1").
+              // A TAG real e gerada pelo backend, que ainda por cima tem unique
+              // global — persistir o rotulo colidiria no proximo plano.
+              const { tag: _tagLocal, ...tarefaSemTagLocal } = tarefaData;
+
               await tarefasApi.create({
-                ...tarefaData,
+                ...tarefaSemTagLocal,
                 plano_manutencao_id: planoResult.id,
                 equipamento_id: data.equipamento_id,
                 criticidade: Number(tarefaData.criticidade) || 3,
@@ -234,6 +245,32 @@ export function PlanosManutencaoPage() {
     setTarefaModal({ isOpen: true, mode: 'create', entity: null });
     setTarefaPendingFiles([]);
   };
+
+  // ============================
+  // Handlers da linha expandida
+  // ============================
+
+  const handleRowToggle = useCallback((plano: PlanoManutencaoApiResponse) => {
+    const planoId = plano.id?.trim() || '';
+    setExpandedPlanoId((atual) => (atual === planoId ? null : planoId));
+  }, []);
+
+  // Ver/editar a partir da linha expandida sempre vão pela API — o desvio de
+  // tarefa pendente do handleEditTarefa só existe no modo create do plano.
+  const abrirTarefaDaLinha = async (tarefa: TarefaApiResponse, mode: 'view' | 'edit') => {
+    setTarefaPendingFiles([]);
+    try {
+      const tarefaCompleta = await tarefasApi.findOne(tarefa.id.trim());
+      setTarefaModal({ isOpen: true, mode, entity: tarefaCompleta });
+    } catch (error) {
+      console.error('Erro ao carregar tarefa:', error);
+      setTarefaModal({ isOpen: true, mode, entity: tarefa });
+    }
+  };
+
+  const handleTarefasChange = useCallback(async () => {
+    await loadData();
+  }, [filters]);
 
   const handleEditTarefa = async (tarefa: any) => {
     // No modo create do plano, editar tarefa pendente local
@@ -335,6 +372,8 @@ export function PlanosManutencaoPage() {
       }
 
       setTarefaModal({ isOpen: false, mode: 'create', entity: null });
+      // Recarrega a linha expandida, se houver uma aberta
+      setTarefasRefreshToken((token) => token + 1);
       if (modalState.entity) {
         await carregarTarefas(modalState.entity.id);
       }
@@ -410,6 +449,18 @@ export function PlanosManutencaoPage() {
               emptyMessage="Nenhum plano de manutenção encontrado."
               emptyIcon={<Layers className="h-8 w-8 text-muted-foreground/50" />}
               customActions={customActions}
+              expandedRowId={expandedPlanoId}
+              onRowToggle={handleRowToggle}
+              renderExpandedRow={(plano) => (
+                <TarefasExpandedRow
+                  planoId={plano.id}
+                  instrucoesOptions={instrucoesOptions}
+                  refreshToken={tarefasRefreshToken}
+                  onVerTarefa={(tarefa) => abrirTarefaDaLinha(tarefa, 'view')}
+                  onEditarTarefa={(tarefa) => abrirTarefaDaLinha(tarefa, 'edit')}
+                  onTarefasChange={handleTarefasChange}
+                />
+              )}
             />
           </div>
         </div>
