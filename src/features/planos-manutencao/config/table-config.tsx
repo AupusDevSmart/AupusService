@@ -2,7 +2,7 @@
 import { TableColumn } from '@/types/base';
 import { PlanoManutencaoApiResponse } from '@/services/planos-manutencao.services';
 import { PlanoInfoCell } from '../components/table-cells/PlanoInfoCell';
-import { EquipamentoLocalCell } from '../components/table-cells/EquipamentoLocalCell';
+import { CategoriaAplicacaoCell } from '../components/table-cells/CategoriaAplicacaoCell';
 import { TarefasStatsCell } from '../components/table-cells/TarefasStatsCell';
 
 export const planosTableColumns: TableColumn<PlanoManutencaoApiResponse>[] = [
@@ -13,9 +13,9 @@ export const planosTableColumns: TableColumn<PlanoManutencaoApiResponse>[] = [
     render: (plano) => <PlanoInfoCell plano={plano} />
   },
   {
-    key: 'equipamento_local',
-    label: 'Equipamento & Local',
-    render: (plano) => <EquipamentoLocalCell plano={plano} />
+    key: 'categoria_aplicacao',
+    label: 'Categoria & Uso',
+    render: (plano) => <CategoriaAplicacaoCell plano={plano} />
   },
   {
     key: 'tarefas_estatisticas',

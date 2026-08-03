@@ -5,8 +5,6 @@ import { ConfiguracoesDiasUteisPage, FeriadosPage } from './features/agenda';
 import { ExecucaoOSPage } from './features/execucao-os';
 import { FerramentasPage } from './features/ferramentas/components/FerramentasPage';
 import { FornecedoresPage } from './features/fornecedores/components/FornecedoresPage';
-import { AssociacaoEquipamentosPage } from './features/planos-manutencao/components/AssociacaoEquipamentosPage';
-import { ClonagemPlanosPage } from './features/planos-manutencao/components/ClonagemPlanosPage';
 import { PlanosManutencaoPage } from './features/planos-manutencao/components/PlanosManutencaoPage';
 import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
@@ -232,22 +230,9 @@ export const appRoutes = createBrowserRouter([
           </FeatureWrapper>
         ),
       },
-      {
-        path: 'planos-manutencao/associar',
-        element: (
-          <FeatureWrapper feature="manutencao.manage">
-            <AssociacaoEquipamentosPage />
-          </FeatureWrapper>
-        ),
-      },
-      {
-        path: 'planos-manutencao/clonar',
-        element: (
-          <FeatureWrapper feature="manutencao.manage">
-            <ClonagemPlanosPage />
-          </FeatureWrapper>
-        ),
-      },
+      // As telas de associacao em lote e clonagem de planos foram removidas: o
+      // plano agora e template de categoria e o vinculo com equipamento sai do
+      // sheet do proprio equipamento, copiando o template.
       // ✅ NOVA: Rotas para agenda
       {
         path: 'agenda/feriados',

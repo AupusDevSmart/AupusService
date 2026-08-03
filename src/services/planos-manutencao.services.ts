@@ -12,7 +12,7 @@ export type StatusPlano = 'ATIVO' | 'INATIVO' | 'EM_REVISAO' | 'ARQUIVADO';
 // ============================================================================
 
 export interface CreatePlanoManutencaoApiData {
-  equipamento_id: string;           // Obrigatório - ID do equipamento
+  categoria_id: string;             // Obrigatório - categoria de equipamento do template
   nome: string;                     // Obrigatório - Nome do plano (máx 200 chars)
   descricao?: string;               // Opcional - Descrição do plano
   versao?: string;                  // Opcional - Versão (máx 20 chars, padrão: "1.0")
@@ -95,6 +95,11 @@ export interface TarefaResumoDto {
 
 export interface PlanoManutencaoApiResponse {
   id: string;
+  categoria_id?: string;                  // Preenchido no template
+  plano_origem_id?: string;               // Preenchido na copia por equipamento
+  is_template?: boolean;
+  total_equipamentos_vinculados?: number;
+  categoria?: { id: string; nome: string };
   equipamento_id: string;
   nome: string;
   descricao?: string;

@@ -1,34 +1,25 @@
 // src/features/planos-manutencao/config/form-config.tsx
 import { FormField } from '@/types/base';
-import { PlantaEquipamentoController } from '../components/PlantaEquipamentoController';
+import { CategoriaSelector } from '../components/CategoriaSelector';
 
 export const planosFormFields: FormField[] = [
   // Informações Básicas
   {
-    key: 'planta_equipamento',
-    label: 'Localização',
+    key: 'categoria_id',
+    label: 'Categoria de Equipamento',
     type: 'custom',
     required: true,
     group: 'informacoes_basicas',
     colSpan: 2,
-    render: (props) => {
-      return (
-        <PlantaEquipamentoController
-          value={props.value}
-          onChange={(newValue) => {
-            props.onChange(newValue);
-            // Também atualizar o campo equipamento_id diretamente
-            if (props.onMultipleChange && newValue.equipamento_id) {
-              props.onMultipleChange({
-                equipamento_id: newValue.equipamento_id
-              });
-            }
-          }}
-          disabled={props.disabled}
-          mode={props.mode as 'view' | 'create' | 'edit' | undefined}
-        />
-      );
-    }
+    render: (props) => (
+      <CategoriaSelector
+        value={props.value as string}
+        onChange={props.onChange}
+        disabled={props.disabled}
+        mode={props.mode as 'view' | 'create' | 'edit' | undefined}
+        categoriaNome={(props.entity as { categoria?: { nome?: string } })?.categoria?.nome}
+      />
+    )
   },
   {
     key: 'nome',

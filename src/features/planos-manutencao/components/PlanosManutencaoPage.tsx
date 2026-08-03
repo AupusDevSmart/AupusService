@@ -166,7 +166,7 @@ export function PlanosManutencaoPage() {
         }
 
         const createData: CreatePlanoManutencaoApiData = {
-          equipamento_id: data.equipamento_id,
+          categoria_id: (data.categoria_id || '').trim(),
           nome: data.nome,
           descricao: data.descricao,
           versao: data.versao || '1.0',
@@ -205,6 +205,7 @@ export function PlanosManutencaoPage() {
         }
       } else if (modalState.mode === 'edit' && modalState.entity) {
         const updateData: UpdatePlanoManutencaoApiData = {
+          categoria_id: (data.categoria_id || '').trim() || undefined,
           nome: data.nome,
           descricao: data.descricao,
           versao: data.versao
