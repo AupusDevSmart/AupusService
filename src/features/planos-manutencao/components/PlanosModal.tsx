@@ -42,60 +42,30 @@ export function PlanosModal({
     return titles[mode] || 'Plano de Manutenção';
   };
 
+  // O plano e um template de categoria: nao carrega mais planta, unidade nem
+  // equipamento. O vinculo com equipamento acontece no sheet do equipamento.
   const modalEntity = useMemo(() => {
-    if (mode === 'create') {
-      return {
-        id: '',
-        equipamento_id: '',
-        nome: '',
-        descricao: '',
-        versao: '1.0',
-        criado_por: '',
-        planta_equipamento: {
-          planta_id: '',
-          equipamento_id: ''
-        }
-      };
-    }
-
-    if (entity) {
-      // Extrair planta, unidade e equipamento da estrutura aninhada
-      const unidade = (entity.equipamento as any)?.unidade;
-      const planta = unidade?.planta || entity.equipamento?.planta;
-      const plantaId = planta?.id?.trim() || '';
-      const unidadeId = unidade?.id?.trim() || '';
-      const equipamentoId = entity.equipamento_id?.trim() || '';
-
-      return {
-        ...entity,
-        // Campo para o controlador planta/equipamento
-        planta_equipamento: {
-          planta_id: plantaId,
-          unidade_id: unidadeId,
-          equipamento_id: equipamentoId,
-          // Dados para exibição no view
-          planta_nome: planta?.nome || '',
-          unidade_nome: unidade?.nome || '',
-          equipamento_nome: entity.equipamento?.nome || '',
-          equipamento_tipo:
-            (entity.equipamento as any)?.tipo_equipamento || (entity.equipamento as any)?.tipo || ''
-        }
-      };
-    }
-
-    // Fallback
-    return {
+    const vazio = {
       id: '',
-      equipamento_id: '',
+      categoria_id: '',
       nome: '',
       descricao: '',
       versao: '1.0',
-      criado_por: '',
-      planta_equipamento: {
-        planta_id: '',
-        equipamento_id: ''
-      }
+      criado_por: ''
     };
+
+    if (mode === 'create') return vazio;
+
+    if (entity) {
+      return {
+        ...entity,
+        // Char(26) vem com padding do banco; sem trim o Combobox nao casa o
+        // valor selecionado e renderiza vazio em edit/view.
+        categoria_id: (entity.categoria_id || entity.categoria?.id || '').trim()
+      };
+    }
+
+    return vazio;
   }, [entity, mode]);
 
   return (
@@ -113,7 +83,10 @@ export function PlanosModal({
         {
           key: 'informacoes_basicas',
           title: 'Informações Básicas',
-          fields: ['planta_equipamento', 'nome', 'descricao', 'versao']
+          // O grupo lista as chaves explicitamente: campo fora daqui nao
+          // renderiza. Era 'planta_equipamento' antes de o plano virar
+          // template de categoria.
+          fields: ['categoria_id', 'nome', 'descricao', 'versao']
         }
       ]}
     >
