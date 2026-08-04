@@ -21,6 +21,26 @@ export interface CreatePlanoManutencaoApiData {
 
 export interface UpdatePlanoManutencaoApiData extends Partial<CreatePlanoManutencaoApiData> {}
 
+export interface VincularPlanoApiData {
+  equipamento_id: string;
+  plano_id: string;
+}
+
+export interface VincularPlanoApiResponse {
+  plano_id: string;
+  tarefas_copiadas: number;
+  substituiu_vinculo_anterior: boolean;
+  tarefas_proprias_descartadas: number;
+  tarefas_customizadas_descartadas: number;
+}
+
+export interface PreviaDesvinculoApiResponse {
+  possui_plano: boolean;
+  total_tarefas: number;
+  tarefas_proprias: number;
+  tarefas_customizadas: number;
+}
+
 export interface DuplicarPlanoApiData {
   equipamento_destino_id: string;   // Obrigatório - ID do equipamento destino
   novo_nome?: string;               // Opcional - Novo nome do plano (máx 200 chars)
@@ -433,6 +453,40 @@ export class PlanosManutencaoApiService {
       console.error('💥 PLANOS API: Erro ao clonar plano em lote:', error);
       throw error;
     }
+  }
+
+  // ==========================================================================
+  // Vinculo equipamento <-> plano
+  // ==========================================================================
+
+  /** Templates aplicaveis ao equipamento: os da categoria do modelo dele. */
+  async listarTemplatesDoEquipamento(equipamentoId: string): Promise<PlanoManutencaoApiResponse[]> {
+    const response = await api.get<PlanoManutencaoApiResponse[]>(
+      `${this.baseEndpoint}/equipamento/${equipamentoId.trim()}/templates`,
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  }
+
+  async previaDesvinculo(equipamentoId: string): Promise<PreviaDesvinculoApiResponse> {
+    const response = await api.get<PreviaDesvinculoApiResponse>(
+      `${this.baseEndpoint}/equipamento/${equipamentoId.trim()}/previa-desvinculo`,
+    );
+    return response.data;
+  }
+
+  async vincular(data: VincularPlanoApiData): Promise<VincularPlanoApiResponse> {
+    const response = await api.post<VincularPlanoApiResponse>(`${this.baseEndpoint}/vincular`, {
+      equipamento_id: data.equipamento_id.trim(),
+      plano_id: data.plano_id.trim(),
+    });
+    return response.data;
+  }
+
+  async desvincular(equipamentoId: string): Promise<PreviaDesvinculoApiResponse> {
+    const response = await api.delete<PreviaDesvinculoApiResponse>(
+      `${this.baseEndpoint}/equipamento/${equipamentoId.trim()}/vinculo`,
+    );
+    return response.data;
   }
 }
 

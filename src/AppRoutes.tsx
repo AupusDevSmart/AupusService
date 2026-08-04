@@ -6,6 +6,7 @@ import { ExecucaoOSPage } from './features/execucao-os';
 import { FerramentasPage } from './features/ferramentas/components/FerramentasPage';
 import { FornecedoresPage } from './features/fornecedores/components/FornecedoresPage';
 import { PlanosManutencaoPage } from './features/planos-manutencao/components/PlanosManutencaoPage';
+import { PlanoDoEquipamentoSection } from './features/planos-manutencao/components/PlanoDoEquipamentoSection';
 import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
 import { TarefasPage } from './features/tarefas/components/TarefasPage';
@@ -130,7 +131,17 @@ export const appRoutes = createBrowserRouter([
         path: 'cadastros/equipamentos',
         element: (
           <FeatureWrapper feature="equipamentos.view">
-            <EquipamentosPage />
+            {/* A secao de plano so existe no Service: o NexOn consome a mesma
+                pagina do shared-pages sem passar nada aqui. */}
+            <EquipamentosPage
+              renderSecaoExtraUC={(equipamento, mode) => (
+                <PlanoDoEquipamentoSection
+                  equipamentoId={equipamento.id}
+                  classificacao={equipamento.classificacao}
+                  somenteLeitura={mode === 'view'}
+                />
+              )}
+            />
           </FeatureWrapper>
         ),
       },

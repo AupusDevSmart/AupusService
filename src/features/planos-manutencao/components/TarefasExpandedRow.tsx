@@ -7,7 +7,7 @@ import { Combobox } from '@aupus/shared-pages';
 import { Eye, Pencil, Trash2, Plus, ClipboardList } from 'lucide-react';
 import { useUserStore } from '@/store/useUserStore';
 import { tarefasApi, type TarefaApiResponse } from '@/services/tarefas.services';
-import { instrucoesApi, type FrequenciaTarefa } from '@/services/instrucoes.services';
+import { type FrequenciaTarefa } from '@/services/instrucoes.services';
 import { toast } from '@/hooks/use-toast';
 
 const frequenciaOptions: Array<{ value: FrequenciaTarefa; label: string }> = [
@@ -83,6 +83,7 @@ export function TarefasExpandedRow({
 
   // Cadastro rápido: só instrução, periodicidade e criticidade.
   // O restante da tarefa é copiado da instrução pelo backend.
+  const [nome, setNome] = useState('');
   const [instrucaoId, setInstrucaoId] = useState('');
   const [frequencia, setFrequencia] = useState<FrequenciaTarefa>('MENSAL');
   const [frequenciaPersonalizada, setFrequenciaPersonalizada] = useState(30);
@@ -114,10 +115,17 @@ export function TarefasExpandedRow({
     setErro(null);
 
     try {
-      await instrucoesApi.adicionarAoPlano(instrucaoId.trim(), {
-        plano_manutencao_id: planoId.trim(),
+      // Sem nome digitado, herda o da instrução — que é o caso comum
+      const nomeInstrucao = instrucoesOptions
+        .find((o) => o.value === instrucaoId.trim())
+        ?.label?.replace(/^[^-]+ - /, '');
+
+      await tarefasApi.create({
+        nome: (nome || nomeInstrucao || '').trim(),
+        instrucao_id: instrucaoId.trim(),
         frequencia,
         criticidade,
+        plano_manutencao_id: planoId.trim(),
         ...(frequencia === 'PERSONALIZADA' && { frequencia_personalizada: frequenciaPersonalizada }),
         ...(user?.id && { criado_por: user.id })
       });
@@ -125,6 +133,7 @@ export function TarefasExpandedRow({
       // Periodicidade e criticidade ficam como estão: em cadastro em massa a
       // sequência costuma repetir os dois e variar só a instrução.
       setInstrucaoId('');
+      setNome('');
       toast({ title: 'Tarefa adicionada ao plano' });
       await carregarTarefas();
       onTarefasChange?.();
@@ -163,6 +172,17 @@ export function TarefasExpandedRow({
             placeholder="Selecione uma instrução..."
             searchPlaceholder="Buscar instrução..."
             emptyText="Nenhuma instrução encontrada"
+          />
+        </div>
+
+        <div className="w-full lg:w-52">
+          <Label className="text-xs text-muted-foreground mb-1 block">Nome</Label>
+          <Input
+            type="text"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Herda o da instrução"
+            className="h-9"
           />
         </div>
 
@@ -238,6 +258,23 @@ export function TarefasExpandedRow({
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="font-mono">{tarefa.tag}</span>
                   <span>#{tarefa.ordem}</span>
+                  {/* Diz se a tarefa acompanha o plano geral ou se divergiu.
+                      Sem isso o usuário não tem como saber por que uma tarefa
+                      mudou sozinha (herdada) e outra não (customizada). */}
+                  {tarefa.origem_status === 'HERDADA' && (
+                    <span title="Segue o plano geral">herdada</span>
+                  )}
+                  {tarefa.origem_status === 'CUSTOMIZADA' && (
+                    <span
+                      className="text-foreground"
+                      title="Ajustada neste equipamento; não é mais atualizada pelo plano geral"
+                    >
+                      customizada
+                    </span>
+                  )}
+                  {tarefa.origem_status === 'PROPRIA' && (
+                    <span title="Criada neste equipamento">própria</span>
+                  )}
                 </div>
                 <p className="text-sm text-foreground truncate">{tarefa.nome}</p>
               </div>
@@ -251,12 +288,15 @@ export function TarefasExpandedRow({
               </div>
 
               <div className="flex items-center gap-0.5 flex-shrink-0">
+                {/* O detalhe util e a INSTRUCAO: a tarefa em si so tem os
+                    quatro campos que ja estao visiveis na linha. */}
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
                   onClick={() => onVerTarefa(tarefa)}
-                  title="Ver detalhes"
+                  title="Ver instrução"
+                  disabled={!tarefa.instrucao_id}
                 >
                   <Eye className="h-3.5 w-3.5" />
                 </Button>

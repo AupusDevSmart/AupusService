@@ -31,32 +31,24 @@ export interface CreateRecursoTarefaApiData {
   obrigatorio?: boolean;
 }
 
+/**
+ * A tarefa tem quatro campos. Todo o conteudo (descricao, categoria, tipo,
+ * duracao, sub-etapas, recursos) vive na INSTRUCAO e e lido de la — inclusive
+ * pelo checklist da OS. A tarefa e o vinculo entre um plano e uma instrucao,
+ * com a periodicidade e a criticidade daquele contexto.
+ */
 export interface CreateTarefaApiData {
-  plano_manutencao_id?: string;        // Agora opcional: ID do plano de manutenção
-  tag?: string;                       // Opcional: Auto-gerado se não fornecido
-  nome: string;                       // Obrigatório: Nome da tarefa (máx 200 chars)
-  descricao: string;                  // Obrigatório: Descrição da tarefa
-  categoria: CategoriaTarefa;         // Obrigatório: Categoria da tarefa
-  tipo_manutencao: TipoManutencao;    // Obrigatório: Tipo de manutenção
-  frequencia: FrequenciaTarefa;       // Obrigatório: Frequência
-  frequencia_personalizada?: number;  // Opcional: Frequência customizada em dias
-  condicao_ativo: CondicaoAtivo;      // Obrigatório: Condição do ativo
-  criticidade: number;                // Obrigatório: Criticidade (1-5)
-  duracao_estimada: number;           // Obrigatório: Duração estimada
-  tempo_estimado: number;             // Obrigatório: Tempo estimado em minutos
-  ordem: number;                      // Obrigatório: Ordem da tarefa no plano
-  planejador?: string;                // Opcional: Nome do planejador
-  responsavel?: string;               // Opcional: Pessoa responsável
-  observacoes?: string;               // Opcional: Observações
-  status?: StatusTarefa;              // Opcional: Status (padrão: ATIVA)
-  ativo?: boolean;                    // Opcional: Flag ativo (padrão: true)
-  criado_por?: string;                // Opcional: ID do usuário criador
-  equipamento_id?: string;            // Opcional: ID do equipamento
-  instrucao_id?: string;              // Opcional: ID da instrução de origem
-  data_ultima_execucao?: Date;        // Opcional: Data da última execução
-  numero_execucoes?: number;          // Opcional: Número de execuções (padrão: 0)
-  sub_tarefas?: CreateSubTarefaApiData[]; // Opcional: Array de sub-tarefas
-  recursos?: CreateRecursoTarefaApiData[]; // Opcional: Array de recursos
+  nome: string;                       // Obrigatório
+  instrucao_id: string;               // Obrigatório: o que deve ser feito
+  frequencia: FrequenciaTarefa;       // Obrigatório: periodicidade
+  frequencia_personalizada?: number;  // Dias, quando a periodicidade é PERSONALIZADA
+  criticidade: number;                // Obrigatório: 1 a 5
+
+  // Contexto
+  plano_manutencao_id?: string;
+  ordem?: number;                     // Omitida: backend usa a próxima livre
+  tag?: string;                       // Omitida: gerada automaticamente
+  criado_por?: string;
 }
 
 export interface UpdateTarefaApiData extends Partial<CreateTarefaApiData> {
@@ -141,9 +133,15 @@ export interface AnexoTarefaDetalhesDto extends AnexoTarefaApiResponse {
   // Extending base response with additional details if needed
 }
 
+export type OrigemTarefa = 'HERDADA' | 'CUSTOMIZADA' | 'REMOVIDA' | 'PROPRIA';
+
 export interface TarefaApiResponse {
   id: string;
   plano_manutencao_id: string;
+  instrucao_id?: string;
+  /** Como a propagação do template trata esta tarefa. Só faz sentido na cópia. */
+  origem_status?: OrigemTarefa;
+  tarefa_origem_id?: string;
   tag: string;                        // TAG única da tarefa
   nome: string;
   descricao: string;
@@ -271,29 +269,18 @@ export interface TarefasListApiResponse {
 // ValidationPipe global usa forbidNonWhitelisted e rejeita com 400. Mesmo motivo
 // vale para as tarefas pendentes do modo create do plano, que carregam id/_tempId
 // locais. Por isso o payload e montado por whitelist em vez de spread.
+// Os quatro campos da tarefa + contexto. O resto do que a tela por acaso tiver
+// em maos (conteudo herdado da instrucao, estado de execucao) nao vai no
+// payload: o DTO do backend nao aceita mais e devolveria 400.
 const CAMPOS_TAREFA = [
-  'plano_manutencao_id',
-  'tag',
   'nome',
-  'descricao',
-  'categoria',
-  'tipo_manutencao',
+  'instrucao_id',
   'frequencia',
   'frequencia_personalizada',
-  'condicao_ativo',
   'criticidade',
-  'duracao_estimada',
-  'tempo_estimado',
+  'plano_manutencao_id',
   'ordem',
-  'planejador',
-  'responsavel',
-  'observacoes',
-  'status',
-  'ativo',
-  'data_ultima_execucao',
-  'numero_execucoes',
-  'equipamento_id',
-  'instrucao_id',
+  'tag',
   'criado_por',
 ] as const;
 
@@ -312,29 +299,6 @@ const CAMPOS_ID_TAREFA = new Set<string>([
 export class TarefasApiService {
   private readonly baseEndpoint = '/tarefas';
 
-  // O backend faz replace (deleteMany + createMany) das sub-estruturas, entao os
-  // campos gerenciados pelo servidor (id, tarefa_id, created_at, updated_at) sao
-  // lixo no payload e derrubam a validacao aninhada.
-  private sanitizeSubTarefas(subs?: CreateSubTarefaApiData[]): CreateSubTarefaApiData[] | undefined {
-    if (!subs) return subs;
-    return subs.map(sub => ({
-      descricao: sub.descricao,
-      obrigatoria: sub.obrigatoria,
-      tempo_estimado: sub.tempo_estimado,
-      ordem: sub.ordem,
-    }));
-  }
-
-  private sanitizeRecursos(recursos?: CreateRecursoTarefaApiData[]): CreateRecursoTarefaApiData[] | undefined {
-    if (!recursos) return recursos;
-    return recursos.map(recurso => ({
-      tipo: recurso.tipo,
-      descricao: recurso.descricao,
-      quantidade: recurso.quantidade,
-      unidade: recurso.unidade,
-      obrigatorio: recurso.obrigatorio,
-    }));
-  }
 
   private montarPayload(
     data: Partial<CreateTarefaApiData> & { atualizado_por?: string },
@@ -350,13 +314,8 @@ export class TarefasApiService {
         CAMPOS_ID_TAREFA.has(campo) && typeof valor === 'string' ? valor.trim() : valor;
     });
 
-    if (data.sub_tarefas !== undefined) {
-      payload.sub_tarefas = this.sanitizeSubTarefas(data.sub_tarefas);
-    }
-    if (data.recursos !== undefined) {
-      payload.recursos = this.sanitizeRecursos(data.recursos);
-    }
-
+    // Sub-etapas e recursos deixaram de pertencer a tarefa: vivem na instrucao
+    // e sao lidos de la. Enviar aqui hoje resulta em 400.
     return payload;
   }
 

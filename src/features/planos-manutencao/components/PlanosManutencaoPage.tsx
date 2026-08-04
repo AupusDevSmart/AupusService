@@ -22,7 +22,9 @@ import { PlanosModal } from './PlanosModal';
 import { TarefasExpandedRow } from './TarefasExpandedRow';
 import { TarefasModal } from '@/features/tarefas/components/TarefasModal';
 import { tarefasFormFields } from '@/features/tarefas/config/form-config';
-import { InstrucoesApiService } from '@/services/instrucoes.services';
+import { InstrucoesApiService, type InstrucaoApiResponse } from '@/services/instrucoes.services';
+import { InstrucoesModal } from '@/features/instrucoes/components/InstrucoesModal';
+import { instrucoesFormFields } from '@/features/instrucoes/config/form-config';
 
 // Campos a esconder quando tarefa é criada dentro do plano (plano/equipamento já definidos)
 const camposPlanoContexto = ['plano_manutencao_id', 'planta_id', 'equipamento_id'];
@@ -63,6 +65,11 @@ export function PlanosManutencaoPage() {
   const [tarefaFormFieldsEnriched, setTarefaFormFieldsEnriched] = useState(tarefasFormFieldsFromPlano);
   const [instrucoesOptions, setInstrucoesOptions] = useState<Array<{ value: string; label: string }>>([]);
   // Linha expandida da tabela (uma por vez) + gatilho de recarga das tarefas
+  // Sheet de instrução aberto pelo "ver detalhes" de uma tarefa
+  const [instrucaoModal, setInstrucaoModal] = useState<{
+    isOpen: boolean;
+    entity: InstrucaoApiResponse | null;
+  }>({ isOpen: false, entity: null });
   const [expandedPlanoId, setExpandedPlanoId] = useState<string | null>(null);
   const [tarefasRefreshToken, setTarefasRefreshToken] = useState(0);
 
@@ -258,6 +265,24 @@ export function PlanosManutencaoPage() {
 
   // Ver/editar a partir da linha expandida sempre vão pela API — o desvio de
   // tarefa pendente do handleEditTarefa só existe no modo create do plano.
+  // O detalhe util de uma tarefa e a INSTRUCAO: a tarefa em si tem so os quatro
+  // campos que ja aparecem na linha. Abre o sheet de instrucao em modo view.
+  const abrirInstrucaoDaTarefa = async (tarefa: TarefaApiResponse) => {
+    const instrucaoId = tarefa.instrucao_id?.trim();
+    if (!instrucaoId) {
+      toast({ title: 'Esta tarefa não tem instrução vinculada', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const instrucao = await instrucoesApi.findOne(instrucaoId);
+      setInstrucaoModal({ isOpen: true, entity: instrucao });
+    } catch (error) {
+      console.error('Erro ao carregar instrução:', error);
+      toast({ title: 'Erro ao carregar a instrução', variant: 'destructive' });
+    }
+  };
+
   const abrirTarefaDaLinha = async (tarefa: TarefaApiResponse, mode: 'view' | 'edit') => {
     setTarefaPendingFiles([]);
     try {
@@ -457,7 +482,7 @@ export function PlanosManutencaoPage() {
                   planoId={plano.id}
                   instrucoesOptions={instrucoesOptions}
                   refreshToken={tarefasRefreshToken}
-                  onVerTarefa={(tarefa) => abrirTarefaDaLinha(tarefa, 'view')}
+                  onVerTarefa={abrirInstrucaoDaTarefa}
                   onEditarTarefa={(tarefa) => abrirTarefaDaLinha(tarefa, 'edit')}
                   onTarefasChange={handleTarefasChange}
                 />
@@ -479,6 +504,17 @@ export function PlanosManutencaoPage() {
           onEditTarefa={handleEditTarefa}
           onDeleteTarefa={handleDeleteTarefa}
           onAddTarefa={handleAddTarefa}
+        />
+
+        {/* Detalhe da tarefa = sheet da instrução, em modo leitura */}
+        <InstrucoesModal
+          isOpen={instrucaoModal.isOpen}
+          mode="view"
+          entity={instrucaoModal.entity}
+          formFields={instrucoesFormFields}
+          onClose={() => setInstrucaoModal({ isOpen: false, entity: null })}
+          onSubmit={async () => {}}
+          onFilesChange={() => {}}
         />
 
         {/* Modal de Tarefa (nested) */}
