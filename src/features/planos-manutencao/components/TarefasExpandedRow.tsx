@@ -53,8 +53,6 @@ interface TarefasExpandedRowProps {
   onTarefasChange?: () => void;
   /** Esconde cadastro, edicao e remocao. Usado no modo view do equipamento. */
   somenteLeitura?: boolean;
-  /** Empilha o formulario em vez de espalhar em linha. Usado dentro de sheet. */
-  compacto?: boolean;
 }
 
 export function TarefasExpandedRow({
@@ -63,8 +61,7 @@ export function TarefasExpandedRow({
   refreshToken = 0,
   onVerTarefa,
   onTarefasChange,
-  somenteLeitura = false,
-  compacto = false
+  somenteLeitura = false
 }: TarefasExpandedRowProps) {
   const { user } = useUserStore();
 
@@ -221,10 +218,12 @@ export function TarefasExpandedRow({
         </div>
       )}
 
-      {/* Cadastro rápido */}
+      {/* Cadastro rápido. Instrucao sozinha na primeira linha: e o unico campo
+          com texto longo e precisa da largura toda. Os outros tres, sendo
+          curtos, cabem numa linha so junto com os botoes. */}
       {!somenteLeitura && mostrandoFormulario && (
-      <div className={`flex flex-col ${compacto ? '' : 'lg:flex-row lg:items-end'} gap-2`}>
-        <div className="flex-1 min-w-0">
+      <div className="space-y-2">
+        <div>
           <Label className="text-xs text-muted-foreground mb-1 block">Instrução</Label>
           <Combobox
             options={instrucoesOptions}
@@ -236,79 +235,81 @@ export function TarefasExpandedRow({
           />
         </div>
 
-        <div className="w-full lg:w-52">
-          <Label className="text-xs text-muted-foreground mb-1 block">Nome</Label>
-          <Input
-            type="text"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Herda o da instrução"
-            className="h-9"
-          />
-        </div>
-
-        <div className="w-full lg:w-44">
-          <Label className="text-xs text-muted-foreground mb-1 block">Periodicidade</Label>
-          <select
-            value={frequencia}
-            onChange={(e) => setFrequencia(e.target.value as FrequenciaTarefa)}
-            className="w-full h-9 px-2 text-sm border rounded bg-background text-foreground"
-          >
-            {frequenciaOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {frequencia === 'PERSONALIZADA' && (
-          <div className="w-full lg:w-32">
-            <Label className="text-xs text-muted-foreground mb-1 block">Dias</Label>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex-1 min-w-[10rem]">
+            <Label className="text-xs text-muted-foreground mb-1 block">Nome</Label>
             <Input
-              type="number"
-              min={1}
-              value={frequenciaPersonalizada}
-              onChange={(e) => setFrequenciaPersonalizada(Number(e.target.value))}
+              type="text"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Herda o da instrução"
               className="h-9"
             />
           </div>
-        )}
 
-        <div className="w-full lg:w-40">
-          <Label className="text-xs text-muted-foreground mb-1 block">Criticidade</Label>
-          <select
-            value={criticidade}
-            onChange={(e) => setCriticidade(Number(e.target.value))}
-            className="w-full h-9 px-2 text-sm border rounded bg-background text-foreground"
-          >
-            {criticidadeOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
+          <div className="w-36">
+            <Label className="text-xs text-muted-foreground mb-1 block">Periodicidade</Label>
+            <select
+              value={frequencia}
+              onChange={(e) => setFrequencia(e.target.value as FrequenciaTarefa)}
+              className="w-full h-9 px-2 text-sm border rounded bg-background text-foreground"
+            >
+              {frequenciaOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
 
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <Button
-            onClick={handleAdicionar}
-            disabled={!instrucaoId || salvando}
-            size="sm"
-            className="h-9"
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            {salvando ? 'Adicionando...' : 'Adicionar'}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-9 dark:bg-black"
-            onClick={() => {
-              setMostrandoFormulario(false);
-              setErro(null);
-            }}
-            disabled={salvando}
-            title="Fechar"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          {frequencia === 'PERSONALIZADA' && (
+            <div className="w-20">
+              <Label className="text-xs text-muted-foreground mb-1 block">Dias</Label>
+              <Input
+                type="number"
+                min={1}
+                value={frequenciaPersonalizada}
+                onChange={(e) => setFrequenciaPersonalizada(Number(e.target.value))}
+                className="h-9"
+              />
+            </div>
+          )}
+
+          <div className="w-36">
+            <Label className="text-xs text-muted-foreground mb-1 block">Criticidade</Label>
+            <select
+              value={criticidade}
+              onChange={(e) => setCriticidade(Number(e.target.value))}
+              className="w-full h-9 px-2 text-sm border rounded bg-background text-foreground"
+            >
+              {criticidadeOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Button
+              onClick={handleAdicionar}
+              disabled={!instrucaoId || salvando}
+              size="sm"
+              className="h-9"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              {salvando ? 'Adicionando...' : 'Adicionar'}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 dark:bg-black"
+              onClick={() => {
+                setMostrandoFormulario(false);
+                setErro(null);
+              }}
+              disabled={salvando}
+              title="Fechar"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
       )}
@@ -333,8 +334,8 @@ export function TarefasExpandedRow({
             editandoId === tarefa.id ? (
               // Edicao inline com os quatro campos. O sheet completo de tarefa
               // mostrava campos que sairam do DTO e devolvia 400 ao salvar.
-              <div key={tarefa.id} className="flex flex-col lg:flex-row lg:items-end gap-2 px-3 py-2 bg-muted/30">
-                <div className="flex-1 min-w-0">
+              <div key={tarefa.id} className="space-y-2 px-3 py-2 bg-muted/30">
+                <div>
                   <Label className="text-xs text-muted-foreground mb-1 block">Instrução</Label>
                   <Combobox
                     options={instrucoesOptions}
@@ -346,7 +347,8 @@ export function TarefasExpandedRow({
                   />
                 </div>
 
-                <div className="w-full lg:w-52">
+                <div className="flex flex-wrap items-end gap-2">
+                <div className="flex-1 min-w-[10rem]">
                   <Label className="text-xs text-muted-foreground mb-1 block">Nome</Label>
                   <Input
                     type="text"
@@ -356,7 +358,7 @@ export function TarefasExpandedRow({
                   />
                 </div>
 
-                <div className="w-full lg:w-44">
+                <div className="w-36">
                   <Label className="text-xs text-muted-foreground mb-1 block">Periodicidade</Label>
                   <select
                     value={edicao.frequencia}
@@ -370,7 +372,7 @@ export function TarefasExpandedRow({
                 </div>
 
                 {edicao.frequencia === 'PERSONALIZADA' && (
-                  <div className="w-full lg:w-28">
+                  <div className="w-20">
                     <Label className="text-xs text-muted-foreground mb-1 block">Dias</Label>
                     <Input
                       type="number"
@@ -384,7 +386,7 @@ export function TarefasExpandedRow({
                   </div>
                 )}
 
-                <div className="w-full lg:w-40">
+                <div className="w-36">
                   <Label className="text-xs text-muted-foreground mb-1 block">Criticidade</Label>
                   <select
                     value={edicao.criticidade}
@@ -411,6 +413,7 @@ export function TarefasExpandedRow({
                   >
                     <X className="h-4 w-4" />
                   </Button>
+                </div>
                 </div>
               </div>
             ) : (
