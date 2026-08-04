@@ -10,7 +10,6 @@ import { useUserStore } from '@/store/useUserStore';
 import { planosTableColumns } from '../config/table-config';
 import { usePlanosManutencaoApi } from '../hooks/usePlanosManutencaoApi';
 import { usePlanosFilters } from '../hooks/usePlanosFilters';
-import { useTarefasPlano } from '../hooks/useTarefasPlano';
 import { usePlanosActions } from '../hooks/usePlanosActions';
 import { createPlanosTableActions } from '../config/actions-config';
 import {
@@ -20,17 +19,12 @@ import {
 } from '@/services/planos-manutencao.services';
 import { PlanosModal } from './PlanosModal';
 import { TarefasExpandedRow } from './TarefasExpandedRow';
-import { TarefasModal } from '@/features/tarefas/components/TarefasModal';
-import { tarefasFormFields } from '@/features/tarefas/config/form-config';
 import { InstrucoesApiService, type InstrucaoApiResponse } from '@/services/instrucoes.services';
 import { InstrucoesModal } from '@/features/instrucoes/components/InstrucoesModal';
 import { instrucoesFormFields } from '@/features/instrucoes/config/form-config';
 
-// Campos a esconder quando tarefa é criada dentro do plano (plano/equipamento já definidos)
-const camposPlanoContexto = ['plano_manutencao_id', 'planta_id', 'equipamento_id'];
-const tarefasFormFieldsFromPlano = tarefasFormFields.filter(f => !camposPlanoContexto.includes(f.key));
 const instrucoesApi = new InstrucoesApiService();
-import { tarefasApi, type TarefaApiResponse } from '@/services/tarefas.services';
+import { type TarefaApiResponse } from '@/services/tarefas.services';
 import { toast } from '@/hooks/use-toast';
 import { formatApiError } from '@/utils/api-error';
 
@@ -52,18 +46,7 @@ export function PlanosManutencaoPage() {
   // Estados locais
   const [filters, setFilters] = useState<PlanosFiltersApi>(initialFilters);
 
-  // Estado do modal de tarefa (nested dentro do modal de plano)
-  const [tarefaModal, setTarefaModal] = useState<{
-    isOpen: boolean;
-    mode: 'create' | 'edit' | 'view';
-    entity: TarefaApiResponse | null;
-    editIndex?: number; // para editar tarefa pendente no modo create
-  }>({ isOpen: false, mode: 'create', entity: null });
-  const [tarefaPendingFiles, setTarefaPendingFiles] = useState<File[]>([]);
-  // Tarefas acumuladas durante criação de plano (antes de salvar)
-  const [tarefasPendentes, setTarefasPendentes] = useState<any[]>([]);
-  // Opções de instruções para o modal de tarefa
-  const [tarefaFormFieldsEnriched, setTarefaFormFieldsEnriched] = useState(tarefasFormFieldsFromPlano);
+  // Opcoes de instrucao para o cadastro rapido da linha expandida
   const [instrucoesOptions, setInstrucoesOptions] = useState<Array<{ value: string; label: string }>>([]);
   // Linha expandida da tabela (uma por vez) + gatilho de recarga das tarefas
   // Sheet de instrução aberto pelo "ver detalhes" de uma tarefa
@@ -72,11 +55,11 @@ export function PlanosManutencaoPage() {
     entity: InstrucaoApiResponse | null;
   }>({ isOpen: false, entity: null });
   const [expandedPlanoId, setExpandedPlanoId] = useState<string | null>(null);
-  const [tarefasRefreshToken, setTarefasRefreshToken] = useState(0);
+  // Muda quando algo fora da linha expandida mexe nas tarefas
+  const [tarefasRefreshToken] = useState(0);
 
   // Hooks customizados
   const { filterConfig, formFields, loadFilterOptions } = usePlanosFilters(initialFilters);
-  const { tarefas, loading: carregandoTarefas, loaded: tarefasLoaded, carregarTarefas, limparTarefas } = useTarefasPlano();
   const {
     loading,
     planos,
@@ -91,11 +74,6 @@ export function PlanosManutencaoPage() {
 
   const { modalState, openModal, closeModal: originalCloseModal } = useGenericModal<PlanoManutencaoApiResponse>();
 
-  // Callback para quando anexos são copiados da instrução
-  const handleAnexosCopied = useCallback((files: File[]) => {
-    setTarefaPendingFiles(prev => [...prev, ...files]);
-  }, []);
-
   // Carregar opções de instruções para o modal de tarefa
   useEffect(() => {
     instrucoesApi.findAll({ limit: 100, status: 'ATIVA' as any }).then((res) => {
@@ -106,13 +84,8 @@ export function PlanosManutencaoPage() {
           label: `${inst.tag ? inst.tag + ' - ' : ''}${inst.nome}`
         }));
       setInstrucoesOptions(options);
-      setTarefaFormFieldsEnriched(
-        tarefasFormFieldsFromPlano.map(f =>
-          f.key === 'instrucao_id' ? { ...f, options, onAnexosCopied: handleAnexosCopied } : f
-        )
-      );
     }).catch(() => {});
-  }, [handleAnexosCopied]);
+  }, []);
 
   // Funções de carregamento
   const loadData = async () => {
@@ -139,12 +112,7 @@ export function PlanosManutencaoPage() {
     onSuccess: reloadAll
   });
 
-  // Wrapper para closeModal
-  const closeModal = () => {
-    limparTarefas();
-    setTarefasPendentes([]);
-    originalCloseModal();
-  };
+  const closeModal = originalCloseModal;
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -156,15 +124,6 @@ export function PlanosManutencaoPage() {
   useEffect(() => {
     loadData();
   }, [filters]);
-
-  // Carregar tarefas quando modal view/edit é aberto
-  useEffect(() => {
-    if (modalState.isOpen && (modalState.mode === 'view' || modalState.mode === 'edit') && modalState.entity) {
-      if (!tarefasLoaded && !carregandoTarefas) {
-        carregarTarefas(modalState.entity.id);
-      }
-    }
-  }, [modalState.isOpen, modalState.mode, modalState.entity, tarefasLoaded, carregandoTarefas, carregarTarefas]);
 
   // Handlers de modal
   const handleSuccess = async () => {
@@ -187,50 +146,10 @@ export function PlanosManutencaoPage() {
           versao: data.versao || '1.0',
           criado_por: user.id
         };
-        const planoResult = await createPlano(createData);
-
-        // Criar tarefas pendentes vinculadas ao plano recém-criado
-        if (tarefasPendentes.length > 0 && planoResult?.id) {
-          let criadas = 0;
-          const falhas: string[] = [];
-          for (const tarefaData of tarefasPendentes) {
-            try {
-              // `tag` aqui e so o rotulo local da lista de pendentes ("Nova-1").
-              // A TAG real e gerada pelo backend, que ainda por cima tem unique
-              // global — persistir o rotulo colidiria no proximo plano.
-              const { tag: _tagLocal, ...tarefaSemTagLocal } = tarefaData;
-
-              await tarefasApi.create({
-                ...tarefaSemTagLocal,
-                plano_manutencao_id: planoResult.id,
-                equipamento_id: data.equipamento_id,
-                criticidade: Number(tarefaData.criticidade) || 3,
-                duracao_estimada: Number(tarefaData.duracao_estimada) || 1,
-                tempo_estimado: Math.round((Number(tarefaData.duracao_estimada) || 1) * 60),
-                criado_por: user.id,
-              });
-              criadas++;
-            } catch (err) {
-              console.error('Erro ao criar tarefa do plano:', err);
-              falhas.push(formatApiError(err));
-            }
-          }
-
-          if (criadas > 0) {
-            toast({ title: `Plano criado com ${criadas} tarefa${criadas > 1 ? 's' : ''}` });
-          }
-
-          // Antes as falhas eram engolidas: o toast dizia "criado com 2
-          // tarefas" e o usuario nunca sabia que outras 3 nao entraram.
-          if (falhas.length > 0) {
-            toast({
-              title: `${falhas.length} tarefa${falhas.length > 1 ? 's' : ''} não ${falhas.length > 1 ? 'foram criadas' : 'foi criada'}`,
-              description: falhas[0],
-              variant: 'destructive'
-            });
-          }
-          setTarefasPendentes([]);
-        }
+        // As tarefas sao cadastradas na linha expandida, depois de o plano
+        // existir. O acumulo de "tarefas pendentes" antes do save sumiu junto
+        // com a secao de tarefas dentro do modal.
+        await createPlano(createData);
       } else if (modalState.mode === 'edit' && modalState.entity) {
         const updateData: UpdatePlanoManutencaoApiData = {
           categoria_id: (data.categoria_id || '').trim() || undefined,
@@ -264,7 +183,6 @@ export function PlanosManutencaoPage() {
   };
 
   const handleEdit = async (plano: PlanoManutencaoApiResponse) => {
-    limparTarefas();
     try {
       const planoCompleto = await getPlano(plano.id, true);
       openModal('edit', planoCompleto);
@@ -276,11 +194,6 @@ export function PlanosManutencaoPage() {
   // ============================
   // Handlers de tarefa (nested)
   // ============================
-
-  const handleAddTarefa = () => {
-    setTarefaModal({ isOpen: true, mode: 'create', entity: null });
-    setTarefaPendingFiles([]);
-  };
 
   // ============================
   // Handlers da linha expandida
@@ -311,136 +224,9 @@ export function PlanosManutencaoPage() {
     }
   };
 
-  const abrirTarefaDaLinha = async (tarefa: TarefaApiResponse, mode: 'view' | 'edit') => {
-    setTarefaPendingFiles([]);
-    try {
-      const tarefaCompleta = await tarefasApi.findOne(tarefa.id.trim());
-      setTarefaModal({ isOpen: true, mode, entity: tarefaCompleta });
-    } catch (error) {
-      console.error('Erro ao carregar tarefa:', error);
-      setTarefaModal({ isOpen: true, mode, entity: tarefa });
-    }
-  };
-
   const handleTarefasChange = useCallback(async () => {
     await loadData();
   }, [filters]);
-
-  const handleEditTarefa = async (tarefa: any) => {
-    // No modo create do plano, editar tarefa pendente local
-    if (modalState.mode === 'create') {
-      const idx = tarefasPendentes.findIndex((t) => t === tarefa || t._tempId === tarefa._tempId);
-      setTarefaModal({ isOpen: true, mode: 'edit', entity: tarefa as any, editIndex: idx >= 0 ? idx : undefined });
-      return;
-    }
-
-    try {
-      const tarefaCompleta = await tarefasApi.findOne((tarefa.id || tarefa.tarefa_id || '').trim());
-      setTarefaModal({ isOpen: true, mode: 'edit', entity: tarefaCompleta });
-    } catch {
-      setTarefaModal({ isOpen: true, mode: 'edit', entity: tarefa });
-    }
-  };
-
-  const handleDeleteTarefa = async (tarefa: any) => {
-    // No modo create do plano, remover tarefa pendente local
-    if (modalState.mode === 'create') {
-      setTarefasPendentes((prev) => prev.filter((t) => t !== tarefa && t._tempId !== tarefa._tempId));
-      return;
-    }
-
-    const tarefaId = (tarefa.id || tarefa.tarefa_id || '').trim();
-    const tarefaNome = tarefa.nome || tarefa.tag || 'esta tarefa';
-
-    if (!confirm(`Deseja remover a tarefa "${tarefaNome}" deste plano?`)) return;
-
-    try {
-      await tarefasApi.remove(tarefaId);
-      toast({ title: 'Tarefa removida' });
-      if (modalState.entity) {
-        await carregarTarefas(modalState.entity.id);
-      }
-    } catch (error) {
-      console.error('Erro ao remover tarefa:', error);
-      toast({ title: 'Erro ao remover tarefa', description: formatApiError(error), variant: 'destructive' });
-    }
-  };
-
-  const handleTarefaSubmit = async (data: any) => {
-    try {
-      // Modo create do plano: acumular tarefas localmente
-      if (modalState.mode === 'create') {
-        const tarefaLocal = {
-          ...data,
-          _tempId: `temp_${Date.now()}`,
-          id: `temp_${Date.now()}`,
-          tag: `Nova-${tarefasPendentes.length + 1}`,
-          nome: data.nome,
-          ordem: tarefasPendentes.length + 1,
-          ativo: true,
-          categoria: data.categoria || 'MECANICA',
-          tipo_manutencao: data.tipo_manutencao || 'PREVENTIVA',
-          tempo_estimado: Math.round((Number(data.duracao_estimada) || 1) * 60),
-          criticidade: Number(data.criticidade) || 3,
-          status: 'ATIVA',
-        };
-
-        if (tarefaModal.editIndex !== undefined && tarefaModal.editIndex >= 0) {
-          // Editar tarefa pendente existente
-          setTarefasPendentes((prev) => {
-            const updated = [...prev];
-            updated[tarefaModal.editIndex!] = { ...updated[tarefaModal.editIndex!], ...tarefaLocal, _tempId: updated[tarefaModal.editIndex!]._tempId };
-            return updated;
-          });
-        } else {
-          setTarefasPendentes((prev) => [...prev, tarefaLocal]);
-        }
-
-        setTarefaModal({ isOpen: false, mode: 'create', entity: null });
-        return;
-      }
-
-      // Modo edit do plano: salvar via API
-      if (tarefaModal.mode === 'create') {
-        const planoId = modalState.entity?.id;
-        const equipamentoId = modalState.entity?.equipamento_id?.trim();
-        await tarefasApi.create({
-          ...data,
-          plano_manutencao_id: planoId,
-          equipamento_id: equipamentoId,
-          criticidade: Number(data.criticidade) || 3,
-          duracao_estimada: Number(data.duracao_estimada) || 1,
-          tempo_estimado: Math.round((Number(data.duracao_estimada) || 1) * 60),
-          ordem: tarefas.length + 1,
-          criado_por: user?.id,
-        });
-        toast({ title: 'Tarefa adicionada' });
-      } else if (tarefaModal.mode === 'edit' && tarefaModal.entity) {
-        await tarefasApi.update(tarefaModal.entity.id.trim(), {
-          ...data,
-          criticidade: Number(data.criticidade) || 3,
-          duracao_estimada: Number(data.duracao_estimada) || 1,
-          tempo_estimado: Math.round((Number(data.duracao_estimada) || 1) * 60),
-        });
-        toast({ title: 'Tarefa atualizada' });
-      }
-
-      setTarefaModal({ isOpen: false, mode: 'create', entity: null });
-      // Recarrega a linha expandida, se houver uma aberta
-      setTarefasRefreshToken((token) => token + 1);
-      if (modalState.entity) {
-        await carregarTarefas(modalState.entity.id);
-      }
-    } catch (error) {
-      console.error('Erro ao salvar tarefa:', error);
-      toast({ title: 'Erro ao salvar tarefa', description: formatApiError(error), variant: 'destructive' });
-    }
-  };
-
-  const closeTarefaModal = () => {
-    setTarefaModal({ isOpen: false, mode: 'create', entity: null });
-    setTarefaPendingFiles([]);
-  };
 
   // Filtros
   const handleFilterChange = (newFilters: Partial<PlanosFiltersApi>) => {
@@ -511,7 +297,6 @@ export function PlanosManutencaoPage() {
                   instrucoesOptions={instrucoesOptions}
                   refreshToken={tarefasRefreshToken}
                   onVerTarefa={abrirInstrucaoDaTarefa}
-                  onEditarTarefa={(tarefa) => abrirTarefaDaLinha(tarefa, 'edit')}
                   onTarefasChange={handleTarefasChange}
                 />
               )}
@@ -525,13 +310,8 @@ export function PlanosManutencaoPage() {
           mode={modalState.mode as 'create' | 'edit' | 'view'}
           entity={modalState.entity}
           formFields={formFields}
-          tarefas={modalState.mode === 'create' ? tarefasPendentes : tarefas}
-          carregandoTarefas={modalState.mode !== 'create' && carregandoTarefas}
           onClose={closeModal}
           onSubmit={handleSubmit}
-          onEditTarefa={handleEditTarefa}
-          onDeleteTarefa={handleDeleteTarefa}
-          onAddTarefa={handleAddTarefa}
         />
 
         {/* Detalhe da tarefa = sheet da instrução, em modo leitura */}
@@ -545,18 +325,7 @@ export function PlanosManutencaoPage() {
           onFilesChange={() => {}}
         />
 
-        {/* Modal de Tarefa (nested) */}
-        <TarefasModal
-          isOpen={tarefaModal.isOpen}
-          mode={tarefaModal.mode}
-          entity={tarefaModal.entity}
-          formFields={tarefaFormFieldsEnriched}
-          pendingFiles={tarefaPendingFiles}
-          onClose={closeTarefaModal}
-          onSubmit={handleTarefaSubmit}
-          onFilesChange={setTarefaPendingFiles}
-        />
-      </Layout.Main>
+        </Layout.Main>
     </Layout>
   );
 }

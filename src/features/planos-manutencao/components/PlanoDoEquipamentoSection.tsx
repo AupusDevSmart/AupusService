@@ -3,6 +3,11 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@aupus/shared-pages';
 import { ClipboardList, Link2, Unlink, AlertTriangle } from 'lucide-react';
+import { TarefasExpandedRow } from './TarefasExpandedRow';
+import { InstrucoesApiService } from '@/services/instrucoes.services';
+import type { TarefaApiResponse } from '@/services/tarefas.services';
+
+const instrucoesApi = new InstrucoesApiService();
 import { toast } from '@/hooks/use-toast';
 import { formatApiError } from '@/utils/api-error';
 import {
@@ -15,6 +20,8 @@ interface PlanoDoEquipamentoSectionProps {
   equipamentoId: string;
   classificacao?: string;
   somenteLeitura?: boolean;
+  /** Abre o sheet da instrução ao clicar em "ver" numa tarefa. */
+  onVerInstrucao?: (tarefa: TarefaApiResponse) => void;
 }
 
 /**
@@ -29,6 +36,7 @@ export function PlanoDoEquipamentoSection({
   equipamentoId,
   classificacao,
   somenteLeitura = false,
+  onVerInstrucao,
 }: PlanoDoEquipamentoSectionProps) {
   const [planoAtual, setPlanoAtual] = React.useState<PlanoManutencaoApiResponse | null>(null);
   const [templates, setTemplates] = React.useState<PlanoManutencaoApiResponse[]>([]);
@@ -36,6 +44,27 @@ export function PlanoDoEquipamentoSection({
   const [selecionado, setSelecionado] = React.useState('');
   const [carregando, setCarregando] = React.useState(true);
   const [salvando, setSalvando] = React.useState(false);
+  const [instrucoesOptions, setInstrucoesOptions] = React.useState<
+    Array<{ value: string; label: string }>
+  >([]);
+  // Sobe a cada vinculo/troca para a lista de tarefas recarregar
+  const [refreshTarefas, setRefreshTarefas] = React.useState(0);
+
+  React.useEffect(() => {
+    instrucoesApi
+      .findAll({ limit: 100, status: 'ATIVA' as never })
+      .then((res) => {
+        setInstrucoesOptions(
+          (res.data || [])
+            .filter((inst) => inst.id && inst.nome)
+            .map((inst) => ({
+              value: inst.id.trim(),
+              label: `${inst.tag ? inst.tag + ' - ' : ''}${inst.nome}`,
+            })),
+        );
+      })
+      .catch(() => setInstrucoesOptions([]));
+  }, []);
 
   const id = equipamentoId?.trim();
   const ehUC = !classificacao || classificacao === 'UC';
@@ -109,6 +138,7 @@ export function PlanoDoEquipamentoSection({
         description: `${resultado.tarefas_copiadas} tarefa${resultado.tarefas_copiadas === 1 ? '' : 's'} copiada${resultado.tarefas_copiadas === 1 ? '' : 's'} do plano.`,
       });
 
+      setRefreshTarefas((n) => n + 1);
       await carregar();
     } catch (error) {
       toast({
@@ -171,14 +201,29 @@ export function PlanoDoEquipamentoSection({
       ) : (
         <>
           {planoAtual && (
-            <div className="border rounded-md p-3 space-y-1">
-              <div className="text-sm font-medium">{planoAtual.nome}</div>
-              <div className="text-xs text-muted-foreground">
-                {previa?.total_tarefas ?? 0} tarefa{(previa?.total_tarefas ?? 0) === 1 ? '' : 's'}
-                {(previa?.tarefas_proprias ?? 0) > 0 && ` · ${previa?.tarefas_proprias} própria(s)`}
-                {(previa?.tarefas_customizadas ?? 0) > 0 &&
-                  ` · ${previa?.tarefas_customizadas} customizada(s)`}
+            <div className="border rounded-md">
+              <div className="p-3 border-b">
+                <div className="text-sm font-medium">{planoAtual.nome}</div>
+                <div className="text-xs text-muted-foreground">
+                  {previa?.total_tarefas ?? 0} tarefa{(previa?.total_tarefas ?? 0) === 1 ? '' : 's'}
+                  {(previa?.tarefas_proprias ?? 0) > 0 && ` · ${previa?.tarefas_proprias} própria(s)`}
+                  {(previa?.tarefas_customizadas ?? 0) > 0 &&
+                    ` · ${previa?.tarefas_customizadas} customizada(s)`}
+                </div>
               </div>
+
+              {/* As tarefas da COPIA moram aqui. A tela de planos so lista
+                  templates, entao sem esta secao as tarefas do equipamento —
+                  e o estado de heranca de cada uma — nao apareceriam em lugar
+                  nenhum, e nao daria para conferir a propagacao. */}
+              <TarefasExpandedRow
+                planoId={planoAtual.id}
+                instrucoesOptions={instrucoesOptions}
+                refreshToken={refreshTarefas}
+                onVerTarefa={onVerInstrucao ?? (() => {})}
+                onTarefasChange={carregar}
+                somenteLeitura={somenteLeitura}
+              />
             </div>
           )}
 

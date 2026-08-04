@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Combobox } from '@aupus/shared-pages';
-import { Eye, Pencil, Trash2, Plus, ClipboardList } from 'lucide-react';
+import { Eye, Pencil, Trash2, Plus, ClipboardList, Check, X } from 'lucide-react';
 import { useUserStore } from '@/store/useUserStore';
 import { tarefasApi, type TarefaApiResponse } from '@/services/tarefas.services';
 import { type FrequenciaTarefa } from '@/services/instrucoes.services';
@@ -42,15 +42,17 @@ const labelFrequencia = (tarefa: TarefaApiResponse): string => {
 
 const labelCriticidade = (criticidade?: number): string =>
   criticidadeOptions.find(opt => opt.value === criticidade)?.label || 'N/A';
+
 interface TarefasExpandedRowProps {
   planoId: string;
   instrucoesOptions: Array<{ value: string; label: string }>;
   // Muda quando a página salva uma tarefa pelo sheet, forçando o recarregamento.
   refreshToken?: number;
   onVerTarefa: (tarefa: TarefaApiResponse) => void;
-  onEditarTarefa: (tarefa: TarefaApiResponse) => void;
   // Avisa a página para atualizar as estatísticas do plano na linha.
   onTarefasChange?: () => void;
+  /** Esconde cadastro, edicao e remocao. Usado no modo view do equipamento. */
+  somenteLeitura?: boolean;
 }
 
 export function TarefasExpandedRow({
@@ -58,8 +60,8 @@ export function TarefasExpandedRow({
   instrucoesOptions,
   refreshToken = 0,
   onVerTarefa,
-  onEditarTarefa,
-  onTarefasChange
+  onTarefasChange,
+  somenteLeitura = false
 }: TarefasExpandedRowProps) {
   const { user } = useUserStore();
 
@@ -75,6 +77,56 @@ export function TarefasExpandedRow({
   const [criticidade, setCriticidade] = useState(3);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  // Edicao inline: os mesmos quatro campos, na propria linha
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [edicao, setEdicao] = useState({
+    nome: '',
+    instrucao_id: '',
+    frequencia: 'MENSAL' as FrequenciaTarefa,
+    frequencia_personalizada: 30,
+    criticidade: 3
+  });
+
+  const abrirEdicao = (tarefa: TarefaApiResponse) => {
+    setErro(null);
+    setEditandoId(tarefa.id);
+    setEdicao({
+      nome: tarefa.nome || '',
+      instrucao_id: (tarefa.instrucao_id || '').trim(),
+      frequencia: (tarefa.frequencia || 'MENSAL') as FrequenciaTarefa,
+      frequencia_personalizada: tarefa.frequencia_personalizada || 30,
+      criticidade: tarefa.criticidade || 3
+    });
+  };
+
+  const handleSalvarEdicao = async () => {
+    if (!editandoId) return;
+
+    setSalvando(true);
+    setErro(null);
+
+    try {
+      await tarefasApi.update(editandoId.trim(), {
+        nome: edicao.nome.trim(),
+        instrucao_id: edicao.instrucao_id,
+        frequencia: edicao.frequencia,
+        criticidade: edicao.criticidade,
+        ...(edicao.frequencia === 'PERSONALIZADA' && {
+          frequencia_personalizada: edicao.frequencia_personalizada
+        })
+      });
+
+      setEditandoId(null);
+      toast({ title: 'Tarefa atualizada' });
+      await carregarTarefas();
+      onTarefasChange?.();
+    } catch (error) {
+      setErro(formatApiError(error));
+    } finally {
+      setSalvando(false);
+    }
+  };
 
   const carregarTarefas = useCallback(async () => {
     setLoading(true);
@@ -147,6 +199,7 @@ export function TarefasExpandedRow({
   return (
     <div className="px-4 py-3 space-y-3 border-t">
       {/* Cadastro rápido */}
+      {!somenteLeitura && (
       <div className="flex flex-col lg:flex-row lg:items-end gap-2">
         <div className="flex-1 min-w-0">
           <Label className="text-xs text-muted-foreground mb-1 block">Instrução</Label>
@@ -220,6 +273,7 @@ export function TarefasExpandedRow({
           {salvando ? 'Adicionando...' : 'Adicionar'}
         </Button>
       </div>
+      )}
 
       {erro && (
         <div className="p-2 text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded">
@@ -237,7 +291,91 @@ export function TarefasExpandedRow({
         </div>
       ) : (
         <div className="border rounded divide-y">
-          {tarefas.map((tarefa) => (
+          {tarefas.map((tarefa) =>
+            editandoId === tarefa.id ? (
+              // Edicao inline com os quatro campos. O sheet completo de tarefa
+              // mostrava campos que sairam do DTO e devolvia 400 ao salvar.
+              <div key={tarefa.id} className="flex flex-col lg:flex-row lg:items-end gap-2 px-3 py-2 bg-muted/30">
+                <div className="flex-1 min-w-0">
+                  <Label className="text-xs text-muted-foreground mb-1 block">Instrução</Label>
+                  <Combobox
+                    options={instrucoesOptions}
+                    value={edicao.instrucao_id || undefined}
+                    onValueChange={(val) => setEdicao((e) => ({ ...e, instrucao_id: (val || '').trim() }))}
+                    placeholder="Selecione uma instrução..."
+                    searchPlaceholder="Buscar instrução..."
+                    emptyText="Nenhuma instrução encontrada"
+                  />
+                </div>
+
+                <div className="w-full lg:w-52">
+                  <Label className="text-xs text-muted-foreground mb-1 block">Nome</Label>
+                  <Input
+                    type="text"
+                    value={edicao.nome}
+                    onChange={(e) => setEdicao((prev) => ({ ...prev, nome: e.target.value }))}
+                    className="h-9"
+                  />
+                </div>
+
+                <div className="w-full lg:w-44">
+                  <Label className="text-xs text-muted-foreground mb-1 block">Periodicidade</Label>
+                  <select
+                    value={edicao.frequencia}
+                    onChange={(e) => setEdicao((prev) => ({ ...prev, frequencia: e.target.value as FrequenciaTarefa }))}
+                    className="w-full h-9 px-2 text-sm border rounded bg-background text-foreground"
+                  >
+                    {frequenciaOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {edicao.frequencia === 'PERSONALIZADA' && (
+                  <div className="w-full lg:w-28">
+                    <Label className="text-xs text-muted-foreground mb-1 block">Dias</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={edicao.frequencia_personalizada}
+                      onChange={(e) =>
+                        setEdicao((prev) => ({ ...prev, frequencia_personalizada: Number(e.target.value) }))
+                      }
+                      className="h-9"
+                    />
+                  </div>
+                )}
+
+                <div className="w-full lg:w-40">
+                  <Label className="text-xs text-muted-foreground mb-1 block">Criticidade</Label>
+                  <select
+                    value={edicao.criticidade}
+                    onChange={(e) => setEdicao((prev) => ({ ...prev, criticidade: Number(e.target.value) }))}
+                    className="w-full h-9 px-2 text-sm border rounded bg-background text-foreground"
+                  >
+                    {criticidadeOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Button size="sm" className="h-9" onClick={handleSalvarEdicao} disabled={salvando}>
+                    <Check className="h-4 w-4 mr-1.5" />
+                    Salvar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9 dark:bg-black"
+                    onClick={() => setEditandoId(null)}
+                    disabled={salvando}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
             <div key={tarefa.id} className="flex items-center gap-3 px-3 py-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -272,6 +410,7 @@ export function TarefasExpandedRow({
                 Crit. {labelCriticidade(tarefa.criticidade)}
               </div>
 
+              {!somenteLeitura && (
               <div className="flex items-center gap-0.5 flex-shrink-0">
                 {/* O detalhe util e a INSTRUCAO: a tarefa em si so tem os
                     quatro campos que ja estao visiveis na linha. */}
@@ -289,7 +428,7 @@ export function TarefasExpandedRow({
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
-                  onClick={() => onEditarTarefa(tarefa)}
+                  onClick={() => abrirEdicao(tarefa)}
                   title="Editar"
                 >
                   <Pencil className="h-3.5 w-3.5" />
@@ -304,8 +443,10 @@ export function TarefasExpandedRow({
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
+              )}
             </div>
-          ))}
+            )
+          )}
         </div>
       )}
     </div>

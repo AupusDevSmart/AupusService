@@ -6,7 +6,7 @@ import { ExecucaoOSPage } from './features/execucao-os';
 import { FerramentasPage } from './features/ferramentas/components/FerramentasPage';
 import { FornecedoresPage } from './features/fornecedores/components/FornecedoresPage';
 import { PlanosManutencaoPage } from './features/planos-manutencao/components/PlanosManutencaoPage';
-import { PlanoDoEquipamentoSection } from './features/planos-manutencao/components/PlanoDoEquipamentoSection';
+import { PlanoDoEquipamentoWrapper } from './features/planos-manutencao/components/PlanoDoEquipamentoWrapper';
 import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
 import { TarefasPage } from './features/tarefas/components/TarefasPage';
@@ -135,7 +135,7 @@ export const appRoutes = createBrowserRouter([
                 pagina do shared-pages sem passar nada aqui. */}
             <EquipamentosPage
               renderSecaoExtraUC={(equipamento, mode) => (
-                <PlanoDoEquipamentoSection
+                <PlanoDoEquipamentoWrapper
                   equipamentoId={equipamento.id}
                   classificacao={equipamento.classificacao}
                   somenteLeitura={mode === 'view'}
