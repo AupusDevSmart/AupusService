@@ -169,6 +169,23 @@ export interface TarefaApiResponse {
   numero_execucoes: number;           // Número de execuções
   
   // Relacionamentos
+  /**
+   * O conteúdo do que será feito. As telas de OS leem as etapas daqui
+   * (`sub_instrucoes`) — a tarefa não guarda mais sub-etapas próprias.
+   */
+  instrucao?: {
+    id: string;
+    tag?: string;
+    nome: string;
+    descricao?: string;
+    sub_instrucoes?: Array<{
+      id: string;
+      descricao: string;
+      obrigatoria: boolean;
+      ordem: number;
+      tempo_estimado?: number;
+    }>;
+  };
   plano_manutencao?: PlanoResumoDto;
   planta?: PlantaResumoDto;
   equipamento?: EquipamentoResumoDto;

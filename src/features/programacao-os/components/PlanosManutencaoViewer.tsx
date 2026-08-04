@@ -421,20 +421,22 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                                   )}
                                 </div>
 
-                                {/* Sub-tarefas */}
-                                {tarefa.sub_tarefas && tarefa.sub_tarefas.length > 0 && (
+                                {/* Etapas da instrucao vinculada. A tarefa nao
+                                    guarda mais sub-etapas proprias: o conteudo
+                                    do que sera feito vive na instrucao. */}
+                                {tarefa.instrucao?.sub_instrucoes && tarefa.instrucao.sub_instrucoes.length > 0 && (
                                   <div>
                                     <h5 className="font-medium text-xs text-foreground mb-2 flex items-center gap-1">
                                       <CheckCircle className="h-3 w-3" />
-                                      Sub-tarefas ({tarefa.sub_tarefas.length})
+                                      Etapas ({tarefa.instrucao.sub_instrucoes.length})
                                     </h5>
                                     <div className="space-y-1">
-                                      {tarefa.sub_tarefas.map((subTarefa, subTarefaIndex) => (
-                                        <div key={`${instanceId.current}-sub-${subTarefaIndex}-${subTarefa.id}`} className="flex items-center gap-2 text-xs bg-card rounded p-2 border">
-                                          <span className="font-mono text-muted-foreground">{subTarefa.ordem}</span>
-                                          <span className="flex-1">{subTarefa.descricao}</span>
-                                          {subTarefa.obrigatoria && (
-                                            <Badge variant="outline" className="text-xs text-red-600 dark:text-red-400 border-red-200 dark:border-red-700">
+                                      {tarefa.instrucao.sub_instrucoes.map((etapa, etapaIndex) => (
+                                        <div key={`${instanceId.current}-etapa-${etapaIndex}-${etapa.id}`} className="flex items-center gap-2 text-xs bg-card rounded p-2 border">
+                                          <span className="font-mono text-muted-foreground">{etapa.ordem}</span>
+                                          <span className="flex-1">{etapa.descricao}</span>
+                                          {etapa.obrigatoria && (
+                                            <Badge variant="outline" className="text-xs">
                                               Obrigatória
                                             </Badge>
                                           )}

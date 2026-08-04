@@ -466,18 +466,24 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
                   </div>
                 )}
 
-                {/* Sub-tarefas */}
-                {tarefa.sub_tarefas && tarefa.sub_tarefas.length > 0 && (
+                {/* Etapas: vem das sub-instrucoes da instrucao vinculada. A
+                    tarefa nao guarda mais sub-etapas proprias — o conteudo do
+                    que sera feito vive na instrucao, que e a mesma fonte do
+                    checklist da OS. */}
+                {tarefa.instrucao?.sub_instrucoes && tarefa.instrucao.sub_instrucoes.length > 0 && (
                   <div className="border-t border-gray-100 dark:border-gray-700/50 pt-1.5">
                     <span className="text-xs text-muted-foreground">
-                      Sub-tarefas ({tarefa.sub_tarefas.length}):
+                      Etapas ({tarefa.instrucao.sub_instrucoes.length}):
                     </span>
                     <ul className="mt-1 space-y-0.5">
-                      {tarefa.sub_tarefas.map((st) => (
-                        <li key={st.id} className="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                      {tarefa.instrucao.sub_instrucoes.map((etapa, index) => (
+                        <li
+                          key={etapa.id || `etapa-${index}`}
+                          className="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-1.5"
+                        >
                           <span className="h-1 w-1 rounded-full bg-gray-400 shrink-0" />
-                          {st.descricao}
-                          {st.obrigatoria && (
+                          {etapa.descricao}
+                          {etapa.obrigatoria && (
                             <span className="text-destructive text-[10px]">*</span>
                           )}
                         </li>
