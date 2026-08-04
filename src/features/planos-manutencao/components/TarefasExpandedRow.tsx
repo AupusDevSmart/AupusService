@@ -53,6 +53,8 @@ interface TarefasExpandedRowProps {
   onTarefasChange?: () => void;
   /** Esconde cadastro, edicao e remocao. Usado no modo view do equipamento. */
   somenteLeitura?: boolean;
+  /** Empilha o formulario em vez de espalhar em linha. Usado dentro de sheet. */
+  compacto?: boolean;
 }
 
 export function TarefasExpandedRow({
@@ -61,7 +63,8 @@ export function TarefasExpandedRow({
   refreshToken = 0,
   onVerTarefa,
   onTarefasChange,
-  somenteLeitura = false
+  somenteLeitura = false,
+  compacto = false
 }: TarefasExpandedRowProps) {
   const { user } = useUserStore();
 
@@ -77,6 +80,9 @@ export function TarefasExpandedRow({
   const [criticidade, setCriticidade] = useState(3);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  // O formulario de cadastro so aparece quando pedido
+  const [mostrandoFormulario, setMostrandoFormulario] = useState(false);
 
   // Edicao inline: os mesmos quatro campos, na propria linha
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -198,9 +204,26 @@ export function TarefasExpandedRow({
 
   return (
     <div className="px-4 py-3 space-y-3 border-t">
+      {/* O formulario fica escondido ate o usuario pedir: aberto por padrao,
+          ele domina a area e a lista de tarefas — que e o que interessa ao
+          abrir — fica empurrada para baixo. */}
+      {!somenteLeitura && !mostrandoFormulario && (
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 dark:bg-black"
+            onClick={() => setMostrandoFormulario(true)}
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
+            Adicionar tarefa
+          </Button>
+        </div>
+      )}
+
       {/* Cadastro rápido */}
-      {!somenteLeitura && (
-      <div className="flex flex-col lg:flex-row lg:items-end gap-2">
+      {!somenteLeitura && mostrandoFormulario && (
+      <div className={`flex flex-col ${compacto ? '' : 'lg:flex-row lg:items-end'} gap-2`}>
         <div className="flex-1 min-w-0">
           <Label className="text-xs text-muted-foreground mb-1 block">Instrução</Label>
           <Combobox
@@ -263,15 +286,30 @@ export function TarefasExpandedRow({
           </select>
         </div>
 
-        <Button
-          onClick={handleAdicionar}
-          disabled={!instrucaoId || salvando}
-          size="sm"
-          className="h-9 flex-shrink-0"
-        >
-          <Plus className="h-4 w-4 mr-1.5" />
-          {salvando ? 'Adicionando...' : 'Adicionar'}
-        </Button>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <Button
+            onClick={handleAdicionar}
+            disabled={!instrucaoId || salvando}
+            size="sm"
+            className="h-9"
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
+            {salvando ? 'Adicionando...' : 'Adicionar'}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 dark:bg-black"
+            onClick={() => {
+              setMostrandoFormulario(false);
+              setErro(null);
+            }}
+            disabled={salvando}
+            title="Fechar"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       )}
 
