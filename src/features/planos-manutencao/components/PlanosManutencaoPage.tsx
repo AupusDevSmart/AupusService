@@ -10,7 +10,6 @@ import { useUserStore } from '@/store/useUserStore';
 import { planosTableColumns } from '../config/table-config';
 import { usePlanosManutencaoApi } from '../hooks/usePlanosManutencaoApi';
 import { usePlanosFilters } from '../hooks/usePlanosFilters';
-import { usePlanosActions } from '../hooks/usePlanosActions';
 import { createPlanosTableActions } from '../config/actions-config';
 import {
   PlanoManutencaoApiResponse,
@@ -106,11 +105,6 @@ export function PlanosManutencaoPage() {
   const reloadAll = async () => {
     await loadData();
   };
-
-  // Actions hook com callbacks
-  const planosActions = usePlanosActions({
-    onSuccess: reloadAll
-  });
 
   const closeModal = originalCloseModal;
 
@@ -248,7 +242,6 @@ export function PlanosManutencaoPage() {
   const customActions = createPlanosTableActions({
     handleView,
     handleEdit,
-    handleAssociarEquipamentos: planosActions.handleAssociarEquipamentos
   }) as any;
 
   return (

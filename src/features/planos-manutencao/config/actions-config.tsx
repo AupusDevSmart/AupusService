@@ -1,13 +1,17 @@
 // src/features/planos-manutencao/config/actions-config.tsx
-import { Edit, ExternalLink, Eye } from 'lucide-react';
+import { Edit, Eye } from 'lucide-react';
 import { PlanoManutencaoApiResponse } from '@/services/planos-manutencao.services';
 
 export interface PlanosTableActions {
   handleView: (plano: PlanoManutencaoApiResponse) => void;
   handleEdit: (plano: PlanoManutencaoApiResponse) => void;
-  handleAssociarEquipamentos: (plano: PlanoManutencaoApiResponse) => void;
 }
 
+/**
+ * "Associar Equipamentos" saiu junto com a pagina de associacao em lote: o
+ * vinculo agora e feito no sheet do proprio equipamento, que e onde a
+ * categoria dele determina quais planos se aplicam.
+ */
 export function createPlanosTableActions(handlers: PlanosTableActions) {
   return [
     {
@@ -23,13 +27,6 @@ export function createPlanosTableActions(handlers: PlanosTableActions) {
       handler: handlers.handleEdit,
       icon: <Edit className="h-4 w-4" />,
       variant: 'default' as const
-    },
-    {
-      key: 'associar',
-      label: 'Associar Equipamentos',
-      handler: handlers.handleAssociarEquipamentos,
-      icon: <ExternalLink className="h-4 w-4" />,
-      variant: 'secondary' as const
     }
   ];
 }
