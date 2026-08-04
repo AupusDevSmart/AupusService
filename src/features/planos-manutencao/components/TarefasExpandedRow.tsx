@@ -9,6 +9,7 @@ import { useUserStore } from '@/store/useUserStore';
 import { tarefasApi, type TarefaApiResponse } from '@/services/tarefas.services';
 import { type FrequenciaTarefa } from '@/services/instrucoes.services';
 import { toast } from '@/hooks/use-toast';
+import { formatApiError } from '@/utils/api-error';
 
 const frequenciaOptions: Array<{ value: FrequenciaTarefa; label: string }> = [
   { value: 'DIARIA', label: 'Diária' },
@@ -41,22 +42,6 @@ const labelFrequencia = (tarefa: TarefaApiResponse): string => {
 
 const labelCriticidade = (criticidade?: number): string =>
   criticidadeOptions.find(opt => opt.value === criticidade)?.label || 'N/A';
-
-// O backend responde ora com `message` string, ora com array (class-validator),
-// ora aninhado em `error.message`.
-const extrairMensagemErro = (error: unknown, fallback: string): string => {
-  const resposta = (error as {
-    response?: { data?: { error?: { message?: unknown }; message?: unknown } };
-    message?: unknown;
-  })?.response?.data;
-
-  const mensagem =
-    resposta?.error?.message ?? resposta?.message ?? (error as { message?: unknown })?.message;
-
-  if (Array.isArray(mensagem)) return mensagem.join(', ');
-  return typeof mensagem === 'string' && mensagem ? mensagem : fallback;
-};
-
 interface TarefasExpandedRowProps {
   planoId: string;
   instrucoesOptions: Array<{ value: string; label: string }>;
@@ -138,7 +123,7 @@ export function TarefasExpandedRow({
       await carregarTarefas();
       onTarefasChange?.();
     } catch (error) {
-      setErro(extrairMensagemErro(error, 'Erro ao adicionar tarefa'));
+      setErro(formatApiError(error));
     } finally {
       setSalvando(false);
     }
@@ -155,7 +140,7 @@ export function TarefasExpandedRow({
       onTarefasChange?.();
     } catch (error) {
       console.error('Erro ao remover tarefa:', error);
-      toast({ title: 'Erro ao remover tarefa', variant: 'destructive' });
+      toast({ title: 'Erro ao remover tarefa', description: formatApiError(error), variant: 'destructive' });
     }
   };
 

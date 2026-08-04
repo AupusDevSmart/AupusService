@@ -32,6 +32,7 @@ const tarefasFormFieldsFromPlano = tarefasFormFields.filter(f => !camposPlanoCon
 const instrucoesApi = new InstrucoesApiService();
 import { tarefasApi, type TarefaApiResponse } from '@/services/tarefas.services';
 import { toast } from '@/hooks/use-toast';
+import { formatApiError } from '@/utils/api-error';
 
 interface PlanosFiltersApi {
   search?: string;
@@ -118,7 +119,14 @@ export function PlanosManutencaoPage() {
     try {
       await fetchPlanos(filters);
     } catch (error) {
+      // Sem aviso, a tabela vazia parece "nenhum plano cadastrado" quando na
+      // verdade a consulta falhou.
       console.error('Erro ao carregar planos:', error);
+      toast({
+        title: 'Erro ao carregar planos',
+        description: formatApiError(error),
+        variant: 'destructive'
+      });
     }
   };
 
@@ -184,6 +192,7 @@ export function PlanosManutencaoPage() {
         // Criar tarefas pendentes vinculadas ao plano recém-criado
         if (tarefasPendentes.length > 0 && planoResult?.id) {
           let criadas = 0;
+          const falhas: string[] = [];
           for (const tarefaData of tarefasPendentes) {
             try {
               // `tag` aqui e so o rotulo local da lista de pendentes ("Nova-1").
@@ -203,10 +212,22 @@ export function PlanosManutencaoPage() {
               criadas++;
             } catch (err) {
               console.error('Erro ao criar tarefa do plano:', err);
+              falhas.push(formatApiError(err));
             }
           }
+
           if (criadas > 0) {
             toast({ title: `Plano criado com ${criadas} tarefa${criadas > 1 ? 's' : ''}` });
+          }
+
+          // Antes as falhas eram engolidas: o toast dizia "criado com 2
+          // tarefas" e o usuario nunca sabia que outras 3 nao entraram.
+          if (falhas.length > 0) {
+            toast({
+              title: `${falhas.length} tarefa${falhas.length > 1 ? 's' : ''} não ${falhas.length > 1 ? 'foram criadas' : 'foi criada'}`,
+              description: falhas[0],
+              variant: 'destructive'
+            });
           }
           setTarefasPendentes([]);
         }
@@ -222,7 +243,14 @@ export function PlanosManutencaoPage() {
 
       await handleSuccess();
     } catch (error) {
+      // Sem isso o usuario clicava em salvar e nada acontecia: o modal ficava
+      // aberto, sem aviso, e a falha so aparecia no console.
       console.error('Erro ao salvar plano:', error);
+      toast({
+        title: modalState.mode === 'create' ? 'Erro ao criar plano' : 'Erro ao salvar plano',
+        description: formatApiError(error),
+        variant: 'destructive'
+      });
     }
   };
 
@@ -279,7 +307,7 @@ export function PlanosManutencaoPage() {
       setInstrucaoModal({ isOpen: true, entity: instrucao });
     } catch (error) {
       console.error('Erro ao carregar instrução:', error);
-      toast({ title: 'Erro ao carregar a instrução', variant: 'destructive' });
+      toast({ title: 'Erro ao carregar a instrução', description: formatApiError(error), variant: 'destructive' });
     }
   };
 
@@ -334,7 +362,7 @@ export function PlanosManutencaoPage() {
       }
     } catch (error) {
       console.error('Erro ao remover tarefa:', error);
-      toast({ title: 'Erro ao remover tarefa', variant: 'destructive' });
+      toast({ title: 'Erro ao remover tarefa', description: formatApiError(error), variant: 'destructive' });
     }
   };
 
@@ -405,7 +433,7 @@ export function PlanosManutencaoPage() {
       }
     } catch (error) {
       console.error('Erro ao salvar tarefa:', error);
-      toast({ title: 'Erro ao salvar tarefa', variant: 'destructive' });
+      toast({ title: 'Erro ao salvar tarefa', description: formatApiError(error), variant: 'destructive' });
     }
   };
 

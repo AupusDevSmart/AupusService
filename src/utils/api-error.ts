@@ -18,6 +18,23 @@ type AxiosErrorLike = {
   message?: unknown;
 };
 
+/** Aceita string ou string[] (ValidationPipe manda array quando falha em varias regras). */
+function textoDaMensagem(valor: unknown): string | null {
+  if (Array.isArray(valor)) {
+    const juntas = valor.filter(Boolean).join('; ');
+    return juntas || null;
+  }
+  if (typeof valor === 'string' && valor) return valor;
+  if (valor && typeof valor === 'object') {
+    try {
+      return JSON.stringify(valor);
+    } catch {
+      return String(valor);
+    }
+  }
+  return null;
+}
+
 export function formatApiError(err: unknown): string {
   if (!err) return 'Erro desconhecido';
 
@@ -28,21 +45,15 @@ export function formatApiError(err: unknown): string {
     const data = response.data;
 
     // NestJS padrao: { message: string | string[], error, statusCode }
-    if (data?.message) {
-      if (Array.isArray(data.message)) {
-        return data.message.filter(Boolean).join('; ');
-      }
-      if (typeof data.message === 'string') return data.message;
-      if (typeof data.message === 'object') {
-        try {
-          return JSON.stringify(data.message);
-        } catch {
-          return String(data.message);
-        }
-      }
-    }
+    const direta = textoDaMensagem(data?.message);
+    if (direta) return direta;
 
-    // Sem message — usa error ou statusText
+    // Formato do HttpExceptionFilter deste backend:
+    // { success: false, error: { code, message, details }, meta }
+    // Sem isso o usuario via "400 Bad Request" no lugar da mensagem real.
+    const aninhada = textoDaMensagem((data?.error as { message?: unknown })?.message);
+    if (aninhada) return aninhada;
+
     if (typeof data?.error === 'string') return data.error;
     if (response.statusText) return `${response.status} ${response.statusText}`;
     return `HTTP ${response.status}`;

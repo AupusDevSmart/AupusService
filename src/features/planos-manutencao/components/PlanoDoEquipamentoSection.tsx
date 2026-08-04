@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Combobox } from '@aupus/shared-pages';
 import { ClipboardList, Link2, Unlink, AlertTriangle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { formatApiError } from '@/utils/api-error';
 import {
   planosManutencaoApi,
   type PlanoManutencaoApiResponse,
@@ -15,18 +16,6 @@ interface PlanoDoEquipamentoSectionProps {
   classificacao?: string;
   somenteLeitura?: boolean;
 }
-
-const extrairMensagemErro = (error: unknown, fallback: string): string => {
-  const resposta = (error as {
-    response?: { data?: { error?: { message?: unknown }; message?: unknown } };
-  })?.response?.data;
-
-  const mensagem =
-    resposta?.error?.message ?? resposta?.message ?? (error as { message?: unknown })?.message;
-
-  if (Array.isArray(mensagem)) return mensagem.join(', ');
-  return typeof mensagem === 'string' && mensagem ? mensagem : fallback;
-};
 
 /**
  * Secao de plano de manutencao dentro do sheet do equipamento.
@@ -124,7 +113,7 @@ export function PlanoDoEquipamentoSection({
     } catch (error) {
       toast({
         title: 'Erro ao vincular plano',
-        description: extrairMensagemErro(error, 'Não foi possível vincular o plano'),
+        description: formatApiError(error),
         variant: 'destructive',
       });
     } finally {
@@ -143,7 +132,7 @@ export function PlanoDoEquipamentoSection({
     } catch (error) {
       toast({
         title: 'Erro ao desvincular',
-        description: extrairMensagemErro(error, 'Não foi possível desvincular o plano'),
+        description: formatApiError(error),
         variant: 'destructive',
       });
     } finally {
