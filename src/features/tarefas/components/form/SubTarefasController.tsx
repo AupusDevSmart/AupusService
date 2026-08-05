@@ -115,8 +115,6 @@ export function SubTarefasController({ value, onChange, disabled }: FormFieldPro
       onRemover={removerSubTarefa}
       onAdicionar={adicionarSubTarefa}
       textoAdicionar="Adicionar sub-tarefa"
-      vazioTexto="Nenhuma sub-tarefa adicionada"
-      vazioIcone={<ClipboardList className="h-8 w-8" />}
       disabled={disabled}
       resumo={[
         { icone: <ClipboardList className="h-3.5 w-3.5" />, label: 'Total de etapas', valor: subTarefas.length },

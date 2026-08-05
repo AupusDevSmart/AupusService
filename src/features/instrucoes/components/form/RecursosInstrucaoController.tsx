@@ -156,8 +156,6 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
       onRemover={remover}
       onAdicionar={adicionar}
       textoAdicionar="Adicionar"
-      vazioTexto="Nenhum recurso adicionado"
-      vazioIcone={<Package className="h-8 w-8" />}
       disabled={disabled}
       resumo={[
         { icone: <Package className="h-3.5 w-3.5" />, label: 'Total de recursos', valor: recursos.length },

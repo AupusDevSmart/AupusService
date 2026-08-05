@@ -25,8 +25,6 @@ interface ItensOrdenaveisTableProps<T> {
   onRemover: (index: number) => void;
   onAdicionar: () => void;
   textoAdicionar: string;
-  vazioTexto: string;
-  vazioIcone?: React.ReactNode;
   resumo?: ResumoItem[];
   disabled?: boolean;
 }
@@ -38,8 +36,6 @@ export function ItensOrdenaveisTable<T>({
   onRemover,
   onAdicionar,
   textoAdicionar,
-  vazioTexto,
-  vazioIcone,
   resumo,
   disabled = false
 }: ItensOrdenaveisTableProps<T>) {
@@ -84,12 +80,11 @@ export function ItensOrdenaveisTable<T>({
         </div>
       )}
 
-      {itens.length === 0 ? (
-        <div className="border border-dashed rounded-md py-8 text-center">
-          {vazioIcone && <div className="mb-2 flex justify-center text-muted-foreground/50">{vazioIcone}</div>}
-          <p className="text-sm text-muted-foreground">{vazioTexto}</p>
-        </div>
-      ) : (
+      {/* Lista vazia nao renderiza nada: a caixa tracejada com "nenhum item"
+          ocupava altura para dizer o obvio, e num sheet com varias secoes isso
+          vira um vazio grande no meio do formulario. O botao de adicionar ja
+          comunica que da para incluir. */}
+      {itens.length === 0 ? null : (
         <div className="border rounded-md overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

@@ -111,8 +111,8 @@ export function InstrucoesModal({
       ]}
     >
       {isOpen && (
-        <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Anexos</h3>
+        <div className="mt-4 border-t pt-4">
+          <h3 className="text-sm font-medium mb-2">Anexos</h3>
           {mode === 'create' ? (
             <AnexosInstrucaoManager
               instrucaoId={null}

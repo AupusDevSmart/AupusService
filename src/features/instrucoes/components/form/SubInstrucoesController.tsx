@@ -115,8 +115,6 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
       onRemover={remover}
       onAdicionar={adicionar}
       textoAdicionar="Adicionar"
-      vazioTexto="Nenhuma sub-instrução adicionada"
-      vazioIcone={<ClipboardList className="h-8 w-8" />}
       disabled={disabled}
       resumo={[
         { icone: <ClipboardList className="h-3.5 w-3.5" />, label: 'Total de etapas', valor: subInstrucoes.length },

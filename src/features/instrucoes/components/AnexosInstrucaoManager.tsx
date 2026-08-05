@@ -149,7 +149,7 @@ export function AnexosInstrucaoManager({ instrucaoId, readonly = false, onFilesC
   const totalFiles = isCreateMode ? localFiles.length : anexos.length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-medium">Anexos ({totalFiles})</h4>
         {!readonly && (
@@ -180,12 +180,7 @@ export function AnexosInstrucaoManager({ instrucaoId, readonly = false, onFilesC
       )}
 
       {isCreateMode ? (
-        localFiles.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Nenhum arquivo selecionado</p>
-          </div>
-        ) : (
+        localFiles.length === 0 ? null : (
           <div className="space-y-2">
             {localFiles.map((file, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-muted/50 border rounded-md hover:bg-muted/80">
@@ -215,12 +210,7 @@ export function AnexosInstrucaoManager({ instrucaoId, readonly = false, onFilesC
           </div>
         )
       ) : (
-        anexos.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Nenhum anexo encontrado</p>
-          </div>
-        ) : (
+        anexos.length === 0 ? null : (
           <div className="space-y-2">
             {anexos.map((anexo) => (
               <div key={anexo.id} className="flex items-center justify-between p-3 bg-muted/50 border rounded-md hover:bg-muted/80">
@@ -262,10 +252,9 @@ export function AnexosInstrucaoManager({ instrucaoId, readonly = false, onFilesC
       )}
 
       {!readonly && (
-        <div className="text-xs text-muted-foreground space-y-1">
-          <p>Tamanho máximo: 10MB</p>
-          <p>Tipos permitidos: PNG, PDF, JPG, DOC, DOCX, XLS, XLSX, TXT</p>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Máx. 10MB · PNG, PDF, JPG, DOC, DOCX, XLS, XLSX, TXT
+        </p>
       )}
     </div>
   );
