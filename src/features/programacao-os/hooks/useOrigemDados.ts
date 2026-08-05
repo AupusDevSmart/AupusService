@@ -356,33 +356,9 @@ export const useOrigemDados = () => {
           tag: tarefa.tag,
           descricao: tarefa.descricao,
           nome: tarefa.nome,
-          categoria: tarefa.categoria,
-          tipo: tarefa.tipo_manutencao,
           frequencia: tarefa.frequencia,
           criticidade: tarefa.criticidade,
-          duracaoEstimada: tarefa.duracao_estimada,
-          tempoEstimado: tarefa.tempo_estimado,
-          responsavel: tarefa.responsavel,
-          observacoes: tarefa.observacoes,
-          ordem: tarefa.ordem,
-          condicaoAtivo: tarefa.condicao_ativo,
-          // Sub-tarefas (se existirem)
-          subTarefas: tarefa.sub_tarefas?.map(subTarefa => ({
-            id: subTarefa.id, // ✅ ID real da API
-            descricao: subTarefa.descricao,
-            obrigatoria: subTarefa.obrigatoria,
-            ordem: subTarefa.ordem,
-            tempo_estimado: subTarefa.tempo_estimado
-          })) || [],
-          // Recursos (se existirem)
-          recursos: tarefa.recursos?.map(recurso => ({
-            id: recurso.id, // ✅ ID real da API
-            tipo: recurso.tipo,
-            descricao: recurso.descricao,
-            quantidade: recurso.quantidade,
-            unidade: recurso.unidade,
-            obrigatorio: recurso.obrigatorio
-          })) || []
+          ordem: tarefa.ordem
         };
       });
 

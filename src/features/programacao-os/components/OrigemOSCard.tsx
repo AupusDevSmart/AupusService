@@ -417,12 +417,6 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
                       <span className="text-gray-700 dark:text-gray-300">{tarefa.criticidade}/5</span>
                     </div>
                   )}
-                  {tarefa.duracao_estimada != null && (
-                    <div>
-                      <span className="text-muted-foreground">Duração: </span>
-                      <span className="text-gray-700 dark:text-gray-300">{tarefa.duracao_estimada}h</span>
-                    </div>
-                  )}
                   {tarefa.condicao_ativo && (
                     <div>
                       <span className="text-muted-foreground">Condição: </span>

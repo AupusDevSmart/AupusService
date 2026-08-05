@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Calendar,
-  Clock,
   ChevronDown,
   ChevronRight,
   Settings,
@@ -373,12 +372,7 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                                       </Badge>
                                     </div>
                                     <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
-                                      <span>{tarefa.categoria}</span>
-                                      <span>•</span>
-                                      <span>{tarefa.tipo_manutencao}</span>
-                                      <span>•</span>
-                                      <Clock className="h-3 w-3" />
-                                      <span>{tarefa.duracao_estimada}h</span>
+                                      <span>{tarefa.frequencia}</span>
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2">

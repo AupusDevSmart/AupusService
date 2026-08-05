@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Wrench, Clock } from 'lucide-react';
+import { Wrench } from 'lucide-react';
 import { TarefaDisponivel } from './types';
 
 interface TarefasSelectorProps {
@@ -122,18 +122,6 @@ export const TarefasSelector: React.FC<TarefasSelectorProps> = ({
                     </div>
 
                     <h4 className="font-medium text-sm text-foreground">{tarefa.nome}</h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {tarefa.descricao}
-                    </p>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {tarefa.tempo_estimado}min
-                      </div>
-                      <div>
-                        Duração: {tarefa.duracao_estimada}h
-                      </div>
-                    </div>
                   </div>
                 </div>
               </CardContent>
