@@ -9,7 +9,6 @@ import { PlanosManutencaoPage } from './features/planos-manutencao/components/Pl
 import { PlanoDoEquipamentoWrapper } from './features/planos-manutencao/components/PlanoDoEquipamentoWrapper';
 import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
-import { TarefasPage } from './features/tarefas/components/TarefasPage';
 import { InstrucoesPage } from './features/instrucoes/components/InstrucoesPage';
 import { VeiculosPage } from './features/veiculos/components/VeiculosPage';
 import { AppTemplate } from './pages/AppTemplate';
@@ -190,14 +189,6 @@ export const appRoutes = createBrowserRouter([
         element: (
           <FeatureWrapper feature="manutencao.manage">
             <SolicitacoesServicoPage />
-          </FeatureWrapper>
-        ),
-      },
-      {
-        path: 'tarefas',
-        element: (
-          <FeatureWrapper feature="manutencao.manage">
-            <TarefasPage />
           </FeatureWrapper>
         ),
       },

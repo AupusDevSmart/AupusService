@@ -75,19 +75,6 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
     {
       path: '/planos-manutencao',
       label: 'Planos de Manutenção',
-      isDropdown: true,
-      dropdownItems: [
-        { label: 'Gerenciar Planos', href: '/planos-manutencao' },
-        { label: 'Associar Equipamentos', href: '/planos-manutencao/associar' },
-      ],
-    },
-    {
-      path: '/planos-manutencao/associar',
-      label: 'Associar Equipamentos',
-    },
-    {
-      path: '/tarefas',
-      label: 'Tarefas',
     },
     {
       path: '/programacao-os',
