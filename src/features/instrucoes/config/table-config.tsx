@@ -1,5 +1,5 @@
 // src/features/instrucoes/config/table-config.tsx
-import { Tag, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TableColumn } from '@/types/base';
 import { InstrucaoApiResponse, StatusInstrucao, CategoriaTarefa, TipoManutencao } from '@/services/instrucoes.services';
@@ -60,15 +60,12 @@ export const instrucoesTableColumns: TableColumn<InstrucaoApiResponse>[] = [
     key: 'dados_principais',
     label: 'Instrução',
     sortable: true,
+    // So o nome: a tag e um identificador interno e ocupava a linha de cima
+    // da celula, deixando a coluna com duas alturas para um dado que ninguem
+    // le. Quem precisa dela continua achando pela busca.
     render: (instrucao) => (
-      <div className="space-y-1">
-        <div className="flex items-center gap-2 font-medium text-foreground">
-          <Tag className="h-4 w-4 text-gray-600" />
-          <span className="font-mono text-sm">{instrucao.tag}</span>
-        </div>
-        <div className="text-sm font-medium truncate max-w-52" title={instrucao.nome}>
-          {instrucao.nome}
-        </div>
+      <div className="text-sm font-medium truncate max-w-52" title={instrucao.nome}>
+        {instrucao.nome}
       </div>
     )
   },
