@@ -241,15 +241,17 @@ export function PlanoDoEquipamentoSection({
                 />
               </div>
 
+              {/* So o icone: o title carrega o significado sem ocupar largura. */}
               <Button
                 type="button"
                 onClick={handleVincular}
                 disabled={!podeAplicar || salvando}
-                size="sm"
-                className="h-9"
+                size="icon"
+                className="h-9 w-9"
+                title={planoAtual ? 'Trocar plano' : 'Vincular plano'}
+                aria-label={planoAtual ? 'Trocar plano' : 'Vincular plano'}
               >
-                <Link2 className="h-4 w-4 mr-1.5" />
-                {planoAtual ? 'Trocar' : 'Vincular'}
+                <Link2 className="h-4 w-4" />
               </Button>
 
               {planoAtual && (
@@ -258,11 +260,12 @@ export function PlanoDoEquipamentoSection({
                   variant="outline"
                   onClick={handleDesvincular}
                   disabled={salvando}
-                  size="sm"
-                  className="h-9 dark:bg-black"
+                  size="icon"
+                  className="h-9 w-9 dark:bg-black"
+                  title="Desvincular plano"
+                  aria-label="Desvincular plano"
                 >
-                  <Unlink className="h-4 w-4 mr-1.5" />
-                  Desvincular
+                  <Unlink className="h-4 w-4" />
                 </Button>
               )}
             </div>

@@ -206,14 +206,16 @@ export function TarefasExpandedRow({
           abrir — fica empurrada para baixo. */}
       {!somenteLeitura && !mostrandoFormulario && (
         <div className="flex justify-end">
+          {/* So o icone: o title carrega o significado sem ocupar largura. */}
           <Button
-            size="sm"
+            size="icon"
             variant="outline"
-            className="h-8 dark:bg-black"
+            className="h-8 w-8 dark:bg-black"
             onClick={() => setMostrandoFormulario(true)}
+            title="Adicionar tarefa"
+            aria-label="Adicionar tarefa"
           >
-            <Plus className="h-4 w-4 mr-1.5" />
-            Adicionar tarefa
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
       )}
@@ -290,22 +292,24 @@ export function TarefasExpandedRow({
             <Button
               onClick={handleAdicionar}
               disabled={!instrucaoId || salvando}
-              size="sm"
-              className="h-9"
+              size="icon"
+              className="h-9 w-9"
+              title={salvando ? 'Adicionando...' : 'Adicionar'}
+              aria-label="Adicionar"
             >
-              <Plus className="h-4 w-4 mr-1.5" />
-              {salvando ? 'Adicionando...' : 'Adicionar'}
+              <Plus className="h-4 w-4" />
             </Button>
             <Button
-              size="sm"
+              size="icon"
               variant="outline"
-              className="h-9 dark:bg-black"
+              className="h-9 w-9 dark:bg-black"
               onClick={() => {
                 setMostrandoFormulario(false);
                 setErro(null);
               }}
               disabled={salvando}
               title="Fechar"
+              aria-label="Fechar"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -400,16 +404,24 @@ export function TarefasExpandedRow({
                 </div>
 
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <Button size="sm" className="h-9" onClick={handleSalvarEdicao} disabled={salvando}>
-                    <Check className="h-4 w-4 mr-1.5" />
-                    Salvar
+                  <Button
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={handleSalvarEdicao}
+                    disabled={salvando}
+                    title="Salvar"
+                    aria-label="Salvar"
+                  >
+                    <Check className="h-4 w-4" />
                   </Button>
                   <Button
-                    size="sm"
+                    size="icon"
                     variant="outline"
-                    className="h-9 dark:bg-black"
+                    className="h-9 w-9 dark:bg-black"
                     onClick={() => setEditandoId(null)}
                     disabled={salvando}
+                    title="Cancelar"
+                    aria-label="Cancelar"
                   >
                     <X className="h-4 w-4" />
                   </Button>
