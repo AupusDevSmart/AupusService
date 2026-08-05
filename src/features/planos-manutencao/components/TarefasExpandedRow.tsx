@@ -53,6 +53,14 @@ interface TarefasExpandedRowProps {
   onTarefasChange?: () => void;
   /** Esconde cadastro, edicao e remocao. Usado no modo view do equipamento. */
   somenteLeitura?: boolean;
+  /**
+   * Coloca o botao de adicionar abaixo da lista, alinhado a esquerda.
+   *
+   * Na tabela de planos a linha expandida ja vem logo abaixo do plano, entao
+   * o botao no topo competia com a lista pela primeira coisa que se ve. No
+   * sheet do equipamento a secao e curta e o botao no topo continua melhor.
+   */
+  botaoAdicionarNoRodape?: boolean;
 }
 
 export function TarefasExpandedRow({
@@ -61,7 +69,8 @@ export function TarefasExpandedRow({
   refreshToken = 0,
   onVerTarefa,
   onTarefasChange,
-  somenteLeitura = false
+  somenteLeitura = false,
+  botaoAdicionarNoRodape = false
 }: TarefasExpandedRowProps) {
   const { user } = useUserStore();
 
@@ -199,45 +208,46 @@ export function TarefasExpandedRow({
     }
   };
 
+  // O formulario fica escondido ate o usuario pedir: aberto por padrao, ele
+  // domina a area e a lista de tarefas — que e o que interessa ao abrir —
+  // fica empurrada para baixo. So o icone: o title carrega o significado.
+  const botaoAdicionar = !somenteLeitura && !mostrandoFormulario && (
+    <div className={botaoAdicionarNoRodape ? 'flex justify-start' : 'flex justify-end'}>
+      <Button
+        size="icon"
+        variant="outline"
+        className="h-8 w-8 dark:bg-black"
+        onClick={() => setMostrandoFormulario(true)}
+        title="Adicionar tarefa"
+        aria-label="Adicionar tarefa"
+      >
+        <Plus className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+
   return (
     <div className="px-4 py-3 space-y-3 border-t">
-      {/* O formulario fica escondido ate o usuario pedir: aberto por padrao,
-          ele domina a area e a lista de tarefas — que e o que interessa ao
-          abrir — fica empurrada para baixo. */}
-      {!somenteLeitura && !mostrandoFormulario && (
-        <div className="flex justify-end">
-          {/* So o icone: o title carrega o significado sem ocupar largura. */}
-          <Button
-            size="icon"
-            variant="outline"
-            className="h-8 w-8 dark:bg-black"
-            onClick={() => setMostrandoFormulario(true)}
-            title="Adicionar tarefa"
-            aria-label="Adicionar tarefa"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      {!botaoAdicionarNoRodape && botaoAdicionar}
 
-      {/* Cadastro rápido. Instrucao sozinha na primeira linha: e o unico campo
-          com texto longo e precisa da largura toda. Os outros tres, sendo
-          curtos, cabem numa linha so junto com os botoes. */}
+      {/* Cadastro rápido numa linha so. Instrucao e o unico campo de texto
+          longo, entao leva o dobro do espaco elastico do nome e os dois
+          selects ficam com largura fixa; em tela estreita o flex-wrap quebra
+          sozinho, que e o caso do sheet do equipamento. */}
       {!somenteLeitura && mostrandoFormulario && (
-      <div className="space-y-2">
-        <div>
-          <Label className="text-xs text-muted-foreground mb-1 block">Instrução</Label>
-          <Combobox
-            options={instrucoesOptions}
-            value={instrucaoId || undefined}
-            onValueChange={(val) => setInstrucaoId(val || '')}
-            placeholder="Selecione uma instrução..."
-            searchPlaceholder="Buscar instrução..."
-            emptyText="Nenhuma instrução encontrada"
-          />
-        </div>
-
         <div className="flex flex-wrap items-end gap-2">
+          <div className="flex-[2] min-w-[14rem]">
+            <Label className="text-xs text-muted-foreground mb-1 block">Instrução</Label>
+            <Combobox
+              options={instrucoesOptions}
+              value={instrucaoId || undefined}
+              onValueChange={(val) => setInstrucaoId(val || '')}
+              placeholder="Selecione uma instrução..."
+              searchPlaceholder="Buscar instrução..."
+              emptyText="Nenhuma instrução encontrada"
+            />
+          </div>
+
           <div className="flex-1 min-w-[10rem]">
             <Label className="text-xs text-muted-foreground mb-1 block">Nome</Label>
             <Input
@@ -315,7 +325,6 @@ export function TarefasExpandedRow({
             </Button>
           </div>
         </div>
-      </div>
       )}
 
       {erro && (
@@ -431,8 +440,9 @@ export function TarefasExpandedRow({
             ) : (
             <div key={tarefa.id} className="flex items-center gap-3 px-3 py-2">
               <div className="min-w-0 flex-1">
+                {/* Sem a tag: e identificador interno e roubava a atencao do
+                    nome, que e o que identifica a tarefa para quem le. */}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="font-mono">{tarefa.tag}</span>
                   <span>#{tarefa.ordem}</span>
                   {/* Diz se a tarefa acompanha o plano geral ou se divergiu.
                       Sem isso o usuário não tem como saber por que uma tarefa
@@ -502,6 +512,8 @@ export function TarefasExpandedRow({
           )}
         </div>
       )}
+
+      {botaoAdicionarNoRodape && botaoAdicionar}
     </div>
   );
 }

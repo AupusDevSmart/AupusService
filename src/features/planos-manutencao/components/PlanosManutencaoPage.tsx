@@ -291,6 +291,7 @@ export function PlanosManutencaoPage() {
                   refreshToken={tarefasRefreshToken}
                   onVerTarefa={abrirInstrucaoDaTarefa}
                   onTarefasChange={handleTarefasChange}
+                  botaoAdicionarNoRodape
                 />
               )}
             />
