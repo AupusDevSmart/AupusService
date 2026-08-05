@@ -59,15 +59,6 @@ export interface UpdateStatusInstrucaoApiData {
   atualizado_por?: string;
 }
 
-export interface AdicionarAoPlanoApiData {
-  plano_manutencao_id: string;
-  frequencia: FrequenciaTarefa;
-  frequencia_personalizada?: number;
-  ordem?: number;          // Omitida: backend usa a proxima ordem livre do plano
-  criticidade?: number;    // Omitida: herda a criticidade da instrucao
-  criado_por?: string;
-}
-
 export interface AssociarAnomaliaApiData {
   anomalia_id: string;
   observacoes?: string;
@@ -366,15 +357,6 @@ export class InstrucoesApiService {
   async getDashboard(): Promise<DashboardInstrucoesDto> {
     try {
       const response = await api.get<DashboardInstrucoesDto>(`${this.baseEndpoint}/dashboard`);
-      return response.data;
-    } catch (error: any) {
-      throw error;
-    }
-  }
-
-  async adicionarAoPlano(id: string, data: AdicionarAoPlanoApiData): Promise<any> {
-    try {
-      const response = await api.post(`${this.baseEndpoint}/${id}/adicionar-ao-plano`, data);
       return response.data;
     } catch (error: any) {
       throw error;

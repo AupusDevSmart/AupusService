@@ -9,7 +9,6 @@ import {
   DashboardInstrucoesDto,
   InstrucoesListApiResponse,
   AnexoInstrucaoApiResponse,
-  AdicionarAoPlanoApiData,
   AssociarAnomaliaApiData,
   AssociarSolicitacaoApiData
 } from '@/services/instrucoes.services';
@@ -135,22 +134,6 @@ export function useInstrucoesApi() {
     } catch (err) {
       handleError(err, 'getDashboard');
       throw err;
-    }
-  }, [handleError]);
-
-  // Adicionar ao plano
-
-  const adicionarAoPlano = useCallback(async (id: string, data: AdicionarAoPlanoApiData): Promise<any> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await instrucoesApi.adicionarAoPlano(id, data);
-      return response;
-    } catch (err) {
-      handleError(err, 'adicionarAoPlano');
-      throw err;
-    } finally {
-      setLoading(false);
     }
   }, [handleError]);
 
@@ -297,7 +280,6 @@ export function useInstrucoesApi() {
     getInstrucao,
     fetchInstrucoes,
     getDashboard,
-    adicionarAoPlano,
     associarAnomalia,
     listarAnomalias,
     desassociarAnomalia,

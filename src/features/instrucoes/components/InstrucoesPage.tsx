@@ -1,10 +1,10 @@
 // src/features/instrucoes/components/InstrucoesPage.tsx
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@aupus/shared-pages';
 import { BaseFilters } from '@aupus/shared-pages';
-import { Plus, FileText, Layers } from 'lucide-react';
+import { Plus, FileText } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { useUserStore } from '@/store/useUserStore';
 import { InstrucaoApiResponse, QueryInstrucoesApiParams, DashboardInstrucoesDto } from '@/services/instrucoes.services';
@@ -14,7 +14,6 @@ import { useInstrucoesFilters } from '../hooks/useInstrucoesFilters';
 import { InstrucoesBreadcrumb } from './InstrucoesBreadcrumb';
 import { InstrucoesDashboard } from './InstrucoesDashboard';
 import { InstrucoesModal } from './InstrucoesModal';
-import { AdicionarAoPlanoModal } from './AdicionarAoPlanoModal';
 
 const initialFilters: QueryInstrucoesApiParams = {
   search: '',
@@ -82,9 +81,6 @@ export function InstrucoesPage() {
     uploadAnexo
   } = useInstrucoesApi();
   const { modalState, openModal, closeModal: originalCloseModal } = useGenericModal<InstrucaoApiResponse>();
-  const [planoModal, setPlanoModal] = useState<{ isOpen: boolean; instrucaoId: string | null; instrucaoNome?: string }>({
-    isOpen: false, instrucaoId: null
-  });
 
   const closeModal = () => {
     setPendingFiles([]);
@@ -205,29 +201,6 @@ export function InstrucoesPage() {
     setFilters(prev => ({ ...prev, page }));
   };
 
-  const handleAdicionarAoPlano = (instrucao: InstrucaoApiResponse) => {
-    setPlanoModal({
-      isOpen: true,
-      instrucaoId: instrucao.id,
-      instrucaoNome: instrucao.tag ? `${instrucao.tag} - ${instrucao.nome}` : instrucao.nome
-    });
-  };
-
-  const handlePlanoSuccess = async () => {
-    await loadData();
-    await loadDashboard();
-  };
-
-  const customActions = useMemo(() => [
-    {
-      key: 'adicionar_ao_plano',
-      label: 'Adicionar ao Plano',
-      icon: <Layers className="h-4 w-4" />,
-      handler: handleAdicionarAoPlano,
-      condition: (instrucao: InstrucaoApiResponse) => instrucao.status === 'ATIVA',
-    }
-  ], []);
-
   return (
     <Layout>
       <Layout.Main>
@@ -268,7 +241,6 @@ export function InstrucoesPage() {
               onEdit={handleEdit}
               emptyMessage="Nenhuma instrução encontrada."
               emptyIcon={<FileText className="h-8 w-8 text-muted-foreground/50" />}
-              customActions={customActions}
             />
           </div>
         </div>
@@ -282,14 +254,6 @@ export function InstrucoesPage() {
           onClose={closeModal}
           onSubmit={handleSubmit}
           onFilesChange={setPendingFiles}
-        />
-
-        <AdicionarAoPlanoModal
-          isOpen={planoModal.isOpen}
-          instrucaoId={planoModal.instrucaoId}
-          instrucaoNome={planoModal.instrucaoNome}
-          onClose={() => setPlanoModal({ isOpen: false, instrucaoId: null })}
-          onSuccess={handlePlanoSuccess}
         />
       </Layout.Main>
     </Layout>

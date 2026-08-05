@@ -11,7 +11,6 @@ export type {
   CreateInstrucaoApiData,
   UpdateInstrucaoApiData,
   UpdateStatusInstrucaoApiData,
-  AdicionarAoPlanoApiData,
   AssociarAnomaliaApiData,
   AssociarSolicitacaoApiData,
   UsuarioResumoDto,
