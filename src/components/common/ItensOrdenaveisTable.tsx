@@ -67,15 +67,18 @@ export function ItensOrdenaveisTable<T>({
         <div className="flex justify-end">
           {/* dark:bg-black: o variant outline usa bg-background (navy no dark) e
               ficava destoando dos campos, que sao pretos. */}
+          {/* So o icone: o texto de cada secao ja esta no titulo dela, e o
+              title/aria-label carrega o significado sem ocupar largura. */}
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="icon"
             onClick={onAdicionar}
-            className="h-8 dark:bg-black"
+            className="h-8 w-8 dark:bg-black"
+            title={textoAdicionar}
+            aria-label={textoAdicionar}
           >
-            <Plus className="h-4 w-4 mr-1.5" />
-            {textoAdicionar}
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
       )}

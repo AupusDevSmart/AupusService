@@ -62,15 +62,6 @@ export const instrucoesFormFields: FormField[] = [
     )
   },
 
-  // Observações e Status
-  {
-    key: 'observacoes',
-    label: 'Observações',
-    type: 'textarea',
-    required: false,
-    placeholder: 'Observações adicionais sobre a instrução...',
-    colSpan: 2
-  },
   {
     key: 'status',
     label: 'Status',

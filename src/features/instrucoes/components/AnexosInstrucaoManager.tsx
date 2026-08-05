@@ -153,14 +153,20 @@ export function AnexosInstrucaoManager({ instrucaoId, readonly = false, onFilesC
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-medium">Anexos ({totalFiles})</h4>
         {!readonly && (
-          <Button variant="outline" size="sm" disabled={uploading} asChild>
-            <label className="cursor-pointer">
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={uploading}
+            asChild
+            className="h-8 w-8"
+            title="Enviar arquivo"
+          >
+            <label className="cursor-pointer" aria-label="Enviar arquivo">
               {uploading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Upload className="h-4 w-4 mr-1" />
+                <Upload className="h-4 w-4" />
               )}
-              Upload
               <input
                 type="file"
                 className="hidden"

@@ -81,7 +81,9 @@ export function InstrucoesModal({
         {
           key: 'informacoes_basicas',
           title: 'Informações Básicas',
-          fields: ['tag', 'nome', 'descricao']
+          // Status logo apos a descricao: e informacao do cabecalho da
+          // instrucao, nao um apendice no fim do formulario.
+          fields: ['tag', 'nome', 'descricao', 'status']
         },
         {
           key: 'classificacao',
@@ -102,11 +104,6 @@ export function InstrucoesModal({
           key: 'recursos',
           title: 'Recursos Necessários',
           fields: ['recursos']
-        },
-        {
-          key: 'observacoes',
-          title: 'Observações & Status',
-          fields: ['observacoes', 'status']
         }
       ]}
     >
