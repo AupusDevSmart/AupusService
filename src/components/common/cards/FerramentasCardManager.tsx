@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Wrench, Trash2 } from 'lucide-react';
+import { CardLista, CardLinha, campoCard, type ColunaCard } from './card-lista';
 
 export interface FerramentaItem {
   id?: string;
@@ -74,6 +75,15 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
     );
   }
 
+  const colunas: ColunaCard[] = [
+    { label: 'Ferramenta', largura: 'minmax(12rem, 1fr)' },
+    { label: 'Qtd', largura: '4rem', alinhamento: 'center' },
+    ...(mode === 'execucao'
+      ? [{ label: 'Utilizada', largura: '4.5rem', alinhamento: 'center' as const }]
+      : []),
+    ...(!disabled ? [{ label: '', largura: '2rem' }] : []),
+  ];
+
   return (
     <div className="space-y-3">
       {/* Header */}
@@ -101,18 +111,15 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
 
       {/* Lista */}
       {ferramentas.length > 0 && (
-        <div className="border border-border rounded-md divide-y divide-border dark:bg-[hsl(0,0%,0%)]">
+        <CardLista colunas={colunas} larguraMinima="30rem">
           {ferramentas.map((ferramenta, index) => (
-            <div
-              key={ferramenta.id || index}
-              className="flex flex-wrap items-center gap-2 px-3 py-2"
-            >
+            <CardLinha key={ferramenta.id || index} colunas={colunas}>
               <Input
                 value={ferramenta.descricao}
                 onChange={(e) => atualizarFerramenta(index, 'descricao', e.target.value)}
                 placeholder="Descrição da ferramenta..."
                 disabled={disabled}
-                className="h-8 text-sm flex-1 min-w-[180px] bg-transparent border-0 shadow-none px-2 focus-visible:ring-0 placeholder:text-muted-foreground/60"
+                className={campoCard}
               />
               <Input
                 type="number"
@@ -121,34 +128,35 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
                 onChange={(e) => atualizarFerramenta(index, 'quantidade', parseInt(e.target.value) || 1)}
                 placeholder="Qtd"
                 disabled={disabled}
-                className="h-8 text-sm w-16 text-center bg-transparent border-0 shadow-none px-2 focus-visible:ring-0"
+                className={`${campoCard} text-center`}
               />
               {mode === 'execucao' && (
-                <label className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground">
+                <div className="flex justify-center">
                   <input
                     type="checkbox"
                     checked={ferramenta.utilizada}
                     onChange={(e) => atualizarFerramenta(index, 'utilizada', e.target.checked)}
                     disabled={disabled}
                     className="rounded border-border"
+                    aria-label="Utilizada"
                   />
-                  Utilizada
-                </label>
+                </div>
               )}
               {!disabled && (
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={() => removerFerramenta(index)}
-                  className="h-7 w-7 p-0 text-muted-foreground hover:text-red-500 dark:hover:text-red-400"
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  title="Remover"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               )}
-            </div>
+            </CardLinha>
           ))}
-        </div>
+        </CardLista>
       )}
 
       {/* Empty state */}

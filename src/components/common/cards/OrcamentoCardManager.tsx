@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Receipt, Trash2 } from 'lucide-react';
+import { CardLista, CardLinha, campoCard, type ColunaCard } from './card-lista';
 
 export interface ItemOrcamento {
   id?: string;
@@ -61,6 +62,12 @@ const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
   const custoOutros = itens.reduce((total, item) => total + (item.valor || 0), 0);
   const custoTotal = custoMateriais + custoEquipe + custoOutros;
 
+  const colunas: ColunaCard[] = [
+    { label: 'Descrição', largura: 'minmax(12rem, 1fr)' },
+    { label: 'Valor (R$)', largura: '7rem', alinhamento: 'right' },
+    ...(!disabled ? [{ label: '', largura: '2rem' }] : []),
+  ];
+
   return (
     <div className="space-y-3">
       {/* Header */}
@@ -88,46 +95,41 @@ const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
 
       {/* Lista de itens */}
       {itens.length > 0 && (
-        <div className="border border-border rounded-md divide-y divide-border dark:bg-[hsl(0,0%,0%)]">
+        <CardLista colunas={colunas} larguraMinima="28rem">
           {itens.map((item, index) => (
-            <div
-              key={item.id || index}
-              className="flex flex-wrap items-center gap-2 px-3 py-2"
-            >
+            <CardLinha key={item.id || index} colunas={colunas}>
               <Input
                 value={item.descricao}
                 onChange={(e) => atualizarItem(index, 'descricao', e.target.value)}
                 placeholder="Descrição do custo..."
                 disabled={disabled}
-                className="h-8 text-sm flex-1 min-w-[180px] bg-transparent border-0 shadow-none px-2 focus-visible:ring-0 placeholder:text-muted-foreground/60"
+                className={campoCard}
               />
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-muted-foreground">R$</span>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={item.valor || ''}
-                  onChange={(e) => atualizarItem(index, 'valor', parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                  disabled={disabled}
-                  className="h-8 text-sm w-24 bg-transparent border-0 shadow-none px-2 focus-visible:ring-0 text-right"
-                />
-              </div>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={item.valor || ''}
+                onChange={(e) => atualizarItem(index, 'valor', parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+                disabled={disabled}
+                className={`${campoCard} text-right`}
+              />
               {!disabled && (
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={() => removerItem(index)}
-                  className="h-7 w-7 p-0 text-muted-foreground hover:text-red-500 dark:hover:text-red-400"
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  title="Remover"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               )}
-            </div>
+            </CardLinha>
           ))}
-        </div>
+        </CardLista>
       )}
 
       {/* Empty state */}

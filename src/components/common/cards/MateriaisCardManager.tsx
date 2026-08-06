@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Package, Trash2 } from 'lucide-react';
+import { CardLista, CardLinha, campoCard, type ColunaCard } from './card-lista';
 
 export interface MaterialItem {
   id?: string;
@@ -77,6 +78,22 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
     return materiais.reduce((total, material) => total + (material.custo_total || 0), 0);
   };
 
+  const colunas: ColunaCard[] = [
+    { label: 'Material', largura: 'minmax(10rem, 1fr)' },
+    { label: 'Qtd', largura: '4rem', alinhamento: 'center' },
+    { label: 'Un.', largura: '3.5rem', alinhamento: 'center' },
+    ...(mode === 'execucao'
+      ? [{ label: 'Consumido', largura: '5.5rem', alinhamento: 'center' as const }]
+      : []),
+    ...(showCustos
+      ? [
+          { label: 'R$/un', largura: '5rem', alinhamento: 'center' as const },
+          { label: 'Custo', largura: '5.5rem', alinhamento: 'right' as const },
+        ]
+      : []),
+    ...(!disabled ? [{ label: '', largura: '2rem' }] : []),
+  ];
+
   if (disabled && materiais.length === 0) {
     return (
       <div className="text-center py-4 text-muted-foreground">
@@ -113,18 +130,15 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
 
       {/* Lista */}
       {materiais.length > 0 && (
-        <div className="border border-border rounded-md divide-y divide-border dark:bg-[hsl(0,0%,0%)]">
+        <CardLista colunas={colunas} larguraMinima="40rem">
           {materiais.map((material, index) => (
-            <div
-              key={material.id || index}
-              className="flex flex-wrap items-center gap-2 px-3 py-2"
-            >
+            <CardLinha key={material.id || index} colunas={colunas}>
               <Input
                 value={material.descricao}
                 onChange={(e) => atualizarMaterial(index, 'descricao', e.target.value)}
                 placeholder="Descrição do material..."
                 disabled={disabled}
-                className="h-8 text-sm flex-1 min-w-[150px] bg-transparent border-0 shadow-none px-2 focus-visible:ring-0 placeholder:text-muted-foreground/60"
+                className={campoCard}
               />
               <Input
                 type="number"
@@ -134,14 +148,14 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
                 onChange={(e) => atualizarMaterial(index, 'quantidade_planejada', parseFloat(e.target.value) || 0)}
                 placeholder="Qtd"
                 disabled={disabled}
-                className="h-8 text-sm w-16 text-center bg-transparent border-0 shadow-none px-2 focus-visible:ring-0"
+                className={`${campoCard} text-center`}
               />
               <Input
                 value={material.unidade}
                 onChange={(e) => atualizarMaterial(index, 'unidade', e.target.value)}
                 placeholder="UN"
                 disabled={disabled}
-                className="h-8 text-sm w-14 text-center bg-transparent border-0 shadow-none px-2 focus-visible:ring-0"
+                className={`${campoCard} text-center`}
               />
               {mode === 'execucao' && (
                 <Input
@@ -152,7 +166,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
                   onChange={(e) => atualizarMaterial(index, 'quantidade_consumida', parseFloat(e.target.value) || 0)}
                   placeholder="Consumido"
                   disabled={disabled}
-                  className="h-8 text-sm w-20 text-center bg-transparent border-0 shadow-none px-2 focus-visible:ring-0"
+                  className={`${campoCard} text-center`}
                 />
               )}
               {showCustos && (
@@ -165,9 +179,9 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
                     onChange={(e) => atualizarMaterial(index, 'custo_unitario', parseFloat(e.target.value) || 0)}
                     placeholder="R$/un"
                     disabled={disabled}
-                    className="h-8 text-sm w-20 text-center bg-transparent border-0 shadow-none px-2 focus-visible:ring-0"
+                    className={`${campoCard} text-center`}
                   />
-                  <span className="text-xs text-muted-foreground w-20 text-right">
+                  <span className="text-sm text-muted-foreground text-right truncate">
                     R$ {(material.custo_total || 0).toFixed(2)}
                   </span>
                 </>
@@ -178,14 +192,14 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => removerMaterial(index)}
-                  className="h-7 w-7 p-0 text-muted-foreground hover:text-red-500 dark:hover:text-red-400"
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               )}
-            </div>
+            </CardLinha>
           ))}
-        </div>
+        </CardLista>
       )}
 
       {/* Resumo */}

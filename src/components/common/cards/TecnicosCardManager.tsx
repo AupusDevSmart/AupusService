@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Users, Trash2 } from 'lucide-react';
+import { CardLista, CardLinha, campoCard, selectCard, type ColunaCard } from './card-lista';
 
 export interface TecnicoItem {
   id?: string;
@@ -108,6 +109,27 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
     return tecnicos.reduce((total, tecnico) => total + (tecnico.horas_estimadas || 0), 0);
   };
 
+  // As colunas variam com o modo, entao o template do grid e montado aqui e
+  // compartilhado entre o cabecalho e as linhas — e o que garante alinhamento.
+  const colunas: ColunaCard[] = [
+    { label: 'Técnico', largura: 'minmax(9rem, 1fr)' },
+    { label: 'Especialidade', largura: '11rem' },
+    { label: 'Horas', largura: '4rem', alinhamento: 'center' },
+    ...(showHorasReais && mode === 'execucao'
+      ? [{ label: 'H. trab.', largura: '4.5rem', alinhamento: 'center' as const }]
+      : []),
+    ...(showCustos
+      ? [
+          { label: 'R$/h', largura: '5rem', alinhamento: 'center' as const },
+          { label: 'Custo', largura: '5.5rem', alinhamento: 'right' as const },
+        ]
+      : []),
+    ...(mode === 'execucao' && showStatus
+      ? [{ label: 'Presente', largura: '4.5rem', alinhamento: 'center' as const }]
+      : []),
+    ...(!disabled ? [{ label: '', largura: '2rem' }] : []),
+  ];
+
   if (disabled && tecnicos.length === 0) {
     return (
       <div className="text-center py-4 text-muted-foreground">
@@ -144,26 +166,23 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
 
       {/* Lista */}
       {tecnicos.length > 0 && (
-        <div className="border border-border rounded-md divide-y divide-border dark:bg-[hsl(0,0%,0%)]">
+        <CardLista colunas={colunas} larguraMinima="46rem">
           {tecnicos.map((tecnico, index) => (
-            <div
-              key={tecnico.id || index}
-              className="flex flex-wrap items-center gap-2 px-3 py-2"
-            >
+            <CardLinha key={tecnico.id || index} colunas={colunas}>
               <Input
                 value={tecnico.nome}
                 onChange={(e) => atualizarTecnico(index, 'nome', e.target.value)}
-                placeholder="Nome do técnico..."
+                placeholder="Nome..."
                 disabled={disabled}
-                className="h-8 text-sm flex-1 min-w-[140px] bg-transparent border-0 shadow-none px-2 focus-visible:ring-0 placeholder:text-muted-foreground/60"
+                className={campoCard}
               />
               <select
                 value={tecnico.especialidade}
                 onChange={(e) => atualizarTecnico(index, 'especialidade', e.target.value)}
                 disabled={disabled}
-                className="h-8 text-sm w-44 bg-transparent border-0 shadow-none px-2 focus-visible:ring-0 text-foreground"
+                className={selectCard}
               >
-                <option value="">Especialidade...</option>
+                <option value="">Selecione...</option>
                 {especialidadesComuns.map(esp => (
                   <option key={esp} value={esp}>{esp}</option>
                 ))}
@@ -174,9 +193,8 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
                 step="0.5"
                 value={tecnico.horas_estimadas}
                 onChange={(e) => atualizarTecnico(index, 'horas_estimadas', parseFloat(e.target.value) || 0)}
-                placeholder="Horas"
                 disabled={disabled}
-                className="h-8 text-sm w-16 text-center bg-transparent border-0 shadow-none px-2 focus-visible:ring-0"
+                className={`${campoCard} text-center`}
               />
               {showHorasReais && mode === 'execucao' && (
                 <Input
@@ -185,9 +203,8 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
                   step="0.5"
                   value={tecnico.horas_trabalhadas || ''}
                   onChange={(e) => atualizarTecnico(index, 'horas_trabalhadas', parseFloat(e.target.value) || 0)}
-                  placeholder="H. trab."
                   disabled={disabled}
-                  className="h-8 text-sm w-18 text-center bg-transparent border-0 shadow-none px-2 focus-visible:ring-0"
+                  className={`${campoCard} text-center`}
                 />
               )}
               {showCustos && (
@@ -198,41 +215,41 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
                     step="0.01"
                     value={tecnico.custo_hora || ''}
                     onChange={(e) => atualizarTecnico(index, 'custo_hora', parseFloat(e.target.value) || 0)}
-                    placeholder="R$/h"
                     disabled={disabled}
-                    className="h-8 text-sm w-18 text-center bg-transparent border-0 shadow-none px-2 focus-visible:ring-0"
+                    className={`${campoCard} text-center`}
                   />
-                  <span className="text-xs text-muted-foreground w-20 text-right">
+                  <span className="text-sm text-muted-foreground text-right truncate">
                     R$ {(tecnico.custo_total || 0).toFixed(2)}
                   </span>
                 </>
               )}
               {mode === 'execucao' && showStatus && (
-                <label className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground">
+                <div className="flex justify-center">
                   <input
                     type="checkbox"
                     checked={tecnico.presente}
                     onChange={(e) => atualizarTecnico(index, 'presente', e.target.checked)}
                     disabled={disabled}
                     className="rounded border-border"
+                    aria-label="Presente"
                   />
-                  Presente
-                </label>
+                </div>
               )}
               {!disabled && (
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={() => removerTecnico(index)}
-                  className="h-7 w-7 p-0 text-muted-foreground hover:text-red-500 dark:hover:text-red-400"
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  title="Remover"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               )}
-            </div>
+            </CardLinha>
           ))}
-        </div>
+        </CardLista>
       )}
 
       {/* Resumo */}

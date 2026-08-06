@@ -3,7 +3,7 @@ import { TableColumn } from '@/types/base';
 import { Anomalia } from '../types';
 import { StatusCell } from '../components/table-cells/StatusCell';
 import { PrioridadeCell } from '../components/table-cells/PrioridadeCell';
-import { condicaoLabels, formatarData } from './labels';
+import { formatarData } from './labels';
 
 /**
  * Colunas da tabela de Anomalias.
@@ -30,19 +30,9 @@ export const anomaliasTableColumns: TableColumn<Anomalia>[] = [
     key: 'descricao',
     label: 'Anomalia',
     sortable: true,
-    width: '34%',
+    width: '40%',
     render: (anomalia) =>
       anomalia.descricao ? <Texto>{anomalia.descricao}</Texto> : <Vazio />,
-  },
-  {
-    key: 'condicao',
-    label: 'Condição',
-    hideOnTablet: true,
-    width: '11%',
-    render: (anomalia) =>
-      anomalia.condicao
-        ? <Texto>{condicaoLabels[anomalia.condicao] || anomalia.condicao}</Texto>
-        : <Vazio />,
   },
   {
     key: 'local',
