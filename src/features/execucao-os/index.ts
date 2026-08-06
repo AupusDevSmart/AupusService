@@ -8,11 +8,8 @@ export { ExecucaoOSDashboard } from './components/ExecucaoOSDashboard';
 export { ActionConfirmPanel } from './components/ActionConfirmPanel';
 
 // Exportar células customizadas
-export { OSInfoCell } from './components/table-cells/OSInfoCell';
 export { StatusCell } from './components/table-cells/StatusCell';
 export { ResponsavelCell } from './components/table-cells/ResponsavelCell';
-export { ProgressoCell } from './components/table-cells/ProgressoCell';
-export { TipoEPrioridadeCell } from './components/table-cells/TipoEPrioridadeCell';
 
 // Exportar tipos
 export type {

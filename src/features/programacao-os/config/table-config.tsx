@@ -2,89 +2,98 @@
 
 import type { TableColumn } from '@aupus/shared-pages';
 import type { ProgramacaoResponse } from '@/services/programacao-os.service';
-import { ProgramacaoInfoCell } from '../components/table-cells/ProgramacaoInfoCell';
 import { StatusCell } from '../components/table-cells/StatusCell';
-import { TipoCell } from '../components/table-cells/TipoCell';
-import { DataProgramadaCell } from '../components/table-cells/DataProgramadaCell';
-import { AlertTriangle, Calendar, FileText } from 'lucide-react';
+import { tipoLabels, prioridadeLabels, origemLabels, formatarDataHora } from './labels';
 
 /**
- * Configuração de colunas da tabela de Programação de OS
- * Segue o padrão definido no FEATURE_REFACTORING_GUIDE.md
- * Reduzido de 186 linhas para ~70 linhas usando células customizadas
+ * Colunas da tabela de Programacao de OS.
+ *
+ * Uma informacao por coluna e uma linha por registro: as celulas empilhavam
+ * dois dados (codigo + descricao, tipo + prioridade, responsavel + equipe), o
+ * que dobrava a altura da linha. Data e hora continuam juntas por serem a
+ * mesma informacao — "quando".
  */
+
+/** Celula de uma linha so. `truncate` precisa de `block` para valer. */
+const Texto = ({ children, mono = false, fraco = false }: {
+  children: React.ReactNode;
+  mono?: boolean;
+  fraco?: boolean;
+}) => (
+  <span
+    className={`block truncate text-sm ${mono ? 'font-mono' : ''} ${
+      fraco ? 'text-muted-foreground' : 'text-foreground'
+    }`}
+  >
+    {children}
+  </span>
+);
+
 export const programacaoOSTableColumns: TableColumn<ProgramacaoResponse>[] = [
   {
-    key: 'info',
-    label: 'Programação',
-    width: '30%',
-    render: (item) => <ProgramacaoInfoCell item={item} />,
+    key: 'codigo',
+    label: 'Código',
+    width: '10%',
+    render: (item) => <Texto mono>{item.codigo || '-'}</Texto>,
+  },
+  {
+    key: 'descricao',
+    label: 'Descrição',
+    width: '26%',
+    render: (item) =>
+      item.descricao
+        ? <Texto>{item.descricao}</Texto>
+        : <Texto fraco>Sem descrição</Texto>,
   },
   {
     key: 'tipo',
-    label: 'Tipo & Prioridade',
-    width: '15%',
-    render: (item) => <TipoCell tipo={item.tipo} prioridade={item.prioridade} />,
+    label: 'Tipo',
+    width: '11%',
+    render: (item) => <Texto>{tipoLabels[item.tipo] || item.tipo}</Texto>,
+  },
+  {
+    key: 'prioridade',
+    label: 'Prioridade',
+    hideOnTablet: true,
+    width: '9%',
+    render: (item) => (
+      <Texto>{prioridadeLabels[item.prioridade] || item.prioridade}</Texto>
+    ),
   },
   {
     key: 'origem',
     label: 'Origem',
-    width: '12%',
-    render: (item) => {
-      const origemIcons = {
-        ANOMALIA: AlertTriangle,
-        PLANO_MANUTENCAO: Calendar,
-        TAREFA: FileText,
-        SOLICITACAO_SERVICO: FileText,
-      };
-
-      const origemLabels = {
-        ANOMALIA: 'Anomalia',
-        PLANO_MANUTENCAO: 'Plano',
-        TAREFA: 'Tarefa',
-        SOLICITACAO_SERVICO: 'Solicitacao',
-      };
-
-      const Icon = origemIcons[item.origem as keyof typeof origemIcons] || FileText;
-      const label = origemLabels[item.origem as keyof typeof origemLabels] || item.origem;
-
-      return (
-        <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-          <span className="text-sm">{label}</span>
-        </div>
-      );
-    },
+    hideOnTablet: true,
+    width: '10%',
+    render: (item) => <Texto>{origemLabels[item.origem] || item.origem}</Texto>,
   },
   {
     key: 'status',
     label: 'Status',
-    width: '13%',
+    width: '11%',
     sortable: true,
     render: (item) => <StatusCell status={item.status} />,
   },
   {
     key: 'data_programada',
     label: 'Data Programada',
-    width: '15%',
+    width: '13%',
     sortable: true,
-    render: (item) => <DataProgramadaCell data_hora_programada={item.data_hora_programada} status={item.status} />,
+    render: (item) => {
+      const quando = formatarDataHora(item.data_hora_programada);
+      return quando
+        ? <Texto>{quando}</Texto>
+        : <Texto fraco>Não programada</Texto>;
+    },
   },
   {
     key: 'responsavel',
     label: 'Responsável',
-    width: '15%',
-    render: (item) => (
-      <div className="flex flex-col gap-1">
-        {item.responsavel ? (
-          <span className="text-sm text-gray-900 dark:text-gray-100">{item.responsavel}</span>
-        ) : (
-          <span className="text-xs text-gray-400 dark:text-gray-600">Não atribuído</span>
-        )}
-        {item.time_equipe && (
-          <span className="text-xs text-gray-600 dark:text-gray-400">{item.time_equipe}</span>
-        )}
-      </div>
-    ),
+    hideOnMobile: true,
+    width: '10%',
+    render: (item) =>
+      item.responsavel
+        ? <Texto>{item.responsavel}</Texto>
+        : <Texto fraco>Não atribuído</Texto>,
   },
 ];
