@@ -3,7 +3,7 @@ import { TableColumn } from '@/types/base';
 import { Anomalia } from '../types';
 import { StatusCell } from '../components/table-cells/StatusCell';
 import { PrioridadeCell } from '../components/table-cells/PrioridadeCell';
-import { condicaoLabels, origemLabels, formatarData } from './labels';
+import { condicaoLabels, formatarData } from './labels';
 
 /**
  * Colunas da tabela de Anomalias.
@@ -30,7 +30,7 @@ export const anomaliasTableColumns: TableColumn<Anomalia>[] = [
     key: 'descricao',
     label: 'Anomalia',
     sortable: true,
-    width: '24%',
+    width: '34%',
     render: (anomalia) =>
       anomalia.descricao ? <Texto>{anomalia.descricao}</Texto> : <Vazio />,
   },
@@ -70,16 +70,6 @@ export const anomaliasTableColumns: TableColumn<Anomalia>[] = [
     render: (anomalia) => <PrioridadeCell prioridade={anomalia.prioridade} />,
   },
   {
-    key: 'origem',
-    label: 'Origem',
-    hideOnTablet: true,
-    width: '8%',
-    render: (anomalia) =>
-      anomalia.origem
-        ? <Texto fraco>{origemLabels[anomalia.origem] || anomalia.origem}</Texto>
-        : <Vazio />,
-  },
-  {
     key: 'data',
     label: 'Data',
     sortable: true,
@@ -88,13 +78,5 @@ export const anomaliasTableColumns: TableColumn<Anomalia>[] = [
       const data = formatarData(anomalia.data);
       return data ? <Texto fraco>{data}</Texto> : <Vazio />;
     },
-  },
-  {
-    key: 'criado_por',
-    label: 'Criado por',
-    hideOnMobile: true,
-    width: '12%',
-    render: (anomalia) =>
-      anomalia.criadoPor ? <Texto fraco>{anomalia.criadoPor}</Texto> : <Vazio />,
   },
 ];
