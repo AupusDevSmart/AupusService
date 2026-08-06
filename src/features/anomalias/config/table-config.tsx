@@ -1,44 +1,100 @@
 // src/features/anomalias/config/table-config.tsx
 import { TableColumn } from '@/types/base';
 import { Anomalia } from '../types';
-import { AnomaliaInfoCell } from '../components/table-cells/AnomaliaInfoCell';
-import { LocalAtivoCell } from '../components/table-cells/LocalAtivoCell';
 import { StatusCell } from '../components/table-cells/StatusCell';
 import { PrioridadeCell } from '../components/table-cells/PrioridadeCell';
-import { OrigemCell } from '../components/table-cells/OrigemCell';
-import { DataResponsavelCell } from '../components/table-cells/DataResponsavelCell';
+import { condicaoLabels, origemLabels, formatarData } from './labels';
+
+/**
+ * Colunas da tabela de Anomalias.
+ *
+ * Uma informacao por coluna e uma linha por registro. As celulas empilhavam
+ * ate tres dados (descricao + ID + condicao), e cada uma repetia um icone
+ * decorativo em toda linha — o icone dizia o que o cabecalho da coluna ja diz.
+ */
+
+/** Celula de uma linha so. `truncate` precisa de `block` para valer. */
+const Texto = ({ children, fraco = false }: {
+  children: React.ReactNode;
+  fraco?: boolean;
+}) => (
+  <span className={`block truncate text-sm ${fraco ? 'text-muted-foreground' : 'text-foreground'}`}>
+    {children}
+  </span>
+);
+
+const Vazio = () => <Texto fraco>-</Texto>;
 
 export const anomaliasTableColumns: TableColumn<Anomalia>[] = [
   {
-    key: 'dados_principais',
+    key: 'descricao',
     label: 'Anomalia',
     sortable: true,
-    render: (anomalia) => <AnomaliaInfoCell anomalia={anomalia} />
+    width: '24%',
+    render: (anomalia) =>
+      anomalia.descricao ? <Texto>{anomalia.descricao}</Texto> : <Vazio />,
   },
   {
-    key: 'local_ativo',
-    label: 'Local & Ativo',
-    render: (anomalia) => <LocalAtivoCell anomalia={anomalia} />
+    key: 'condicao',
+    label: 'Condição',
+    hideOnTablet: true,
+    width: '11%',
+    render: (anomalia) =>
+      anomalia.condicao
+        ? <Texto>{condicaoLabels[anomalia.condicao] || anomalia.condicao}</Texto>
+        : <Vazio />,
+  },
+  {
+    key: 'local',
+    label: 'Local',
+    width: '13%',
+    render: (anomalia) => (anomalia.local ? <Texto>{anomalia.local}</Texto> : <Vazio />),
+  },
+  {
+    key: 'ativo',
+    label: 'Ativo',
+    hideOnMobile: true,
+    width: '13%',
+    render: (anomalia) => (anomalia.ativo ? <Texto>{anomalia.ativo}</Texto> : <Vazio />),
   },
   {
     key: 'status',
     label: 'Status',
-    render: (anomalia) => <StatusCell status={anomalia.status} />
+    width: '11%',
+    render: (anomalia) => <StatusCell status={anomalia.status} />,
   },
   {
     key: 'prioridade',
     label: 'Prioridade',
-    render: (anomalia) => <PrioridadeCell prioridade={anomalia.prioridade} />
+    width: '10%',
+    render: (anomalia) => <PrioridadeCell prioridade={anomalia.prioridade} />,
   },
   {
     key: 'origem',
     label: 'Origem',
-    hideOnMobile: true,
-    render: (anomalia) => <OrigemCell origem={anomalia.origem} />
+    hideOnTablet: true,
+    width: '8%',
+    render: (anomalia) =>
+      anomalia.origem
+        ? <Texto fraco>{origemLabels[anomalia.origem] || anomalia.origem}</Texto>
+        : <Vazio />,
   },
   {
-    key: 'data_criacao',
-    label: 'Data & Responsável',
-    render: (anomalia) => <DataResponsavelCell anomalia={anomalia} />
-  }
+    key: 'data',
+    label: 'Data',
+    sortable: true,
+    width: '8%',
+    render: (anomalia) => {
+      const data = formatarData(anomalia.data);
+      return data ? <Texto fraco>{data}</Texto> : <Vazio />;
+    },
+  },
+  {
+    key: 'criado_por',
+    label: 'Criado por',
+    hideOnMobile: true,
+    width: '12%',
+    render: (anomalia) =>
+      anomalia.criadoPor ? <Texto fraco>{anomalia.criadoPor}</Texto> : <Vazio />,
+  },
 ];
