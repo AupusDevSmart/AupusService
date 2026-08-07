@@ -79,8 +79,14 @@
     /* Os controles de formulario do app (button, input, select, textarea,
        popover, command) hardcodam rounded-[0.25rem]. O token ficou em 1rem e
        tudo que vem do shared-pages seguia ele — os campos de data saiam com
-       ~14px de raio contra 4px dos vizinhos. Alinhado ao que o app ja usa. */
-    --radius: 0.25rem;
+       ~14px de raio contra 4px dos vizinhos. Alinhado ao que o app ja usa.
+
+       0.5rem e nao 0.25rem porque os dois tailwind derivam diferente:
+       AupusService md = radius-4px, shared-pages md = radius-2px. Com 0.5rem
+       o rounded-md local da 4px, igual aos controles hardcoded; o do
+       shared-pages da 6px. Com 0.25rem o local ia a ZERO e quadrava badge,
+       dropdown, tabs, toast e tooltip. */
+    --radius: 0.5rem;
 
     --chart-1: 338, 100%, 39%;
     --chart-2: 206, 85%, 32%;
