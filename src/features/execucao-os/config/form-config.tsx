@@ -477,9 +477,11 @@ export const execucaoOSFormFields: FormField[] = [
     required: true,
     group: 'qualidade',
     width: 'quarter',
+    // Desde AUDITADA: a nota e dada no painel de auditar, entao o auditor
+    // precisa conseguir reabrir a OS e conferir o que registrou.
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
-      return status === 'FINALIZADA';
+      return status === 'AUDITADA' || status === 'FINALIZADA';
     }
   },
   {
@@ -491,7 +493,7 @@ export const execucaoOSFormFields: FormField[] = [
     colSpan: 2,
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
-      return status === 'FINALIZADA';
+      return status === 'AUDITADA' || status === 'FINALIZADA';
     }
   },
 
