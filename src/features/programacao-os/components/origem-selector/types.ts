@@ -95,14 +95,36 @@ export interface SolicitacaoDisponivel {
 /**
  * Interface para tarefas disponíveis
  */
+/**
+ * Tarefa oferecida na selecao de origem.
+ *
+ * Desde o PR6 a tarefa tem quatro campos e NAO guarda mais conteudo:
+ * descricao, categoria, tipo_manutencao, tempo_estimado e duracao_estimada
+ * foram droppadas e vivem na instrucao. Declarar aquelas colunas aqui era o
+ * que deixava o front compilar lendo campo inexistente.
+ */
 export interface TarefaDisponivel {
   id: string;
   nome: string;
-  descricao: string;
-  categoria: string;
-  tipo_manutencao: string;
-  tempo_estimado: number;
-  duracao_estimada: number;
+  tag?: string;
+  criticidade?: number;
+  frequencia?: string;
+  ordem?: number;
+  instrucao?: {
+    id?: string;
+    tag?: string;
+    nome?: string;
+    categoria?: string;
+    tipo_manutencao?: string;
+    descricao?: string;
+    sub_instrucoes?: Array<{
+      id?: string;
+      descricao: string;
+      obrigatoria?: boolean;
+      ordem?: number;
+      tempo_estimado?: number | null;
+    }>;
+  };
 }
 
 /**

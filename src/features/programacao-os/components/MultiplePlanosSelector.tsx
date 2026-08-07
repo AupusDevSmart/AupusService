@@ -673,9 +673,11 @@ export const MultiplePlanosSelector: React.FC<MultiplePlanosSelectorProps> = ({
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
                                     <Wrench className="h-4 w-4 text-primary" />
-                                    <Badge variant="outline" className="text-xs">
-                                      {tarefa.categoria}
-                                    </Badge>
+                                    {tarefa.instrucao?.categoria && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {tarefa.instrucao.categoria}
+                                      </Badge>
+                                    )}
                                     <Badge
                                       variant={tarefa.criticidade >= 4 ? 'destructive' : tarefa.criticidade >= 3 ? 'secondary' : 'default'}
                                       className="text-xs"
@@ -684,7 +686,7 @@ export const MultiplePlanosSelector: React.FC<MultiplePlanosSelectorProps> = ({
                                     </Badge>
                                   </div>
 
-                                  <h4 className="font-medium text-sm text-foreground">{tarefa.descricao}</h4>
+                                  <h4 className="font-medium text-sm text-foreground">{tarefa.nome}</h4>
                                   <p className="text-xs text-muted-foreground mt-1">
                                     Tag: {tarefa.tag} • {tarefa.tipo} • {tarefa.frequencia}
                                   </p>

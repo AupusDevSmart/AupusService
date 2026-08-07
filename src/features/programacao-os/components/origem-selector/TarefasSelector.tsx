@@ -113,15 +113,28 @@ export const TarefasSelector: React.FC<TarefasSelectorProps> = ({
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <Wrench className="h-4 w-4 text-primary" />
-                      <Badge variant="outline" className="text-xs">
-                        {tarefa.categoria}
-                      </Badge>
-                      <Badge variant="secondary" className="text-xs">
-                        {tarefa.tipo_manutencao}
-                      </Badge>
+                      {tarefa.instrucao?.categoria && (
+                        <Badge variant="outline" className="text-xs">
+                          {tarefa.instrucao.categoria}
+                        </Badge>
+                      )}
+                      {tarefa.instrucao?.tipo_manutencao && (
+                        <Badge variant="secondary" className="text-xs">
+                          {tarefa.instrucao.tipo_manutencao}
+                        </Badge>
+                      )}
                     </div>
 
                     <h4 className="font-medium text-sm text-foreground">{tarefa.nome}</h4>
+                    {tarefa.instrucao && (
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {tarefa.instrucao.tag ? `${tarefa.instrucao.tag} · ` : ''}
+                        {tarefa.instrucao.nome}
+                        {tarefa.instrucao.sub_instrucoes?.length
+                          ? ` · ${tarefa.instrucao.sub_instrucoes.length} etapa(s)`
+                          : ''}
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>

@@ -178,6 +178,11 @@ export interface TarefaApiResponse {
     tag?: string;
     nome: string;
     descricao?: string;
+    // Conteudo que era da tarefa antes do PR6 e hoje vive so aqui. As telas de
+    // OS leem daqui para dizer o que deve ser feito.
+    categoria?: string;
+    tipo_manutencao?: string;
+    condicao_ativo?: string;
     sub_instrucoes?: Array<{
       id: string;
       descricao: string;

@@ -363,7 +363,7 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                                   ) : (
                                     <ChevronRight className="h-3 w-3 text-muted-foreground mr-2" />
                                   )}
-                                  {getCategoriasIcons(tarefa.categoria)}
+                                  {getCategoriasIcons(tarefa.instrucao?.categoria ?? '')}
                                   <div className="text-left flex-1 ml-2">
                                     <div className="font-medium text-sm text-foreground flex items-center gap-2">
                                       <span>{tarefa.nome}</span>
@@ -386,7 +386,7 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                               <div className="px-3 pb-3 space-y-3">
                                 {/* Descrição da Tarefa */}
                                 <div className="bg-muted/50 dark:bg-muted/30 rounded p-3">
-                                  <p className="text-sm text-foreground">{tarefa.descricao}</p>
+                                  <p className="text-sm text-foreground">{tarefa.instrucao?.descricao}</p>
                                   {tarefa.observacoes && (
                                     <p className="text-xs text-muted-foreground mt-2 italic">
                                       Observações: {tarefa.observacoes}
@@ -402,7 +402,7 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                                   </div>
                                   <div>
                                     <span className="font-medium text-foreground">Condição:</span>
-                                    <span className="ml-2">{tarefa.condicao_ativo}</span>
+                                    <span className="ml-2">{tarefa.instrucao?.condicao_ativo ?? '-'}</span>
                                   </div>
                                   {tarefa.responsavel && (
                                     <div className="col-span-2">

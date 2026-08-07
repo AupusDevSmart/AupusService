@@ -368,35 +368,34 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
                         {tarefa.nome}
                       </span>
                     </div>
-                    {tarefa.descricao && (
+                    {tarefa.instrucao?.descricao && (
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                        {tarefa.descricao}
+                        {tarefa.instrucao.descricao}
                       </p>
                     )}
                   </div>
-                  <Badge
-                    variant={tarefa.status === 'ATIVA' ? 'default' : 'secondary'}
-                    className="text-xs shrink-0"
-                  >
-                    {tarefa.status}
-                  </Badge>
+                  {tarefa.instrucao?.tag && (
+                    <Badge variant="outline" className="text-xs shrink-0 font-mono">
+                      {tarefa.instrucao.tag}
+                    </Badge>
+                  )}
                 </div>
 
                 {/* Detalhes em grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs">
-                  {tarefa.categoria && (
+                  {tarefa.instrucao?.categoria && (
                     <div>
                       <span className="text-muted-foreground">Categoria: </span>
-                      <span className="text-gray-700 dark:text-gray-300">
-                        {categoriaLabels[tarefa.categoria] || tarefa.categoria}
+                      <span className="text-foreground">
+                        {categoriaLabels[tarefa.instrucao.categoria] || tarefa.instrucao.categoria}
                       </span>
                     </div>
                   )}
-                  {tarefa.tipo_manutencao && (
+                  {tarefa.instrucao?.tipo_manutencao && (
                     <div>
                       <span className="text-muted-foreground">Tipo: </span>
-                      <span className="text-gray-700 dark:text-gray-300">
-                        {tipoLabels[tarefa.tipo_manutencao] || tarefa.tipo_manutencao}
+                      <span className="text-foreground">
+                        {tipoLabels[tarefa.instrucao.tipo_manutencao] || tarefa.instrucao.tipo_manutencao}
                       </span>
                     </div>
                   )}
@@ -417,12 +416,7 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
                       <span className="text-gray-700 dark:text-gray-300">{tarefa.criticidade}/5</span>
                     </div>
                   )}
-                  {tarefa.condicao_ativo && (
-                    <div>
-                      <span className="text-muted-foreground">Condição: </span>
-                      <span className="text-gray-700 dark:text-gray-300">{tarefa.condicao_ativo}</span>
-                    </div>
-                  )}
+
                 </div>
 
                 {/* Equipamento e plano */}

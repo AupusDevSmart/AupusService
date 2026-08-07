@@ -354,11 +354,13 @@ export const useOrigemDados = () => {
           id: tarefa.id, // ✅ ID real da API (UUID/CUID)
           templateId: tarefa.id,
           tag: tarefa.tag,
-          descricao: tarefa.descricao,
           nome: tarefa.nome,
           frequencia: tarefa.frequencia,
           criticidade: tarefa.criticidade,
-          ordem: tarefa.ordem
+          ordem: tarefa.ordem,
+          // Conteudo do que sera feito: desde o PR6 vive na instrucao, nao na
+          // tarefa. E daqui que as telas de OS leem categoria, tipo e etapas.
+          instrucao: tarefa.instrucao,
         };
       });
 
