@@ -60,10 +60,6 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
       label: 'Plantas',
     },
     {
-      path: '/cadastros/unidades',
-      label: 'Unidades',
-    },
-    {
       path: '/cadastros/equipamentos',
       label: 'Equipamentos',
     },

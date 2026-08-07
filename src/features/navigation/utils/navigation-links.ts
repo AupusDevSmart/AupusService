@@ -10,7 +10,6 @@ import {
   Calendar,
   FileText,
   Truck,
-  Building,
   AlertTriangle,
   CheckSquare,
   Package,
@@ -65,14 +64,6 @@ export const navigationLinks: Array<NavigationLink> = [
         icon: Factory,
         label: 'Plantas',
         hint: 'Plantas',
-      },
-      {
-        key: 'unidades',
-        featureKey: 'unidades.view',
-        path: '/cadastros/unidades',
-        icon: Building,
-        label: 'Unidades',
-        hint: 'Unidades',
       },
       {
         key: 'equipamentos',
