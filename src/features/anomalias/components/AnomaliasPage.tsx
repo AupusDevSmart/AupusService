@@ -4,7 +4,7 @@ import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@aupus/shared-pages';
 import { BaseFilters } from '@aupus/shared-pages';
-import { BaseModal } from '@aupus/shared-pages';
+import { AnomaliasModal } from './AnomaliasModal';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { Anomalia, AnomaliaFormData } from '../types';
@@ -350,57 +350,14 @@ export function AnomaliasPage() {
         </div>
 
         {/* Modal */}
-        {modalState.isOpen && (
-          <BaseModal
-            isOpen={modalState.isOpen}
-            mode={modalState.mode}
-            entity={modalEntity as any}
-            title={
-              modalState.mode === 'create'
-                ? 'Nova Anomalia'
-                : modalState.mode === 'edit'
-                ? 'Editar Anomalia'
-                : 'Visualizar Anomalia'
-            }
-            icon={<AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-primary" />}
-            formFields={formFields}
-            onClose={closeModal}
-            onSubmit={handleSubmit}
-            width="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[800px]"
-            groups={[
-              {
-                key: 'informacoes_basicas',
-                title: 'Informações Básicas',
-                fields: ['descricao'],
-              },
-              {
-                key: 'localizacao',
-                title: 'Localização',
-                fields: ['localizacao'],
-              },
-              {
-                key: 'classificacao',
-                title: 'Classificação',
-                fields: ['condicao', 'origem', 'prioridade', 'status'],
-              },
-              {
-                key: 'observacoes',
-                title: 'Observações Adicionais',
-                fields: ['observacoes'],
-              },
-              {
-                key: 'instrucoes_vinculadas',
-                title: 'Instrucoes Vinculadas',
-                fields: ['instrucoes_ids'],
-              },
-              {
-                key: 'anexos',
-                title: 'Anexos',
-                fields: ['anexos'],
-              },
-            ]}
-          />
-        )}
+        <AnomaliasModal
+          isOpen={modalState.isOpen}
+          mode={modalState.mode}
+          entity={modalEntity}
+          formFields={formFields}
+          onClose={closeModal}
+          onSubmit={handleSubmit}
+        />
       </Layout.Main>
     </Layout>
   );

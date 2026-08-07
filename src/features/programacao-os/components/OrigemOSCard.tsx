@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { OrigemLinks } from '@/features/execucao-os/components/OrigemLinks';
 import { useAnomalias } from '@/features/anomalias/hooks/useAnomalias';
 import {
   AlertTriangle,
@@ -183,10 +184,13 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
             Erro ao carregar dados da anomalia
           </div>
         )}
-        <div>
-          <h4 className="font-medium text-sm text-gray-800 dark:text-gray-200">
+        <div className="space-y-2">
+          <h4 className="font-medium text-sm text-foreground">
             {anomaliaData?.descricao || 'Descrição não disponível'}
           </h4>
+          {/* A anomalia tem condicao, anexos e instrucoes vinculadas que nao
+              cabem aqui — o atalho abre o sheet dela por cima da OS. */}
+          <OrigemLinks anomaliaId={anomaliaData?.id} />
         </div>
 
         <div className="grid grid-cols-2 gap-3 text-xs">
@@ -477,6 +481,17 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
                         </li>
                       ))}
                     </ul>
+                  </div>
+                )}
+
+                {/* A instrucao tem mais do que as etapas: descricao, recursos
+                    necessarios e anexos. O atalho abre o sheet dela por cima. */}
+                {tarefa.instrucao?.id && (
+                  <div className="border-t border-gray-100 dark:border-gray-700/50 pt-1.5">
+                    <OrigemLinks
+                      instrucaoId={tarefa.instrucao.id}
+                      instrucaoRotulo={tarefa.instrucao.nome}
+                    />
                   </div>
                 )}
               </div>
