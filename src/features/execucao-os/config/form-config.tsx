@@ -8,6 +8,7 @@ import { OrcamentoCardManager } from '@/components/common/cards/OrcamentoCardMan
 import { OrigemOSCardWrapper } from '../components/OrigemOSCardWrapper';
 import { ReservaVeiculoCard } from '../components/ReservaVeiculoCard';
 import { StatusTransitionHelper } from '../components/StatusTransitionHelper';
+import { HistoricoOSCard } from '../components/HistoricoOSCard';
 
 export const execucaoOSFormFields: FormField[] = [
   // Seleção da Programação - GRUPO: selecao
@@ -415,21 +416,6 @@ export const execucaoOSFormFields: FormField[] = [
       return status === 'FINALIZADA' && !!value;
     }
   },
-  {
-    key: 'medidasSegurancaAdicionais',
-    label: 'Medidas de Segurança Adicionais',
-    type: 'textarea',
-    placeholder: 'Medidas extras de segurança adotadas',
-    group: 'seguranca',
-    colSpan: 2,
-    disabled: true,
-    startNewRow: true,
-    condition: (entity, formData) => {
-      const status = formData?.statusExecucao || entity?.statusExecucao;
-      const value = formData?.medidasSegurancaAdicionais || entity?.medidasSegurancaAdicionais;
-      return status === 'FINALIZADA' && !!value;
-    }
-  },
 
   // Resultados e Qualidade - GRUPO: resultados
   {
@@ -524,21 +510,6 @@ export const execucaoOSFormFields: FormField[] = [
     }
   },
   {
-    key: 'motivoPausas',
-    label: 'Motivo das Pausas',
-    type: 'textarea',
-    colSpan: 2,
-    placeholder: 'Descreva os motivos das pausas durante a execução',
-    condition: (entity, formData) => {
-      const status = formData?.statusExecucao || entity?.statusExecucao;
-      // Mostrar se está pausada OU se já passou pela pausa e tem conteúdo
-      return status === 'PAUSADA' ||
-             (status === 'EM_EXECUCAO' && entity?.motivoPausas) ||
-             (status === 'FINALIZADA' && entity?.motivoPausas);
-    },
-    group: 'observacoes'
-  },
-  {
     key: 'motivoCancelamento',
     label: 'Motivo do Cancelamento',
     type: 'textarea',
@@ -550,6 +521,19 @@ export const execucaoOSFormFields: FormField[] = [
              (entity && entity.statusExecucao === 'CANCELADA');
     },
     group: 'observacoes'
+  },
+
+  // Historico - GRUPO: historico
+  {
+    key: 'historicoOS',
+    label: '',
+    type: 'custom',
+    group: 'historico',
+    colSpan: 2,
+    showOnlyOnMode: ['view', 'edit'],
+    render: (props: any) => (
+      <HistoricoOSCard historico={props.entity?.historico} />
+    )
   },
 
   // Campos de auditoria - GRUPO: auditoria
@@ -567,7 +551,9 @@ export const execucaoOSFormFields: FormField[] = [
   },
   {
     key: 'dataFinalizacao',
-    label: 'Data da Finalização',
+    // Mostra data_hora_fim_real: nao existe coluna de "finalizado em". Sao
+    // momentos diferentes do fluxo (EXECUTADA -> AUDITADA -> FINALIZADA).
+    label: 'Data de Conclusão da Execução',
     type: 'datetime-local',
     disabled: true,
     group: 'auditoria',
@@ -658,7 +644,7 @@ export const execucaoOSFormGroups = [
   {
     key: 'seguranca',
     title: 'Segurança e EPIs',
-    fields: ['equipamentosSeguranca', 'incidentesSeguranca', 'medidasSegurancaAdicionais'] // ✅ ADICIONADO: mapping explícito
+    fields: ['equipamentosSeguranca', 'incidentesSeguranca']
   },
   {
     key: 'resultados',
@@ -675,7 +661,12 @@ export const execucaoOSFormGroups = [
   {
     key: 'observacoes',
     title: 'Observações Gerais',
-    fields: ['observacoesExecucao', 'motivoPausas', 'motivoCancelamento'] // ✅ ADICIONADO: mapping explícito
+    fields: ['observacoesExecucao', 'motivoCancelamento']
+  },
+  {
+    key: 'historico',
+    title: 'Histórico da OS',
+    fields: ['historicoOS']
   },
   {
     key: 'auditoria',

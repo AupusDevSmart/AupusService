@@ -46,11 +46,9 @@ export interface ExecutarOSDto {
   materiais_consumidos?: { id: string; quantidade_consumida: number; observacoes?: string }[];
   ferramentas_utilizadas?: { id: string; condicao_depois: string; observacoes?: string }[];
   atividades_realizadas?: string;
-  checklist_concluido?: number;
   procedimentos_seguidos?: string;
   equipamentos_seguranca?: string;
   incidentes_seguranca?: string;
-  medidas_seguranca_adicionais?: string;
   custos_adicionais?: number;
   km_final?: number;
   observacoes_veiculo?: string;
