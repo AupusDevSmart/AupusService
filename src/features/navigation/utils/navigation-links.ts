@@ -3,7 +3,6 @@ import {
   type LucideIcon,
   Building2,
   Users,
-  Zap,
   Factory,
   Wrench,
   Settings,
@@ -12,11 +11,10 @@ import {
   Truck,
   AlertTriangle,
   CheckSquare,
-  Package,
+  ClipboardList,
   PlayCircle,
   Layers,
   LayoutDashboard,
-  CalendarDays,
   Clock,
   FilePenLine
 } from 'lucide-react';
@@ -42,21 +40,16 @@ export const navigationLinks: Array<NavigationLink> = [
     hint: 'Dashboard Operacional Unificado',
   },
 
+  // O que o usuário administra como patrimônio: onde ficam as instalações e o
+  // que está instalado nelas. Instalações não têm página própria — vivem na
+  // linha expandida de cada planta.
   {
-    key: 'cadastros',
+    key: 'ativos',
     path: '/cadastros',
     icon: Building2,
-    label: 'Cadastros',
-    hint: 'Cadastros',
+    label: 'Ativos',
+    hint: 'Ativos',
     links: [
-      {
-        key: 'usuarios',
-        featureKey: 'usuarios.view',
-        path: '/cadastros/usuarios',
-        icon: Users,
-        label: 'Usuários',
-        hint: 'Usuários',
-      },
       {
         key: 'plantas',
         featureKey: 'plantas.view',
@@ -72,24 +65,18 @@ export const navigationLinks: Array<NavigationLink> = [
         icon: Wrench,
         label: 'Equipamentos',
         hint: 'Equipamentos',
-      },
-      {
-        key: 'concessionarias',
-        featureKey: 'equipamentos.manage',
-        path: '/cadastros/concessionarias',
-        icon: Zap,
-        label: 'Concessionárias',
-        hint: 'Concessionárias',
       }
     ]
   },
 
+  // Concessionárias existe só no AupusNexOn. A rota continua registrada aqui
+  // para não quebrar link antigo, mas fora do menu.
   {
-    key: 'manutencao',
+    key: 'controle',
     path: '/manutencao',
-    icon: Settings,
-    label: 'Manutenção',
-    hint: 'Manutenção',
+    icon: ClipboardList,
+    label: 'Controle',
+    hint: 'Controle',
     links: [
       {
         key: 'planos-manutencao',
@@ -144,13 +131,23 @@ export const navigationLinks: Array<NavigationLink> = [
     ]
   },
 
+  // Tudo que sustenta a operação sem ser a operação em si: quem acessa, o que
+  // se reserva, e o calendário que define dia útil.
   {
-    key: 'recursos',
-    path: '/recursos',
-    icon: Package,
-    label: 'Recursos',
-    hint: 'Recursos',
+    key: 'administracao',
+    path: '/administracao',
+    icon: Settings,
+    label: 'Administração',
+    hint: 'Administração',
     links: [
+      {
+        key: 'usuarios',
+        featureKey: 'usuarios.view',
+        path: '/cadastros/usuarios',
+        icon: Users,
+        label: 'Usuários',
+        hint: 'Usuários',
+      },
       {
         key: 'veiculos',
         featureKey: 'recursos.manage',
@@ -166,17 +163,7 @@ export const navigationLinks: Array<NavigationLink> = [
         icon: CheckSquare,
         label: 'Reservas',
         hint: 'Reservas',
-      }
-    ]
-  },
-
-  {
-    key: 'agenda',
-    path: '#',
-    icon: CalendarDays,
-    label: 'Agenda',
-    hint: 'Agenda',
-    links: [
+      },
       {
         key: 'feriados',
         featureKey: 'agenda.manage',
