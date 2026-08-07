@@ -243,12 +243,24 @@ export function TarefasExpandedRow({
     <div className="px-4 py-3 space-y-3 border-t">
       {posicaoBotaoAdicionar === 'topo' && botaoAdicionar}
 
-      {/* Cadastro rápido numa linha so. Instrucao e o unico campo de texto
-          longo, entao leva o dobro do espaco elastico do nome e os dois
-          selects ficam com largura fixa; em tela estreita o flex-wrap quebra
-          sozinho, que e o caso do sheet do equipamento. */}
+      {/* Cadastro rápido numa linha so. O nome vem primeiro: e ele que
+          identifica a tarefa na lista. A instrucao leva o dobro do espaco
+          elastico por ser o unico campo de texto longo, e os dois selects tem
+          largura fixa; em tela estreita o flex-wrap quebra sozinho, que e o
+          caso do sheet do equipamento. */}
       {!somenteLeitura && mostrandoFormulario && (
         <div className="flex flex-wrap items-end gap-2">
+          <div className="flex-1 min-w-[10rem]">
+            <Label className="text-xs text-muted-foreground mb-1 block">Nome</Label>
+            <Input
+              type="text"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Digite o nome da tarefa"
+              className="h-9"
+            />
+          </div>
+
           <div className="flex-[2] min-w-[14rem]">
             <Label className="text-xs text-muted-foreground mb-1 block">Instrução</Label>
             <Combobox
@@ -258,17 +270,6 @@ export function TarefasExpandedRow({
               placeholder="Selecione uma instrução..."
               searchPlaceholder="Buscar instrução..."
               emptyText="Nenhuma instrução encontrada"
-            />
-          </div>
-
-          <div className="flex-1 min-w-[10rem]">
-            <Label className="text-xs text-muted-foreground mb-1 block">Nome</Label>
-            <Input
-              type="text"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Herda o da instrução"
-              className="h-9"
             />
           </div>
 
@@ -357,8 +358,22 @@ export function TarefasExpandedRow({
             editandoId === tarefa.id ? (
               // Edicao inline com os quatro campos. O sheet completo de tarefa
               // mostrava campos que sairam do DTO e devolvia 400 ao salvar.
-              <div key={tarefa.id} className="space-y-2 px-3 py-2 bg-muted/30">
-                <div>
+              <div key={tarefa.id} className="px-3 py-2 bg-muted/30">
+                {/* Mesma ordem e mesmo layout do cadastro: quem edita espera
+                    encontrar os campos onde acabou de preenche-los. */}
+                <div className="flex flex-wrap items-end gap-2">
+                <div className="flex-1 min-w-[10rem]">
+                  <Label className="text-xs text-muted-foreground mb-1 block">Nome</Label>
+                  <Input
+                    type="text"
+                    value={edicao.nome}
+                    onChange={(e) => setEdicao((prev) => ({ ...prev, nome: e.target.value }))}
+                    placeholder="Digite o nome da tarefa"
+                    className="h-9"
+                  />
+                </div>
+
+                <div className="flex-[2] min-w-[14rem]">
                   <Label className="text-xs text-muted-foreground mb-1 block">Instrução</Label>
                   <Combobox
                     options={instrucoesOptions}
@@ -367,17 +382,6 @@ export function TarefasExpandedRow({
                     placeholder="Selecione uma instrução..."
                     searchPlaceholder="Buscar instrução..."
                     emptyText="Nenhuma instrução encontrada"
-                  />
-                </div>
-
-                <div className="flex flex-wrap items-end gap-2">
-                <div className="flex-1 min-w-[10rem]">
-                  <Label className="text-xs text-muted-foreground mb-1 block">Nome</Label>
-                  <Input
-                    type="text"
-                    value={edicao.nome}
-                    onChange={(e) => setEdicao((prev) => ({ ...prev, nome: e.target.value }))}
-                    className="h-9"
                   />
                 </div>
 
