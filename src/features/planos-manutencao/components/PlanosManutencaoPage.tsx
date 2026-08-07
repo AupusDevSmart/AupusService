@@ -54,6 +54,9 @@ export function PlanosManutencaoPage() {
     entity: InstrucaoApiResponse | null;
   }>({ isOpen: false, entity: null });
   const [expandedPlanoId, setExpandedPlanoId] = useState<string | null>(null);
+  // Sobe a cada clique na acao de adicionar tarefa, abrindo o formulario
+  // dentro da linha expandida.
+  const [abrirCadastroToken, setAbrirCadastroToken] = useState(0);
   // Muda quando algo fora da linha expandida mexe nas tarefas
   const [tarefasRefreshToken] = useState(0);
 
@@ -193,6 +196,11 @@ export function PlanosManutencaoPage() {
   // Handlers da linha expandida
   // ============================
 
+  const handleAdicionarTarefa = useCallback((plano: PlanoManutencaoApiResponse) => {
+    setExpandedPlanoId(plano.id?.trim() || null);
+    setAbrirCadastroToken((n) => n + 1);
+  }, []);
+
   const handleRowToggle = useCallback((plano: PlanoManutencaoApiResponse) => {
     const planoId = plano.id?.trim() || '';
     setExpandedPlanoId((atual) => (atual === planoId ? null : planoId));
@@ -242,6 +250,7 @@ export function PlanosManutencaoPage() {
   const customActions = createPlanosTableActions({
     handleView,
     handleEdit,
+    handleAdicionarTarefa,
   }) as any;
 
   return (
@@ -291,7 +300,8 @@ export function PlanosManutencaoPage() {
                   refreshToken={tarefasRefreshToken}
                   onVerTarefa={abrirInstrucaoDaTarefa}
                   onTarefasChange={handleTarefasChange}
-                  botaoAdicionarNoRodape
+                  posicaoBotaoAdicionar="oculto"
+                  abrirCadastroToken={abrirCadastroToken}
                 />
               )}
             />

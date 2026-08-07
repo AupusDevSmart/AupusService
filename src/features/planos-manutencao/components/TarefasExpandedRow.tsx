@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Combobox } from '@aupus/shared-pages';
-import { Eye, Pencil, Trash2, Plus, ClipboardList, Check, X } from 'lucide-react';
+import { Eye, Pencil, Trash2, Plus, Check, X } from 'lucide-react';
 import { useUserStore } from '@/store/useUserStore';
 import { tarefasApi, type TarefaApiResponse } from '@/services/tarefas.services';
 import { type FrequenciaTarefa } from '@/services/instrucoes.services';
@@ -54,13 +54,17 @@ interface TarefasExpandedRowProps {
   /** Esconde cadastro, edicao e remocao. Usado no modo view do equipamento. */
   somenteLeitura?: boolean;
   /**
-   * Coloca o botao de adicionar abaixo da lista, alinhado a esquerda.
+   * Onde fica o botao de adicionar tarefa.
    *
-   * Na tabela de planos a linha expandida ja vem logo abaixo do plano, entao
-   * o botao no topo competia com a lista pela primeira coisa que se ve. No
-   * sheet do equipamento a secao e curta e o botao no topo continua melhor.
+   * 'oculto' na tabela de planos, onde ele virou acao da linha do plano; no
+   * sheet do equipamento a secao e curta e o topo continua melhor.
    */
-  botaoAdicionarNoRodape?: boolean;
+  posicaoBotaoAdicionar?: 'topo' | 'rodape' | 'oculto';
+  /**
+   * Sobe a cada clique na acao "adicionar tarefa" da tabela, para abrir o
+   * formulario de fora da linha expandida.
+   */
+  abrirCadastroToken?: number;
 }
 
 export function TarefasExpandedRow({
@@ -70,7 +74,8 @@ export function TarefasExpandedRow({
   onVerTarefa,
   onTarefasChange,
   somenteLeitura = false,
-  botaoAdicionarNoRodape = false
+  posicaoBotaoAdicionar = 'topo',
+  abrirCadastroToken = 0
 }: TarefasExpandedRowProps) {
   const { user } = useUserStore();
 
@@ -157,6 +162,12 @@ export function TarefasExpandedRow({
     carregarTarefas();
   }, [carregarTarefas, refreshToken]);
 
+  // Token e nao booleano: clicar de novo na acao precisa reabrir o formulario
+  // mesmo que ele tenha sido fechado no X.
+  useEffect(() => {
+    if (abrirCadastroToken > 0 && !somenteLeitura) setMostrandoFormulario(true);
+  }, [abrirCadastroToken, somenteLeitura]);
+
   const handleAdicionar = async () => {
     if (!instrucaoId) return;
 
@@ -211,8 +222,10 @@ export function TarefasExpandedRow({
   // O formulario fica escondido ate o usuario pedir: aberto por padrao, ele
   // domina a area e a lista de tarefas — que e o que interessa ao abrir —
   // fica empurrada para baixo. So o icone: o title carrega o significado.
-  const botaoAdicionar = !somenteLeitura && !mostrandoFormulario && (
-    <div className={botaoAdicionarNoRodape ? 'flex justify-start' : 'flex justify-end'}>
+  const botaoAdicionar = !somenteLeitura &&
+    !mostrandoFormulario &&
+    posicaoBotaoAdicionar !== 'oculto' && (
+    <div className={posicaoBotaoAdicionar === 'rodape' ? 'flex justify-start' : 'flex justify-end'}>
       <Button
         size="icon"
         variant="outline"
@@ -228,7 +241,7 @@ export function TarefasExpandedRow({
 
   return (
     <div className="px-4 py-3 space-y-3 border-t">
-      {!botaoAdicionarNoRodape && botaoAdicionar}
+      {posicaoBotaoAdicionar === 'topo' && botaoAdicionar}
 
       {/* Cadastro rápido numa linha so. Instrucao e o unico campo de texto
           longo, entao leva o dobro do espaco elastico do nome e os dois
@@ -337,10 +350,7 @@ export function TarefasExpandedRow({
       {loading ? (
         <p className="py-4 text-center text-sm text-muted-foreground">Carregando tarefas...</p>
       ) : tarefas.length === 0 ? (
-        <div className="py-6 text-center">
-          <ClipboardList className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-          <p className="text-sm text-muted-foreground">Nenhuma tarefa neste plano ainda.</p>
-        </div>
+        <p className="py-3 text-sm text-muted-foreground">Nenhuma tarefa neste plano ainda.</p>
       ) : (
         <div className="border rounded divide-y">
           {tarefas.map((tarefa) =>
@@ -442,8 +452,11 @@ export function TarefasExpandedRow({
               <div className="min-w-0 flex-1">
                 {/* Sem a tag: e identificador interno e roubava a atencao do
                     nome, que e o que identifica a tarefa para quem le. */}
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs text-muted-foreground shrink-0">#{tarefa.ordem}</span>
+                  <p className="text-sm text-foreground truncate">{tarefa.nome}</p>
+                </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>#{tarefa.ordem}</span>
                   {/* Diz se a tarefa acompanha o plano geral ou se divergiu.
                       Sem isso o usuário não tem como saber por que uma tarefa
                       mudou sozinha (herdada) e outra não (customizada). */}
@@ -462,7 +475,6 @@ export function TarefasExpandedRow({
                     <span title="Criada neste equipamento">própria</span>
                   )}
                 </div>
-                <p className="text-sm text-foreground truncate">{tarefa.nome}</p>
               </div>
 
               <div className="hidden md:block w-40 flex-shrink-0 text-xs text-muted-foreground truncate">
@@ -513,7 +525,7 @@ export function TarefasExpandedRow({
         </div>
       )}
 
-      {botaoAdicionarNoRodape && botaoAdicionar}
+      {posicaoBotaoAdicionar === 'rodape' && botaoAdicionar}
     </div>
   );
 }

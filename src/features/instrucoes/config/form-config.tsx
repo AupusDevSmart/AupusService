@@ -10,7 +10,10 @@ export const instrucoesFormFields: FormField[] = [
     label: 'TAG da Instrução',
     type: 'text',
     required: false,
-    placeholder: 'Ex: INST-001 (auto-gerado se vazio)',
+    disabled: true,
+    // Sempre gerada pelo backend (gerarTagUnica). No cadastro nao ha o que
+    // mostrar, entao o campo so aparece depois que a instrucao existe.
+    showOnlyOnMode: ['view', 'edit'],
     colSpan: 1
   } as any,
   {
@@ -62,17 +65,4 @@ export const instrucoesFormFields: FormField[] = [
     )
   },
 
-  {
-    key: 'status',
-    label: 'Status',
-    type: 'select',
-    required: true,
-    options: [
-      { value: 'ATIVA', label: 'Ativa' },
-      { value: 'INATIVA', label: 'Inativa' },
-      { value: 'EM_REVISAO', label: 'Em Revisão' },
-      { value: 'ARQUIVADA', label: 'Arquivada' }
-    ],
-    colSpan: 2
-  }
 ];

@@ -83,7 +83,7 @@ export function InstrucoesModal({
           title: 'Informações Básicas',
           // Status logo apos a descricao: e informacao do cabecalho da
           // instrucao, nao um apendice no fim do formulario.
-          fields: ['tag', 'nome', 'descricao', 'status']
+          fields: ['tag', 'nome', 'descricao']
         },
         {
           key: 'classificacao',
@@ -96,14 +96,12 @@ export function InstrucoesModal({
           fields: ['duracao_estimada', 'tempo_estimado']
         },
         {
-          key: 'atividades',
-          title: 'Sub-instruções',
-          fields: ['sub_instrucoes']
-        },
-        {
-          key: 'recursos',
-          title: 'Recursos Necessários',
-          fields: ['recursos']
+          // 'main' e a unica chave cujo titulo o BaseForm nao renderiza. As
+          // duas tabelas titulam a si mesmas, com o botao de adicionar na
+          // mesma linha do titulo.
+          key: 'main',
+          title: '',
+          fields: ['sub_instrucoes', 'recursos']
         }
       ]}
     >

@@ -25,6 +25,12 @@ interface ItensOrdenaveisTableProps<T> {
   onRemover: (index: number) => void;
   onAdicionar: () => void;
   textoAdicionar: string;
+  /**
+   * Quando informado, a tabela renderiza o proprio cabecalho com o titulo e o
+   * botao de adicionar NA MESMA LINHA. Sem isso o titulo vem do grupo do
+   * BaseForm e o botao fica numa linha so para ele, logo abaixo.
+   */
+  titulo?: string;
   resumo?: ResumoItem[];
   disabled?: boolean;
 }
@@ -36,6 +42,7 @@ export function ItensOrdenaveisTable<T>({
   onRemover,
   onAdicionar,
   textoAdicionar,
+  titulo,
   resumo,
   disabled = false
 }: ItensOrdenaveisTableProps<T>) {
@@ -63,13 +70,21 @@ export function ItensOrdenaveisTable<T>({
 
   return (
     <div className="space-y-2">
-      {podeEditar && (
-        <div className="flex justify-end">
-          {/* dark:bg-black: o variant outline usa bg-background (navy no dark) e
-              ficava destoando dos campos, que sao pretos. */}
-          {/* So o icone: o texto de cada secao ja esta no titulo dela, e o
+      {(podeEditar || titulo) && (
+        <div className={titulo ? 'flex items-center justify-between' : 'flex justify-end'}>
+          {titulo && (
+            <h3 className="text-sm font-medium text-foreground">
+              {titulo}
+              {itens.length > 0 && (
+                <span className="ml-1.5 text-xs text-muted-foreground">({itens.length})</span>
+              )}
+            </h3>
+          )}
+          {/* dark:bg-black: o variant outline usa bg-background (navy no dark)
+              e ficava destoando dos campos, que sao pretos. So o icone: o
               title/aria-label carrega o significado sem ocupar largura. */}
-          <Button
+          {podeEditar && (
+            <Button
             type="button"
             variant="outline"
             size="icon"
@@ -80,6 +95,7 @@ export function ItensOrdenaveisTable<T>({
           >
             <Plus className="h-4 w-4" />
           </Button>
+          )}
         </div>
       )}
 

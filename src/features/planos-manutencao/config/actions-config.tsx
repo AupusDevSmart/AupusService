@@ -1,10 +1,11 @@
 // src/features/planos-manutencao/config/actions-config.tsx
-import { Edit, Eye } from 'lucide-react';
+import { Edit, Eye, Plus } from 'lucide-react';
 import { PlanoManutencaoApiResponse } from '@/services/planos-manutencao.services';
 
 export interface PlanosTableActions {
   handleView: (plano: PlanoManutencaoApiResponse) => void;
   handleEdit: (plano: PlanoManutencaoApiResponse) => void;
+  handleAdicionarTarefa: (plano: PlanoManutencaoApiResponse) => void;
 }
 
 /**
@@ -26,6 +27,16 @@ export function createPlanosTableActions(handlers: PlanosTableActions) {
       label: 'Editar',
       handler: handlers.handleEdit,
       icon: <Edit className="h-4 w-4" />,
+      variant: 'default' as const
+    },
+    {
+      // Expande a linha e ja abre o formulario de cadastro. O botao saiu de
+      // dentro da linha expandida: adicionar tarefa e acao DO PLANO, entao
+      // pertence a coluna de acoes dele.
+      key: 'adicionar_tarefa',
+      label: 'Adicionar tarefa',
+      handler: handlers.handleAdicionarTarefa,
+      icon: <Plus className="h-4 w-4" />,
       variant: 'default' as const
     }
   ];

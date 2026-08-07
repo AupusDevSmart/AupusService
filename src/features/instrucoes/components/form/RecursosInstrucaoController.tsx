@@ -155,7 +155,8 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
       onReordenar={reordenar}
       onRemover={remover}
       onAdicionar={adicionar}
-      textoAdicionar="Adicionar"
+      textoAdicionar="Adicionar recurso"
+      titulo="Recursos Necessários"
       disabled={disabled}
       resumo={[
         { icone: <Package className="h-3.5 w-3.5" />, label: 'Total de recursos', valor: recursos.length },

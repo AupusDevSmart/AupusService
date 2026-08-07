@@ -2,7 +2,6 @@
 import React from 'react';
 import { FormFieldProps } from '@/types/base';
 import { Input } from '@/components/ui/input';
-import { ClipboardList, CheckCircle2, Clock } from 'lucide-react';
 import { ItensOrdenaveisTable, type ColunaItemOrdenavel } from '@/components/common/ItensOrdenaveisTable';
 
 interface SubInstrucao {
@@ -11,13 +10,6 @@ interface SubInstrucao {
   obrigatoria: boolean;
   tempo_estimado?: number;
 }
-
-const formatarTempo = (minutos: number): string => {
-  if (minutos < 60) return `${minutos} min`;
-  const horas = Math.floor(minutos / 60);
-  const resto = minutos % 60;
-  return resto > 0 ? `${horas}h ${resto}min` : `${horas}h`;
-};
 
 export function SubInstrucoesController({ value, onChange, disabled }: FormFieldProps) {
   const [subInstrucoes, setSubInstrucoes] = React.useState<SubInstrucao[]>(
@@ -104,9 +96,7 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
     }
   ];
 
-  const tempoTotal = subInstrucoes.reduce((acc, item) => acc + (Number(item.tempo_estimado) || 0), 0);
-
-  // Sem título próprio: o BaseModal ja renderiza o cabecalho do grupo.
+  // Titulo proprio: assim ele e o botao de adicionar ficam na mesma linha.
   return (
     <ItensOrdenaveisTable
       itens={subInstrucoes}
@@ -114,17 +104,9 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
       onReordenar={reordenar}
       onRemover={remover}
       onAdicionar={adicionar}
-      textoAdicionar="Adicionar"
+      textoAdicionar="Adicionar sub-instrução"
+      titulo="Sub-instruções"
       disabled={disabled}
-      resumo={[
-        { icone: <ClipboardList className="h-3.5 w-3.5" />, label: 'Total de etapas', valor: subInstrucoes.length },
-        {
-          icone: <CheckCircle2 className="h-3.5 w-3.5" />,
-          label: 'Etapas obrigatórias',
-          valor: subInstrucoes.filter((item) => item.obrigatoria).length
-        },
-        { icone: <Clock className="h-3.5 w-3.5" />, label: 'Tempo estimado total', valor: formatarTempo(tempoTotal) }
-      ]}
     />
   );
 }
