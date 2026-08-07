@@ -18,7 +18,7 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Gerado automaticamente',
     disabled: true,
     group: 'identificacao',
-    colSpan: 2,
+    width: 'half',
     showOnlyOnMode: ['view', 'edit'],
   },
   {
@@ -51,7 +51,7 @@ export const programacaoOSFormFields: FormField[] = [
   // Origem da OS - GRUPO: origem
   {
     key: 'origem',
-    label: 'Selecione a origem da Ordem de Serviço',
+    label: '', // duplicava o titulo do grupo
     type: 'custom',
     component: OrigemOSSelector,
     required: true,
@@ -70,7 +70,7 @@ export const programacaoOSFormFields: FormField[] = [
   },
   {
     key: 'origemCard',
-    label: 'Origem da Ordem de Serviço',
+    label: '', // duplicava o titulo do grupo
     type: 'custom',
     group: 'origem',
     showOnlyOnMode: ['view', 'edit'],
@@ -147,18 +147,6 @@ export const programacaoOSFormFields: FormField[] = [
 
   // Planejamento - GRUPO: planejamento
   {
-    key: 'duracao_estimada',
-    label: 'Duração Estimada (horas)',
-    type: 'number',
-    required: true,
-    placeholder: 'Ex: 6',
-    group: 'planejamento',
-    width: 'half', // 50% em desktop
-    computeDisabled: (entity: any) => {
-      return entity?.status && entity.status !== 'PENDENTE';
-    }
-  },
-  {
     key: 'data_previsao_inicio',
     label: 'Data e Hora Prevista Início',
     type: 'datetime-local',
@@ -172,6 +160,18 @@ export const programacaoOSFormFields: FormField[] = [
     key: 'data_previsao_fim',
     label: 'Data e Hora Prevista Fim',
     type: 'datetime-local',
+    group: 'planejamento',
+    width: 'half', // 50% em desktop
+    computeDisabled: (entity: any) => {
+      return entity?.status && entity.status !== 'PENDENTE';
+    }
+  },
+  {
+    key: 'duracao_estimada',
+    label: 'Duração Estimada (horas)',
+    type: 'number',
+    required: true,
+    placeholder: 'Ex: 6',
     group: 'planejamento',
     width: 'half', // 50% em desktop
     computeDisabled: (entity: any) => {
@@ -341,7 +341,7 @@ export const programacaoOSFormFields: FormField[] = [
   // Orçamento - GRUPO: orcamento
   {
     key: 'itens_orcamento',
-    label: 'Orçamento',
+    label: '', // duplicava o titulo do grupo
     type: 'custom',
     component: OrcamentoCardManager,
     componentProps: (formData: any) => {
@@ -368,7 +368,7 @@ export const programacaoOSFormFields: FormField[] = [
   // Observações - GRUPO: observacoes
   {
     key: 'observacoes',
-    label: 'Observações',
+    label: '', // duplicava o titulo do grupo
     type: 'textarea',
     placeholder: 'Observações adicionais sobre a programação',
     group: 'observacoes',
@@ -540,7 +540,7 @@ export const programacaoOSFormGroups = [
   {
     key: 'planejamento',
     title: 'Planejamento',
-    fields: ['duracao_estimada', 'data_previsao_inicio', 'data_previsao_fim']
+    fields: ['data_previsao_inicio', 'data_previsao_fim', 'duracao_estimada']
   },
   // TODO: Descomentar quando implementar programação detalhada
   /*

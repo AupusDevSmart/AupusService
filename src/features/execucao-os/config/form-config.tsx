@@ -28,7 +28,7 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'text',
     disabled: true,
     group: 'identificacao',
-    colSpan: 2,
+    width: 'half',
     showOnlyOnMode: ['view', 'edit'],
   },
   {
@@ -170,18 +170,6 @@ export const execucaoOSFormFields: FormField[] = [
     startNewRow: true
   },
   {
-    key: 'tempoTotalExecucao',
-    label: 'Tempo Total de Execução (min)',
-    type: 'number',
-    disabled: true,
-    group: 'controle',
-    width: 'half',
-    condition: (entity, formData) => {
-      const status = formData?.statusExecucao || entity?.statusExecucao;
-      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
-    }
-  },
-  {
     key: 'dataHoraInicioReal',
     label: 'Data e Hora Início Real',
     type: 'datetime-local',
@@ -203,6 +191,20 @@ export const execucaoOSFormFields: FormField[] = [
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
       return status === 'FINALIZADA';
+    }
+  },
+  {
+    // Depois das datas: e um valor derivado delas, nao um dado de entrada.
+    key: 'tempoTotalExecucao',
+    label: 'Tempo Total de Execução (min)',
+    type: 'number',
+    disabled: true,
+    group: 'controle',
+    width: 'half',
+    startNewRow: true,
+    condition: (entity, formData) => {
+      const status = formData?.statusExecucao || entity?.statusExecucao;
+      return status === 'EM_EXECUCAO' || status === 'PAUSADA' || status === 'FINALIZADA';
     }
   },
 
@@ -358,7 +360,7 @@ export const execucaoOSFormFields: FormField[] = [
   // Orçamento - GRUPO: orcamento
   {
     key: 'itens_orcamento',
-    label: 'Orçamento',
+    label: '', // duplicava o titulo do grupo
     type: 'custom',
     component: OrcamentoCardManager,
     componentProps: (formData: any) => {

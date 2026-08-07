@@ -76,7 +76,11 @@
     --input: hsl(0, 0%, 66%);
     --input-hover: hsl(214.3, 26.8%, 86.4%);
 
-    --radius: 1rem;
+    /* Os controles de formulario do app (button, input, select, textarea,
+       popover, command) hardcodam rounded-[0.25rem]. O token ficou em 1rem e
+       tudo que vem do shared-pages seguia ele — os campos de data saiam com
+       ~14px de raio contra 4px dos vizinhos. Alinhado ao que o app ja usa. */
+    --radius: 0.25rem;
 
     --chart-1: 338, 100%, 39%;
     --chart-2: 206, 85%, 32%;
