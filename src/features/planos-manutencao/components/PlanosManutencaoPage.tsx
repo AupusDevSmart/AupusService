@@ -54,9 +54,9 @@ export function PlanosManutencaoPage() {
     entity: InstrucaoApiResponse | null;
   }>({ isOpen: false, entity: null });
   const [expandedPlanoId, setExpandedPlanoId] = useState<string | null>(null);
-  // Sobe a cada clique na acao de adicionar tarefa, abrindo o formulario
-  // dentro da linha expandida.
-  const [abrirCadastroToken, setAbrirCadastroToken] = useState(0);
+  // Plano para o qual o cadastro de tarefa deve abrir. Guardar o ALVO e nao um
+  // contador: com contador o efeito disparava no mount da linha expandida.
+  const [abrirCadastroPara, setAbrirCadastroPara] = useState<string | null>(null);
   // Muda quando algo fora da linha expandida mexe nas tarefas
   const [tarefasRefreshToken] = useState(0);
 
@@ -197,8 +197,9 @@ export function PlanosManutencaoPage() {
   // ============================
 
   const handleAdicionarTarefa = useCallback((plano: PlanoManutencaoApiResponse) => {
-    setExpandedPlanoId(plano.id?.trim() || null);
-    setAbrirCadastroToken((n) => n + 1);
+    const id = plano.id?.trim() || null;
+    setExpandedPlanoId(id);
+    setAbrirCadastroPara(id);
   }, []);
 
   const handleRowToggle = useCallback((plano: PlanoManutencaoApiResponse) => {
@@ -301,7 +302,8 @@ export function PlanosManutencaoPage() {
                   onVerTarefa={abrirInstrucaoDaTarefa}
                   onTarefasChange={handleTarefasChange}
                   posicaoBotaoAdicionar="oculto"
-                  abrirCadastroToken={abrirCadastroToken}
+                  abrirCadastroPara={abrirCadastroPara}
+                  onCadastroAberto={() => setAbrirCadastroPara(null)}
                 />
               )}
             />

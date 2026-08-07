@@ -61,10 +61,14 @@ interface TarefasExpandedRowProps {
    */
   posicaoBotaoAdicionar?: 'topo' | 'rodape' | 'oculto';
   /**
-   * Sobe a cada clique na acao "adicionar tarefa" da tabela, para abrir o
-   * formulario de fora da linha expandida.
+   * Id do plano para o qual o cadastro deve abrir, vindo da acao da tabela.
+   * Identifica o ALVO em vez de ser um contador: contador disparava no mount,
+   * entao depois do primeiro uso qualquer linha aberta ja mostrava o
+   * formulario.
    */
-  abrirCadastroToken?: number;
+  abrirCadastroPara?: string | null;
+  /** Avisa a pagina que o formulario abriu, para ela limpar o alvo. */
+  onCadastroAberto?: () => void;
 }
 
 export function TarefasExpandedRow({
@@ -75,7 +79,8 @@ export function TarefasExpandedRow({
   onTarefasChange,
   somenteLeitura = false,
   posicaoBotaoAdicionar = 'topo',
-  abrirCadastroToken = 0
+  abrirCadastroPara,
+  onCadastroAberto
 }: TarefasExpandedRowProps) {
   const { user } = useUserStore();
 
@@ -162,11 +167,12 @@ export function TarefasExpandedRow({
     carregarTarefas();
   }, [carregarTarefas, refreshToken]);
 
-  // Token e nao booleano: clicar de novo na acao precisa reabrir o formulario
-  // mesmo que ele tenha sido fechado no X.
   useEffect(() => {
-    if (abrirCadastroToken > 0 && !somenteLeitura) setMostrandoFormulario(true);
-  }, [abrirCadastroToken, somenteLeitura]);
+    const id = planoId?.trim();
+    if (!id || abrirCadastroPara !== id || somenteLeitura) return;
+    setMostrandoFormulario(true);
+    onCadastroAberto?.();
+  }, [abrirCadastroPara, planoId, somenteLeitura, onCadastroAberto]);
 
   const handleAdicionar = async () => {
     if (!instrucaoId) return;
