@@ -128,7 +128,7 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Condições do veículo, problemas encontrados, etc.',
     group: 'reserva',
-    width: 'full',
+    colSpan: 2,
     startNewRow: true,
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
@@ -262,7 +262,7 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Descreva as atividades executadas',
     group: 'atividades',
-    width: 'full',
+    colSpan: 2,
     disabled: true,
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
@@ -294,7 +294,7 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Liste os procedimentos seguidos',
     group: 'atividades',
-    width: 'two-thirds',
+    colSpan: 2,
     disabled: true,
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
@@ -392,7 +392,7 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Liste os EPIs utilizados',
     group: 'seguranca',
-    width: 'full',
+    colSpan: 2,
     disabled: true,
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
@@ -406,7 +406,7 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Relate qualquer incidente ou quase acidente',
     group: 'seguranca',
-    width: 'full',
+    colSpan: 2,
     disabled: true,
     startNewRow: true,
     condition: (entity, formData) => {
@@ -421,7 +421,7 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Medidas extras de segurança adotadas',
     group: 'seguranca',
-    width: 'full',
+    colSpan: 2,
     disabled: true,
     startNewRow: true,
     condition: (entity, formData) => {
@@ -436,6 +436,7 @@ export const execucaoOSFormFields: FormField[] = [
     key: 'resultadoServico',
     label: 'Resultado do Serviço',
     type: 'textarea',
+    colSpan: 2,
     placeholder: 'Descreva o resultado obtido',
     required: true,
     group: 'resultados',
@@ -448,6 +449,7 @@ export const execucaoOSFormFields: FormField[] = [
     key: 'problemasEncontrados',
     label: 'Problemas Encontrados',
     type: 'textarea',
+    colSpan: 2,
     placeholder: 'Descreva problemas identificados durante a execução',
     group: 'resultados',
     condition: (entity, formData) => {
@@ -459,6 +461,7 @@ export const execucaoOSFormFields: FormField[] = [
     key: 'recomendacoes',
     label: 'Recomendações',
     type: 'textarea',
+    colSpan: 2,
     placeholder: 'Recomendações para futuras manutenções',
     group: 'resultados',
     condition: (entity, formData) => {
@@ -499,7 +502,7 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'textarea',
     placeholder: 'Comentários sobre a qualidade do serviço',
     group: 'qualidade',
-    width: 'three-quarters',
+    colSpan: 2,
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
       return status === 'FINALIZADA';
@@ -511,6 +514,7 @@ export const execucaoOSFormFields: FormField[] = [
     key: 'observacoesExecucao',
     label: 'Observações da Execução',
     type: 'textarea',
+    colSpan: 2,
     placeholder: 'Observações gerais sobre a execução',
     group: 'observacoes',
     condition: (entity, formData) => {
@@ -523,6 +527,7 @@ export const execucaoOSFormFields: FormField[] = [
     key: 'motivoPausas',
     label: 'Motivo das Pausas',
     type: 'textarea',
+    colSpan: 2,
     placeholder: 'Descreva os motivos das pausas durante a execução',
     condition: (entity, formData) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
@@ -537,6 +542,7 @@ export const execucaoOSFormFields: FormField[] = [
     key: 'motivoCancelamento',
     label: 'Motivo do Cancelamento',
     type: 'textarea',
+    colSpan: 2,
     placeholder: 'Descreva o motivo do cancelamento',
     required: true,
     condition: (entity, formData) => {
