@@ -2,7 +2,6 @@
 import React from 'react';
 import { FormFieldProps } from '@/types/base';
 import { Input } from '@/components/ui/input';
-import { Package, CheckCircle2 } from 'lucide-react';
 import { ItensOrdenaveisTable, type ColunaItemOrdenavel } from '@/components/common/ItensOrdenaveisTable';
 
 interface Recurso {
@@ -147,7 +146,7 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
     }
   ];
 
-  // Sem título próprio: o BaseModal ja renderiza o cabecalho do grupo.
+  // Titulo proprio: assim ele e o botao de adicionar ficam na mesma linha.
   return (
     <ItensOrdenaveisTable
       itens={recursos}
@@ -158,14 +157,6 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
       textoAdicionar="Adicionar recurso"
       titulo="Recursos Necessários"
       disabled={disabled}
-      resumo={[
-        { icone: <Package className="h-3.5 w-3.5" />, label: 'Total de recursos', valor: recursos.length },
-        {
-          icone: <CheckCircle2 className="h-3.5 w-3.5" />,
-          label: 'Obrigatórios',
-          valor: recursos.filter((item) => item.obrigatorio).length
-        }
-      ]}
     />
   );
 }

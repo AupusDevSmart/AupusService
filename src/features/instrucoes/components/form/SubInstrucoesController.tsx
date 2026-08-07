@@ -79,15 +79,22 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
     },
     {
       key: 'tempo_estimado',
-      header: 'Tempo (min)',
+      header: 'Tempo (h)',
       width: 'w-28',
       align: 'center',
+      // A coluna do banco continua em MINUTOS (Int) — so a tela trabalha em
+      // horas. Converter aqui evita migracao e mantem compativel o que o
+      // gerarChecklistPadrao ja le de sub_instrucoes.tempo_estimado.
       render: (item, index) => (
         <Input
           type="number"
           min={0}
-          value={item.tempo_estimado || ''}
-          onChange={(e) => atualizar(index, 'tempo_estimado', Number(e.target.value))}
+          step={0.25}
+          value={item.tempo_estimado ? item.tempo_estimado / 60 : ''}
+          onChange={(e) => {
+            const horas = Number(e.target.value);
+            atualizar(index, 'tempo_estimado', horas > 0 ? Math.round(horas * 60) : 0);
+          }}
           disabled={disabled}
           className="h-8 w-20 mx-auto text-center"
           placeholder="0"
