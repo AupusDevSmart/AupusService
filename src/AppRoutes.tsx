@@ -9,6 +9,7 @@ import { PlanosManutencaoPage } from './features/planos-manutencao/components/Pl
 import { PlanoDoEquipamentoWrapper } from './features/planos-manutencao/components/PlanoDoEquipamentoWrapper';
 import { PlanoDoEquipamentoProvider } from './features/planos-manutencao/components/PlanoDoEquipamentoContext';
 import { SeletorDePlanoField } from './features/planos-manutencao/components/SeletorDePlanoField';
+import { HistoricoDoEquipamentoSection } from './features/planos-manutencao/components/HistoricoDoEquipamentoSection';
 import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
 import { InstrucoesPage } from './features/instrucoes/components/InstrucoesPage';
@@ -143,6 +144,12 @@ export const appRoutes = createBrowserRouter([
                     equipamentoId={equipamento.id}
                     classificacao={equipamento.classificacao}
                     somenteLeitura={mode === 'view'}
+                  />
+                )}
+                renderHistoricoUC={(equipamento) => (
+                  <HistoricoDoEquipamentoSection
+                    equipamentoId={equipamento.id}
+                    classificacao={equipamento.classificacao}
                   />
                 )}
               />
