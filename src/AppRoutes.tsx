@@ -10,6 +10,7 @@ import { PlanoDoEquipamentoWrapper } from './features/planos-manutencao/componen
 import { PlanoDoEquipamentoProvider } from './features/planos-manutencao/components/PlanoDoEquipamentoContext';
 import { SeletorDePlanoField } from './features/planos-manutencao/components/SeletorDePlanoField';
 import { HistoricoDoEquipamentoSection } from './features/planos-manutencao/components/HistoricoDoEquipamentoSection';
+import { AnexosDoEquipamentoSection } from './features/equipamentos/components/AnexosDoEquipamentoSection';
 import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
 import { InstrucoesPage } from './features/instrucoes/components/InstrucoesPage';
@@ -152,6 +153,7 @@ export const appRoutes = createBrowserRouter([
                     classificacao={equipamento.classificacao}
                   />
                 )}
+                renderAnexosUC={() => <AnexosDoEquipamentoSection />}
               />
             </PlanoDoEquipamentoProvider>
           </FeatureWrapper>
