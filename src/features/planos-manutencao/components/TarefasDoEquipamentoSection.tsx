@@ -1,5 +1,7 @@
 // src/features/planos-manutencao/components/TarefasDoEquipamentoSection.tsx
-import { ClipboardList } from 'lucide-react';
+import { useState } from 'react';
+import { ClipboardList, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { TarefasExpandedRow } from './TarefasExpandedRow';
 import { usePlanoDoEquipamento } from './PlanoDoEquipamentoContext';
 import type { TarefaApiResponse } from '@/services/tarefas.services';
@@ -32,6 +34,10 @@ export function TarefasDoEquipamentoSection({
   const { planoAtual, previa, instrucoesOptions, carregando, refreshTarefas, ehUC, recarregar } =
     usePlanoDoEquipamento(equipamentoId, classificacao);
 
+  // Id do plano para o qual o cadastro deve abrir. Guarda o ALVO e não um
+  // contador: contador dispara no mount da lista e o formulário abriria sozinho.
+  const [abrirCadastroPara, setAbrirCadastroPara] = useState<string | null>(null);
+
   if (!ehUC) return null;
 
   return (
@@ -46,6 +52,23 @@ export function TarefasDoEquipamentoSection({
             {(previa?.tarefas_customizadas ?? 0) > 0 &&
               ` · ${previa?.tarefas_customizadas} customizada(s)`}
           </span>
+        )}
+
+        {/* O botão vive aqui, e não dentro da lista, para ficar na mesma linha
+            do título. A lista continua dona do formulário — o clique só diz
+            para qual plano ele deve abrir. */}
+        {planoAtual && !somenteLeitura && (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 ml-auto"
+            onClick={() => setAbrirCadastroPara(planoAtual.id)}
+            title="Adicionar tarefa"
+            aria-label="Adicionar tarefa"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
         )}
       </div>
 
@@ -65,6 +88,9 @@ export function TarefasDoEquipamentoSection({
           onTarefasChange={recarregar}
           somenteLeitura={somenteLeitura}
           variante="sheet"
+          posicaoBotaoAdicionar="oculto"
+          abrirCadastroPara={abrirCadastroPara}
+          onCadastroAberto={() => setAbrirCadastroPara(null)}
         />
       )}
     </div>
