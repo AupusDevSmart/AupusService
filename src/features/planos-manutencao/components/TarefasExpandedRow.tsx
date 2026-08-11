@@ -392,10 +392,11 @@ export function TarefasExpandedRow({
       ) : tarefas.length === 0 ? (
         <p className="py-3 text-sm text-muted-foreground">Nenhuma tarefa neste plano ainda.</p>
       ) : (
-        // Sem moldura: a caixa em volta competia com a borda da propria linha
-        // da tabela e do card do sheet. O divide-y separa uma tarefa da outra,
-        // que e a unica divisao que precisa ser vista.
-        <div className="divide-y">
+        // Sem moldura e sem divisoria entre as tarefas: a caixa competia com a
+        // borda da propria linha da tabela e do card do sheet, e as linhas
+        // internas transformavam uma lista curta num emaranhado de tracos. O
+        // espacamento vertical ja separa uma tarefa da outra.
+        <div>
           {tarefas.map((tarefa) =>
             editandoId === tarefa.id ? (
               // Edicao inline com os quatro campos. O sheet completo de tarefa
