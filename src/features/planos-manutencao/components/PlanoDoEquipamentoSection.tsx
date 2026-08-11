@@ -223,6 +223,7 @@ export function PlanoDoEquipamentoSection({
                 onVerTarefa={onVerInstrucao ?? (() => {})}
                 onTarefasChange={carregar}
                 somenteLeitura={somenteLeitura}
+                variante="sheet"
               />
             </div>
           )}

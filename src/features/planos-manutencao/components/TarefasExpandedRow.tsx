@@ -69,7 +69,33 @@ interface TarefasExpandedRowProps {
   abrirCadastroPara?: string | null;
   /** Avisa a pagina que o formulario abriu, para ela limpar o alvo. */
   onCadastroAberto?: () => void;
+  /**
+   * Onde a lista esta montada, o que muda so o recuo.
+   *
+   * 'linha-expandida': dentro da linha expandida da tabela de planos. Recua
+   * para DENTRO do nome do plano, senao a lista nasce a esquerda dele e parece
+   * irma, nao filha.
+   *
+   * 'sheet': dentro do card do sheet do equipamento, onde o nome do plano ja
+   * esta no cabecalho do card. Aqui o certo e alinhar com ele, nao recuar.
+   */
+  variante?: 'linha-expandida' | 'sheet';
 }
+
+/**
+ * Recuo da lista conforme o contexto.
+ *
+ * Na tabela, o nome do plano comeca a 52px da borda: celula do chevron
+ * (w-10 = 40px) mais o px-3 da celula. A linha expandida vem com p-0, entao
+ * pl-16 (64px) poe o nome da tarefa 12px adentro do nome do plano.
+ *
+ * No sheet, o cabecalho do card usa p-3 — px-3 alinha as tarefas exatamente
+ * com o nome do plano logo acima.
+ */
+const RECUO = {
+  'linha-expandida': 'pl-16 pr-4',
+  sheet: 'px-3',
+} as const;
 
 export function TarefasExpandedRow({
   planoId,
@@ -80,7 +106,8 @@ export function TarefasExpandedRow({
   somenteLeitura = false,
   posicaoBotaoAdicionar = 'topo',
   abrirCadastroPara,
-  onCadastroAberto
+  onCadastroAberto,
+  variante = 'linha-expandida'
 }: TarefasExpandedRowProps) {
   const { user } = useUserStore();
 
@@ -246,7 +273,13 @@ export function TarefasExpandedRow({
   );
 
   return (
-    <div className="px-4 py-3 space-y-3 border-t">
+    // No sheet o card ja tem border-b no cabecalho; um border-t aqui viraria
+    // uma linha de 2px colada na outra.
+    <div
+      className={`${RECUO[variante]} py-3 space-y-3 ${
+        variante === 'linha-expandida' ? 'border-t' : ''
+      }`}
+    >
       {posicaoBotaoAdicionar === 'topo' && botaoAdicionar}
 
       {/* Cadastro rápido numa linha so. O nome vem primeiro: e ele que
@@ -359,12 +392,15 @@ export function TarefasExpandedRow({
       ) : tarefas.length === 0 ? (
         <p className="py-3 text-sm text-muted-foreground">Nenhuma tarefa neste plano ainda.</p>
       ) : (
-        <div className="border rounded divide-y">
+        // Sem moldura: a caixa em volta competia com a borda da propria linha
+        // da tabela e do card do sheet. O divide-y separa uma tarefa da outra,
+        // que e a unica divisao que precisa ser vista.
+        <div className="divide-y">
           {tarefas.map((tarefa) =>
             editandoId === tarefa.id ? (
               // Edicao inline com os quatro campos. O sheet completo de tarefa
               // mostrava campos que sairam do DTO e devolvia 400 ao salvar.
-              <div key={tarefa.id} className="px-3 py-2 bg-muted/30">
+              <div key={tarefa.id} className="py-2 bg-muted/30">
                 {/* Mesma ordem e mesmo layout do cadastro: quem edita espera
                     encontrar os campos onde acabou de preenche-los. */}
                 <div className="flex flex-wrap items-end gap-2">
@@ -458,14 +494,12 @@ export function TarefasExpandedRow({
                 </div>
               </div>
             ) : (
-            <div key={tarefa.id} className="flex items-center gap-3 px-3 py-2">
+            <div key={tarefa.id} className="flex items-center gap-3 py-2">
               <div className="min-w-0 flex-1">
-                {/* Sem a tag: e identificador interno e roubava a atencao do
-                    nome, que e o que identifica a tarefa para quem le. */}
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xs text-muted-foreground shrink-0">#{tarefa.ordem}</span>
-                  <p className="text-sm text-foreground truncate">{tarefa.nome}</p>
-                </div>
+                {/* Sem tag e sem numero de ordem: os dois sao identificadores
+                    internos e disputavam a atencao com o nome, que e o que
+                    identifica a tarefa para quem le. */}
+                <p className="text-sm text-foreground truncate">{tarefa.nome}</p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   {/* Diz se a tarefa acompanha o plano geral ou se divergiu.
                       Sem isso o usuário não tem como saber por que uma tarefa
