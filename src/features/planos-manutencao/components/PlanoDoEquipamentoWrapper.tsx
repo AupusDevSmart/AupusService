@@ -1,6 +1,6 @@
 // src/features/planos-manutencao/components/PlanoDoEquipamentoWrapper.tsx
 import React from 'react';
-import { PlanoDoEquipamentoSection } from './PlanoDoEquipamentoSection';
+import { TarefasDoEquipamentoSection } from './TarefasDoEquipamentoSection';
 import { InstrucoesModal } from '@/features/instrucoes/components/InstrucoesModal';
 import { instrucoesFormFields } from '@/features/instrucoes/config/form-config';
 import { InstrucoesApiService, type InstrucaoApiResponse } from '@/services/instrucoes.services';
@@ -17,7 +17,7 @@ interface PlanoDoEquipamentoWrapperProps {
 }
 
 /**
- * Junta a secao de plano com o sheet de instrucao.
+ * Junta a secao de tarefas com o sheet de instrucao.
  *
  * O sheet da instrucao vive aqui e nao dentro da secao porque a secao e
  * renderizada dentro do sheet do equipamento (via slot do shared-pages), e
@@ -46,7 +46,7 @@ export function PlanoDoEquipamentoWrapper(props: PlanoDoEquipamentoWrapperProps)
 
   return (
     <>
-      <PlanoDoEquipamentoSection {...props} onVerInstrucao={abrirInstrucao} />
+      <TarefasDoEquipamentoSection {...props} onVerInstrucao={abrirInstrucao} />
 
       <InstrucoesModal
         isOpen={!!instrucao}

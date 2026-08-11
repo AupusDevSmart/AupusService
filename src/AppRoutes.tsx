@@ -7,6 +7,8 @@ import { FerramentasPage } from './features/ferramentas/components/FerramentasPa
 import { FornecedoresPage } from './features/fornecedores/components/FornecedoresPage';
 import { PlanosManutencaoPage } from './features/planos-manutencao/components/PlanosManutencaoPage';
 import { PlanoDoEquipamentoWrapper } from './features/planos-manutencao/components/PlanoDoEquipamentoWrapper';
+import { PlanoDoEquipamentoProvider } from './features/planos-manutencao/components/PlanoDoEquipamentoContext';
+import { SeletorDePlanoField } from './features/planos-manutencao/components/SeletorDePlanoField';
 import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
 import { InstrucoesPage } from './features/instrucoes/components/InstrucoesPage';
@@ -121,17 +123,30 @@ export const appRoutes = createBrowserRouter([
         path: 'cadastros/equipamentos',
         element: (
           <FeatureWrapper feature="equipamentos.view">
-            {/* A secao de plano so existe no Service: o NexOn consome a mesma
-                pagina do shared-pages sem passar nada aqui. */}
-            <EquipamentosPage
-              renderSecaoExtraUC={(equipamento, mode) => (
-                <PlanoDoEquipamentoWrapper
-                  equipamentoId={equipamento.id}
-                  classificacao={equipamento.classificacao}
-                  somenteLeitura={mode === 'view'}
-                />
-              )}
-            />
+            {/* O plano de manutencao so existe no Service: o NexOn consome a
+                mesma pagina do shared-pages sem passar nada aqui.
+
+                A escolha do plano e a lista de tarefas dele sao montadas em
+                pontos diferentes do sheet e compartilham o mesmo estado, por
+                isso o provider fica acima da pagina inteira. */}
+            <PlanoDoEquipamentoProvider>
+              <EquipamentosPage
+                renderCampoDadosBasicosUC={(equipamento, mode) => (
+                  <SeletorDePlanoField
+                    equipamentoId={equipamento.id}
+                    classificacao={equipamento.classificacao}
+                    somenteLeitura={mode === 'view'}
+                  />
+                )}
+                renderSecaoExtraUC={(equipamento, mode) => (
+                  <PlanoDoEquipamentoWrapper
+                    equipamentoId={equipamento.id}
+                    classificacao={equipamento.classificacao}
+                    somenteLeitura={mode === 'view'}
+                  />
+                )}
+              />
+            </PlanoDoEquipamentoProvider>
           </FeatureWrapper>
         ),
       },
