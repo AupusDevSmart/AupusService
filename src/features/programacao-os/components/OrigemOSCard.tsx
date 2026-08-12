@@ -4,18 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { OrigemLinks } from '@/features/execucao-os/components/OrigemLinks';
 import { useAnomalias } from '@/features/anomalias/hooks/useAnomalias';
-import {
-  AlertTriangle,
-  Settings,
-  FileText,
-  MapPin,
-  Calendar,
-  Wrench,
-  Clock,
-  Loader2,
-  ChevronDown,
-  ChevronUp
-} from 'lucide-react';
+import { AlertTriangle, FileText, Calendar, Wrench, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import PlanosManutencaoViewer from './PlanosManutencaoViewer';
 import { solicitacoesServicoService } from '@/services/solicitacoes-servico.service';
 import { tarefasApi, type TarefaApiResponse } from '@/services/tarefas.services';
@@ -81,6 +70,36 @@ const getOrigemLabel = (origem: string): string => {
   };
   return labels[origem] || origem;
 };
+
+/**
+ * Um par rótulo → valor.
+ *
+ * As quatro origens mostram basicamente isso — local, ativo, condição,
+ * prioridade, datas, solicitante — e cada uma montava do seu jeito, uma
+ * embaixo da outra. Empilhado, o card de anomalia passava de 400px de altura
+ * num sheet que já tem muito conteúdo.
+ *
+ * Some sozinho quando não há valor: campo vazio ocupando espaço é pior que
+ * ausência.
+ */
+const Campo: React.FC<{ rotulo: string; children?: React.ReactNode }> = ({ rotulo, children }) => {
+  if (children === null || children === undefined || children === '') return null;
+
+  return (
+    <div className="min-w-0">
+      <p className="text-[11px] text-muted-foreground leading-tight">{rotulo}</p>
+      <div className="text-xs text-foreground/90 truncate">{children}</div>
+    </div>
+  );
+};
+
+/**
+ * Duas colunas no celular, quatro no desktop. É o que tira a altura do card:
+ * seis campos empilhados viram duas linhas.
+ */
+const Grade: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">{children}</div>
+);
 
 const getOrigemIcon = (origem: string) => {
   if (origem === 'ANOMALIA' || origem === 'EMERGENCIA') return AlertTriangle;
@@ -199,96 +218,52 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
   const OrigemIcon = getOrigemIcon(origem);
 
   const renderAnomaliaDetails = () => {
-    const anomaliaData = anomaliaFromAPI || anomalia || dadosOrigem;
+    const a = anomaliaFromAPI || anomalia || dadosOrigem;
+    const reportada = a?.createdAt || a?.created_at || a?.data;
+    const atualizada = a?.updatedAt || a?.updated_at || a?.atualizadoEm;
+    const critica = a?.prioridade === 'CRITICA' || a?.prioridade === 'ALTA';
 
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         {anomaliaError && (
-          <div className="text-xs text-red-600 dark:text-red-300 bg-red-100 dark:bg-red-900/50 p-2 rounded">
-            Erro ao carregar dados da anomalia
-          </div>
+          <p className="text-xs text-destructive">Erro ao carregar dados da anomalia</p>
         )}
+
         <div className="space-y-2">
-          <h4 className="font-medium text-sm text-foreground">
-            {anomaliaData?.descricao || 'Descrição não disponível'}
-          </h4>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm font-medium text-foreground min-w-0">
+              {a?.descricao || 'Descrição não disponível'}
+            </p>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {a?.prioridade && (
+                <Badge variant={critica ? 'destructive' : 'secondary'} className="text-xs">
+                  {a.prioridade}
+                </Badge>
+              )}
+              {a?.status && <Badge variant="outline" className="text-xs">{a.status}</Badge>}
+            </div>
+          </div>
+
           {/* A anomalia tem condicao, anexos e instrucoes vinculadas que nao
               cabem aqui — o atalho abre o sheet dela por cima da OS. */}
-          <OrigemLinks anomaliaId={anomaliaData?.id} />
+          <OrigemLinks anomaliaId={a?.id} />
         </div>
 
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          <div className="flex items-center gap-1">
-            <MapPin className="h-3 w-3 text-gray-500 dark:text-gray-400" />
-            <span className="text-gray-700 dark:text-gray-300">
-              {anomaliaData?.localizacao?.local || anomaliaData?.local || 'Local não informado'}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Settings className="h-3 w-3 text-gray-500 dark:text-gray-400" />
-            <span className="text-gray-700 dark:text-gray-300">
-              {anomaliaData?.localizacao?.ativo || anomaliaData?.ativo || 'Ativo não informado'}
-            </span>
-          </div>
-        </div>
+        <Grade>
+          <Campo rotulo="Local">{a?.localizacao?.local || a?.local}</Campo>
+          <Campo rotulo="Ativo">{a?.localizacao?.ativo || a?.ativo}</Campo>
+          <Campo rotulo="Condição">{a?.condicao}</Campo>
+          <Campo rotulo="Identificada por">{a?.origem}</Campo>
+          <Campo rotulo="Reportada em">{reportada ? formatarData(reportada) : null}</Campo>
+          <Campo rotulo="Atualizada em">{atualizada ? formatarData(atualizada) : null}</Campo>
+        </Grade>
 
-        <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-2">
-          {anomaliaData?.condicao && (
-            <div className="flex items-center gap-1 text-xs">
-              <span className="font-medium text-gray-600 dark:text-gray-400">Condição:</span>
-              <span className="text-gray-700 dark:text-gray-300">{anomaliaData.condicao}</span>
-            </div>
-          )}
-          {anomaliaData?.origem && (
-            <div className="flex items-center gap-1 text-xs">
-              <span className="font-medium text-gray-600 dark:text-gray-400">Origem:</span>
-              <span className="text-gray-700 dark:text-gray-300">{anomaliaData.origem}</span>
-            </div>
-          )}
-          {anomaliaData?.observacoes && (
-            <div className="text-xs">
-              <span className="font-medium text-gray-600 dark:text-gray-400">Observações:</span>
-              <p className="text-gray-700 dark:text-gray-300 mt-1 leading-relaxed">
-                {anomaliaData.observacoes}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {anomaliaData?.prioridade && (
-          <div className="flex gap-2">
-            <Badge
-              variant={anomaliaData.prioridade === 'CRITICA' || anomaliaData.prioridade === 'ALTA' ? 'destructive' : 'secondary'}
-              className="text-xs"
-            >
-              {anomaliaData.prioridade}
-            </Badge>
-            {anomaliaData.status && (
-              <Badge variant="outline" className="text-xs">
-                {anomaliaData.status}
-              </Badge>
-            )}
+        {a?.observacoes && (
+          <div className="border-t pt-3">
+            <p className="text-[11px] text-muted-foreground">Observações</p>
+            <p className="text-xs text-foreground/90 leading-relaxed">{a.observacoes}</p>
           </div>
         )}
-
-        <div className="space-y-1 border-t border-gray-200 dark:border-gray-700 pt-2">
-          {(anomaliaData?.createdAt || anomaliaData?.created_at || anomaliaData?.data) && (
-            <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-              <Calendar className="h-3 w-3" />
-              <span>
-                Reportada em: {formatarData(anomaliaData.createdAt || anomaliaData.created_at || anomaliaData.data)}
-              </span>
-            </div>
-          )}
-          {(anomaliaData?.updatedAt || anomaliaData?.updated_at || anomaliaData?.atualizadoEm) && (
-            <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-              <Clock className="h-3 w-3" />
-              <span>
-                Atualizada em: {formatarData(anomaliaData.updatedAt || anomaliaData.updated_at || anomaliaData.atualizadoEm)}
-              </span>
-            </div>
-          )}
-        </div>
       </div>
     );
   };
@@ -333,249 +308,95 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
   const renderTarefaDetails = () => {
     if (!dadosOrigem) return null;
 
-    const count =
-      dadosOrigem.tarefas_count ||
-      dadosOrigem.tarefas_ids?.length ||
-      dadosOrigem.tarefas_nomes?.length ||
-      tarefasCongeladas.length ||
-      0;
-    const unidadeNome = dadosOrigem.unidade_nome;
-    const autoGerada = dadosOrigem.auto_gerada;
-
     const frequenciaLabels: Record<string, string> = {
       DIARIA: 'Diária', SEMANAL: 'Semanal', QUINZENAL: 'Quinzenal',
       MENSAL: 'Mensal', BIMESTRAL: 'Bimestral', TRIMESTRAL: 'Trimestral',
       SEMESTRAL: 'Semestral', ANUAL: 'Anual', PERSONALIZADA: 'Personalizada',
     };
 
-    const categoriaLabels: Record<string, string> = {
-      MECANICA: 'Mecânica', ELETRICA: 'Elétrica', INSTRUMENTACAO: 'Instrumentação',
-      LUBRIFICACAO: 'Lubrificação', LIMPEZA: 'Limpeza', INSPECAO: 'Inspeção',
-      CALIBRACAO: 'Calibração', OUTROS: 'Outros',
-    };
-
-    const tipoLabels: Record<string, string> = {
-      PREVENTIVA: 'Preventiva', PREDITIVA: 'Preditiva', CORRETIVA: 'Corretiva',
-      INSPECAO: 'Inspeção', VISITA_TECNICA: 'Visita Técnica',
-    };
-
-    return (
-      <div className="space-y-3">
-        {/* Resumo */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="outline" className="text-xs">
-            {count} tarefa{count !== 1 ? 's' : ''}
-          </Badge>
-          {unidadeNome && (
-            <Badge variant="secondary" className="text-xs">{unidadeNome}</Badge>
-          )}
-          {autoGerada && (
-            <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-              Auto-gerada
-            </Badge>
-          )}
+    /**
+     * Uma tarefa por linha, com os dados nas colunas — e não um cartão por
+     * tarefa com tudo empilhado dentro. Uma OS de plano traz várias tarefas, e
+     * no formato antigo cada uma custava umas cinco linhas de altura.
+     *
+     * A descrição da instrução fica de fora da linha de propósito: é texto
+     * longo e o lugar dela é o sheet da instrução, alcançável pelo checklist.
+     */
+    const linhaDeTarefa = (t: {
+      id: string;
+      nome: string;
+      tag?: string;
+      frequencia?: string;
+      criticidade?: number;
+      status?: string;
+    }) => (
+      <div key={t.id} className="flex items-center gap-3 py-2 border-t first:border-t-0">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-foreground/90 truncate" title={t.nome}>{t.nome}</p>
+          {t.tag && <span className="font-mono text-[11px] text-muted-foreground">{t.tag}</span>}
         </div>
 
-        {/* O que a OS congelou. Vem primeiro porque é o que foi realmente
-            pedido, e não depende de buscar a tarefa viva. */}
-        {tarefasCongeladas.length > 0 && (
-          <div className="space-y-2">
-            {tarefasCongeladas.map((tarefa) => (
-              <div
-                key={tarefa.id}
-                className="border border-border rounded-md p-3 space-y-1.5"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    {tarefa.tag && (
-                      <span className="font-mono text-xs text-muted-foreground">{tarefa.tag}</span>
-                    )}
-                    <p className="text-sm font-medium text-foreground">{tarefa.nome}</p>
-                  </div>
-                  {tarefa.status && (
-                    <Badge variant="outline" className="text-xs shrink-0">
-                      {tarefa.status === 'CONCLUIDA' ? 'Concluída' : 'Pendente'}
-                    </Badge>
-                  )}
-                </div>
+        <span className="hidden sm:block w-24 flex-shrink-0 text-[11px] text-muted-foreground truncate">
+          {t.frequencia ? frequenciaLabels[t.frequencia] ?? t.frequencia : '—'}
+        </span>
 
-                {tarefa.descricao && (
-                  <p className="text-xs text-muted-foreground">{tarefa.descricao}</p>
-                )}
+        <span className="hidden md:block w-20 flex-shrink-0 text-[11px] text-muted-foreground">
+          {t.criticidade != null ? `Crit. ${t.criticidade}` : '—'}
+        </span>
 
-                <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-                  {tarefa.frequencia && (
-                    <span>{frequenciaLabels[tarefa.frequencia] ?? tarefa.frequencia}</span>
-                  )}
-                  {tarefa.criticidade != null && <span>Criticidade {tarefa.criticidade}</span>}
-                </div>
-              </div>
-            ))}
-          </div>
+        {t.status && (
+          <Badge variant="outline" className="text-[11px] shrink-0">
+            {t.status === 'CONCLUIDA' ? 'Concluída' : 'Pendente'}
+          </Badge>
         )}
+      </div>
+    );
 
-        {/* Loading */}
+    const daApi = tarefasFromAPI.map((t: any) => ({
+      id: t.id,
+      nome: t.nome,
+      tag: t.tag,
+      frequencia: t.frequencia,
+      criticidade: t.criticidade,
+    }));
+
+    // O congelado ganha do buscado: é o que foi pedido, não o que a tarefa é hoje.
+    const paraMostrar = tarefasCongeladas.length > 0 ? tarefasCongeladas : daApi;
+
+    const count =
+      dadosOrigem.tarefas_count ||
+      dadosOrigem.tarefas_ids?.length ||
+      dadosOrigem.tarefas_nomes?.length ||
+      paraMostrar.length ||
+      0;
+
+    return (
+      <div className="space-y-4">
+        <Grade>
+          <Campo rotulo="Tarefas">{`${count} tarefa${count !== 1 ? 's' : ''}`}</Campo>
+          <Campo rotulo="Instalação">{dadosOrigem.unidade_nome}</Campo>
+          <Campo rotulo="Agrupamento">{dadosOrigem.agrupamento}</Campo>
+          <Campo rotulo="Geração">{dadosOrigem.auto_gerada ? 'Automática' : null}</Campo>
+        </Grade>
+
         {tarefasLoading && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+          <p className="flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             Carregando detalhes das tarefas...
-          </div>
+          </p>
         )}
 
-        {/* Detalhes buscados da tarefa viva, quando não há congelado. */}
-        {tarefasCongeladas.length === 0 && tarefasFromAPI.length > 0 && (
-          <div className="space-y-2">
-            {tarefasFromAPI.map((tarefa) => (
-              <div
-                key={tarefa.id}
-                className="border border-gray-200 dark:border-gray-700 rounded-md p-3 space-y-2"
-              >
-                {/* Header da tarefa */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs text-muted-foreground">{tarefa.tag}</span>
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-                        {tarefa.nome}
-                      </span>
-                    </div>
-                    {tarefa.instrucao?.descricao && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                        {tarefa.instrucao.descricao}
-                      </p>
-                    )}
-                  </div>
-                  {tarefa.instrucao?.tag && (
-                    <Badge variant="outline" className="text-xs shrink-0 font-mono">
-                      {tarefa.instrucao.tag}
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Detalhes em grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs">
-                  {tarefa.instrucao?.categoria && (
-                    <div>
-                      <span className="text-muted-foreground">Categoria: </span>
-                      <span className="text-foreground">
-                        {categoriaLabels[tarefa.instrucao.categoria] || tarefa.instrucao.categoria}
-                      </span>
-                    </div>
-                  )}
-                  {tarefa.instrucao?.tipo_manutencao && (
-                    <div>
-                      <span className="text-muted-foreground">Tipo: </span>
-                      <span className="text-foreground">
-                        {tipoLabels[tarefa.instrucao.tipo_manutencao] || tarefa.instrucao.tipo_manutencao}
-                      </span>
-                    </div>
-                  )}
-                  {tarefa.frequencia && (
-                    <div>
-                      <span className="text-muted-foreground">Frequência: </span>
-                      <span className="text-gray-700 dark:text-gray-300">
-                        {frequenciaLabels[tarefa.frequencia] || tarefa.frequencia}
-                        {tarefa.frequencia === 'PERSONALIZADA' && tarefa.frequencia_personalizada
-                          ? ` (${tarefa.frequencia_personalizada} dias)`
-                          : ''}
-                      </span>
-                    </div>
-                  )}
-                  {tarefa.criticidade != null && (
-                    <div>
-                      <span className="text-muted-foreground">Criticidade: </span>
-                      <span className="text-gray-700 dark:text-gray-300">{tarefa.criticidade}/5</span>
-                    </div>
-                  )}
-
-                </div>
-
-                {/* Equipamento e plano */}
-                <div className="flex items-center gap-3 text-xs flex-wrap">
-                  {tarefa.equipamento && (
-                    <div className="flex items-center gap-1">
-                      <Settings className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-gray-700 dark:text-gray-300">{tarefa.equipamento.nome}</span>
-                    </div>
-                  )}
-                  {tarefa.plano_manutencao && (
-                    <div className="flex items-center gap-1">
-                      <FileText className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-gray-700 dark:text-gray-300">{tarefa.plano_manutencao.nome}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Execução */}
-                {(tarefa.data_ultima_execucao || tarefa.numero_execucoes > 0) && (
-                  <div className="flex items-center gap-3 text-xs border-t border-gray-100 dark:border-gray-700/50 pt-1.5">
-                    {tarefa.data_ultima_execucao && (
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground">
-                          Última execução: {formatarData(tarefa.data_ultima_execucao)}
-                        </span>
-                      </div>
-                    )}
-                    {tarefa.numero_execucoes > 0 && (
-                      <span className="text-muted-foreground">
-                        ({tarefa.numero_execucoes} execuç{tarefa.numero_execucoes === 1 ? 'ão' : 'ões'})
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* Etapas: vem das sub-instrucoes da instrucao vinculada. A
-                    tarefa nao guarda mais sub-etapas proprias — o conteudo do
-                    que sera feito vive na instrucao, que e a mesma fonte do
-                    checklist da OS. */}
-                {tarefa.instrucao?.sub_instrucoes && tarefa.instrucao.sub_instrucoes.length > 0 && (
-                  <div className="border-t border-gray-100 dark:border-gray-700/50 pt-1.5">
-                    <span className="text-xs text-muted-foreground">
-                      Etapas ({tarefa.instrucao.sub_instrucoes.length}):
-                    </span>
-                    <ul className="mt-1 space-y-0.5">
-                      {tarefa.instrucao.sub_instrucoes.map((etapa, index) => (
-                        <li
-                          key={etapa.id || `etapa-${index}`}
-                          className="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-1.5"
-                        >
-                          <span className="h-1 w-1 rounded-full bg-gray-400 shrink-0" />
-                          {etapa.descricao}
-                          {etapa.obrigatoria && (
-                            <span className="text-destructive text-[10px]">*</span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* A instrucao tem mais do que as etapas: descricao, recursos
-                    necessarios e anexos. O atalho abre o sheet dela por cima. */}
-                {tarefa.instrucao?.id && (
-                  <div className="border-t border-gray-100 dark:border-gray-700/50 pt-1.5">
-                    <OrigemLinks
-                      instrucaoId={tarefa.instrucao.id}
-                      instrucaoRotulo={tarefa.instrucao.nome}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+        {paraMostrar.length > 0 && (
+          <div className="border-t pt-1">{paraMostrar.map(linhaDeTarefa)}</div>
         )}
 
-        {/* Fallback: se não conseguiu carregar da API, mostrar dados básicos */}
-        {!tarefasLoading && tarefasFromAPI.length === 0 && (dadosOrigem.tarefas_tags?.length > 0 || dadosOrigem.tarefas_nomes?.length > 0) && (
-          <div className="space-y-1">
-            {(dadosOrigem.tarefas_tags || []).map((tag: string, i: number) => (
-              <div key={tag} className="flex items-center gap-2 text-xs">
-                <span className="font-mono text-muted-foreground">{tag}</span>
-                {dadosOrigem.tarefas_nomes?.[i] && (
-                  <span className="text-gray-700 dark:text-gray-300">{dadosOrigem.tarefas_nomes[i]}</span>
-                )}
-              </div>
+        {/* Sem id nem congelado, sobra o nome que a programação gravou. */}
+        {paraMostrar.length === 0 && !tarefasLoading && dadosOrigem.tarefas_nomes?.length > 0 && (
+          <div className="border-t pt-1">
+            {dadosOrigem.tarefas_nomes.map((nome: string, i: number) => (
+              <p key={i} className="text-xs text-foreground/90 py-2 border-t first:border-t-0">
+                {nome}
+              </p>
             ))}
           </div>
         )}
@@ -600,70 +421,40 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
       OUTRO: 'Outro',
     };
 
+    const urgente = sol.prioridade === 'URGENTE' || sol.prioridade === 'ALTA';
+
     return (
-      <div className="space-y-3">
-        {/* Número e título */}
-        {sol.numero && (
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs font-mono">{sol.numero}</Badge>
-            {sol.status && (
-              <Badge variant="secondary" className="text-xs">{sol.status}</Badge>
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            {sol.titulo && <p className="text-sm font-medium text-foreground">{sol.titulo}</p>}
+            {sol.numero && (
+              <span className="font-mono text-xs text-muted-foreground">{sol.numero}</span>
             )}
           </div>
-        )}
-
-        {sol.titulo && (
-          <h4 className="font-medium text-sm text-gray-800 dark:text-gray-200">
-            {sol.titulo}
-          </h4>
-        )}
-
-        {sol.descricao && (
-          <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
-            {sol.descricao}
-          </p>
-        )}
-
-        {/* Detalhes em grid */}
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          {sol.tipo && (
-            <div>
-              <span className="font-medium text-gray-600 dark:text-gray-400">Tipo: </span>
-              <span className="text-gray-700 dark:text-gray-300">{tipoLabels[sol.tipo] || sol.tipo}</span>
-            </div>
-          )}
-          {sol.prioridade && (
-            <div>
-              <span className="font-medium text-gray-600 dark:text-gray-400">Prioridade: </span>
-              <Badge
-                variant={sol.prioridade === 'URGENTE' || sol.prioridade === 'ALTA' ? 'destructive' : 'secondary'}
-                className="text-xs"
-              >
+          <div className="flex items-center gap-1.5 shrink-0">
+            {sol.prioridade && (
+              <Badge variant={urgente ? 'destructive' : 'secondary'} className="text-xs">
                 {sol.prioridade}
               </Badge>
-            </div>
-          )}
-          {sol.local && (
-            <div className="flex items-center gap-1">
-              <MapPin className="h-3 w-3 text-gray-500 dark:text-gray-400" />
-              <span className="text-gray-700 dark:text-gray-300">{sol.local}</span>
-            </div>
-          )}
-          {sol.solicitante_nome && (
-            <div>
-              <span className="font-medium text-gray-600 dark:text-gray-400">Solicitante: </span>
-              <span className="text-gray-700 dark:text-gray-300">{sol.solicitante_nome}</span>
-            </div>
-          )}
+            )}
+            {sol.status && <Badge variant="outline" className="text-xs">{sol.status}</Badge>}
+          </div>
         </div>
 
-        {/* Data */}
-        {sol.data_solicitacao && (
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
-            <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-              <Calendar className="h-3 w-3" />
-              <span>Solicitada em: {formatarData(sol.data_solicitacao)}</span>
-            </div>
+        <Grade>
+          <Campo rotulo="Tipo">{sol.tipo ? tipoLabels[sol.tipo] || sol.tipo : null}</Campo>
+          <Campo rotulo="Local">{sol.local}</Campo>
+          <Campo rotulo="Solicitante">{sol.solicitante_nome}</Campo>
+          <Campo rotulo="Solicitada em">
+            {sol.data_solicitacao ? formatarData(sol.data_solicitacao) : null}
+          </Campo>
+        </Grade>
+
+        {sol.descricao && (
+          <div className="border-t pt-3">
+            <p className="text-[11px] text-muted-foreground">Descrição</p>
+            <p className="text-xs text-foreground/90 leading-relaxed">{sol.descricao}</p>
           </div>
         )}
       </div>
