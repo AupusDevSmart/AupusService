@@ -182,11 +182,19 @@ export function HistoricoDoEquipamentoSection({
                     {tarefa.frequencia ? (ROTULO_FREQUENCIA[tarefa.frequencia] ?? tarefa.frequencia) : '—'}
                   </span>
 
-                  <span className="w-28 flex-shrink-0 text-xs text-muted-foreground">
+                  <span
+                    className={`w-28 flex-shrink-0 text-xs ${
+                      tarefa.ultima_execucao ? 'text-foreground/80' : 'text-muted-foreground'
+                    }`}
+                  >
                     {tarefa.ultima_execucao ? formatarData(tarefa.ultima_execucao) : 'nunca'}
                   </span>
 
-                  <span className="w-20 flex-shrink-0 text-xs text-muted-foreground">
+                  <span
+                    className={`w-20 flex-shrink-0 text-xs ${
+                      tarefa.numero_execucoes > 0 ? 'text-foreground/80' : 'text-muted-foreground'
+                    }`}
+                  >
                     {tarefa.numero_execucoes}
                   </span>
 
@@ -249,15 +257,15 @@ export function HistoricoDoEquipamentoSection({
                       </span>
                     </button>
 
-                    <span className="hidden md:block w-24 flex-shrink-0 text-xs text-muted-foreground">
+                    <span className="hidden md:block w-24 flex-shrink-0 text-xs text-foreground/80">
                       {formatarData(item.data)}
                     </span>
 
-                    <span className="hidden sm:block w-28 flex-shrink-0 text-xs text-muted-foreground truncate">
+                    <span className="hidden sm:block w-28 flex-shrink-0 text-xs text-foreground/80 truncate">
                       {rotuloStatus(item.status)}
                     </span>
 
-                    <span className="w-16 flex-shrink-0 text-xs text-muted-foreground">
+                    <span className="w-16 flex-shrink-0 text-xs text-foreground/80">
                       {item.tipo === 'OS'
                         ? `${item.tarefas_concluidas}/${item.tarefas_total}`
                         : `${item.tarefas_total}`}
@@ -279,7 +287,7 @@ export function HistoricoDoEquipamentoSection({
                     <div className="pl-6 pt-1">
                       {item.tarefas.map((tarefa) => (
                         <div key={tarefa.id} className="flex items-center gap-3 py-1">
-                          <span className="min-w-0 flex-1 text-xs text-muted-foreground truncate">
+                          <span className="min-w-0 flex-1 text-xs text-foreground/80 truncate">
                             {tarefa.nome}
                           </span>
                           <span className="w-28 flex-shrink-0 text-xs text-muted-foreground">

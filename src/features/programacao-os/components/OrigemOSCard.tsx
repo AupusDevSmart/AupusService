@@ -130,9 +130,32 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
     }
   }, [dadosOrigem?.solicitacaoServicoId, solicitacaoServico?.id, solicitacaoServico?.titulo]);
 
+  /**
+   * O que a OS congelou no momento em que foi gerada.
+   *
+   * É a fonte melhor que `dados_origem.tarefas_ids`: aquele campo nem sempre
+   * traz os ids (uma programação criada a partir de tarefas grava só nomes e
+   * contagem), e mesmo quando traz, buscar a tarefa viva mostra o que ela é
+   * HOJE — não o que foi pedido. Sem isto o card ficava com o cabeçalho e um
+   * "1 tarefa", sem dizer o que era para fazer.
+   */
+  const tarefasCongeladas = (tarefas || [])
+    .map((t: any) => ({
+      id: t.id,
+      nome: t.nome_snapshot || t.instrucao_nome || t.tarefa?.nome || t.nome,
+      tag: t.instrucao_tag || t.tarefa?.tag,
+      descricao: t.instrucao_descricao || t.instrucao?.descricao,
+      criticidade: t.criticidade_snapshot ?? t.criticidade ?? t.tarefa?.criticidade,
+      frequencia: t.frequencia_snapshot || t.frequencia || t.tarefa?.frequencia,
+      status: t.status,
+    }))
+    .filter((t) => t.nome);
+
   // Buscar detalhes das tarefas quando expandir card de origem TAREFA
   useEffect(() => {
     if (!expanded || origem !== 'TAREFA' || tarefasFromAPI.length > 0) return;
+    // Ja temos o congelado: nao ha por que buscar a tarefa viva.
+    if (tarefasCongeladas.length > 0) return;
 
     const tarefaIds: string[] = dadosOrigem?.tarefas_ids || [];
     if (tarefaIds.length === 0) return;
@@ -162,6 +185,7 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
   })();
 
   const hasTarefaDetails = origem === 'TAREFA' && !!(
+    tarefasCongeladas.length ||
     dadosOrigem?.tarefas_ids?.length ||
     dadosOrigem?.tarefas_nomes?.length ||
     dadosOrigem?.tarefas_tags?.length ||
@@ -309,7 +333,12 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
   const renderTarefaDetails = () => {
     if (!dadosOrigem) return null;
 
-    const count = dadosOrigem.tarefas_count || dadosOrigem.tarefas_ids?.length || 0;
+    const count =
+      dadosOrigem.tarefas_count ||
+      dadosOrigem.tarefas_ids?.length ||
+      dadosOrigem.tarefas_nomes?.length ||
+      tarefasCongeladas.length ||
+      0;
     const unidadeNome = dadosOrigem.unidade_nome;
     const autoGerada = dadosOrigem.auto_gerada;
 
@@ -347,6 +376,44 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
           )}
         </div>
 
+        {/* O que a OS congelou. Vem primeiro porque é o que foi realmente
+            pedido, e não depende de buscar a tarefa viva. */}
+        {tarefasCongeladas.length > 0 && (
+          <div className="space-y-2">
+            {tarefasCongeladas.map((tarefa) => (
+              <div
+                key={tarefa.id}
+                className="border border-border rounded-md p-3 space-y-1.5"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    {tarefa.tag && (
+                      <span className="font-mono text-xs text-muted-foreground">{tarefa.tag}</span>
+                    )}
+                    <p className="text-sm font-medium text-foreground">{tarefa.nome}</p>
+                  </div>
+                  {tarefa.status && (
+                    <Badge variant="outline" className="text-xs shrink-0">
+                      {tarefa.status === 'CONCLUIDA' ? 'Concluída' : 'Pendente'}
+                    </Badge>
+                  )}
+                </div>
+
+                {tarefa.descricao && (
+                  <p className="text-xs text-muted-foreground">{tarefa.descricao}</p>
+                )}
+
+                <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                  {tarefa.frequencia && (
+                    <span>{frequenciaLabels[tarefa.frequencia] ?? tarefa.frequencia}</span>
+                  )}
+                  {tarefa.criticidade != null && <span>Criticidade {tarefa.criticidade}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Loading */}
         {tarefasLoading && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
@@ -355,8 +422,8 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
           </div>
         )}
 
-        {/* Lista de tarefas com detalhes completos */}
-        {tarefasFromAPI.length > 0 && (
+        {/* Detalhes buscados da tarefa viva, quando não há congelado. */}
+        {tarefasCongeladas.length === 0 && tarefasFromAPI.length > 0 && (
           <div className="space-y-2">
             {tarefasFromAPI.map((tarefa) => (
               <div
