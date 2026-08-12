@@ -55,6 +55,38 @@ const ROTULO_ORIGEM: Record<string, string> = {
 
 const rotuloOrigem = (origem: string) => ROTULO_ORIGEM[origem] ?? humanizar(origem || '');
 
+/**
+ * Os enums nao tem acento, entao humanizar devolvia "Em execucao". Sao poucos
+ * valores e todos aparecem na tela — vale escrever cada um.
+ */
+const ROTULO_STATUS: Record<string, string> = {
+  PENDENTE: 'Pendente',
+  EM_EXECUCAO: 'Em execução',
+  PAUSADA: 'Pausada',
+  EXECUTADA: 'Executada',
+  AUDITADA: 'Auditada',
+  FINALIZADA: 'Finalizada',
+  CANCELADA: 'Cancelada',
+  APROVADA: 'Aprovada',
+  REJEITADA: 'Rejeitada',
+  PROGRAMADA: 'Programada',
+  CONCLUIDA: 'Concluída',
+};
+
+const rotuloStatus = (status: string) => ROTULO_STATUS[status] ?? humanizar(status || '');
+
+const ROTULO_FREQUENCIA: Record<string, string> = {
+  DIARIA: 'Diária',
+  SEMANAL: 'Semanal',
+  QUINZENAL: 'Quinzenal',
+  MENSAL: 'Mensal',
+  BIMESTRAL: 'Bimestral',
+  TRIMESTRAL: 'Trimestral',
+  SEMESTRAL: 'Semestral',
+  ANUAL: 'Anual',
+  PERSONALIZADA: 'Personalizada',
+};
+
 const corrretiva = (origem: string) => origem === 'ANOMALIA';
 
 const rotuloProxima = (dias: number | null) => {
@@ -147,7 +179,7 @@ export function HistoricoDoEquipamentoSection({
                   <p className="min-w-0 flex-1 text-sm text-foreground truncate">{tarefa.nome}</p>
 
                   <span className="hidden sm:block w-24 flex-shrink-0 text-xs text-muted-foreground truncate">
-                    {tarefa.frequencia ? humanizar(tarefa.frequencia) : '—'}
+                    {tarefa.frequencia ? (ROTULO_FREQUENCIA[tarefa.frequencia] ?? tarefa.frequencia) : '—'}
                   </span>
 
                   <span className="w-28 flex-shrink-0 text-xs text-muted-foreground">
@@ -222,7 +254,7 @@ export function HistoricoDoEquipamentoSection({
                     </span>
 
                     <span className="hidden sm:block w-28 flex-shrink-0 text-xs text-muted-foreground truncate">
-                      {humanizar(item.status)}
+                      {rotuloStatus(item.status)}
                     </span>
 
                     <span className="w-16 flex-shrink-0 text-xs text-muted-foreground">
@@ -253,7 +285,7 @@ export function HistoricoDoEquipamentoSection({
                           <span className="w-28 flex-shrink-0 text-xs text-muted-foreground">
                             {tarefa.data_conclusao
                               ? `concluída ${formatarData(tarefa.data_conclusao)}`
-                              : humanizar(tarefa.status)}
+                              : rotuloStatus(tarefa.status)}
                           </span>
                         </div>
                       ))}
