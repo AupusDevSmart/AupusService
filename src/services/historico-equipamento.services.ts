@@ -15,24 +15,49 @@ export interface ItemHistoricoOS {
   numero: string;
   descricao: string;
   status: string;
+  /** ANOMALIA, TAREFA, PLANO_MANUTENCAO, SOLICITACAO_SERVICO ou MANUAL. */
+  origem: string;
   data: string | null;
   tarefas_total: number;
   tarefas_concluidas: number;
   tarefas: TarefaDoHistorico[];
 }
 
+export interface SituacaoDaTarefa {
+  id: string;
+  nome: string;
+  frequencia: string | null;
+  ultima_execucao: string | null;
+  numero_execucoes: number;
+  proxima_execucao: string | null;
+  /** Negativo quer dizer atrasada. Null quando a tarefa não tem periodicidade. */
+  dias_ate_proxima: number | null;
+}
+
+export interface HistoricoDoEquipamento {
+  tarefas: SituacaoDaTarefa[];
+  ordens: ItemHistoricoOS[];
+}
+
 /**
- * Ordens de serviço e programações que tocaram um equipamento.
+ * Histórico de manutenção de um equipamento.
  *
  * O endpoint vive no AupusService (módulo tarefas), não no api-shared: OS só
  * existe neste produto.
+ *
+ * A situação das tarefas vem calculada de lá de propósito — a conta da próxima
+ * execução é a mesma que o agendador usa, e refazê-la aqui já tinha feito a
+ * tela discordar do cron depois de uma OS cancelada.
  */
 export class HistoricoEquipamentoApiService {
-  async listar(equipamentoId: string): Promise<ItemHistoricoOS[]> {
+  async obter(equipamentoId: string): Promise<HistoricoDoEquipamento> {
     const resposta = await api.get(`/equipamentos/${equipamentoId.trim()}/historico-os`);
-    // O interceptor pode embrulhar em { success, data }.
-    const dados = resposta.data?.data ?? resposta.data ?? [];
-    return Array.isArray(dados) ? dados : [];
+    const dados = resposta.data?.data ?? resposta.data ?? {};
+
+    return {
+      tarefas: Array.isArray(dados.tarefas) ? dados.tarefas : [],
+      ordens: Array.isArray(dados.ordens) ? dados.ordens : [],
+    };
   }
 }
 

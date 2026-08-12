@@ -1,12 +1,15 @@
 // src/features/planos-manutencao/components/HistoricoDoEquipamentoSection.tsx
 import { useEffect, useState } from 'react';
-import { History, ClipboardCheck } from 'lucide-react';
-import { HistoricoOSDoEquipamento } from './HistoricoOSDoEquipamento';
+import { useNavigate } from 'react-router-dom';
+import { History, ClipboardCheck, ExternalLink, ChevronDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { usePlanoDoEquipamento } from './PlanoDoEquipamentoContext';
-import { TarefasApiService, type TarefaApiResponse } from '@/services/tarefas.services';
+import {
+  historicoEquipamentoApi,
+  type HistoricoDoEquipamento,
+  type ItemHistoricoOS,
+} from '@/services/historico-equipamento.services';
 import { formatApiError } from '@/utils/api-error';
-
-const tarefasApi = new TarefasApiService();
 
 interface HistoricoDoEquipamentoSectionProps {
   equipamentoId: string;
@@ -16,97 +19,76 @@ interface HistoricoDoEquipamentoSectionProps {
 /**
  * O histórico do equipamento, em duas perguntas.
  *
- * "Cada tarefa está em dia?" — resolvido com o que a própria tarefa guarda
- * (`data_ultima_execucao`, `numero_execucoes`, periodicidade). É a visão de
- * quem quer saber o que falta fazer.
- *
- * "O que já passou por aqui?" — a lista de ordens de serviço e programações,
- * em HistoricoOSDoEquipamento. É a visão de quem quer rastrear o que foi feito
- * e abrir a OS. Essa consulta usa o `equipamento_id` congelado em
- * `tarefas_os`/`tarefas_programacao_os`, e não o join com a tarefa viva: trocar
- * o plano de um equipamento apaga as cópias das tarefas (hard delete
- * deliberado, porque a OS congela o conteúdo), e um histórico apoiado no join
- * se esvaziaria sozinho a cada troca.
+ * "Cada tarefa está em dia?" e "o que já passou por aqui?". Os dois blocos vêm
+ * calculados do backend numa chamada só — em especial a próxima execução, que
+ * usa a mesma função do agendador. Recalcular aqui já tinha feito a tela dizer
+ * "atrasada" enquanto o cron considerava a tarefa em dia, porque cancelar uma
+ * OS avança a âncora sem registrar execução.
  */
 
-const DIAS_POR_FREQUENCIA: Record<string, number> = {
-  DIARIA: 1,
-  SEMANAL: 7,
-  QUINZENAL: 15,
-  MENSAL: 30,
-  BIMESTRAL: 60,
-  TRIMESTRAL: 90,
-  SEMESTRAL: 180,
-  ANUAL: 365,
+const formatarData = (valor: string | null) => {
+  if (!valor) return '—';
+  const data = new Date(valor);
+  return Number.isNaN(data.getTime()) ? '—' : data.toLocaleDateString('pt-BR');
 };
 
-const intervaloEmDias = (tarefa: TarefaApiResponse): number | null => {
-  if (tarefa.frequencia === 'PERSONALIZADA') return tarefa.frequencia_personalizada ?? null;
-  return DIAS_POR_FREQUENCIA[tarefa.frequencia as string] ?? null;
+/** Os enums do backend vêm em MAIÚSCULO_COM_UNDERLINE. */
+const humanizar = (valor: string) =>
+  valor
+    .toLowerCase()
+    .split('_')
+    .join(' ')
+    .replace(/^./, (c) => c.toUpperCase());
+
+/**
+ * OS de anomalia é trabalho corretivo — apareceu um problema. As de tarefa e
+ * plano são preventivas, saíram do calendário. As duas contam como trabalho
+ * feito no equipamento, então as duas aparecem; o rótulo é que separa.
+ */
+const ROTULO_ORIGEM: Record<string, string> = {
+  ANOMALIA: 'Corretiva · anomalia',
+  TAREFA: 'Preventiva · tarefa',
+  PLANO_MANUTENCAO: 'Preventiva · plano',
+  SOLICITACAO_SERVICO: 'Solicitação',
+  MANUAL: 'Manual',
 };
 
-const formatarData = (valor?: Date | string | null) => {
-  if (!valor) return null;
-  const data = valor instanceof Date ? valor : new Date(valor);
-  if (Number.isNaN(data.getTime())) return null;
-  return data.toLocaleDateString('pt-BR');
-};
+const rotuloOrigem = (origem: string) => ROTULO_ORIGEM[origem] ?? humanizar(origem || '');
 
-/** Dias até a próxima execução; negativo quer dizer atrasada. */
-const diasAteProxima = (tarefa: TarefaApiResponse): number | null => {
-  const intervalo = intervaloEmDias(tarefa);
-  if (!intervalo) return null;
+const corrretiva = (origem: string) => origem === 'ANOMALIA';
 
-  const base = tarefa.data_ultima_execucao ?? (tarefa as any).data_ancora;
-  if (!base) return null;
-
-  const inicio = base instanceof Date ? base : new Date(base);
-  if (Number.isNaN(inicio.getTime())) return null;
-
-  const proxima = new Date(inicio);
-  proxima.setDate(proxima.getDate() + intervalo);
-
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  proxima.setHours(0, 0, 0, 0);
-
-  return Math.round((proxima.getTime() - hoje.getTime()) / 86400000);
-};
-
-const rotuloProxima = (tarefa: TarefaApiResponse) => {
-  const dias = diasAteProxima(tarefa);
-  if (dias === null) return { texto: '—', atrasada: false };
-  if (dias < 0) return { texto: `atrasada ${Math.abs(dias)}d`, atrasada: true };
-  if (dias === 0) return { texto: 'hoje', atrasada: true };
-  return { texto: `em ${dias}d`, atrasada: false };
+const rotuloProxima = (dias: number | null) => {
+  if (dias === null) return { texto: '—', destaque: false };
+  if (dias < 0) return { texto: `atrasada ${Math.abs(dias)}d`, destaque: true };
+  if (dias === 0) return { texto: 'hoje', destaque: true };
+  return { texto: `em ${dias}d`, destaque: false };
 };
 
 export function HistoricoDoEquipamentoSection({
   equipamentoId,
   classificacao,
 }: HistoricoDoEquipamentoSectionProps) {
-  const { planoAtual, refreshTarefas, ehUC } = usePlanoDoEquipamento(equipamentoId, classificacao);
+  const navigate = useNavigate();
+  const { ehUC, refreshTarefas } = usePlanoDoEquipamento(equipamentoId, classificacao);
 
-  const [tarefas, setTarefas] = useState<TarefaApiResponse[]>([]);
-  const [carregando, setCarregando] = useState(false);
+  const [dados, setDados] = useState<HistoricoDoEquipamento>({ tarefas: [], ordens: [] });
+  const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [expandido, setExpandido] = useState<string | null>(null);
 
-  const planoId = planoAtual?.id?.trim();
+  const id = equipamentoId?.trim();
 
   useEffect(() => {
-    if (!planoId) {
-      setTarefas([]);
-      return;
-    }
+    if (!id) return;
 
     let cancelado = false;
     setCarregando(true);
     setErro(null);
 
-    tarefasApi
-      .findAll({ plano_id: planoId, limit: 100 })
-      .then((res) => {
-        if (!cancelado) setTarefas(res.data || []);
+    historicoEquipamentoApi
+      .obter(id)
+      .then((resposta) => {
+        if (!cancelado) setDados(resposta);
       })
       .catch((error) => {
         if (!cancelado) setErro(formatApiError(error));
@@ -118,77 +100,170 @@ export function HistoricoDoEquipamentoSection({
     return () => {
       cancelado = true;
     };
-  }, [planoId, refreshTarefas]);
+  }, [id, refreshTarefas]);
+
+  const abrir = (item: ItemHistoricoOS) => {
+    // Não precisa fechar o sheet: navegar desmonta a página de equipamentos
+    // inteira, e o modal vai junto.
+    navigate(
+      item.tipo === 'OS'
+        ? `/execucao-os?execucaoId=${item.id.trim()}`
+        : `/programacao-os?programacaoId=${item.id.trim()}`,
+    );
+  };
 
   if (!ehUC) return null;
+
+  if (carregando) return <p className="text-sm text-muted-foreground">Carregando...</p>;
+  if (erro) return <p className="text-sm text-destructive">{erro}</p>;
 
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-medium">Situação das tarefas</h3>
-      </div>
-
-      {!planoId ? (
-        <p className="text-sm text-muted-foreground">
-          Nenhum plano vinculado. Escolha um plano em Dados técnicos para acompanhar as execuções.
-        </p>
-      ) : carregando ? (
-        <p className="text-sm text-muted-foreground">Carregando...</p>
-      ) : erro ? (
-        <p className="text-sm text-destructive">{erro}</p>
-      ) : tarefas.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhuma tarefa neste plano ainda.</p>
-      ) : (
-        <div>
-          <div className="flex items-center gap-3 py-2 text-xs text-muted-foreground">
-            <span className="min-w-0 flex-1">Tarefa</span>
-            <span className="w-28 flex-shrink-0">Última execução</span>
-            <span className="w-20 flex-shrink-0">Execuções</span>
-            <span className="w-28 flex-shrink-0">Próxima</span>
-          </div>
-
-          {tarefas.map((tarefa) => {
-            const ultima = formatarData(tarefa.data_ultima_execucao);
-            const proxima = rotuloProxima(tarefa);
-
-            return (
-              <div key={tarefa.id} className="flex items-center gap-3 py-2">
-                <p className="min-w-0 flex-1 text-sm text-foreground truncate">{tarefa.nome}</p>
-
-                <span className="w-28 flex-shrink-0 text-xs text-muted-foreground">
-                  {ultima ?? 'nunca'}
-                </span>
-
-                <span className="w-20 flex-shrink-0 text-xs text-muted-foreground">
-                  {tarefa.numero_execucoes ?? 0}
-                </span>
-
-                <span
-                  className={`w-28 flex-shrink-0 text-xs ${
-                    proxima.atrasada ? 'text-foreground font-medium' : 'text-muted-foreground'
-                  }`}
-                >
-                  {proxima.texto}
-                </span>
-              </div>
-            );
-          })}
+        <div className="flex items-center gap-2">
+          <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Situação das tarefas</h3>
         </div>
-      )}
+
+        {dados.tarefas.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma tarefa. Escolha um plano em Dados técnicos para acompanhar as execuções.
+          </p>
+        ) : (
+          <div>
+            <div className="flex items-center gap-3 py-2 text-xs text-muted-foreground">
+              <span className="min-w-0 flex-1">Tarefa</span>
+              <span className="hidden sm:block w-24 flex-shrink-0">Periodicidade</span>
+              <span className="w-28 flex-shrink-0">Última</span>
+              <span className="w-20 flex-shrink-0">Execuções</span>
+              <span className="w-28 flex-shrink-0">Próxima</span>
+            </div>
+
+            {dados.tarefas.map((tarefa) => {
+              const proxima = rotuloProxima(tarefa.dias_ate_proxima);
+
+              return (
+                <div key={tarefa.id} className="flex items-center gap-3 py-2">
+                  <p className="min-w-0 flex-1 text-sm text-foreground truncate">{tarefa.nome}</p>
+
+                  <span className="hidden sm:block w-24 flex-shrink-0 text-xs text-muted-foreground truncate">
+                    {tarefa.frequencia ? humanizar(tarefa.frequencia) : '—'}
+                  </span>
+
+                  <span className="w-28 flex-shrink-0 text-xs text-muted-foreground">
+                    {tarefa.ultima_execucao ? formatarData(tarefa.ultima_execucao) : 'nunca'}
+                  </span>
+
+                  <span className="w-20 flex-shrink-0 text-xs text-muted-foreground">
+                    {tarefa.numero_execucoes}
+                  </span>
+
+                  <span
+                    className={`w-28 flex-shrink-0 text-xs ${
+                      proxima.destaque ? 'text-foreground font-medium' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {proxima.texto}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* A lista de OS não depende do plano vinculado: ela olha o que foi
-          congelado nas ordens, então continua ali mesmo depois de trocar ou
-          desvincular o plano. */}
+      {/* Não depende do plano vinculado: lê o que foi congelado nas ordens,
+          então continua ali depois de trocar ou desvincular o plano. */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <History className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">Ordens de serviço</h3>
         </div>
 
-        <HistoricoOSDoEquipamento equipamentoId={equipamentoId} />
+        {dados.ordens.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma ordem de serviço ou programação com tarefas deste equipamento.
+          </p>
+        ) : (
+          <div>
+            {dados.ordens.map((item) => {
+              const aberto = expandido === item.id;
+
+              return (
+                <div key={`${item.tipo}:${item.id}`} className="py-2">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setExpandido(aberto ? null : item.id)}
+                      className="flex items-center gap-2 min-w-0 flex-1 text-left"
+                      title="Ver as tarefas deste item"
+                    >
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform ${
+                          aberto ? '' : '-rotate-90'
+                        }`}
+                      />
+                      <span className="min-w-0">
+                        <span className="text-sm text-foreground truncate block">
+                          {item.numero} · {item.descricao}
+                        </span>
+                        <span
+                          className={`text-xs ${
+                            corrretiva(item.origem) ? 'text-foreground' : 'text-muted-foreground'
+                          }`}
+                        >
+                          {rotuloOrigem(item.origem)}
+                        </span>
+                      </span>
+                    </button>
+
+                    <span className="hidden md:block w-24 flex-shrink-0 text-xs text-muted-foreground">
+                      {formatarData(item.data)}
+                    </span>
+
+                    <span className="hidden sm:block w-28 flex-shrink-0 text-xs text-muted-foreground truncate">
+                      {humanizar(item.status)}
+                    </span>
+
+                    <span className="w-16 flex-shrink-0 text-xs text-muted-foreground">
+                      {item.tipo === 'OS'
+                        ? `${item.tarefas_concluidas}/${item.tarefas_total}`
+                        : `${item.tarefas_total}`}
+                    </span>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 flex-shrink-0"
+                      onClick={() => abrir(item)}
+                      title={item.tipo === 'OS' ? 'Abrir a ordem de serviço' : 'Abrir a programação'}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+
+                  {aberto && (
+                    <div className="pl-6 pt-1">
+                      {item.tarefas.map((tarefa) => (
+                        <div key={tarefa.id} className="flex items-center gap-3 py-1">
+                          <span className="min-w-0 flex-1 text-xs text-muted-foreground truncate">
+                            {tarefa.nome}
+                          </span>
+                          <span className="w-28 flex-shrink-0 text-xs text-muted-foreground">
+                            {tarefa.data_conclusao
+                              ? `concluída ${formatarData(tarefa.data_conclusao)}`
+                              : humanizar(tarefa.status)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
