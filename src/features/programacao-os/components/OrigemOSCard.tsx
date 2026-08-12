@@ -101,6 +101,57 @@ const Grade: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">{children}</div>
 );
 
+/**
+ * Abre a instrução por cima do sheet da OS.
+ *
+ * Vale para as três origens que têm instrução: a tarefa (uma por tarefa), a
+ * anomalia (várias, via anomalias_instrucoes) e a solicitação de serviço
+ * (várias, via solicitacoes_instrucoes). É na instrução que vivem as etapas,
+ * os recursos e os anexos — o resto é rótulo.
+ */
+const BotaoInstrucao: React.FC<{ instrucaoId?: string | null; titulo?: string }> = ({
+  instrucaoId,
+  titulo = 'Ver instrução',
+}) => {
+  if (!instrucaoId) return null;
+  return <OrigemLinks instrucaoId={instrucaoId} instrucaoRotulo={titulo} />;
+};
+
+/**
+ * As instruções vinculadas a uma anomalia ou a uma solicitação.
+ *
+ * As duas aceitam VÁRIAS — `anomalias_instrucoes` e `solicitacoes_instrucoes` —
+ * e as duas já trazem isso no detalhe, então é só listar. Antes o card mostrava
+ * a descrição do problema e parava por aí: quem ia executar não tinha como
+ * chegar no procedimento.
+ */
+const ListaDeInstrucoes: React.FC<{ instrucoes?: any[] }> = ({ instrucoes }) => {
+  const lista = (instrucoes || [])
+    .map((i: any) => i?.instrucao ?? i)
+    .filter((i: any) => i?.id);
+
+  if (lista.length === 0) return null;
+
+  return (
+    <div className="border-t pt-3">
+      <p className="text-[11px] text-muted-foreground mb-1">
+        Instruções ({lista.length})
+      </p>
+      {lista.map((i: any) => (
+        <div key={i.id} className="flex items-center gap-3 py-2 border-t first:border-t-0">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-foreground/90 truncate" title={i.nome}>{i.nome}</p>
+            {i.tag && <span className="font-mono text-[11px] text-muted-foreground">{i.tag}</span>}
+          </div>
+          <div className="shrink-0">
+            <BotaoInstrucao instrucaoId={i.id} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const getOrigemIcon = (origem: string) => {
   if (origem === 'ANOMALIA' || origem === 'EMERGENCIA') return AlertTriangle;
   if (origem === 'PLANO_MANUTENCAO' || origem === 'PREVENTIVA' || origem === 'TAREFA') return Calendar;
@@ -163,7 +214,9 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
       id: t.id,
       nome: t.nome_snapshot || t.instrucao_nome || t.tarefa?.nome || t.nome,
       tag: t.instrucao_tag || t.tarefa?.tag,
-      descricao: t.instrucao_descricao || t.instrucao?.descricao,
+      instrucaoId: t.instrucao_id ?? t.tarefa?.instrucao_id ?? null,
+      instrucaoNome: t.instrucao_nome || t.instrucao?.nome || null,
+      planoNome: t.plano_nome || t.tarefa?.plano_manutencao?.nome || null,
       criticidade: t.criticidade_snapshot ?? t.criticidade ?? t.tarefa?.criticidade,
       frequencia: t.frequencia_snapshot || t.frequencia || t.tarefa?.frequencia,
       status: t.status,
@@ -258,6 +311,8 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
           <Campo rotulo="Atualizada em">{atualizada ? formatarData(atualizada) : null}</Campo>
         </Grade>
 
+        <ListaDeInstrucoes instrucoes={a?.anomalias_instrucoes || a?.instrucoes} />
+
         {a?.observacoes && (
           <div className="border-t pt-3">
             <p className="text-[11px] text-muted-foreground">Observações</p>
@@ -329,11 +384,16 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
       frequencia?: string;
       criticidade?: number;
       status?: string;
+      instrucaoId?: string | null;
+      instrucaoNome?: string | null;
     }) => (
       <div key={t.id} className="flex items-center gap-3 py-2 border-t first:border-t-0">
         <div className="min-w-0 flex-1">
           <p className="text-xs text-foreground/90 truncate" title={t.nome}>{t.nome}</p>
-          {t.tag && <span className="font-mono text-[11px] text-muted-foreground">{t.tag}</span>}
+          <span className="text-[11px] text-muted-foreground truncate block">
+            {t.tag && <span className="font-mono">{t.tag} </span>}
+            {t.instrucaoNome}
+          </span>
         </div>
 
         <span className="hidden sm:block w-24 flex-shrink-0 text-[11px] text-muted-foreground truncate">
@@ -349,6 +409,10 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
             {t.status === 'CONCLUIDA' ? 'Concluída' : 'Pendente'}
           </Badge>
         )}
+
+        <div className="shrink-0">
+          <BotaoInstrucao instrucaoId={t.instrucaoId} />
+        </div>
       </div>
     );
 
@@ -356,12 +420,19 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
       id: t.id,
       nome: t.nome,
       tag: t.tag,
+      instrucaoId: t.instrucao_id ?? t.instrucao?.id ?? null,
+      instrucaoNome: t.instrucao?.nome ?? null,
+      planoNome: t.plano_manutencao?.nome ?? null,
       frequencia: t.frequencia,
       criticidade: t.criticidade,
     }));
 
     // O congelado ganha do buscado: é o que foi pedido, não o que a tarefa é hoje.
     const paraMostrar = tarefasCongeladas.length > 0 ? tarefasCongeladas : daApi;
+
+    const planosDaOS = [
+      ...new Set(paraMostrar.map((t: any) => t.planoNome).filter(Boolean)),
+    ] as string[];
 
     const count =
       dadosOrigem.tarefas_count ||
@@ -374,8 +445,12 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
       <div className="space-y-4">
         <Grade>
           <Campo rotulo="Tarefas">{`${count} tarefa${count !== 1 ? 's' : ''}`}</Campo>
+          {/* Uma OS pode juntar tarefas de planos diferentes; nesse caso o
+              resumo diz quantos, e cada linha continua sendo a verdade. */}
+          <Campo rotulo={planosDaOS.length > 1 ? 'Planos' : 'Plano'}>
+            {planosDaOS.length > 1 ? `${planosDaOS.length} planos` : planosDaOS[0]}
+          </Campo>
           <Campo rotulo="Instalação">{dadosOrigem.unidade_nome}</Campo>
-          <Campo rotulo="Agrupamento">{dadosOrigem.agrupamento}</Campo>
           <Campo rotulo="Geração">{dadosOrigem.auto_gerada ? 'Automática' : null}</Campo>
         </Grade>
 
@@ -450,6 +525,8 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
             {sol.data_solicitacao ? formatarData(sol.data_solicitacao) : null}
           </Campo>
         </Grade>
+
+        <ListaDeInstrucoes instrucoes={sol.instrucoes || sol.solicitacoes_instrucoes} />
 
         {sol.descricao && (
           <div className="border-t pt-3">
