@@ -1,6 +1,7 @@
 // src/features/planos-manutencao/components/HistoricoDoEquipamentoSection.tsx
 import { useEffect, useState } from 'react';
-import { History } from 'lucide-react';
+import { History, ClipboardCheck } from 'lucide-react';
+import { HistoricoOSDoEquipamento } from './HistoricoOSDoEquipamento';
 import { usePlanoDoEquipamento } from './PlanoDoEquipamentoContext';
 import { TarefasApiService, type TarefaApiResponse } from '@/services/tarefas.services';
 import { formatApiError } from '@/utils/api-error';
@@ -13,20 +14,19 @@ interface HistoricoDoEquipamentoSectionProps {
 }
 
 /**
- * O que já foi feito e o que falta, tarefa a tarefa.
+ * O histórico do equipamento, em duas perguntas.
  *
- * Primeira versão, construída só com o que a própria tarefa já guarda:
- * `data_ultima_execucao`, `numero_execucoes` e a periodicidade. Não depende de
- * endpoint novo nem de migração.
+ * "Cada tarefa está em dia?" — resolvido com o que a própria tarefa guarda
+ * (`data_ultima_execucao`, `numero_execucoes`, periodicidade). É a visão de
+ * quem quer saber o que falta fazer.
  *
- * O que ainda NÃO está aqui é a lista de ordens de serviço com link para
- * abri-las. Esse passo precisa de uma mudança no banco antes: hoje a ligação
- * OS -> equipamento só existe via `tarefas_os.tarefa_id -> tarefas.equipamento_id`,
- * e trocar o plano de um equipamento APAGA as cópias das tarefas (hard delete,
- * deliberado, porque a OS congela o conteúdo). Quando isso acontece o vínculo
- * some e a OS histórica fica órfã. `ordens_servico.equipamento_id` não serve de
- * alternativa: está preenchido em 1 de 19 OS. A correção é congelar também o
- * equipamento em `tarefas_os` e `tarefas_programacao_os`.
+ * "O que já passou por aqui?" — a lista de ordens de serviço e programações,
+ * em HistoricoOSDoEquipamento. É a visão de quem quer rastrear o que foi feito
+ * e abrir a OS. Essa consulta usa o `equipamento_id` congelado em
+ * `tarefas_os`/`tarefas_programacao_os`, e não o join com a tarefa viva: trocar
+ * o plano de um equipamento apaga as cópias das tarefas (hard delete
+ * deliberado, porque a OS congela o conteúdo), e um histórico apoiado no join
+ * se esvaziaria sozinho a cada troca.
  */
 
 const DIAS_POR_FREQUENCIA: Record<string, number> = {
@@ -123,10 +123,11 @@ export function HistoricoDoEquipamentoSection({
   if (!ehUC) return null;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-6">
+      <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <History className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-medium">Histórico de Manutenção</h3>
+        <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-medium">Situação das tarefas</h3>
       </div>
 
       {!planoId ? (
@@ -176,6 +177,19 @@ export function HistoricoDoEquipamentoSection({
           })}
         </div>
       )}
+      </div>
+
+      {/* A lista de OS não depende do plano vinculado: ela olha o que foi
+          congelado nas ordens, então continua ali mesmo depois de trocar ou
+          desvincular o plano. */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <History className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Ordens de serviço</h3>
+        </div>
+
+        <HistoricoOSDoEquipamento equipamentoId={equipamentoId} />
+      </div>
     </div>
   );
 }

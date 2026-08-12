@@ -1,6 +1,6 @@
 // src/features/programacao-os/components/ProgramacaoOSPage.tsx - ATUALIZADA COM CARDS
 import { useState, useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@aupus/shared-pages';
@@ -78,6 +78,7 @@ export function ProgramacaoOSPage() {
   useUserStore(); // Hook para obter usuário logado
 
   // Estados principais
+  const [searchParams, setSearchParams] = useSearchParams();
   const [programacoes, setProgramacoes] = useState<ProgramacaoResponse[]>([]);
   const [filters, setFilters] = useState<ProgramacaoFiltersDto>(initialFilters);
   const [pagination, setPagination] = useState({
@@ -159,6 +160,27 @@ export function ProgramacaoOSPage() {
   useEffect(() => {
     carregarDados();
   }, [filters]);
+
+  // Abrir o sheet automaticamente quando vier com programacaoId na URL.
+  // E por aqui que o historico do equipamento navega ate a programacao;
+  // espelha o ?execucaoId= que a pagina de execucao ja aceitava.
+  useEffect(() => {
+    const id = searchParams.get('programacaoId');
+    if (!id) return;
+
+    (async () => {
+      try {
+        const daLista = programacoes.find((p) => p.id?.trim() === id.trim());
+        const detalhe = daLista ?? (await buscarProgramacao(id));
+        if (detalhe) openModal('view', detalhe as ProgramacaoResponse);
+      } catch (error) {
+        console.error('Erro ao abrir programação vinda da URL:', error);
+      } finally {
+        // Limpa o parametro para o sheet nao reabrir sozinho ao fechar.
+        setSearchParams({}, { replace: true });
+      }
+    })();
+  }, [searchParams]);
 
   // Receber dados pré-selecionados via navigate state
   useEffect(() => {
