@@ -7,7 +7,8 @@ import { usePlanoDoEquipamento } from './PlanoDoEquipamentoContext';
 import type { TarefaApiResponse } from '@/services/tarefas.services';
 
 interface TarefasDoEquipamentoSectionProps {
-  equipamentoId: string;
+  /** Nulo no cadastro, quando o equipamento ainda nao existe. */
+  equipamentoId: string | null;
   classificacao?: string;
   somenteLeitura?: boolean;
   /** Abre o sheet da instrução ao clicar em "ver" numa tarefa. */
@@ -31,8 +32,22 @@ export function TarefasDoEquipamentoSection({
   somenteLeitura = false,
   onVerInstrucao,
 }: TarefasDoEquipamentoSectionProps) {
-  const { planoAtual, previa, instrucoesOptions, carregando, refreshTarefas, ehUC, recarregar } =
-    usePlanoDoEquipamento(equipamentoId, classificacao);
+  const {
+    planoAtual,
+    previa,
+    instrucoesOptions,
+    carregando,
+    refreshTarefas,
+    ehUC,
+    recarregar,
+    planoEscolhidoNoCadastro,
+  } = usePlanoDoEquipamento(equipamentoId ?? '', classificacao);
+
+  const criando = !equipamentoId;
+  // No cadastro nao ha copia ainda: mostra as tarefas do TEMPLATE escolhido,
+  // que e exatamente o que sera copiado ao salvar. Somente leitura — editar
+  // aqui mexeria no template e afetaria todos os equipamentos da categoria.
+  const planoParaListar = criando ? planoEscolhidoNoCadastro : planoAtual?.id;
 
   // Id do plano para o qual o cadastro deve abrir. Guarda o ALVO e não um
   // contador: contador dispara no mount da lista e o formulário abriria sozinho.
@@ -72,21 +87,24 @@ export function TarefasDoEquipamentoSection({
         )}
       </div>
 
-      {carregando ? (
+      {carregando && !criando ? (
         <p className="text-sm text-muted-foreground">Carregando...</p>
-      ) : !planoAtual ? (
+      ) : !planoParaListar ? (
         <p className="text-sm text-muted-foreground">
-          Nenhum plano vinculado. Escolha um plano em Dados Básicos para que as tarefas dele apareçam
-          aqui.
+          Nenhum plano {criando ? 'escolhido' : 'vinculado'}. Escolha um plano em Dados técnicos para
+          que as tarefas dele apareçam aqui.
         </p>
       ) : (
         <TarefasExpandedRow
-          planoId={planoAtual.id}
+          planoId={planoParaListar}
           instrucoesOptions={instrucoesOptions}
           refreshToken={refreshTarefas}
           onVerTarefa={onVerInstrucao ?? (() => {})}
           onTarefasChange={recarregar}
-          somenteLeitura={somenteLeitura}
+          // No cadastro a lista é do TEMPLATE: editar aqui mexeria no plano da
+          // categoria inteira. Depois de salvar, as tarefas viram cópia do
+          // equipamento e passam a ser editáveis.
+          somenteLeitura={somenteLeitura || criando}
           variante="sheet"
           posicaoBotaoAdicionar="oculto"
           abrirCadastroPara={abrirCadastroPara}

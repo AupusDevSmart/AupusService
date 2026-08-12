@@ -11,7 +11,7 @@ import { formatApiError } from '@/utils/api-error';
 const instrucoesApi = new InstrucoesApiService();
 
 interface PlanoDoEquipamentoWrapperProps {
-  equipamentoId: string;
+  equipamentoId: string | null;
   classificacao?: string;
   somenteLeitura?: boolean;
 }

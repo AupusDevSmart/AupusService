@@ -467,6 +467,15 @@ export class PlanosManutencaoApiService {
     return Array.isArray(response.data) ? response.data : [];
   }
 
+  /** Templates de uma categoria. Usado no cadastro, onde ainda nao ha equipamento. */
+  async listarTemplatesDaCategoria(categoriaId: string): Promise<PlanoManutencaoApiResponse[]> {
+    if (!categoriaId?.trim()) return [];
+    const response = await api.get<PlanoManutencaoApiResponse[]>(
+      `${this.baseEndpoint}/categoria/${categoriaId.trim()}/templates`,
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  }
+
   async previaDesvinculo(equipamentoId: string): Promise<PreviaDesvinculoApiResponse> {
     const response = await api.get<PreviaDesvinculoApiResponse>(
       `${this.baseEndpoint}/equipamento/${equipamentoId.trim()}/previa-desvinculo`,

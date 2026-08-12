@@ -132,17 +132,19 @@ export const appRoutes = createBrowserRouter([
                 isso o provider fica acima da pagina inteira. */}
             <PlanoDoEquipamentoProvider>
               <EquipamentosPage
-                renderCampoDadosBasicosUC={(equipamento, mode) => (
+                renderCampoDadosBasicosUC={(equipamento, mode, ctx) => (
                   <SeletorDePlanoField
-                    equipamentoId={equipamento.id}
-                    classificacao={equipamento.classificacao}
+                    equipamentoId={equipamento?.id ?? null}
+                    classificacao={equipamento?.classificacao}
                     somenteLeitura={mode === 'view'}
+                    categoriaId={ctx.categoriaId}
+                    registrarAcaoPosCriacao={ctx.registrarAcaoPosCriacao}
                   />
                 )}
                 renderSecaoExtraUC={(equipamento, mode) => (
                   <PlanoDoEquipamentoWrapper
-                    equipamentoId={equipamento.id}
-                    classificacao={equipamento.classificacao}
+                    equipamentoId={equipamento?.id ?? null}
+                    classificacao={equipamento?.classificacao}
                     somenteLeitura={mode === 'view'}
                   />
                 )}

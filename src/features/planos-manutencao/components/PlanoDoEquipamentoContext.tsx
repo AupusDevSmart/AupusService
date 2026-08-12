@@ -38,6 +38,12 @@ interface PlanoDoEquipamentoValue {
   recarregar: () => Promise<void>;
   /** Chamado pelos consumidores; ignora repetição do mesmo equipamento. */
   registrar: (equipamentoId: string, classificacao?: string) => void;
+  /**
+   * Plano escolhido no CADASTRO, antes de existir equipamento. O seletor
+   * escreve e a aba de tarefas le, para mostrar o que sera copiado ao salvar.
+   */
+  planoEscolhidoNoCadastro: string;
+  escolherPlanoNoCadastro: (planoId: string) => void;
 }
 
 const Ctx = React.createContext<PlanoDoEquipamentoValue | null>(null);
@@ -52,6 +58,7 @@ export function PlanoDoEquipamentoProvider({ children }: { children: React.React
   const [carregando, setCarregando] = React.useState(true);
   const [salvando, setSalvando] = React.useState(false);
   const [refreshTarefas, setRefreshTarefas] = React.useState(0);
+  const [planoEscolhidoNoCadastro, setPlanoEscolhidoNoCadastro] = React.useState('');
   const [instrucoesOptions, setInstrucoesOptions] = React.useState<
     Array<{ value: string; label: string }>
   >([]);
@@ -203,6 +210,8 @@ export function PlanoDoEquipamentoProvider({ children }: { children: React.React
     desvincular,
     recarregar,
     registrar,
+    planoEscolhidoNoCadastro,
+    escolherPlanoNoCadastro: setPlanoEscolhidoNoCadastro,
   };
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
