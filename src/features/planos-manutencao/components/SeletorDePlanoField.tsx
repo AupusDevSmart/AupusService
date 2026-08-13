@@ -174,10 +174,12 @@ export function SeletorDePlanoField({
           campo encolhia enquanto carregava ou quando não havia plano, e a linha
           inteira do formulário dançava. */}
       {ocupado ? (
-        <div className="campo-estatico flex text-muted-foreground">Carregando...</div>
+        <div className="campo-estatico text-sm text-muted-foreground">
+          <span className="truncate">Carregando...</span>
+        </div>
       ) : semCategoria ? (
         <div
-          className="campo-estatico flex text-muted-foreground text-xs"
+          className="campo-estatico text-sm text-muted-foreground"
           title="Escolha a categoria do equipamento para ver os planos disponíveis."
         >
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
@@ -185,14 +187,16 @@ export function SeletorDePlanoField({
         </div>
       ) : lista.length === 0 ? (
         <div
-          className="campo-estatico flex text-muted-foreground text-xs"
+          className="campo-estatico text-sm text-muted-foreground"
           title="Nenhum plano disponível para esta categoria."
         >
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">Nenhum plano para esta categoria.</span>
         </div>
       ) : somenteLeitura ? (
-        <div className="campo-estatico">{planoAtual?.nome || 'Nenhum plano vinculado'}</div>
+        <div className="campo-estatico text-sm">
+          <span className="truncate">{planoAtual?.nome || 'Nenhum plano vinculado'}</span>
+        </div>
       ) : (
         <Combobox
           options={options}
