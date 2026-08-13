@@ -132,7 +132,7 @@ export function SeletorDePlanoField({
           mudava conforme houvesse ou não plano vinculado — a coluna nunca
           alinhava com a criticidade ao lado. O -my-0.5 mantém a linha do rótulo
           na altura de sempre. */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="linha-rotulo">
         <label className="text-sm font-medium">Plano de Manutenção</label>
 
         {/* No cadastro não há o que aplicar agora: o vínculo sai junto com o
