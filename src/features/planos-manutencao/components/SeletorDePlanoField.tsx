@@ -127,72 +127,82 @@ export function SeletorDePlanoField({
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium">Plano de Manutenção</label>
+      {/* Os botões ficam na linha do rótulo, e não ao lado do campo. Dividindo a
+          linha com o combo, eles encurtavam a caixa em uma medida que ainda
+          mudava conforme houvesse ou não plano vinculado — a coluna nunca
+          alinhava com a criticidade ao lado. O -my-0.5 mantém a linha do rótulo
+          na altura de sempre. */}
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-sm font-medium">Plano de Manutenção</label>
 
-      {ocupado ? (
-        <p className="text-sm text-muted-foreground">Carregando...</p>
-      ) : semCategoria ? (
-        <div className="flex items-start gap-2 text-sm text-muted-foreground">
-          <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-          <span>Escolha a categoria do equipamento para ver os planos disponíveis.</span>
-        </div>
-      ) : lista.length === 0 ? (
-        <div className="flex items-start gap-2 text-sm text-muted-foreground">
-          <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-          <span>
-            Nenhum plano disponível para esta <span className="text-foreground">categoria</span>.
-          </span>
-        </div>
-      ) : somenteLeitura ? (
-        <div className="p-2 bg-muted/50 rounded border text-sm">
-          {planoAtual?.nome || 'Nenhum plano vinculado'}
-        </div>
-      ) : (
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="flex-1 min-w-0">
-            <Combobox
-              options={options}
-              value={selecionado || undefined}
-              onValueChange={(val) => setSelecionado((val || '').trim())}
-              placeholder="Selecione um plano..."
-              searchPlaceholder="Buscar plano..."
-              emptyText="Nenhum plano encontrado"
-              disabled={salvando}
-            />
-          </div>
+        {/* No cadastro não há o que aplicar agora: o vínculo sai junto com o
+            equipamento, ao salvar. */}
+        {!criando && !somenteLeitura && !ocupado && lista.length > 0 && (
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              onClick={() => vincular(selecionado)}
+              disabled={!podeAplicar || salvando}
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 -my-0.5"
+              title={planoAtual ? 'Substituir plano' : 'Vincular plano'}
+              aria-label={planoAtual ? 'Substituir plano' : 'Vincular plano'}
+            >
+              <Link2 className="h-4 w-4" />
+            </Button>
 
-          {/* No cadastro não há o que aplicar agora: o vínculo sai junto com o
-              equipamento, ao salvar. */}
-          {!criando && (
-            <>
+            {planoAtual && (
               <Button
                 type="button"
-                onClick={() => vincular(selecionado)}
-                disabled={!podeAplicar || salvando}
                 variant="ghost"
+                onClick={desvincular}
+                disabled={salvando}
                 size="icon"
-                title={planoAtual ? 'Substituir plano' : 'Vincular plano'}
-                aria-label={planoAtual ? 'Substituir plano' : 'Vincular plano'}
+                className="h-6 w-6 -my-0.5"
+                title="Desvincular plano"
+                aria-label="Desvincular plano"
               >
-                <Link2 className="h-4 w-4" />
+                <Unlink className="h-4 w-4" />
               </Button>
+            )}
+          </div>
+        )}
+      </div>
 
-              {planoAtual && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={desvincular}
-                  disabled={salvando}
-                  size="icon"
-                  title="Desvincular plano"
-                  aria-label="Desvincular plano"
-                >
-                  <Unlink className="h-4 w-4" />
-                </Button>
-              )}
-            </>
-          )}
+      {/* Todo estado ocupa uma caixa de altura inteira. Como texto solto, o
+          campo encolhia enquanto carregava ou quando não havia plano, e a linha
+          inteira do formulário dançava. */}
+      {ocupado ? (
+        <div className="campo-estatico flex text-muted-foreground">Carregando...</div>
+      ) : semCategoria ? (
+        <div
+          className="campo-estatico flex text-muted-foreground text-xs"
+          title="Escolha a categoria do equipamento para ver os planos disponíveis."
+        >
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">Escolha a categoria para ver os planos.</span>
         </div>
+      ) : lista.length === 0 ? (
+        <div
+          className="campo-estatico flex text-muted-foreground text-xs"
+          title="Nenhum plano disponível para esta categoria."
+        >
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">Nenhum plano para esta categoria.</span>
+        </div>
+      ) : somenteLeitura ? (
+        <div className="campo-estatico">{planoAtual?.nome || 'Nenhum plano vinculado'}</div>
+      ) : (
+        <Combobox
+          options={options}
+          value={selecionado || undefined}
+          onValueChange={(val) => setSelecionado((val || '').trim())}
+          placeholder="Selecione um plano..."
+          searchPlaceholder="Buscar plano..."
+          emptyText="Nenhum plano encontrado"
+          disabled={salvando}
+        />
       )}
 
       {criando && selecionado && (
