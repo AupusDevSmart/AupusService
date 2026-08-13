@@ -487,6 +487,8 @@ export function useEquipamentos(): UseEquipamentosReturn {
         search: filters?.search || undefined,
         classificacao: (filters?.classificacao !== 'all' ? filters?.classificacao : undefined) as 'UC' | 'UAR' | undefined,
         criticidade: (filters?.criticidade !== 'all' ? filters?.criticidade : undefined) as '1' | '2' | '3' | '4' | '5' | undefined,
+        // Esconder PONTO e BARRAMENTO e trabalho da consulta, nao da tela.
+        ocultarVirtuais: true,
         // Hierarquia: unidade > planta > proprietário (com trim para evitar espaços)
         unidade_id: hasUnidade ? filters.unidadeId?.trim() : undefined,
         planta_id: hasUnidade ? undefined : (hasPlanta ? filters.plantaId?.trim() : undefined),
@@ -510,13 +512,7 @@ export function useEquipamentos(): UseEquipamentosReturn {
       //   console.log('📊 [DEBUG] Contagem FINAL que será usada:', primeiroUC.equipamentos_filhos?.length || primeiroUC.totalComponentes || 0);
       // }
 
-      const equipamentosTransformados = equipamentosArray.map(transformApiToFrontend);
-
-      // Filtrar para ocultar PONTOS e BARRAMENTOS
-      const equipamentosFiltrados = equipamentosTransformados.filter((eq: Equipamento) => {
-        const tipoId = eq.tipo?.toUpperCase() || eq.tipoEquipamento?.toUpperCase() || '';
-        return tipoId !== 'PONTO' && tipoId !== 'BARRAMENTO';
-      });
+      const equipamentosFiltrados = response.data.map(transformApiToFrontend);
 
       const pagination = (response as any).pagination || (response.data as any)?.pagination;
       console.log('🔢 [DEBUG PAGINACAO] pagination:', pagination, 'array:', equipamentosArray.length, 'filtrado:', equipamentosFiltrados.length);
@@ -547,23 +543,21 @@ export function useEquipamentos(): UseEquipamentosReturn {
         search: filters?.search || undefined,
         classificacao: (filters?.classificacao !== 'all' ? filters?.classificacao : undefined) as 'UC' | 'UAR' | undefined,
         criticidade: (filters?.criticidade !== 'all' ? filters?.criticidade : undefined) as '1' | '2' | '3' | '4' | '5' | undefined,
+        // Esconder PONTO e BARRAMENTO e trabalho da consulta, nao da tela.
+        ocultarVirtuais: true,
       };
       
       const response = await equipamentosApi.findByPlanta(plantaId, params);
 
       // A API retorna: { success: true, data: { data: [], pagination: {}, planta: {} }, meta: {} }
-      const equipamentosTransformados = response.data.data.map(transformApiToFrontend);
-
-      // Filtrar para ocultar PONTOS e BARRAMENTOS
-      const equipamentosFiltrados = equipamentosTransformados.filter((eq: Equipamento) => {
-        const tipoId = eq.tipo?.toUpperCase() || eq.tipoEquipamento?.toUpperCase() || '';
-        return tipoId !== 'PONTO' && tipoId !== 'BARRAMENTO';
-      });
+      const equipamentosFiltrados = response.data.data.map(transformApiToFrontend);
 
       setEquipamentos(equipamentosFiltrados);
       setTotalPages(response.data.pagination.pages);
       setCurrentPage(response.data.pagination.page);
-      setTotal(equipamentosFiltrados.length); // Atualizar total com a quantidade filtrada
+      // O total e o do BACKEND: usar o tamanho da pagina filtrada limitava a
+      // contagem a 10 e tirava o sentido da paginacao.
+      setTotal(response.data.pagination.total ?? equipamentosFiltrados.length);
 
       return {
         equipamentos: equipamentosFiltrados,
