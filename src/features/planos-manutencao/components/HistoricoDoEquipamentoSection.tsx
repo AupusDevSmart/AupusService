@@ -1,7 +1,7 @@
 // src/features/planos-manutencao/components/HistoricoDoEquipamentoSection.tsx
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History, ClipboardCheck, ExternalLink, ChevronDown } from 'lucide-react';
+import { History, ExternalLink, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePlanoDoEquipamento } from './PlanoDoEquipamentoContext';
 import {
@@ -75,26 +75,7 @@ const ROTULO_STATUS: Record<string, string> = {
 
 const rotuloStatus = (status: string) => ROTULO_STATUS[status] ?? humanizar(status || '');
 
-const ROTULO_FREQUENCIA: Record<string, string> = {
-  DIARIA: 'Diária',
-  SEMANAL: 'Semanal',
-  QUINZENAL: 'Quinzenal',
-  MENSAL: 'Mensal',
-  BIMESTRAL: 'Bimestral',
-  TRIMESTRAL: 'Trimestral',
-  SEMESTRAL: 'Semestral',
-  ANUAL: 'Anual',
-  PERSONALIZADA: 'Personalizada',
-};
-
 const corrretiva = (origem: string) => origem === 'ANOMALIA';
-
-const rotuloProxima = (dias: number | null) => {
-  if (dias === null) return { texto: '—', destaque: false };
-  if (dias < 0) return { texto: `atrasada ${Math.abs(dias)}d`, destaque: true };
-  if (dias === 0) return { texto: 'hoje', destaque: true };
-  return { texto: `em ${dias}d`, destaque: false };
-};
 
 export function HistoricoDoEquipamentoSection({
   equipamentoId,
@@ -150,68 +131,7 @@ export function HistoricoDoEquipamentoSection({
   if (erro) return <p className="text-sm text-destructive">{erro}</p>;
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">Situação das tarefas</h3>
-        </div>
-
-        {dados.tarefas.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhuma tarefa. Escolha um plano em Dados técnicos para acompanhar as execuções.
-          </p>
-        ) : (
-          <div>
-            <div className="flex items-center gap-3 py-2 text-xs text-muted-foreground">
-              <span className="min-w-0 flex-1">Tarefa</span>
-              <span className="hidden sm:block w-24 flex-shrink-0">Periodicidade</span>
-              <span className="w-28 flex-shrink-0">Última</span>
-              <span className="w-20 flex-shrink-0">Execuções</span>
-              <span className="w-28 flex-shrink-0">Próxima</span>
-            </div>
-
-            {dados.tarefas.map((tarefa) => {
-              const proxima = rotuloProxima(tarefa.dias_ate_proxima);
-
-              return (
-                <div key={tarefa.id} className="flex items-center gap-3 py-2">
-                  <p className="min-w-0 flex-1 text-sm text-foreground truncate">{tarefa.nome}</p>
-
-                  <span className="hidden sm:block w-24 flex-shrink-0 text-xs text-muted-foreground truncate">
-                    {tarefa.frequencia ? (ROTULO_FREQUENCIA[tarefa.frequencia] ?? tarefa.frequencia) : '—'}
-                  </span>
-
-                  <span
-                    className={`w-28 flex-shrink-0 text-xs ${
-                      tarefa.ultima_execucao ? 'text-foreground/80' : 'text-muted-foreground'
-                    }`}
-                  >
-                    {tarefa.ultima_execucao ? formatarData(tarefa.ultima_execucao) : 'nunca'}
-                  </span>
-
-                  <span
-                    className={`w-20 flex-shrink-0 text-xs ${
-                      tarefa.numero_execucoes > 0 ? 'text-foreground/80' : 'text-muted-foreground'
-                    }`}
-                  >
-                    {tarefa.numero_execucoes}
-                  </span>
-
-                  <span
-                    className={`w-28 flex-shrink-0 text-xs ${
-                      proxima.destaque ? 'text-foreground font-medium' : 'text-muted-foreground'
-                    }`}
-                  >
-                    {proxima.texto}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
+    <div>
       {/* Não depende do plano vinculado: lê o que foi congelado nas ordens,
           então continua ali depois de trocar ou desvincular o plano. */}
       <div className="space-y-3">

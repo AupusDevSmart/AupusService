@@ -169,6 +169,7 @@ export function SeletorDePlanoField({
                 type="button"
                 onClick={() => vincular(selecionado)}
                 disabled={!podeAplicar || salvando}
+                variant="ghost"
                 size="icon"
                 title={planoAtual ? 'Substituir plano' : 'Vincular plano'}
                 aria-label={planoAtual ? 'Substituir plano' : 'Vincular plano'}
@@ -179,7 +180,7 @@ export function SeletorDePlanoField({
               {planoAtual && (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   onClick={desvincular}
                   disabled={salvando}
                   size="icon"
