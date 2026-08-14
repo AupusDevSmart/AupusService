@@ -1,5 +1,4 @@
 // src/features/recursos/config/table-config.tsx
-import { Badge } from '@/components/ui/badge';
 import type { TableColumn } from '@/types/base';
 import { rotuloCategoria, type RecursoApiResponse } from '@/services/recursos.services';
 
@@ -15,10 +14,11 @@ export const recursosTableColumns: TableColumn<RecursoApiResponse>[] = [
   {
     key: 'categoria',
     label: 'Categoria',
+    // Texto puro: a moldura não separava nada que a coluna já não separasse, e
+    // numa lista inteira de pastilhas o olho perde o nome, que é o que se
+    // procura.
     render: (recurso) => (
-      <Badge variant="outline" className="text-xs">
-        {rotuloCategoria(recurso.categoria)}
-      </Badge>
+      <span className="text-sm text-foreground">{rotuloCategoria(recurso.categoria)}</span>
     ),
   },
   {
