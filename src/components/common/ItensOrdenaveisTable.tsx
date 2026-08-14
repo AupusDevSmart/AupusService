@@ -107,8 +107,12 @@ export function ItensOrdenaveisTable<T>({
         <div className="border rounded-md overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
+              {/* So a borda de fora. Regua entre linhas, embaixo do cabecalho
+                  e em cima do rodape picava a tabela em faixas dentro de um
+                  formulario que ja e cheio de campos; o fundo do cabecalho e do
+                  rodape ja os separa do corpo. */}
               <thead>
-                <tr className="bg-muted/50 border-b">
+                <tr className="bg-muted/50">
                   {podeEditar && <th className="w-8" />}
                   <th className="w-10 px-2 py-2 text-center text-xs font-medium text-muted-foreground">#</th>
                   {colunas.map((coluna) => (
@@ -128,7 +132,7 @@ export function ItensOrdenaveisTable<T>({
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody>
                 {itens.map((item, index) => (
                   <tr
                     key={index}
@@ -191,7 +195,7 @@ export function ItensOrdenaveisTable<T>({
               </tbody>
               {resumo && resumo.length > 0 && (
                 <tfoot>
-                  <tr className="bg-muted/30 border-t">
+                  <tr className="bg-muted/30">
                     <td colSpan={totalColunas} className="px-3 py-2">
                       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
                         {resumo.map((item) => (
