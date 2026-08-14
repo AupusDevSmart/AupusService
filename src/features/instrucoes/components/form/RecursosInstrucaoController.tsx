@@ -3,7 +3,7 @@ import React from 'react';
 import { FormFieldProps } from '@/types/base';
 import { Input } from '@/components/ui/input';
 import { Combobox } from '@aupus/shared-pages';
-import { AlertCircle, Wallet } from 'lucide-react';
+import { AlertCircle, Wallet, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatApiError } from '@/utils/api-error';
 import { ItensOrdenaveisTable, type ColunaItemOrdenavel } from '@/components/common/ItensOrdenaveisTable';
@@ -143,13 +143,51 @@ export function RecursosInstrucaoController({
    * dias de 8h porque é assim que se aloca e se paga — uma instrução de 10h
    * ocupa dois dias de técnico, não um dia e um quarto.
    */
-  const horasDeDiaria = React.useMemo(() => {
+  const { dias: diarias, horas: horasDeDiaria } = React.useMemo(() => {
     const minutos = (subInstrucoes || []).reduce(
       (soma, item) => soma + (Number(item?.tempo_estimado) || 0),
       0,
     );
-    return diariasDaDuracao(minutos / 60).horas;
+    return diariasDaDuracao(minutos / 60);
   }, [subInstrucoes]);
+
+  /**
+   * Mantém a quantidade das linhas em hora acompanhando a duração da instrução.
+   *
+   * Sugerir só na hora de escolher o recurso não bastava: quem monta a
+   * instrução costuma listar os recursos ANTES de detalhar as etapas, e nesse
+   * caminho a sugestão nunca chegava. Agora ela também alcança as linhas já
+   * escolhidas quando as sub-instruções mudam.
+   *
+   * Só mexe no que ninguém editou — quantidade vazia, ainda no 1 do padrão, ou
+   * igual à sugestão anterior. Quem digitou um número fica com ele.
+   */
+  const sugestaoAnteriorRef = React.useRef(horasDeDiaria);
+
+  React.useEffect(() => {
+    const anterior = sugestaoAnteriorRef.current;
+    sugestaoAnteriorRef.current = horasDeDiaria;
+
+    if (horasDeDiaria <= 0 || anterior === horasDeDiaria) return;
+
+    let mudou = false;
+    const proximos = recursos.map((item) => {
+      if ((item.unidade || '').trim() !== 'h') return item;
+
+      const atual = String(item.quantidade ?? '').trim();
+      // O "1" entra como intocado porque é o valor com que a linha nasce. Uma
+      // hora cravada é quantidade improvável para um serviço medido em diárias,
+      // então o risco de atropelar uma escolha real é pequeno perto do ganho.
+      const intocada = atual === '' || atual === '1' || atual === String(anterior);
+      if (!intocada) return item;
+
+      mudou = true;
+      return { ...item, quantidade: String(horasDeDiaria) };
+    });
+
+    if (mudou) aplicar(proximos);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [horasDeDiaria, recursos]);
 
   /**
    * Escolher no catálogo traz junto nome e unidade, e sugere a quantidade.
@@ -336,7 +374,19 @@ export function RecursosInstrucaoController({
       titulo="Recursos Necessários"
       // No rodapé da tabela, como a duração nas sub-instruções: o total é
       // resultado da lista e pertence a ela, não a uma linha solta embaixo.
+      // A duração aparece aqui também, e não só nas sub-instruções: é de onde
+      // sai a quantidade das linhas em hora, e sem dizer isso o número que
+      // aparece sozinho no campo vira mistério.
       resumo={[
+        ...(horasDeDiaria > 0
+          ? [
+              {
+                icone: <Clock className="h-3.5 w-3.5" />,
+                label: 'Alocação',
+                valor: `${diarias} ${diarias === 1 ? 'dia' : 'dias'} (${horasDeDiaria}h)`,
+              },
+            ]
+          : []),
         {
           icone: <Wallet className="h-3.5 w-3.5" />,
           label: 'Custo estimado',
