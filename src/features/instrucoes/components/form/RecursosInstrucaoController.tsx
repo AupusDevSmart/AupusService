@@ -10,8 +10,13 @@ import { ItensOrdenaveisTable, type ColunaItemOrdenavel } from '@/components/com
 import {
   recursosApi,
   rotuloCategoria,
+  CATEGORIAS_RECURSO,
   type RecursoApiResponse,
 } from '@/services/recursos.services';
+
+// Mesmo raio e borda do Input padrao para o select nao destoar da linha.
+const selectClassName =
+  'h-8 w-full rounded-[0.25rem] border border-input bg-transparent px-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
 
 interface Recurso {
   id?: string;
@@ -83,14 +88,22 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
     [catalogo],
   );
 
-  const opcoes = React.useMemo(
-    () =>
-      catalogo.map((r) => ({
-        value: r.id.trim(),
-        label: `${rotuloCategoria(r.categoria)} · ${r.nome}`,
-      })),
-    [catalogo],
-  );
+  /**
+   * Opções por categoria: escolhida a categoria da linha, o combobox mostra só
+   * o que pertence a ela. Com o catálogo inteiro numa lista só, achar "Cabo
+   * 4mm" no meio de técnicos e viaturas é trabalho à toa.
+   */
+  const opcoesPorCategoria = React.useMemo(() => {
+    const mapa = new Map<string, { value: string; label: string }[]>();
+
+    for (const recurso of catalogo) {
+      const lista = mapa.get(recurso.categoria) || [];
+      lista.push({ value: recurso.id.trim(), label: recurso.nome });
+      mapa.set(recurso.categoria, lista);
+    }
+
+    return mapa;
+  }, [catalogo]);
 
   const aplicar = (lista: Recurso[]) => {
     setRecursos(lista);
@@ -112,7 +125,7 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
     aplicar(recursos.map((item, i) => (i === index ? { ...item, [campo]: valor } : item)));
   };
 
-  /** Escolher no catálogo traz junto categoria, nome e unidade. */
+  /** Escolher no catálogo traz junto nome e unidade. */
   const escolherRecurso = (index: number, recursoId: string) => {
     const doCatalogo = porId.get(recursoId?.trim());
     if (!doCatalogo) return;
@@ -127,6 +140,21 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
               descricao: doCatalogo.nome,
               unidade: doCatalogo.unidade || '',
             }
+          : item,
+      ),
+    );
+  };
+
+  /**
+   * Trocar a categoria descarta o recurso escolhido: ele pertencia à categoria
+   * anterior e continuaria ali, invisível no combobox já filtrado, mas contando
+   * no custo — o pior tipo de resto.
+   */
+  const trocarCategoria = (index: number, categoria: Recurso['tipo']) => {
+    aplicar(
+      recursos.map((item, i) =>
+        i === index
+          ? { ...item, tipo: categoria, recurso_id: null, descricao: '', unidade: '' }
           : item,
       ),
     );
@@ -151,9 +179,29 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
 
   const colunas: Array<ColunaItemOrdenavel<Recurso>> = [
     {
+      key: 'categoria',
+      header: 'Categoria',
+      width: 'w-36',
+      render: (item, index) => (
+        <select
+          value={item.tipo}
+          onChange={(e) => trocarCategoria(index, e.target.value as Recurso['tipo'])}
+          disabled={disabled}
+          className={selectClassName}
+        >
+          {CATEGORIAS_RECURSO.map((opcao) => (
+            <option key={opcao.value} value={opcao.value}>
+              {opcao.label}
+            </option>
+          ))}
+        </select>
+      ),
+    },
+    {
       key: 'recurso',
       header: 'Recurso',
       render: (item, index) => {
+        const opcoes = opcoesPorCategoria.get(item.tipo) || [];
         // Linha antiga, de antes do catálogo: mostra o que foi digitado e deixa
         // trocar por um item do catálogo.
         const legado = !item.recurso_id && item.descricao;
@@ -164,16 +212,22 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
               options={opcoes}
               value={item.recurso_id || undefined}
               onValueChange={(valor) => escolherRecurso(index, valor)}
-              placeholder={carregando ? 'Carregando...' : 'Selecione o recurso...'}
+              placeholder={
+                carregando
+                  ? 'Carregando...'
+                  : opcoes.length === 0
+                    ? `Nenhum recurso em ${rotuloCategoria(item.tipo)}`
+                    : 'Selecione o recurso...'
+              }
               searchPlaceholder="Buscar recurso..."
-              emptyText="Nenhum recurso cadastrado. Cadastre em Administração › Recursos."
-              disabled={disabled || carregando}
+              emptyText="Nenhum recurso nesta categoria. Cadastre em Administração › Recursos."
+              disabled={disabled || carregando || opcoes.length === 0}
               className="h-8"
             />
             {legado && (
               <p className="flex items-center gap-1 text-xs text-muted-foreground">
                 <AlertCircle className="h-3 w-3 shrink-0" />
-                Cadastrado antes do catálogo: {rotuloCategoria(item.tipo)} · {item.descricao}
+                Cadastrado antes do catálogo: {item.descricao}
               </p>
             )}
           </div>
@@ -183,26 +237,24 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
     {
       key: 'quantidade',
       header: 'Qtd',
-      width: 'w-20',
+      width: 'w-28',
       align: 'center',
       render: (item, index) => (
-        <Input
-          placeholder="1"
-          type="text"
-          value={item.quantidade ?? ''}
-          onChange={(e) => atualizar(index, 'quantidade', e.target.value)}
-          disabled={disabled}
-          className="h-8 w-16 mx-auto text-center"
-        />
-      ),
-    },
-    {
-      key: 'unidade',
-      header: 'Unidade',
-      width: 'w-24',
-      align: 'center',
-      render: (item) => (
-        <span className="text-sm text-muted-foreground">{item.unidade || '—'}</span>
+        <div className="flex items-center justify-center gap-1">
+          <Input
+            placeholder="1"
+            type="text"
+            value={item.quantidade ?? ''}
+            onChange={(e) => atualizar(index, 'quantidade', e.target.value)}
+            disabled={disabled}
+            className="h-8 w-16 text-center"
+          />
+          {/* A unidade vem do recurso e não se edita aqui — encostada na
+              quantidade ela se lê como "2 h", que é o que se quer saber. */}
+          <span className="text-xs text-muted-foreground w-8 text-left">
+            {item.unidade || ''}
+          </span>
+        </div>
       ),
     },
     {
