@@ -104,13 +104,13 @@ export function ItensOrdenaveisTable<T>({
           vira um vazio grande no meio do formulario. O botao de adicionar ja
           comunica que da para incluir. */}
       {itens.length === 0 ? null : (
-        <div className="border rounded-md overflow-hidden">
+        <div className="rounded-md overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              {/* So a borda de fora. Regua entre linhas, embaixo do cabecalho
-                  e em cima do rodape picava a tabela em faixas dentro de um
-                  formulario que ja e cheio de campos; o fundo do cabecalho e do
-                  rodape ja os separa do corpo. */}
+              {/* Sem borda nenhuma. Dentro de um formulario ja cheio de campos
+                  emoldurados, a tabela com moldura propria virava uma caixa
+                  dentro da caixa. O fundo do cabecalho e do rodape delimita o
+                  corpo, e o hover diz em que linha se esta. */}
               <thead>
                 <tr className="bg-muted/50">
                   {podeEditar && <th className="w-8" />}
