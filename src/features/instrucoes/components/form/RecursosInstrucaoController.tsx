@@ -175,7 +175,6 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
   };
 
   const total = recursos.reduce((soma, item) => soma + (subtotal(item) ?? 0), 0);
-  const semPreco = recursos.filter((item) => subtotal(item) === null).length;
 
   const colunas: Array<ColunaItemOrdenavel<Recurso>> = [
     {
@@ -264,8 +263,10 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
       align: 'center',
       render: (item) => {
         const valor = subtotal(item);
+        // Traço neutro, e não um aviso: recurso sem preço no catálogo é comum e
+        // não é problema da instrução resolver.
         return valor === null ? (
-          <span className="text-xs text-muted-foreground">sem preço</span>
+          <span className="text-sm text-muted-foreground">—</span>
         ) : (
           <span className="text-sm text-foreground">{moeda(valor)}</span>
         );
@@ -303,13 +304,7 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
       />
 
       {recursos.length > 0 && (
-        <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-sm">
-          {semPreco > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <AlertCircle className="h-3 w-3 shrink-0" />
-              {semPreco} {semPreco === 1 ? 'item sem preço' : 'itens sem preço'} — fora do total
-            </span>
-          )}
+        <div className="flex items-center justify-end text-sm">
           <span className="text-muted-foreground">
             Custo estimado: <span className="text-foreground font-medium">{moeda(total)}</span>
           </span>
