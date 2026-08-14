@@ -204,7 +204,7 @@ export interface SubTarefaExecucaoApiResponse {
 export interface RecursoTarefaExecucaoApiResponse {
   id: string;
   tarefa_execucao_id: string;
-  tipo: 'PECA' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
+  tipo: 'INSTRUMENTO' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
   descricao: string;
   quantidade_prevista?: number;
   quantidade_utilizada?: number;

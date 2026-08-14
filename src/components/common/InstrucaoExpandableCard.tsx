@@ -13,7 +13,7 @@ interface InstrucaoExpandableCardProps {
 }
 
 const tipoRecursoLabels: Record<string, string> = {
-  PECA: 'Peca',
+  INSTRUMENTO: 'Instrumento',
   MATERIAL: 'Material',
   FERRAMENTA: 'Ferramenta',
   TECNICO: 'Tecnico',

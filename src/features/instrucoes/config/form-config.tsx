@@ -56,11 +56,16 @@ export const instrucoesFormFields: FormField[] = [
     type: 'custom',
     required: false,
     colSpan: 2,
-    render: ({ value, onChange, disabled }) => (
+    // A quantidade sugerida de cada recurso sai da duração das sub-instruções,
+    // então este campo precisa enxergá-las enquanto são editadas. O BaseForm
+    // entrega o valor de cada chave declarada aqui junto com os props do campo.
+    dependencies: ['sub_instrucoes'],
+    render: ({ value, onChange, disabled, sub_instrucoes }: any) => (
       <RecursosInstrucaoController
         value={value}
         onChange={onChange}
         disabled={disabled}
+        subInstrucoes={sub_instrucoes}
       />
     )
   },

@@ -3,10 +3,11 @@ import React from 'react';
 import { FormFieldProps } from '@/types/base';
 import { Input } from '@/components/ui/input';
 import { Combobox } from '@aupus/shared-pages';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatApiError } from '@/utils/api-error';
 import { ItensOrdenaveisTable, type ColunaItemOrdenavel } from '@/components/common/ItensOrdenaveisTable';
+import { diariasDaDuracao } from '@/utils/horas';
 import {
   recursosApi,
   rotuloCategoria,
@@ -22,7 +23,7 @@ interface Recurso {
   id?: string;
   /** Aponta para o catálogo. Vazio nas linhas antigas, digitadas antes dele existir. */
   recurso_id?: string | null;
-  tipo: 'PECA' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
+  tipo: 'INSTRUMENTO' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
   descricao: string;
   quantidade?: string | number;
   unidade?: string;
@@ -45,7 +46,17 @@ const moeda = (valor: number) =>
  * se é obrigatório. O preço é lido ao vivo, de propósito: reajustar um custo
  * tem que se refletir aqui. O que congela é a OS, quando é gerada.
  */
-export function RecursosInstrucaoController({ value, onChange, disabled }: FormFieldProps) {
+interface RecursosInstrucaoControllerProps extends FormFieldProps {
+  /** As sub-instruções em edição. É a soma delas que sugere a quantidade. */
+  subInstrucoes?: { tempo_estimado?: number }[];
+}
+
+export function RecursosInstrucaoController({
+  value,
+  onChange,
+  disabled,
+  subInstrucoes,
+}: RecursosInstrucaoControllerProps) {
   const [recursos, setRecursos] = React.useState<Recurso[]>(
     Array.isArray(value) ? value : []
   );
@@ -125,10 +136,33 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
     aplicar(recursos.map((item, i) => (i === index ? { ...item, [campo]: valor } : item)));
   };
 
-  /** Escolher no catálogo traz junto nome e unidade. */
+  /**
+   * Quantas horas a instrução ocupa em diárias fechadas.
+   *
+   * A soma das sub-instruções dá a duração real; ela é arredondada para cima em
+   * dias de 8h porque é assim que se aloca e se paga — uma instrução de 10h
+   * ocupa dois dias de técnico, não um dia e um quarto.
+   */
+  const horasDeDiaria = React.useMemo(() => {
+    const minutos = (subInstrucoes || []).reduce(
+      (soma, item) => soma + (Number(item?.tempo_estimado) || 0),
+      0,
+    );
+    return diariasDaDuracao(minutos / 60).horas;
+  }, [subInstrucoes]);
+
+  /**
+   * Escolher no catálogo traz junto nome e unidade, e sugere a quantidade.
+   *
+   * A sugestão só vale para o que se mede em hora: material se conta por peça,
+   * e encher a quantidade dele com as horas da instrução seria besteira.
+   */
   const escolherRecurso = (index: number, recursoId: string) => {
     const doCatalogo = porId.get(recursoId?.trim());
     if (!doCatalogo) return;
+
+    const emHoras = (doCatalogo.unidade || '').trim() === 'h';
+    const sugestao = emHoras && horasDeDiaria > 0 ? String(horasDeDiaria) : undefined;
 
     aplicar(
       recursos.map((item, i) =>
@@ -139,6 +173,7 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
               tipo: doCatalogo.categoria,
               descricao: doCatalogo.nome,
               unidade: doCatalogo.unidade || '',
+              quantidade: sugestao ?? item.quantidade,
             }
           : item,
       ),
@@ -246,7 +281,7 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
             value={item.quantidade ?? ''}
             onChange={(e) => atualizar(index, 'quantidade', e.target.value)}
             disabled={disabled}
-            className="h-8 w-16 text-center"
+            className="h-8 w-14 text-center"
           />
           {/* A unidade vem do recurso e não se edita aqui — encostada na
               quantidade ela se lê como "2 h", que é o que se quer saber. */}
@@ -291,25 +326,24 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
   ];
 
   return (
-    <div className="space-y-2">
-      <ItensOrdenaveisTable
-        itens={recursos}
-        colunas={colunas}
-        onReordenar={reordenar}
-        onRemover={remover}
-        onAdicionar={adicionar}
-        textoAdicionar="Adicionar recurso"
-        titulo="Recursos Necessários"
-        disabled={disabled}
-      />
-
-      {recursos.length > 0 && (
-        <div className="flex items-center justify-end text-sm">
-          <span className="text-muted-foreground">
-            Custo estimado: <span className="text-foreground font-medium">{moeda(total)}</span>
-          </span>
-        </div>
-      )}
-    </div>
+    <ItensOrdenaveisTable
+      itens={recursos}
+      colunas={colunas}
+      onReordenar={reordenar}
+      onRemover={remover}
+      onAdicionar={adicionar}
+      textoAdicionar="Adicionar recurso"
+      titulo="Recursos Necessários"
+      // No rodapé da tabela, como a duração nas sub-instruções: o total é
+      // resultado da lista e pertence a ela, não a uma linha solta embaixo.
+      resumo={[
+        {
+          icone: <Wallet className="h-3.5 w-3.5" />,
+          label: 'Custo estimado',
+          valor: moeda(total),
+        },
+      ]}
+      disabled={disabled}
+    />
   );
 }

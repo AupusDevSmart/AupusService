@@ -2,7 +2,9 @@
 import React from 'react';
 import { FormFieldProps } from '@/types/base';
 import { Input } from '@/components/ui/input';
+import { Clock } from 'lucide-react';
 import { ItensOrdenaveisTable, type ColunaItemOrdenavel } from '@/components/common/ItensOrdenaveisTable';
+import { formatarHoras } from '@/utils/horas';
 
 interface SubInstrucao {
   id?: string;
@@ -96,12 +98,25 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
             atualizar(index, 'tempo_estimado', horas > 0 ? Math.round(horas * 60) : 0);
           }}
           disabled={disabled}
-          className="h-8 w-20 mx-auto text-center"
+          className="h-8 w-16 mx-auto text-center"
           placeholder="0"
         />
       )
     }
   ];
+
+  /**
+   * Quanto a instrução dura por completo: a soma das etapas.
+   *
+   * O banco guarda minutos; a tela trabalha em horas. Somo em minutos e
+   * converto uma vez só no fim — dividir cada etapa por 60 antes de somar
+   * acumularia erro de arredondamento a cada linha.
+   */
+  const totalMinutos = subInstrucoes.reduce(
+    (soma, item) => soma + (Number(item.tempo_estimado) || 0),
+    0,
+  );
+  const totalHoras = totalMinutos / 60;
 
   // Titulo proprio: assim ele e o botao de adicionar ficam na mesma linha.
   return (
@@ -113,6 +128,13 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
       onAdicionar={adicionar}
       textoAdicionar="Adicionar sub-instrução"
       titulo="Sub-instruções"
+      resumo={[
+        {
+          icone: <Clock className="h-3.5 w-3.5" />,
+          label: 'Duração total',
+          valor: formatarHoras(totalHoras),
+        },
+      ]}
       disabled={disabled}
     />
   );

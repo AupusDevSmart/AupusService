@@ -1,5 +1,5 @@
 // src/features/recursos/components/RecursoModal.tsx
-import { useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -11,6 +11,8 @@ import { Combobox } from '@aupus/shared-pages';
 import { Save, X, Loader2, Package } from 'lucide-react';
 import {
   CATEGORIAS_RECURSO,
+  UNIDADES_RECURSO,
+  unidadePadraoDaCategoria,
   type CategoriaRecurso,
   type CreateRecursoApiData,
   type RecursoApiResponse,
@@ -88,6 +90,39 @@ export function RecursoModal({
     setErro(null);
   };
 
+  /**
+   * Escolher a categoria já sugere a unidade. Não sobrescreve o que foi
+   * escolhido à mão: quem trocou a unidade de propósito fez uma escolha, e
+   * mexer na categoria depois não é motivo para desfazê-la.
+   */
+  const trocarCategoria = (categoria: CategoriaRecurso) => {
+    setErro(null);
+    setForm((atual) => ({
+      ...atual,
+      categoria,
+      unidade:
+        !atual.unidade || atual.unidade === unidadePadraoDaCategoria(atual.categoria)
+          ? unidadePadraoDaCategoria(categoria)
+          : atual.unidade,
+    }));
+  };
+
+  /**
+   * Unidade fora da lista — vinda de cadastro antigo — entra como opção extra.
+   * Sem isso ela sumiria do campo e uma edição de preço apagaria a unidade sem
+   * ninguém pedir.
+   */
+  const opcoesDeUnidade = React.useMemo(() => {
+    const base = UNIDADES_RECURSO.map((u) => ({ value: u.value, label: u.label }));
+    const atual = form.unidade?.trim();
+
+    if (atual && !base.some((u) => u.value === atual)) {
+      return [...base, { value: atual, label: `${atual} (cadastro antigo)` }];
+    }
+
+    return base;
+  }, [form.unidade]);
+
   const salvar = async () => {
     if (!form.categoria) {
       setErro('Escolha a categoria');
@@ -146,7 +181,7 @@ export function RecursoModal({
             <Combobox
               options={CATEGORIAS_RECURSO.map((c) => ({ value: c.value, label: c.label }))}
               value={form.categoria || undefined}
-              onValueChange={(valor) => alterar('categoria', (valor || '') as CategoriaRecurso)}
+              onValueChange={(valor) => valor && trocarCategoria(valor as CategoriaRecurso)}
               placeholder="Selecione a categoria"
               searchPlaceholder="Buscar categoria..."
               emptyText="Nenhuma categoria."
@@ -173,12 +208,13 @@ export function RecursoModal({
               <div className="linha-rotulo">
                 <label className="text-sm font-medium">Unidade</label>
               </div>
-              <input
-                className="input-minimal"
-                value={form.unidade}
-                onChange={(e) => alterar('unidade', e.target.value)}
-                placeholder="h, un, m, diária"
-                maxLength={20}
+              <Combobox
+                options={opcoesDeUnidade}
+                value={form.unidade || undefined}
+                onValueChange={(valor) => alterar('unidade', valor || '')}
+                placeholder="Selecione a unidade"
+                searchPlaceholder="Buscar unidade..."
+                emptyText="Nenhuma unidade."
               />
             </div>
 

@@ -154,7 +154,7 @@ export function AnexosInstrucaoManager({ instrucaoId, readonly = false, onFilesC
         <h4 className="text-sm font-medium">Anexos ({totalFiles})</h4>
         {!readonly && (
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
             disabled={uploading}
             asChild

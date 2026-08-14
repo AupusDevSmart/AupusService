@@ -6,10 +6,15 @@ import { api } from '@/config/api';
  * Postgres é migração com risco. Na tela é "Categoria", que é o nome que
  * interessa a quem usa.
  */
-export type CategoriaRecurso = 'PECA' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
+export type CategoriaRecurso =
+  | 'INSTRUMENTO'
+  | 'MATERIAL'
+  | 'FERRAMENTA'
+  | 'TECNICO'
+  | 'VIATURA';
 
 export const CATEGORIAS_RECURSO: { value: CategoriaRecurso; label: string }[] = [
-  { value: 'PECA', label: 'Peça' },
+  { value: 'INSTRUMENTO', label: 'Instrumento' },
   { value: 'MATERIAL', label: 'Material' },
   { value: 'FERRAMENTA', label: 'Ferramenta' },
   { value: 'TECNICO', label: 'Técnico' },
@@ -18,6 +23,32 @@ export const CATEGORIAS_RECURSO: { value: CategoriaRecurso; label: string }[] = 
 
 export const rotuloCategoria = (categoria?: string | null) =>
   CATEGORIAS_RECURSO.find((c) => c.value === categoria)?.label || categoria || '—';
+
+/**
+ * Unidades possíveis. O valor guardado é curto porque aparece colado na
+ * quantidade dentro da instrução — "2 h" se lê melhor que "2 hora".
+ */
+export const UNIDADES_RECURSO: { value: string; label: string }[] = [
+  { value: 'h', label: 'Hora' },
+  { value: 'un', label: 'Unidade' },
+  { value: 'm', label: 'Metro' },
+  { value: 'kg', label: 'Quilo' },
+  { value: 'rolo', label: 'Rolo' },
+];
+
+export const rotuloUnidade = (unidade?: string | null) =>
+  UNIDADES_RECURSO.find((u) => u.value === unidade)?.label || unidade || '—';
+
+/**
+ * Quase tudo se mede em hora porque o que custa é o tempo de quem opera:
+ * instrumento, ferramenta, técnico e viatura são cobrados pelo período em que
+ * ficam alocados. Material é o único que se conta por peça.
+ */
+export const unidadePadraoDaCategoria = (categoria?: CategoriaRecurso | '' | null) =>
+  categoria === 'MATERIAL' ? 'un' : 'h';
+
+/** Horas por dia de trabalho, usado para arredondar a duração de uma instrução. */
+export const HORAS_POR_DIA = 8;
 
 export interface RecursoApiResponse {
   id: string;

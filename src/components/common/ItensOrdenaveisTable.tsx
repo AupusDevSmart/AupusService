@@ -80,16 +80,16 @@ export function ItensOrdenaveisTable<T>({
               )}
             </h3>
           )}
-          {/* dark:bg-black: o variant outline usa bg-background (navy no dark)
-              e ficava destoando dos campos, que sao pretos. So o icone: o
+          {/* Sem moldura: dentro de uma secao do formulario o botao e acao
+              secundaria, e a borda competia com os campos. So o icone: o
               title/aria-label carrega o significado sem ocupar largura. */}
           {podeEditar && (
             <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="icon"
             onClick={onAdicionar}
-            className="h-8 w-8 dark:bg-black"
+            className="h-8 w-8"
             title={textoAdicionar}
             aria-label={textoAdicionar}
           >
@@ -176,10 +176,10 @@ export function ItensOrdenaveisTable<T>({
                       <td className="px-2 py-1.5 text-center align-middle">
                         <Button
                           type="button"
-                          variant="outline"
+                          variant="ghost"
                           size="icon"
                           onClick={() => onRemover(index)}
-                          className="h-8 w-8 dark:bg-black text-muted-foreground hover:text-destructive"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
                           title="Remover"
                         >
                           <Trash2 className="h-3.5 w-3.5" />

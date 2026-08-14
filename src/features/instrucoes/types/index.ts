@@ -16,7 +16,7 @@ export interface SubInstrucao {
 
 export interface RecursoInstrucao {
   id: string;
-  tipo: 'PECA' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
+  tipo: 'INSTRUMENTO' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
   descricao: string;
   quantidade?: number;
   unidade?: string;

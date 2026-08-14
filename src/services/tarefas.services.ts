@@ -24,7 +24,7 @@ export interface CreateSubTarefaApiData {
 }
 
 export interface CreateRecursoTarefaApiData {
-  tipo: 'PECA' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
+  tipo: 'INSTRUMENTO' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
   descricao: string;
   quantidade?: number;
   unidade?: string;
@@ -107,7 +107,7 @@ export interface SubTarefaApiResponse {
 
 export interface RecursoTarefaApiResponse {
   id: string;
-  tipo: 'PECA' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
+  tipo: 'INSTRUMENTO' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
   descricao: string;
   quantidade?: number;
   unidade?: string;
