@@ -24,6 +24,8 @@ export interface CreateSubInstrucaoApiData {
 }
 
 export interface CreateRecursoInstrucaoApiData {
+  /** Aponta para o catalogo de recursos. Vazio so nas linhas antigas. */
+  recurso_id?: string | null;
   tipo: 'PECA' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
   descricao: string;
   quantidade?: number;

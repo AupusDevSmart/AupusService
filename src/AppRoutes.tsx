@@ -13,6 +13,7 @@ import { HistoricoDoEquipamentoSection } from './features/planos-manutencao/comp
 import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
 import { InstrucoesPage } from './features/instrucoes/components/InstrucoesPage';
+import { RecursosPage } from './features/recursos/components/RecursosPage';
 import { VeiculosPage } from './features/veiculos/components/VeiculosPage';
 import { AppTemplate } from './pages/AppTemplate';
 import { AnomaliaPage } from './pages/anomalias';
@@ -212,6 +213,14 @@ export const appRoutes = createBrowserRouter([
         element: (
           <FeatureWrapper feature="manutencao.manage">
             <InstrucoesPage />
+          </FeatureWrapper>
+        ),
+      },
+      {
+        path: 'recursos',
+        element: (
+          <FeatureWrapper feature="recursos.manage">
+            <RecursosPage />
           </FeatureWrapper>
         ),
       },

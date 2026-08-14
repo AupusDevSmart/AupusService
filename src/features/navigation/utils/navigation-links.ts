@@ -9,6 +9,7 @@ import {
   Calendar,
   FileText,
   Truck,
+  Package,
   AlertTriangle,
   CheckSquare,
   ClipboardList,
@@ -147,6 +148,14 @@ export const navigationLinks: Array<NavigationLink> = [
         icon: Users,
         label: 'Usuários',
         hint: 'Usuários',
+      },
+      {
+        key: 'recursos',
+        featureKey: 'recursos.manage',
+        path: '/recursos',
+        icon: Package,
+        label: 'Recursos',
+        hint: 'Recursos',
       },
       {
         key: 'veiculos',

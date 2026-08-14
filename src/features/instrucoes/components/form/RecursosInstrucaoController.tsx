@@ -2,10 +2,21 @@
 import React from 'react';
 import { FormFieldProps } from '@/types/base';
 import { Input } from '@/components/ui/input';
+import { Combobox } from '@aupus/shared-pages';
+import { AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { formatApiError } from '@/utils/api-error';
 import { ItensOrdenaveisTable, type ColunaItemOrdenavel } from '@/components/common/ItensOrdenaveisTable';
+import {
+  recursosApi,
+  rotuloCategoria,
+  type RecursoApiResponse,
+} from '@/services/recursos.services';
 
 interface Recurso {
   id?: string;
+  /** Aponta para o catálogo. Vazio nas linhas antigas, digitadas antes dele existir. */
+  recurso_id?: string | null;
   tipo: 'PECA' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
   descricao: string;
   quantidade?: string | number;
@@ -13,29 +24,73 @@ interface Recurso {
   obrigatorio: boolean;
 }
 
-const tipoOptions = [
-  { value: 'PECA', label: 'Peça' },
-  { value: 'MATERIAL', label: 'Material' },
-  { value: 'FERRAMENTA', label: 'Ferramenta' },
-  { value: 'TECNICO', label: 'Técnico' },
-  { value: 'VIATURA', label: 'Viatura' }
-];
+const numero = (valor?: string | number | null) => {
+  if (valor === null || valor === undefined || valor === '') return null;
+  const n = typeof valor === 'string' ? parseFloat(String(valor).replace(',', '.')) : valor;
+  return Number.isNaN(n) ? null : n;
+};
 
-// Mesmo raio e borda do Input padrao (rounded-[0.25rem]) para o select nao
-// destoar dos outros campos da linha.
-const selectClassName =
-  'h-8 w-full rounded-[0.25rem] border border-input bg-transparent px-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
+const moeda = (valor: number) =>
+  valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+/**
+ * Os recursos de uma instrução, escolhidos do catálogo.
+ *
+ * Categoria, nome e unidade vêm do recurso; a instrução decide a quantidade e
+ * se é obrigatório. O preço é lido ao vivo, de propósito: reajustar um custo
+ * tem que se refletir aqui. O que congela é a OS, quando é gerada.
+ */
 export function RecursosInstrucaoController({ value, onChange, disabled }: FormFieldProps) {
   const [recursos, setRecursos] = React.useState<Recurso[]>(
     Array.isArray(value) ? value : []
   );
+  const [catalogo, setCatalogo] = React.useState<RecursoApiResponse[]>([]);
+  const [carregando, setCarregando] = React.useState(true);
 
   React.useEffect(() => {
     if (Array.isArray(value)) {
       setRecursos(value);
     }
   }, [value]);
+
+  React.useEffect(() => {
+    let cancelado = false;
+
+    // Limite alto porque o combobox filtra do lado do cliente: um catálogo de
+    // manutenção tem dezenas de itens, não milhares.
+    recursosApi
+      .listar({ apenas_ativos: true, limit: 500 })
+      .then((resposta) => {
+        if (!cancelado) setCatalogo(resposta.data);
+      })
+      .catch((erro) => {
+        if (cancelado) return;
+        toast.error('Erro ao carregar o catálogo de recursos', {
+          description: formatApiError(erro),
+        });
+      })
+      .finally(() => {
+        if (!cancelado) setCarregando(false);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  const porId = React.useMemo(
+    () => new Map(catalogo.map((r) => [r.id.trim(), r])),
+    [catalogo],
+  );
+
+  const opcoes = React.useMemo(
+    () =>
+      catalogo.map((r) => ({
+        value: r.id.trim(),
+        label: `${rotuloCategoria(r.categoria)} · ${r.nome}`,
+      })),
+    [catalogo],
+  );
 
   const aplicar = (lista: Recurso[]) => {
     setRecursos(lista);
@@ -45,7 +100,7 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
   const adicionar = () => {
     aplicar([
       ...recursos,
-      { tipo: 'MATERIAL', descricao: '', quantidade: '1', unidade: '', obrigatorio: false }
+      { recurso_id: null, tipo: 'MATERIAL', descricao: '', quantidade: '1', obrigatorio: false },
     ]);
   };
 
@@ -57,6 +112,26 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
     aplicar(recursos.map((item, i) => (i === index ? { ...item, [campo]: valor } : item)));
   };
 
+  /** Escolher no catálogo traz junto categoria, nome e unidade. */
+  const escolherRecurso = (index: number, recursoId: string) => {
+    const doCatalogo = porId.get(recursoId?.trim());
+    if (!doCatalogo) return;
+
+    aplicar(
+      recursos.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              recurso_id: doCatalogo.id.trim(),
+              tipo: doCatalogo.categoria,
+              descricao: doCatalogo.nome,
+              unidade: doCatalogo.unidade || '',
+            }
+          : item,
+      ),
+    );
+  };
+
   const reordenar = (origem: number, destino: number) => {
     const lista = [...recursos];
     const [movido] = lista.splice(origem, 1);
@@ -64,37 +139,46 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
     aplicar(lista);
   };
 
+  const subtotal = (item: Recurso): number | null => {
+    const doCatalogo = item.recurso_id ? porId.get(item.recurso_id.trim()) : undefined;
+    const preco = numero(doCatalogo?.preco_medio);
+    if (preco === null) return null;
+    return preco * (numero(item.quantidade) ?? 1);
+  };
+
+  const total = recursos.reduce((soma, item) => soma + (subtotal(item) ?? 0), 0);
+  const semPreco = recursos.filter((item) => subtotal(item) === null).length;
+
   const colunas: Array<ColunaItemOrdenavel<Recurso>> = [
     {
-      key: 'tipo',
-      header: 'Tipo',
-      width: 'w-32',
-      render: (item, index) => (
-        <select
-          value={item.tipo}
-          onChange={(e) => atualizar(index, 'tipo', e.target.value)}
-          disabled={disabled}
-          className={selectClassName}
-        >
-          {tipoOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-      )
-    },
-    {
-      key: 'descricao',
-      header: 'Descrição',
-      render: (item, index) => (
-        <Input
-          placeholder="Descrição do recurso..."
-          type="text"
-          value={item.descricao}
-          onChange={(e) => atualizar(index, 'descricao', e.target.value)}
-          disabled={disabled}
-          className="h-8"
-        />
-      )
+      key: 'recurso',
+      header: 'Recurso',
+      render: (item, index) => {
+        // Linha antiga, de antes do catálogo: mostra o que foi digitado e deixa
+        // trocar por um item do catálogo.
+        const legado = !item.recurso_id && item.descricao;
+
+        return (
+          <div className="space-y-1">
+            <Combobox
+              options={opcoes}
+              value={item.recurso_id || undefined}
+              onValueChange={(valor) => escolherRecurso(index, valor)}
+              placeholder={carregando ? 'Carregando...' : 'Selecione o recurso...'}
+              searchPlaceholder="Buscar recurso..."
+              emptyText="Nenhum recurso cadastrado. Cadastre em Administração › Recursos."
+              disabled={disabled || carregando}
+              className="h-8"
+            />
+            {legado && (
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                <AlertCircle className="h-3 w-3 shrink-0" />
+                Cadastrado antes do catálogo: {rotuloCategoria(item.tipo)} · {item.descricao}
+              </p>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'quantidade',
@@ -105,28 +189,35 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
         <Input
           placeholder="1"
           type="text"
-          value={item.quantidade || ''}
+          value={item.quantidade ?? ''}
           onChange={(e) => atualizar(index, 'quantidade', e.target.value)}
           disabled={disabled}
           className="h-8 w-16 mx-auto text-center"
         />
-      )
+      ),
     },
     {
       key: 'unidade',
       header: 'Unidade',
       width: 'w-24',
       align: 'center',
-      render: (item, index) => (
-        <Input
-          placeholder="un"
-          type="text"
-          value={item.unidade || ''}
-          onChange={(e) => atualizar(index, 'unidade', e.target.value)}
-          disabled={disabled}
-          className="h-8 w-20 mx-auto text-center"
-        />
-      )
+      render: (item) => (
+        <span className="text-sm text-muted-foreground">{item.unidade || '—'}</span>
+      ),
+    },
+    {
+      key: 'subtotal',
+      header: 'Custo',
+      width: 'w-28',
+      align: 'center',
+      render: (item) => {
+        const valor = subtotal(item);
+        return valor === null ? (
+          <span className="text-xs text-muted-foreground">sem preço</span>
+        ) : (
+          <span className="text-sm text-foreground">{moeda(valor)}</span>
+        );
+      },
     },
     {
       key: 'obrigatorio',
@@ -142,21 +233,36 @@ export function RecursosInstrucaoController({ value, onChange, disabled }: FormF
           className="accent-foreground"
           title="Obrigatório"
         />
-      )
-    }
+      ),
+    },
   ];
 
-  // Titulo proprio: assim ele e o botao de adicionar ficam na mesma linha.
   return (
-    <ItensOrdenaveisTable
-      itens={recursos}
-      colunas={colunas}
-      onReordenar={reordenar}
-      onRemover={remover}
-      onAdicionar={adicionar}
-      textoAdicionar="Adicionar recurso"
-      titulo="Recursos Necessários"
-      disabled={disabled}
-    />
+    <div className="space-y-2">
+      <ItensOrdenaveisTable
+        itens={recursos}
+        colunas={colunas}
+        onReordenar={reordenar}
+        onRemover={remover}
+        onAdicionar={adicionar}
+        textoAdicionar="Adicionar recurso"
+        titulo="Recursos Necessários"
+        disabled={disabled}
+      />
+
+      {recursos.length > 0 && (
+        <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-sm">
+          {semPreco > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              {semPreco} {semPreco === 1 ? 'item sem preço' : 'itens sem preço'} — fora do total
+            </span>
+          )}
+          <span className="text-muted-foreground">
+            Custo estimado: <span className="text-foreground font-medium">{moeda(total)}</span>
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
