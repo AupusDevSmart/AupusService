@@ -1,7 +1,7 @@
 // src/features/dashboard/components/PainelManutencao.tsx
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Bar,
   BarChart,
@@ -28,6 +28,7 @@ import {
   type FiltrosDashboard,
 } from '@/services/dashboard-manutencao.services';
 import { CartaoIndicador, Quadro, SemDado } from './PainelPrimitivos';
+import { DADOS_DEMO } from './dadosDemo';
 
 /**
  * Painel de gestão de manutenção e serviços.
@@ -136,16 +137,34 @@ function Grafico({ children }: { children: React.ReactElement }) {
 
 export function PainelManutencao() {
   const navigate = useNavigate();
+  const [parametrosUrl] = useSearchParams();
   const [filtros, setFiltros] = useState<FiltrosDashboard>({ periodo: '12meses' });
 
-  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
+  /**
+   * `?demo=1` troca a resposta da API por um conjunto fictício, para avaliar o
+   * desenho da tela com o volume de uma operação já rodando. A chamada nem sai
+   * nesse modo, e a tela avisa em cima que os números não são reais.
+   */
+  const demo = parametrosUrl.get('demo') === '1';
+
+  const {
+    data: dadosApi,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ['dashboard-manutencao', filtros],
     queryFn: () => dashboardManutencaoApi.carregar(filtros),
     staleTime: 60_000,
+    enabled: !demo,
     // Sem isto, trocar um filtro derruba `data` para undefined e a tela volta ao
     // esqueleto — inclusive os próprios combos, que vivem dentro dos dados.
     placeholderData: keepPreviousData,
   });
+
+  const data = demo ? DADOS_DEMO : dadosApi;
 
   const opcoesPlanta = useMemo(
     () => [
@@ -197,7 +216,7 @@ export function PainelManutencao() {
       (k) => filtros[k as keyof FiltrosDashboard] && filtros[k as keyof FiltrosDashboard] !== 'all',
     ) || filtros.periodo !== '12meses';
 
-  if (isLoading) {
+  if (isLoading && !demo) {
     return (
       <Layout>
         <Layout.Main>
@@ -215,7 +234,7 @@ export function PainelManutencao() {
     );
   }
 
-  if (isError || !data) {
+  if ((isError && !demo) || !data) {
     return (
       <Layout>
         <Layout.Main>
@@ -325,13 +344,23 @@ export function PainelManutencao() {
               </Button>
             )}
 
-            <span className="ml-auto hidden items-center gap-1.5 text-[10px] text-muted-foreground lg:flex">
-              <RefreshCw className={`h-3 w-3 ${isFetching ? 'animate-spin' : ''}`} />
-              {new Date(data.atualizadoEm).toLocaleTimeString('pt-BR', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </span>
+            {/* Em demonstração o aviso ocupa o lugar do horário: não faz
+                sentido dizer "atualizado às 14h" sobre número inventado. */}
+            {demo ? (
+              <span className="ml-auto flex items-center gap-1.5 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="h-3 w-3 shrink-0" />
+                Dados fictícios — os filtros não alteram o exemplo. Tire{' '}
+                <code className="font-mono">?demo=1</code> da URL para ver os dados reais.
+              </span>
+            ) : (
+              <span className="ml-auto hidden items-center gap-1.5 text-[10px] text-muted-foreground lg:flex">
+                <RefreshCw className={`h-3 w-3 ${isFetching ? 'animate-spin' : ''}`} />
+                {new Date(data.atualizadoEm).toLocaleTimeString('pt-BR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            )}
           </div>
 
           {/* ---------- 1 · INDICADORES ---------- */}
