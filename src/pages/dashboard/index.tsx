@@ -1,2 +1,2 @@
 // src/pages/dashboard/index.tsx
-export { MinimalistDashboard as DashboardPage } from './MinimalistDashboard';
+export { PainelManutencao as DashboardPage } from '@/features/dashboard/components/PainelManutencao';
