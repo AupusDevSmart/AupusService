@@ -104,9 +104,15 @@ class DashboardManutencaoApiService {
       Object.entries(filtros).filter(([, v]) => v && v !== 'all'),
     );
 
-    const response = await api.get<any>(this.endpoint, { params });
-    // O interceptor pode desembrulhar { success, data }; às vezes sobra uma camada.
-    return response.data?.data ?? response.data;
+    // O interceptor pode desembrulhar { success, data }; às vezes sobra uma
+    // camada. O painel aceita as duas formas em vez de apostar numa delas.
+    const response = await api.get<DashboardManutencaoApi | { data: DashboardManutencaoApi }>(
+      this.endpoint,
+      { params },
+    );
+
+    const corpo = response.data;
+    return corpo && 'data' in corpo ? corpo.data : corpo;
   }
 }
 

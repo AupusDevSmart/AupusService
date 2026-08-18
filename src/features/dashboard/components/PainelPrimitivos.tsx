@@ -8,6 +8,10 @@ import type { IndicadorApi } from '@/services/dashboard-manutencao.services';
  *
  * Tudo em tokens do design system (bg-card, border-border, text-muted-foreground)
  * e raio pequeno — nada de canto muito arredondado, seguindo o resto do produto.
+ *
+ * As peças são dimensionadas para caber: a partir de 2xl o painel inteiro ocupa
+ * uma tela só, então cada elemento gasta o mínimo de altura e cresce junto com o
+ * espaço que sobrar, em vez de ter altura fixa.
  */
 
 /** Mapeia o nome do ícone que o backend manda para o componente do Lucide. */
@@ -38,105 +42,104 @@ export function CartaoIndicador({ indicador }: { indicador: IndicadorApi }) {
   const semDado = indicador.valor === '—';
 
   return (
-    <div className="rounded border border-border bg-card p-3">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Icone className="h-3.5 w-3.5 shrink-0" />
+    <div
+      className="flex min-w-0 flex-col justify-center rounded border border-border bg-card px-2.5 py-2"
+      title={indicador.pendencia}
+    >
+      <div className="flex items-center gap-1 text-[11px] leading-none text-muted-foreground">
+        <Icone className="h-3 w-3 shrink-0" />
         <span className="truncate">{indicador.rotulo}</span>
 
         {/* O aviso de simulado fica no card, não numa legenda de rodapé: quem
             lê o número precisa saber na hora que ele não é real. */}
         {indicador.simulado && (
-          <span
-            className="ml-auto shrink-0 rounded-sm border border-border px-1 text-[10px] uppercase tracking-wide text-muted-foreground"
-            title={indicador.pendencia}
-          >
-            simulado
+          <span className="ml-auto shrink-0 rounded-sm border border-border px-1 text-[9px] uppercase leading-[14px] tracking-wide">
+            sim
           </span>
         )}
       </div>
 
-      <div
-        className={`mt-1 text-2xl font-medium leading-tight ${
-          semDado ? 'text-muted-foreground' : 'text-foreground'
-        }`}
-      >
-        {indicador.valor}
+      <div className="mt-1 flex items-baseline gap-1">
+        <span
+          className={`text-xl font-medium leading-none ${
+            semDado ? 'text-muted-foreground' : 'text-foreground'
+          }`}
+        >
+          {indicador.valor}
+        </span>
         {indicador.unidade && !semDado && (
-          <span className="ml-1 text-xs font-normal text-muted-foreground">{indicador.unidade}</span>
+          <span className="text-[10px] text-muted-foreground">{indicador.unidade}</span>
         )}
       </div>
 
       <div
-        className={`mt-1 flex items-start gap-1 text-[11px] ${
+        className={`mt-1 truncate text-[10px] leading-none ${
           indicador.status ? COR_STATUS[indicador.status] : 'text-muted-foreground'
         }`}
       >
-        <span className="min-w-0">{indicador.nota}</span>
-        {indicador.pendencia && !indicador.simulado && (
-          <Info className="h-3 w-3 shrink-0 text-muted-foreground" aria-label={indicador.pendencia} />
-        )}
+        {indicador.nota}
       </div>
     </div>
   );
 }
 
-export function TituloSecao({
-  children,
-  icone: Icone,
-}: {
-  children: React.ReactNode;
-  icone: React.ComponentType<{ className?: string }>;
-}) {
-  return (
-    <h2 className="mb-3 mt-7 flex items-center gap-2 border-b border-border pb-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-      <Icone className="h-3.5 w-3.5" />
-      {children}
-    </h2>
-  );
-}
-
+/**
+ * Moldura de um gráfico.
+ *
+ * O cabeçalho é de uma linha só — título, subtítulo e legenda dividem a mesma
+ * faixa. Doze molduras na tela: cada linha extra de cabeçalho custaria mais de
+ * cem pixels do espaço que os gráficos precisam.
+ *
+ * A pendência (o que falta registrar para o número virar real) vira o ícone de
+ * informação à direita, com o texto no hover, em vez de um parágrafo no rodapé.
+ */
 export function Quadro({
   titulo,
   subtitulo,
   children,
   pendencia,
   simulado,
+  legenda,
   acao,
+  className = '',
 }: {
   titulo: string;
   subtitulo?: string;
   children: React.ReactNode;
   pendencia?: string;
   simulado?: boolean;
+  legenda?: { rotulo: string; cor: string }[];
   acao?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="rounded border border-border bg-card p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-foreground">{titulo}</p>
-          {subtitulo && <p className="mt-0.5 text-[11px] text-muted-foreground">{subtitulo}</p>}
-        </div>
-        {simulado && (
-          <span className="shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-            simulado
-          </span>
+    <div
+      className={`flex min-h-0 min-w-0 flex-col overflow-hidden rounded border border-border bg-card p-3 ${className}`}
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        <p className="shrink-0 text-xs font-medium text-foreground">{titulo}</p>
+        {subtitulo && (
+          <span className="truncate text-[10px] text-muted-foreground">{subtitulo}</span>
         )}
+
+        {legenda && <Legenda itens={legenda} className="ml-auto" />}
+
+        <div className={`flex shrink-0 items-center gap-1.5 ${legenda ? '' : 'ml-auto'}`}>
+          {simulado && (
+            <span className="rounded-sm border border-border px-1 text-[9px] uppercase leading-[14px] tracking-wide text-muted-foreground">
+              simulado
+            </span>
+          )}
+          {pendencia && (
+            <span title={pendencia} className="flex items-center">
+              <Info className="h-3 w-3 text-muted-foreground" />
+            </span>
+          )}
+          {acao}
+        </div>
       </div>
 
-      <div className="mt-3">{children}</div>
-
-      {/* A pendência fica embaixo do gráfico, não no lugar dele: o desenho
-          continua servindo para validar a tela, e o texto diz o que falta
-          registrar para o número virar real. */}
-      {pendencia && (
-        <p className="mt-3 flex items-start gap-1.5 border-t border-border pt-2 text-[11px] text-muted-foreground">
-          <Info className="mt-px h-3 w-3 shrink-0" />
-          <span>{pendencia}</span>
-        </p>
-      )}
-
-      {acao && <div className="mt-3">{acao}</div>}
+      <div className="mt-2 min-h-0 flex-1">{children}</div>
     </div>
   );
 }
@@ -144,18 +147,26 @@ export function Quadro({
 /** Quando não há o que desenhar — lista vazia, sem base de cálculo. */
 export function SemDado({ mensagem }: { mensagem: string }) {
   return (
-    <div className="flex h-full min-h-[140px] items-center justify-center rounded-sm border border-dashed border-border px-4 text-center text-xs text-muted-foreground">
+    <div className="flex h-full min-h-[60px] items-center justify-center rounded-sm border border-dashed border-border px-3 text-center text-[11px] leading-snug text-muted-foreground">
       {mensagem}
     </div>
   );
 }
 
-export function Legenda({ itens }: { itens: { rotulo: string; cor: string }[] }) {
+export function Legenda({
+  itens,
+  className = '',
+}: {
+  itens: { rotulo: string; cor: string }[];
+  className?: string;
+}) {
   return (
-    <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+    <div
+      className={`flex min-w-0 flex-wrap justify-end gap-x-2.5 gap-y-0.5 text-[10px] leading-tight text-muted-foreground ${className}`}
+    >
       {itens.map((i) => (
-        <span key={i.rotulo} className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-sm" style={{ background: i.cor }} />
+        <span key={i.rotulo} className="flex items-center gap-1 whitespace-nowrap">
+          <span className="h-1.5 w-1.5 rounded-sm" style={{ background: i.cor }} />
           {i.rotulo}
         </span>
       ))}
