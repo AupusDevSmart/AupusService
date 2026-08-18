@@ -371,7 +371,7 @@ export function PainelManutencao() {
                 </Grafico>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                   <span
-                    className="text-xl font-medium leading-none"
+                    className="text-base font-medium leading-none"
                     style={{ color: pctPlano >= ep.meta ? COR.verde : COR.ambar }}
                   >
                     {pctPlano}%
@@ -412,9 +412,12 @@ export function PainelManutencao() {
                   </PieChart>
                 </Grafico>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-xl font-medium leading-none text-foreground">
+                  {/* Os dois lados do mesmo tamanho: tamanhos diferentes davam
+                      a impressao de que um numero importava mais que o outro,
+                      quando a leitura util e justamente a proporcao entre eles. */}
+                  <span className="text-base font-medium leading-none text-foreground">
                     {data.planejadaVsNao.planejada}
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-muted-foreground">
                       /{data.planejadaVsNao.naoPlanejada}
                     </span>
                   </span>
@@ -795,7 +798,7 @@ function Estatistica({
     <div className="flex min-w-0 flex-col justify-center rounded-sm border border-border px-2 py-1">
       <span className="truncate text-[10px] leading-none text-muted-foreground">{rotulo}</span>
       <span
-        className={`mt-1 text-base font-medium leading-none ${
+        className={`mt-1 text-sm font-medium leading-none ${
           destaque ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'
         }`}
       >
