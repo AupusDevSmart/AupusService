@@ -349,36 +349,44 @@ export function PainelManutencao() {
               subtitulo={`meta ${ep.meta}%`}
               className={`${ALTURA_PADRAO} 2xl:col-span-3`}
             >
-              <div className="relative h-full">
-                <Grafico>
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: 'Executadas', value: pctPlano },
-                        { name: 'Pendentes', value: 100 - pctPlano },
-                      ]}
-                      dataKey="value"
-                      innerRadius="70%"
-                      outerRadius="98%"
-                      startAngle={90}
-                      endAngle={-270}
-                      stroke="none"
-                    >
-                      <Cell fill={pctPlano >= ep.meta ? COR.verde : COR.ambar} />
-                      <Cell fill={COR.trilho} />
-                    </Pie>
-                  </PieChart>
-                </Grafico>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span
-                    className="text-base font-medium leading-none"
+              {/* O número sai de dentro do furo da rosca.
+                  Centralizado, ele dependia de o furo ser maior que a linha de
+                  texto — e o furo encolhe junto com a moldura, então em altura
+                  apertada o percentual invadia o anel e a legenda de baixo era
+                  cortada. Ao lado, a rosca encolhe sem levar o número junto. */}
+              <div className="flex h-full items-center gap-3">
+                <div className="aspect-square h-full shrink-0">
+                  <Grafico>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Executadas', value: pctPlano },
+                          { name: 'Pendentes', value: 100 - pctPlano },
+                        ]}
+                        dataKey="value"
+                        innerRadius="66%"
+                        outerRadius="96%"
+                        startAngle={90}
+                        endAngle={-270}
+                        stroke="none"
+                      >
+                        <Cell fill={pctPlano >= ep.meta ? COR.verde : COR.ambar} />
+                        <Cell fill={COR.trilho} />
+                      </Pie>
+                    </PieChart>
+                  </Grafico>
+                </div>
+
+                <div className="min-w-0">
+                  <p
+                    className="text-lg font-medium leading-none"
                     style={{ color: pctPlano >= ep.meta ? COR.verde : COR.ambar }}
                   >
                     {pctPlano}%
-                  </span>
-                  <span className="mt-0.5 text-[10px] text-muted-foreground">
+                  </p>
+                  <p className="mt-1 truncate text-[11px] text-muted-foreground">
                     {ep.executadas} de {ep.programadas}
-                  </span>
+                  </p>
                 </div>
               </div>
             </Quadro>
@@ -392,68 +400,91 @@ export function PainelManutencao() {
                 { rotulo: 'Não planejada', cor: COR.laranja },
               ]}
             >
-              <div className="relative h-full">
-                <Grafico>
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: 'Planejada', value: data.planejadaVsNao.planejada },
-                        { name: 'Não planejada', value: data.planejadaVsNao.naoPlanejada },
-                      ]}
-                      dataKey="value"
-                      innerRadius="70%"
-                      outerRadius="98%"
-                      stroke="none"
-                    >
-                      <Cell fill={COR.azul} />
-                      <Cell fill={COR.laranja} />
-                    </Pie>
-                    <Tooltip content={<DicaGrafico sufixo="%" />} />
-                  </PieChart>
-                </Grafico>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  {/* Os dois lados do mesmo tamanho: tamanhos diferentes davam
-                      a impressao de que um numero importava mais que o outro,
-                      quando a leitura util e justamente a proporcao entre eles. */}
-                  <span className="text-base font-medium leading-none text-foreground">
+              <div className="flex h-full items-center gap-3">
+                <div className="aspect-square h-full shrink-0">
+                  <Grafico>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Planejada', value: data.planejadaVsNao.planejada },
+                          { name: 'Não planejada', value: data.planejadaVsNao.naoPlanejada },
+                        ]}
+                        dataKey="value"
+                        innerRadius="66%"
+                        outerRadius="96%"
+                        stroke="none"
+                      >
+                        <Cell fill={COR.azul} />
+                        <Cell fill={COR.laranja} />
+                      </Pie>
+                      <Tooltip content={<DicaGrafico sufixo="%" />} />
+                    </PieChart>
+                  </Grafico>
+                </div>
+
+                {/* Os dois lados do mesmo tamanho: tamanhos diferentes davam a
+                    impressão de que um número importava mais que o outro,
+                    quando a leitura útil é justamente a proporção entre eles. */}
+                <div className="min-w-0">
+                  <p className="text-lg font-medium leading-none text-foreground">
                     {data.planejadaVsNao.planejada}
                     <span className="text-muted-foreground">
-                      /{data.planejadaVsNao.naoPlanejada}
+                      {' / '}
+                      {data.planejadaVsNao.naoPlanejada}
                     </span>
-                  </span>
+                  </p>
+                  <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                    plan. / não plan.
+                  </p>
                 </div>
               </div>
             </Quadro>
 
-            <Quadro
-              titulo="Origem da OS"
-              className={`${ALTURA_PADRAO} 2xl:col-span-3`}
-              legenda={[
-                { rotulo: `Plano ${data.origemOS.plano}%`, cor: COR.azul },
-                { rotulo: `Anomalia ${data.origemOS.anomalia}%`, cor: COR.laranja },
-                { rotulo: `Solicitação ${data.origemOS.solicitacao}%`, cor: COR.ambar },
-              ]}
-            >
-              <Grafico>
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: 'Plano', value: data.origemOS.plano },
-                      { name: 'Anomalia', value: data.origemOS.anomalia },
-                      { name: 'Solicitação', value: data.origemOS.solicitacao },
-                    ]}
-                    dataKey="value"
-                    innerRadius="70%"
-                    outerRadius="98%"
-                    stroke="none"
-                  >
-                    <Cell fill={COR.azul} />
-                    <Cell fill={COR.laranja} />
-                    <Cell fill={COR.ambar} />
-                  </Pie>
-                  <Tooltip content={<DicaGrafico sufixo="%" />} />
-                </PieChart>
-              </Grafico>
+            <Quadro titulo="Origem da OS" className={`${ALTURA_PADRAO} 2xl:col-span-3`}>
+              <div className="flex h-full items-center gap-3">
+                <div className="aspect-square h-full shrink-0">
+                  <Grafico>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Plano', value: data.origemOS.plano },
+                          { name: 'Anomalia', value: data.origemOS.anomalia },
+                          { name: 'Solicitação', value: data.origemOS.solicitacao },
+                        ]}
+                        dataKey="value"
+                        innerRadius="66%"
+                        outerRadius="96%"
+                        stroke="none"
+                      >
+                        <Cell fill={COR.azul} />
+                        <Cell fill={COR.laranja} />
+                        <Cell fill={COR.ambar} />
+                      </Pie>
+                      <Tooltip content={<DicaGrafico sufixo="%" />} />
+                    </PieChart>
+                  </Grafico>
+                </div>
+
+                {/* A legenda desce do cabeçalho para cá: com o percentual ao
+                    lado de cada origem ela deixa de ser só um decodificador de
+                    cor e passa a ser a própria leitura do gráfico. */}
+                <div className="flex min-w-0 flex-col gap-1 text-[11px] text-muted-foreground">
+                  {[
+                    { rotulo: 'Plano', valor: data.origemOS.plano, cor: COR.azul },
+                    { rotulo: 'Anomalia', valor: data.origemOS.anomalia, cor: COR.laranja },
+                    { rotulo: 'Solicitação', valor: data.origemOS.solicitacao, cor: COR.ambar },
+                  ].map((o) => (
+                    <span key={o.rotulo} className="flex items-center gap-1.5 whitespace-nowrap">
+                      <span
+                        className="h-1.5 w-1.5 shrink-0 rounded-sm"
+                        style={{ background: o.cor }}
+                      />
+                      <span className="truncate">{o.rotulo}</span>
+                      <span className="ml-auto pl-1 text-foreground">{o.valor}%</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
             </Quadro>
 
             <Quadro
