@@ -82,9 +82,9 @@ class UnidadesService {
       console.log('🔑 [FRONTEND SERVICE - CREATE] concessionariaId na resposta:', result.concessionariaId);
       console.log('🏁 [FRONTEND SERVICE - CREATE] ===== FIM =====');
 
-      // Exibir sucesso
-      alert('Unidade cadastrada com sucesso!');
-
+      // Sem alert nativo: ele BLOQUEIA a thread ate alguem clicar em OK, e o
+      // sheet ja avisa por toast. No cadastro isso era pior ainda, porque o
+      // upload dos anexos so continua depois do OK.
       return result;
     } catch (error) {
       console.error('❌ [UnidadesService] Erro ao criar unidade:', error);
@@ -98,7 +98,6 @@ class UnidadesService {
       const response = await api.put(`${this.baseUrl}/${id}`, dados);
 
       // Exibir sucesso
-      alert('Unidade atualizada com sucesso!');
 
       return response.data;
     } catch (error) {
@@ -113,7 +112,6 @@ class UnidadesService {
       await api.delete(`${this.baseUrl}/${id}`);
 
       // Exibir sucesso
-      alert('Unidade excluída com sucesso!');
     } catch (error) {
       console.error('Erro ao excluir unidade:', error);
       throw error;
