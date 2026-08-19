@@ -5,6 +5,8 @@ import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@aupus/shared-pages';
 import { BaseFilters } from '@aupus/shared-pages';
 import { Plus, FileText } from 'lucide-react';
+import { toast } from 'sonner';
+import { formatApiError } from '@/utils/api-error';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { useUserStore } from '@/store/useUserStore';
 import { InstrucaoApiResponse, QueryInstrucoesApiParams, DashboardInstrucoesDto } from '@/services/instrucoes.services';
@@ -18,7 +20,10 @@ import { InstrucoesModal } from './InstrucoesModal';
 const initialFilters: QueryInstrucoesApiParams = {
   search: '',
   page: 1,
-  limit: 10,
+  // 50 por pagina: a lista de instrucoes e consultada para achar uma
+  // conhecida, e paginar de 10 em 10 obrigava a percorrer paginas para isso.
+  // O teto do backend e 100 (@Max no query DTO).
+  limit: 50,
   sort_by: 'created_at',
   sort_order: 'desc'
 };
@@ -75,6 +80,7 @@ export function InstrucoesPage() {
     total,
     createInstrucao,
     updateInstrucao,
+    deleteInstrucao,
     getInstrucao,
     fetchInstrucoes,
     getDashboard,
@@ -167,6 +173,18 @@ export function InstrucoesPage() {
     }
   };
 
+  const handleExcluir = async (instrucao: InstrucaoApiResponse) => {
+    try {
+      await deleteInstrucao(instrucao.id.trim());
+      toast.success(`Instrução ${instrucao.tag} excluída.`);
+      await handleSuccess();
+    } catch (error) {
+      // O hook já reporta; aqui só evitamos fechar o modal em cima do erro,
+      // para a pessoa ver a mensagem sem perder o que estava editando.
+      toast.error(formatApiError(error));
+    }
+  };
+
   const handleView = async (instrucao: InstrucaoApiResponse) => {
     try {
       const completa = await getInstrucao(instrucao.id);
@@ -231,7 +249,7 @@ export function InstrucoesPage() {
               columns={instrucoesTableColumns}
               pagination={{
                 page: currentPage,
-                limit: filters.limit || 10,
+                limit: filters.limit || 50,
                 total,
                 totalPages
               }}
@@ -254,6 +272,7 @@ export function InstrucoesPage() {
           onClose={closeModal}
           onSubmit={handleSubmit}
           onFilesChange={setPendingFiles}
+          onExcluir={handleExcluir}
         />
       </Layout.Main>
     </Layout>

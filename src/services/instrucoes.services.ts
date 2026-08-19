@@ -261,6 +261,11 @@ export class InstrucoesApiService {
   private sanitizeRecursos(recursos?: CreateRecursoInstrucaoApiData[]): CreateRecursoInstrucaoApiData[] | undefined {
     if (!recursos) return recursos;
     return recursos.map(recurso => ({
+      // `recurso_id` é o vínculo com o catálogo e precisa viajar. Sem ele o
+      // backend cai no ramo da linha avulsa: grava tipo e descrição soltos,
+      // com recurso_id nulo. A linha até aparece salva, mas o combobox — que
+      // casa pelo id — reabre vazio, e o preço do catálogo se perde.
+      recurso_id: recurso.recurso_id,
       tipo: recurso.tipo,
       descricao: recurso.descricao,
       quantidade: recurso.quantidade,
