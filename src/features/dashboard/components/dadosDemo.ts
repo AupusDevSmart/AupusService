@@ -6,17 +6,30 @@ import type { DashboardManutencaoApi } from '@/services/dashboard-manutencao.ser
  * que existe no banco.
  *
  * Serve a uma pergunta específica: como o painel fica quando a operação já tem
- * volume e histórico? Hoje o banco de desenvolvimento tem poucas dezenas de OS,
- * então metade dos gráficos aparece quase vazia e não dá para julgar densidade,
+ * volume e histórico? O banco real ainda tem poucas dezenas de OS, então boa
+ * parte dos gráficos aparece quase vazia e não dá para julgar densidade,
  * legibilidade nem se tudo cabe na tela.
  *
- * Ligado por `?demo=1` na URL, nunca por padrão, e a tela avisa em cima que os
- * números são fictícios. Nada aqui chega ao backend.
+ * Os números são gerados com semente fixa, e não com `Math.random()`: assim a
+ * tela não muda a cada render, dá para comparar duas versões do layout lado a
+ * lado e um print continua valendo depois. Nada aqui chega ao backend.
  *
- * Os números são gerados por um gerador com semente fixa, e não por
- * `Math.random()`: assim a tela não muda a cada render, dá para comparar duas
- * versões do layout lado a lado e um print continua valendo depois.
+ * ============================================================================
+ * COMO VOLTAR PARA OS DADOS REAIS
+ * ============================================================================
+ *
+ * Trocar a constante abaixo para `false` e publicar. É a única linha que
+ * decide, e vale como padrão da tela.
+ *
+ * Sem publicar nada, a URL manda em cima do padrão nos dois sentidos:
+ *   /dashboard?demo=0   força os dados reais da API
+ *   /dashboard?demo=1   força os dados de exemplo
+ *
+ * Enquanto o exemplo estiver ligado, a tela mostra um aviso fixo de que os
+ * números são fictícios. Isso não é enfeite: o painel está publicado, e um
+ * número inventado sem aviso é pior do que um gráfico vazio.
  */
+export const PAINEL_USA_DADOS_DE_EXEMPLO = true;
 
 const MESES_CURTOS = [
   'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
@@ -93,29 +106,28 @@ function montar(): DashboardManutencaoApi {
         status: 'ok',
       },
       {
-        id: 'os_aberto',
+        id: 'os_aberta',
         icone: 'folder-open',
-        rotulo: 'OS em aberto',
+        rotulo: 'OS aberta',
         valor: '63',
         nota: '12 atrasadas',
         status: 'warn',
       },
       {
-        id: 'no_prazo',
+        id: 'os_concluida',
         icone: 'circle-check',
-        rotulo: 'Concluídas no prazo',
-        valor: '87',
-        unidade: '%',
-        nota: 'meta 90%',
-        status: 'warn',
+        rotulo: 'OS concluída',
+        valor: '196',
+        nota: '87% no prazo',
+        status: 'ok',
       },
       {
         id: 'backlog',
         icone: 'stack',
         rotulo: 'Backlog',
         valor: '412',
-        unidade: 'h',
-        nota: '≈ 2,3 semanas',
+        unidade: 'HH',
+        nota: 'em semanas exige capacidade da equipe',
         status: null,
       },
       {
@@ -127,20 +139,21 @@ function montar(): DashboardManutencaoApi {
         status: 'warn',
       },
       {
-        id: 'mttr',
-        icone: 'clock',
-        rotulo: 'MTTR corretiva',
-        valor: '6,4',
+        id: 'mtbf',
+        icone: 'activity',
+        rotulo: 'MTBF',
+        valor: '742',
         unidade: 'h',
-        nota: '52 fechadas no período',
+        nota: 'entre falhas, 12 meses',
         status: 'ok',
       },
       {
-        id: 'custo_mes',
-        icone: 'activity',
-        rotulo: 'Custo do mês',
-        valor: 'R$ 148k',
-        nota: 'orçado R$ 160k',
+        id: 'mttr',
+        icone: 'clock',
+        rotulo: 'MTTR',
+        valor: '6,4',
+        unidade: 'h',
+        nota: '52 corretivas concluídas',
         status: 'ok',
       },
       {
@@ -165,36 +178,37 @@ function montar(): DashboardManutencaoApi {
         status: 'warn',
       },
       {
-        id: 'sem_material',
-        icone: 'package-off',
-        rotulo: 'Parada por material',
-        valor: '7',
-        nota: 'OS aguardando peça',
-        status: 'bad',
-      },
-      {
-        id: 'pausadas',
-        icone: 'pause',
-        rotulo: 'OS pausadas',
-        valor: '5',
-        nota: 'há mais de 3 dias',
-        status: 'warn',
-      },
-      {
-        id: 'checklist',
-        icone: 'checklist',
-        rotulo: 'Checklist incompleto',
-        valor: '12',
-        nota: 'de 196 concluídas',
-        status: 'warn',
-      },
-      {
         id: 'reincidencia',
         icone: 'repeat',
         rotulo: 'Reincidência',
         valor: '8',
-        nota: 'mesmo ativo em 90 dias',
+        nota: 'equipamentos com anomalia repetida em 90 d',
         status: 'bad',
+      },
+      {
+        id: 'travadas',
+        icone: 'package-off',
+        rotulo: 'OS pausada',
+        valor: '5',
+        nota: 'motivo da pausa não classificado',
+        status: 'warn',
+      },
+      {
+        id: 'parada',
+        icone: 'pause',
+        rotulo: 'Parada não programada',
+        valor: '7',
+        nota: 'sem apontamento de parada',
+        status: 'warn',
+      },
+      {
+        id: 'aderencia_hh',
+        icone: 'checklist',
+        rotulo: 'Aderência HH',
+        valor: '92',
+        unidade: '%',
+        nota: 'duração real sobre o estimado',
+        status: 'ok',
       },
     ],
 

@@ -28,7 +28,7 @@ import {
   type FiltrosDashboard,
 } from '@/services/dashboard-manutencao.services';
 import { CartaoIndicador, Quadro, SemDado } from './PainelPrimitivos';
-import { DADOS_DEMO } from './dadosDemo';
+import { DADOS_DEMO, PAINEL_USA_DADOS_DE_EXEMPLO } from './dadosDemo';
 
 /**
  * Painel de gestão de manutenção e serviços.
@@ -141,11 +141,17 @@ export function PainelManutencao() {
   const [filtros, setFiltros] = useState<FiltrosDashboard>({ periodo: '12meses' });
 
   /**
-   * `?demo=1` troca a resposta da API por um conjunto fictício, para avaliar o
-   * desenho da tela com o volume de uma operação já rodando. A chamada nem sai
-   * nesse modo, e a tela avisa em cima que os números não são reais.
+   * Dados de exemplo no lugar da resposta da API, para avaliar o desenho da
+   * tela com o volume de uma operação já rodando.
+   *
+   * O padrão vem de `PAINEL_USA_DADOS_DE_EXEMPLO`, em dadosDemo.ts — é lá que
+   * se desliga isso de vez. A URL manda em cima do padrão nos dois sentidos,
+   * então dá para ver os dados reais sem publicar nada: `?demo=0`.
+   *
+   * Ligado, a chamada à API nem sai.
    */
-  const demo = parametrosUrl.get('demo') === '1';
+  const parametroDemo = parametrosUrl.get('demo');
+  const demo = parametroDemo === null ? PAINEL_USA_DADOS_DE_EXEMPLO : parametroDemo === '1';
 
   const {
     data: dadosApi,
@@ -344,13 +350,17 @@ export function PainelManutencao() {
               </Button>
             )}
 
-            {/* Em demonstração o aviso ocupa o lugar do horário: não faz
-                sentido dizer "atualizado às 14h" sobre número inventado. */}
+            {/* O aviso ocupa o lugar do horário: não faz sentido dizer
+                "atualizado às 14h" sobre número inventado.
+
+                Ele é fixo e não se fecha de propósito. O painel está publicado
+                e qualquer pessoa da operação pode abrir esta tela; número
+                inventado sem aviso é pior do que gráfico vazio. */}
             {demo ? (
               <span className="ml-auto flex items-center gap-1.5 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-700 dark:text-amber-400">
                 <AlertTriangle className="h-3 w-3 shrink-0" />
-                Dados fictícios — os filtros não alteram o exemplo. Tire{' '}
-                <code className="font-mono">?demo=1</code> da URL para ver os dados reais.
+                Dados de exemplo, não são reais — os filtros não alteram o exemplo. Abra{' '}
+                <code className="font-mono">?demo=0</code> para ver os dados da operação.
               </span>
             ) : (
               <span className="ml-auto hidden items-center gap-1.5 text-[10px] text-muted-foreground lg:flex">
