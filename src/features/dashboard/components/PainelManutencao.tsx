@@ -371,12 +371,12 @@ export function PainelManutencao() {
           </div>
 
           {/* ---------- 2 A 6 · GRÁFICOS ---------- */}
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3 2xl:min-h-0 2xl:flex-1 2xl:grid-cols-12 2xl:grid-rows-4">
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3 2xl:min-h-0 2xl:flex-1 2xl:grid-cols-12 2xl:grid-rows-3">
             {/* linha 1 — aderência ao plano */}
             <Quadro
               titulo="Execução do plano"
               subtitulo={`meta ${ep.meta}%`}
-              className={`${ALTURA_PADRAO} 2xl:col-span-3`}
+              className={`${ALTURA_PADRAO} 2xl:col-span-4`}
             >
               {/* O número sai de dentro do furo da rosca.
                   Centralizado, ele dependia de o furo ser maior que a linha de
@@ -423,7 +423,7 @@ export function PainelManutencao() {
             <Quadro
               titulo="Planejada vs. não planejada"
               subtitulo="ref. 80/20"
-              className={`${ALTURA_PADRAO} 2xl:col-span-3`}
+              className={`${ALTURA_PADRAO} 2xl:col-span-4`}
               legenda={[
                 { rotulo: 'Planejada', cor: COR.azul },
                 { rotulo: 'Não planejada', cor: COR.laranja },
@@ -469,7 +469,7 @@ export function PainelManutencao() {
               </div>
             </Quadro>
 
-            <Quadro titulo="Origem da OS" className={`${ALTURA_PADRAO} 2xl:col-span-3`}>
+            <Quadro titulo="Origem da OS" className={`${ALTURA_PADRAO} 2xl:col-span-4`}>
               <div className="flex h-full items-center gap-3">
                 <div className="aspect-square h-full shrink-0">
                   <Grafico>
@@ -516,6 +516,10 @@ export function PainelManutencao() {
               </div>
             </Quadro>
 
+            {/* DESLIGADO — Mix por tipo de manutenção.
+                Para reativar, tirar este comentário e devolver as colunas: as
+                três roscas acima voltam a col-span-3 e a grade a grid-rows-4.
+
             <Quadro
               titulo="Mix por tipo"
               subtitulo="alvo: prev.+pred. > 70%"
@@ -549,12 +553,13 @@ export function PainelManutencao() {
                 </div>
               </div>
             </Quadro>
+            */}
 
             {/* linha 2 — custo */}
             <Quadro
               titulo="Custo de manutenção"
               subtitulo="tracejado = orçado"
-              className={`${ALTURA_PADRAO} 2xl:col-span-6`}
+              className={`${ALTURA_PADRAO} 2xl:col-span-8`}
               simulado={data.custo.simulado}
               pendencia={data.custo.pendencia}
               legenda={[
@@ -599,7 +604,7 @@ export function PainelManutencao() {
 
             <Quadro
               titulo="Custo médio por OS"
-              className={`${ALTURA_PADRAO} 2xl:col-span-3`}
+              className={`${ALTURA_PADRAO} 2xl:col-span-4`}
               pendencia={data.custoPorOS.pendencia}
               legenda={
                 data.custoPorOS.base === 0
@@ -633,6 +638,11 @@ export function PainelManutencao() {
               )}
             </Quadro>
 
+            {/* DESLIGADO — Manutenção vs. serviços.
+                Era simulado: não existe campo de finalidade na OS. Para
+                reativar, tirar o comentário e devolver "Custo de manutenção" a
+                col-span-6 e "Custo médio por OS" a col-span-3.
+
             <Quadro
               titulo="Manutenção vs. serviços"
               className={`${ALTURA_PADRAO} 2xl:col-span-3`}
@@ -661,6 +671,7 @@ export function PainelManutencao() {
                 </BarChart>
               </Grafico>
             </Quadro>
+            */}
 
             {/* linha 3 — anomalias e horas */}
             <Quadro
@@ -751,7 +762,12 @@ export function PainelManutencao() {
               </Grafico>
             </Quadro>
 
-            {/* linha 4 — backlog, ofensores, prazo */}
+            {/* DESLIGADA — linha 4 inteira: backlog, ofensores e prazo por equipe.
+                Ofensores e prazo não tinham base de cálculo (nenhuma OS com
+                custo lançado, nenhuma com equipe registrada) e viviam mostrando
+                a caixa de "sem dado". Para reativar, tirar o comentário e voltar
+                a grade para grid-rows-4.
+
             <Quadro
               titulo="Envelhecimento do backlog"
               subtitulo="OS em aberto por faixa de dias"
@@ -828,14 +844,21 @@ export function PainelManutencao() {
                 </Grafico>
               )}
             </Quadro>
+            */}
           </div>
 
-          {/* ---------- 7 · ALERTAS ---------- */}
+          {/* DESLIGADA — faixa de alertas de qualidade e restrição.
+              Dos cinco, três não tinham fonte no banco (retrabalho, parada não
+              programada e aderência HH vinham marcados como simulados) e os
+              outros dois ficavam zerados. O endpoint continua devolvendo
+              `alertas`; para reativar, basta tirar este comentário.
+
           <div className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
             {data.alertas.map((k) => (
               <CartaoIndicador key={k.id} indicador={k} />
             ))}
           </div>
+          */}
         </div>
       </Layout.Main>
     </Layout>
