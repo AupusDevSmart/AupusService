@@ -6,6 +6,20 @@ import { BaseTable } from '@aupus/shared-pages';
 import { BaseFilters } from '@aupus/shared-pages';
 import { BaseModal } from '@aupus/shared-pages';
 import { Plus, FilePenLine, RotateCcw } from 'lucide-react';
+import { toast } from 'sonner';
+import { formatApiError } from '@/utils/api-error';
+import { propostaApi, type Proposta } from '@/services/proposta.services';
+import { PropostaSection } from './PropostaSection';
+import type { FormField } from '@/types/base';
+
+/**
+ * O que o BaseForm entrega a um campo customizado. So o que esta secao usa —
+ * declarar o objeto inteiro aqui duplicaria o tipo do BaseForm.
+ */
+interface PropsDoCampo {
+  entity?: SolicitacaoServico | null;
+  mode?: 'create' | 'edit' | 'view';
+}
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { SolicitacaoServico, SolicitacaoServicoFormData } from '../types';
 import { solicitacoesTableColumns } from '../config/table-config';
@@ -114,10 +128,79 @@ export function SolicitacoesPage() {
     }
   };
 
+  /**
+   * A proposta montada no sheet antes de a solicitacao existir.
+   *
+   * Fica na pagina, e nao no componente da secao, porque quem sabe o id novo e
+   * o handleSubmit — a secao ja foi desmontada quando ele chega.
+   */
+  const [rascunhoProposta, setRascunhoProposta] = useState<Proposta | null>(null);
+
+  /** Grava o rascunho em sequencia: cada rota devolve os totais recalculados. */
+  const gravarRascunhoProposta = async (id: string, rascunho: Proposta) => {
+    if (rascunho.subinstrucoes.length > 0) {
+      await propostaApi.salvarSubinstrucoes(id, rascunho.subinstrucoes);
+    }
+    if (rascunho.itens.length > 0) {
+      await propostaApi.salvarItens(id, rascunho.itens);
+    }
+    if (rascunho.outros_custos.length > 0) {
+      await propostaApi.salvarOutrosCustos(id, rascunho.outros_custos);
+    }
+    // Sempre por ultimo: e a gravacao que fecha o total com o que veio antes.
+    await propostaApi.salvarCondicoes(id, {
+      lucro_percentual: rascunho.lucro_percentual,
+      com_nota_fiscal: rascunho.com_nota_fiscal,
+    });
+  };
+
+  /**
+   * O render da proposta e montado aqui, e nao no form-config, porque so a
+   * pagina tem o setRascunhoProposta — e e ela quem grava depois de criar.
+   */
+  const camposDoSheet = useMemo(
+    () =>
+      formFields.map((campo: FormField) =>
+        campo.key === 'proposta'
+          ? {
+              ...campo,
+              render: ({ entity, mode }: PropsDoCampo) => (
+                <PropostaSection
+                  solicitacaoId={entity?.id ?? null}
+                  somenteLeitura={mode === 'view'}
+                  numero={entity?.numero}
+                  titulo={entity?.titulo}
+                  cliente={entity?.planta?.nome}
+                  onRascunhoChange={setRascunhoProposta}
+                />
+              ),
+            }
+          : campo,
+      ),
+    [formFields],
+  );
+
   const handleSubmit = async (data: SolicitacaoServicoFormData) => {
     try {
       if (modalState.mode === 'create') {
-        await createSolicitacao(data);
+        const criada = (await createSolicitacao(data)) as SolicitacaoServico | undefined;
+
+        // A proposta e montada no mesmo sheet, antes de a solicitacao existir.
+        // Sem id nao ha rota para gravar, entao ela viaja como rascunho e e
+        // persistida aqui, assim que o id nasce.
+        const novoId = criada?.id?.trim?.();
+        if (novoId && rascunhoProposta) {
+          try {
+            await gravarRascunhoProposta(novoId, rascunhoProposta);
+          } catch (erro) {
+            // A solicitacao existe; so a proposta falhou. Dizer qual das duas
+            // coisas deu errado evita a pessoa cadastrar tudo de novo.
+            toast.error('Solicitação criada, mas a proposta não pôde ser salva', {
+              description: formatApiError(erro),
+            });
+          }
+        }
+        setRascunhoProposta(null);
       } else if (modalState.mode === 'edit' && modalState.entity) {
         await updateSolicitacao(modalState.entity.id, data);
       }
@@ -240,7 +323,7 @@ export function SolicitacoesPage() {
             entity={modalState.entity as any}
             title={getModalTitle()}
             icon={<FilePenLine className="h-4 w-4 md:h-5 md:w-5 text-primary" />}
-            formFields={formFields}
+            formFields={camposDoSheet}
             onClose={handleClose}
             onSubmit={handleSubmit}
             width="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[800px]"

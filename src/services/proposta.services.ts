@@ -105,6 +105,19 @@ class PropostaApiService {
     return this.desembrulhar<Proposta>(resposta);
   }
 
+  async salvarSubinstrucoes(
+    solicitacaoId: string,
+    subinstrucoes: SubinstrucaoProposta[],
+  ): Promise<Proposta> {
+    const resposta = await api.put(`${this.base(solicitacaoId)}/subinstrucoes`, {
+      subinstrucoes: subinstrucoes.map((s) => ({
+        descricao: s.descricao,
+        tempo_estimado: s.tempo_estimado ?? null,
+      })),
+    });
+    return this.desembrulhar<Proposta>(resposta);
+  }
+
   /** Refaz a cópia a partir das instruções. Descarta edições de preço. */
   async recarregar(solicitacaoId: string): Promise<Proposta> {
     const resposta = await api.post(`${this.base(solicitacaoId)}/recarregar`);
@@ -113,6 +126,58 @@ class PropostaApiService {
 }
 
 export const propostaApi = new PropostaApiService();
+
+/**
+ * Proposta em branco, para o sheet de cadastro.
+ *
+ * Antes de a solicitação existir não há id, e as rotas da proposta precisam
+ * dele. Em vez de esconder a seção — que era o que acontecia, e deixava o
+ * lucro, a nota fiscal e os outros custos invisíveis justamente na hora de
+ * montar o orçamento — a tela trabalha sobre este rascunho e a página o
+ * persiste assim que a solicitação nasce.
+ */
+export const propostaVazia = (): Proposta => ({
+  itens: [],
+  subinstrucoes: [],
+  outros_custos: [],
+  lucro_percentual: 0,
+  com_nota_fiscal: false,
+  aliquota_percentual: 15,
+  total_custo: 0,
+  total_imposto: 0,
+  total_lucro: 0,
+  total_geral: 0,
+});
+
+/**
+ * Os mesmos totais que o servidor calcula, para o rascunho ter numero antes de
+ * existir no banco.
+ *
+ * É a única duplicação da fórmula, e ela é deliberada: sem id não há a quem
+ * perguntar. Assim que a solicitação existe, o número passa a vir do servidor
+ * e este cálculo sai de cena — quem manda no que vai para o PDF é ele.
+ */
+export function calcularRascunho(p: Proposta): Proposta {
+  const cent = (v: number) => Math.round(v * 100) / 100;
+
+  const custoItens = p.itens.reduce((s, i) => s + (i.quantidade || 0) * (i.preco_unitario || 0), 0);
+  const fd = p.outros_custos.filter((c) => c.faturamento_direto).reduce((s, c) => s + (c.valor || 0), 0);
+  const comum = p.outros_custos.filter((c) => !c.faturamento_direto).reduce((s, c) => s + (c.valor || 0), 0);
+
+  const tributavel = custoItens + comum;
+  const aliquota = p.com_nota_fiscal ? (p.aliquota_percentual || 0) / 100 : 0;
+  const comImposto = aliquota > 0 && aliquota < 1 ? tributavel / (1 - aliquota) : tributavel;
+  const base = comImposto + fd;
+  const lucro = cent(base * ((p.lucro_percentual || 0) / 100));
+
+  return {
+    ...p,
+    total_custo: cent(custoItens + comum + fd),
+    total_imposto: cent(comImposto - tributavel),
+    total_lucro: lucro,
+    total_geral: cent(base + lucro),
+  };
+}
 
 /** Reais, com os dois centavos sempre visíveis. */
 export const moeda = (valor: number) =>

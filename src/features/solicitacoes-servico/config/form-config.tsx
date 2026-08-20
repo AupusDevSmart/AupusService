@@ -167,14 +167,7 @@ export const solicitacoesFormFields: FormField[] = [
     type: 'custom',
     colSpan: 2,
     excludeFromSubmit: true,
-    render: ({ entity, mode }: any) => (
-      <PropostaSection
-        solicitacaoId={entity?.id ?? null}
-        somenteLeitura={mode === 'view'}
-        numero={entity?.numero}
-        titulo={entity?.titulo}
-        cliente={entity?.planta?.nome}
-      />
-    ),
+    // O render vem da pagina (SolicitacoesPage): so ela tem para onde mandar o
+    // rascunho da proposta enquanto a solicitacao ainda nao existe.
   } as any,
 ];
