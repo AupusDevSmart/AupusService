@@ -1,5 +1,6 @@
 // src/features/solicitacoes-servico/config/form-config.tsx
 import { FormField } from '@/types/base';
+import { PropostaSection } from '../components/PropostaSection';
 import { SimpleCascadeSelector } from '../components/SimpleCascadeSelector';
 import { AuthService } from '@/services/auth.service';
 import { useEffect, useState } from 'react';
@@ -154,4 +155,26 @@ export const solicitacoesFormFields: FormField[] = [
     colSpan: 2,
     excludeFromSubmit: true,
   },
+  // Proposta comercial — por ultimo: e o fechamento, e so faz sentido depois
+  // de escopo e instrucoes estarem definidos.
+  //
+  // excludeFromSubmit porque a proposta nao viaja no payload da solicitacao:
+  // ela tem endpoints proprios e grava sozinha, ja com os totais que o
+  // servidor calculou.
+  {
+    key: 'proposta',
+    label: '',
+    type: 'custom',
+    colSpan: 2,
+    excludeFromSubmit: true,
+    render: ({ entity, mode }: any) => (
+      <PropostaSection
+        solicitacaoId={entity?.id ?? null}
+        somenteLeitura={mode === 'view'}
+        numero={entity?.numero}
+        titulo={entity?.titulo}
+        cliente={entity?.planta?.nome}
+      />
+    ),
+  } as any,
 ];
