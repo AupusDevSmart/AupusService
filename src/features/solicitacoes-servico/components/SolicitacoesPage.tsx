@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { formatApiError } from '@/utils/api-error';
 import { propostaApi, type Proposta } from '@/services/proposta.services';
 import { PropostaSection } from './PropostaSection';
+import { PropostaCorrenteProvider, comBotaoDePdf } from './BotaoGerarPdf';
 import type { FormField } from '@/types/base';
 
 /**
@@ -142,6 +143,19 @@ export function SolicitacoesPage() {
    */
   const [rascunhoProposta, setRascunhoProposta] = useState<Proposta | null>(null);
 
+  /**
+   * A proposta corrente, para o botao de PDF que fecha o formulario.
+   *
+   * Separada do rascunho porque as duas respondem perguntas diferentes: o
+   * rascunho e "o que gravar quando a solicitacao nascer", e so existe no
+   * cadastro; esta e "o que imprimir agora", e vale tambem para solicitacao ja
+   * salva, cuja proposta a secao carrega sozinha da API.
+   *
+   * Viaja por contexto, e nao pelo `camposDoSheet`: aquele e memoizado, e mudar
+   * a identidade do render de um campo o desmonta e remonta.
+   */
+  const [propostaAtual, setPropostaAtual] = useState<Proposta | null>(null);
+
   /** Grava o rascunho em sequencia: cada rota devolve os totais recalculados. */
   const gravarRascunhoProposta = async (id: string, rascunho: Proposta) => {
     if (rascunho.subinstrucoes.length > 0) {
@@ -183,14 +197,14 @@ export function SolicitacoesPage() {
                   solicitacaoId={entity?.id ?? null}
                   instrucoesIds={formData?.instrucoes_ids ?? []}
                   somenteLeitura={mode === 'view'}
-                  numero={entity?.numero}
-                  titulo={entity?.titulo}
-                  cliente={entity?.planta?.nome}
                   onRascunhoChange={setRascunhoProposta}
+                  onPropostaChange={setPropostaAtual}
                 />
               ),
             }
-          : campo,
+          : campo.key === 'solicitante'
+            ? { ...campo, render: comBotaoDePdf(campo.render) }
+            : campo,
       ),
     [formFields],
   );
@@ -332,25 +346,27 @@ export function SolicitacoesPage() {
         </div>
 
         {modalState.isOpen && (
-          <BaseModal
-            isOpen={modalState.isOpen}
-            mode={modalState.mode}
-            entity={modalState.entity as any}
-            title={getModalTitle()}
-            icon={<FilePenLine className="h-4 w-4 md:h-5 md:w-5 text-primary" />}
-            formFields={camposDoSheet}
-            onClose={handleClose}
-            onSubmit={handleSubmit}
-            width="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[800px]"
-          >
-            {/* Painel de confirmação de ação - aparece no final do form em modo view */}
-            {solicitacoesActions.pendingAction && modalState.mode === 'view' && (
-              <ActionConfirmPanel
-                action={solicitacoesActions.pendingAction}
-                onConfirm={solicitacoesActions.confirmAction}
-              />
-            )}
-          </BaseModal>
+          <PropostaCorrenteProvider proposta={propostaAtual}>
+            <BaseModal
+              isOpen={modalState.isOpen}
+              mode={modalState.mode}
+              entity={modalState.entity as any}
+              title={getModalTitle()}
+              icon={<FilePenLine className="h-4 w-4 md:h-5 md:w-5 text-primary" />}
+              formFields={camposDoSheet}
+              onClose={handleClose}
+              onSubmit={handleSubmit}
+              width="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[800px]"
+            >
+              {/* Painel de confirmação de ação - aparece no final do form em modo view */}
+              {solicitacoesActions.pendingAction && modalState.mode === 'view' && (
+                <ActionConfirmPanel
+                  action={solicitacoesActions.pendingAction}
+                  onConfirm={solicitacoesActions.confirmAction}
+                />
+              )}
+            </BaseModal>
+          </PropostaCorrenteProvider>
         )}
       </Layout.Main>
     </Layout>

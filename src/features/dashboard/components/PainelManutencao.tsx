@@ -393,7 +393,7 @@ export function PainelManutencao() {
                   texto — e o furo encolhe junto com a moldura, então em altura
                   apertada o percentual invadia o anel e a legenda de baixo era
                   cortada. Ao lado, a rosca encolhe sem levar o número junto. */}
-              <div className="flex h-full items-center gap-3">
+              <div className="flex h-full items-center justify-center gap-3">
                 <div className="aspect-square h-full shrink-0">
                   <Grafico>
                     <PieChart>
@@ -439,7 +439,7 @@ export function PainelManutencao() {
                 { rotulo: 'Não planejada', cor: COR.laranja },
               ]}
             >
-              <div className="flex h-full items-center gap-3">
+              <div className="flex h-full items-center justify-center gap-3">
                 <div className="aspect-square h-full shrink-0">
                   <Grafico>
                     <PieChart>
@@ -480,7 +480,7 @@ export function PainelManutencao() {
             </Quadro>
 
             <Quadro titulo="Origem da OS" className={`${ALTURA_PADRAO} 2xl:col-span-4`}>
-              <div className="flex h-full items-center gap-3">
+              <div className="flex h-full items-center justify-center gap-3">
                 <div className="aspect-square h-full shrink-0">
                   <Grafico>
                     <PieChart>

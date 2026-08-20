@@ -1,6 +1,6 @@
 // src/features/solicitacoes-servico/components/PropostaSection.tsx
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, RefreshCw, Loader2, FileDown } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { formatApiError } from '@/utils/api-error';
@@ -24,11 +24,14 @@ interface PropostaSectionProps {
   /** As instruções escolhidas acima. Mudou aqui, a proposta se refaz. */
   instrucoesIds?: string[];
   somenteLeitura?: boolean;
-  numero?: string;
-  titulo?: string;
-  cliente?: string;
   /** Sobe o rascunho para a página persistir depois de criar a solicitação. */
   onRascunhoChange?: (rascunho: Proposta) => void;
+  /**
+   * Sobe a proposta corrente — nos dois modos — para quem precisa dela fora
+   * daqui. Hoje é o botão de PDF, que fecha o formulário. Nulo quando não há
+   * nada a imprimir.
+   */
+  onPropostaChange?: (proposta: Proposta | null) => void;
 }
 
 /**
@@ -51,16 +54,13 @@ export function PropostaSection({
   solicitacaoId,
   instrucoesIds = [],
   somenteLeitura = false,
-  numero,
-  titulo,
-  cliente,
   onRascunhoChange,
+  onPropostaChange,
 }: PropostaSectionProps) {
   const rascunho = !solicitacaoId;
   const [proposta, setProposta] = useState<Proposta>(propostaVazia);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
-  const [gerando, setGerando] = useState(false);
 
   const carregar = useCallback(async () => {
     if (!solicitacaoId) return;
@@ -230,20 +230,6 @@ export function PropostaSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chaveInstrucoes, somenteLeitura]);
 
-  const gerarPdf = async () => {
-    try {
-      setGerando(true);
-      // Carregada só aqui: a biblioteca é pesada e o bundle já é grande. Quem
-      // nunca gera proposta não paga por ela.
-      const { gerarPropostaPdf } = await import('@/lib/pdf/proposta');
-      await gerarPropostaPdf({ proposta, numero, titulo, cliente });
-    } catch (erro) {
-      toast.error('Não foi possível gerar o PDF', { description: formatApiError(erro) });
-    } finally {
-      setGerando(false);
-    }
-  };
-
   const editavel = !somenteLeitura;
 
   /**
@@ -261,6 +247,14 @@ export function PropostaSection({
     proposta.itens.length > 0 ||
     proposta.subinstrucoes.length > 0 ||
     proposta.outros_custos.length > 0;
+
+  // Quem imprime é o pé do formulário; quem TEM a proposta é esta seção. O
+  // efeito fica aqui, depois do `temProposta`, porque é a mesma condição que
+  // decide se existe algo na tela para imprimir.
+  useEffect(() => {
+    onPropostaChange?.(temProposta ? proposta : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proposta, temProposta]);
 
   if (instrucoesIds.length === 0 && !temProposta) {
     return (
@@ -547,16 +541,8 @@ export function PropostaSection({
 
       {/* ---------------- FECHAMENTO ---------------- */}
       <div className="border rounded-lg">
-        <div className="flex items-center justify-between p-3">
+        <div className="p-3">
           <span className="text-sm font-medium">Fechamento</span>
-          <Button type="button" variant="outline" size="sm" onClick={gerarPdf} disabled={gerando}>
-            {gerando ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            ) : (
-              <FileDown className="h-4 w-4 mr-1" />
-            )}
-            Gerar PDF
-          </Button>
         </div>
 
         <div className="border-t px-4 py-3 space-y-4">
