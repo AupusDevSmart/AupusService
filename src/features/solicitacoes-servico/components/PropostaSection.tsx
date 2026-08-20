@@ -206,6 +206,30 @@ export function PropostaSection({
 
   const editavel = !somenteLeitura;
 
+  /**
+   * Sem instrucao vinculada nao ha proposta.
+   *
+   * As secoes nascem do que a instrucao traz — etapas e recursos. Mostrar tres
+   * blocos vazios antes disso enche o sheet de campos que so vao se preencher
+   * depois, e da a entender que ha algo a fazer ali.
+   *
+   * A propria proposta tambem conta: uma solicitacao antiga pode ter itens sem
+   * o vinculo estar carregado no formulario ainda, e escondel-los apagaria da
+   * tela um orcamento que existe.
+   */
+  const temProposta =
+    proposta.itens.length > 0 ||
+    proposta.subinstrucoes.length > 0 ||
+    proposta.outros_custos.length > 0;
+
+  if (instrucoesIds.length === 0 && !temProposta) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Vincule uma instrução acima para montar a proposta.
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {rascunho && (
@@ -253,38 +277,45 @@ export function PropostaSection({
               <span className="w-5 shrink-0 text-right text-xs text-muted-foreground">
                 {indice + 1}.
               </span>
-              <input
-                className="input-minimal flex-1"
-                value={etapa.descricao}
-                placeholder="O que será feito nesta etapa"
-                disabled={!editavel}
-                onChange={(e) =>
-                  salvarEtapas((p) => ({
-                    ...p,
-                    subinstrucoes: p.subinstrucoes.map((s, i) =>
-                      i === indice ? { ...s, descricao: e.target.value } : s,
-                    ),
-                  }))
-                }
-              />
-              <input
-                className="input-minimal w-14 text-right"
-                type="number"
-                min="0"
-                placeholder="min"
-                value={etapa.tempo_estimado ?? ''}
-                disabled={!editavel}
-                onChange={(e) =>
-                  salvarEtapas((p) => ({
-                    ...p,
-                    subinstrucoes: p.subinstrucoes.map((s, i) =>
-                      i === indice
-                        ? { ...s, tempo_estimado: e.target.value === '' ? null : Number(e.target.value) }
-                        : s,
-                    ),
-                  }))
-                }
-              />
+              {/* O tamanho vai no container, e o input ocupa 100% dele: a
+                  classe .input-minimal traz width:100% e ganharia de um w-14
+                  aplicado no proprio campo. */}
+              <div className="min-w-0 flex-1">
+                <input
+                  className="input-minimal"
+                  value={etapa.descricao}
+                  placeholder="O que será feito nesta etapa"
+                  disabled={!editavel}
+                  onChange={(e) =>
+                    salvarEtapas((p) => ({
+                      ...p,
+                      subinstrucoes: p.subinstrucoes.map((s, i) =>
+                        i === indice ? { ...s, descricao: e.target.value } : s,
+                      ),
+                    }))
+                  }
+                />
+              </div>
+              <div className="w-16 shrink-0">
+                <input
+                  className="input-minimal text-right"
+                  type="number"
+                  min="0"
+                  placeholder="min"
+                  value={etapa.tempo_estimado ?? ''}
+                  disabled={!editavel}
+                  onChange={(e) =>
+                    salvarEtapas((p) => ({
+                      ...p,
+                      subinstrucoes: p.subinstrucoes.map((s, i) =>
+                        i === indice
+                          ? { ...s, tempo_estimado: e.target.value === '' ? null : Number(e.target.value) }
+                          : s,
+                      ),
+                    }))
+                  }
+                />
+              </div>
               {/* Sem rotulo "min" separado: ele repetia o placeholder do campo
                   e custava mais largura do que informacao. */}
               {editavel && (
@@ -415,22 +446,26 @@ export function PropostaSection({
 
             return (
               <div key={custo.id ?? `novo-${indice}`} className="flex items-center gap-2">
-                <input
-                  className="input-minimal flex-1"
-                  value={custo.descricao}
-                  placeholder="Ex.: frete, hospedagem"
-                  disabled={!editavel}
-                  onChange={(e) => trocar({ descricao: e.target.value })}
-                />
-                <input
-                  className="input-minimal w-20 text-right"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={custo.valor}
-                  disabled={!editavel}
-                  onChange={(e) => trocar({ valor: Number(e.target.value) || 0 })}
-                />
+                <div className="min-w-0 flex-1">
+                  <input
+                    className="input-minimal"
+                    value={custo.descricao}
+                    placeholder="Ex.: frete, hospedagem"
+                    disabled={!editavel}
+                    onChange={(e) => trocar({ descricao: e.target.value })}
+                  />
+                </div>
+                <div className="w-24 shrink-0">
+                  <input
+                    className="input-minimal text-right"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={custo.valor}
+                    disabled={!editavel}
+                    onChange={(e) => trocar({ valor: Number(e.target.value) || 0 })}
+                  />
+                </div>
                 {/* FD na tela, nome por extenso no hover: cabe na linha e não
                     força quebra num sheet estreito. */}
                 <label
@@ -480,17 +515,19 @@ export function PropostaSection({
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium">Lucro</label>
-              <input
-                className="input-minimal w-20 text-right"
-                type="number"
-                step="0.01"
-                min="0"
-                value={proposta.lucro_percentual}
-                disabled={!editavel}
-                onChange={(e) =>
-                  salvarCondicoes((p) => ({ ...p, lucro_percentual: Number(e.target.value) || 0 }))
-                }
-              />
+              <div className="w-20 shrink-0">
+                <input
+                  className="input-minimal text-right"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={proposta.lucro_percentual}
+                  disabled={!editavel}
+                  onChange={(e) =>
+                    salvarCondicoes((p) => ({ ...p, lucro_percentual: Number(e.target.value) || 0 }))
+                  }
+                />
+              </div>
               <span className="text-sm text-muted-foreground">%</span>
             </div>
 
@@ -565,36 +602,39 @@ function LinhaItem({
       : null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {/* basis-48 com flex-1: a descricao nunca desce abaixo de ~190px, e e a
-          primeira a receber a sobra. Antes ela era so flex-1 e ficava espremida
-          entre cinco elementos de largura fixa. */}
-      <span className="min-w-0 flex-1 basis-48 truncate text-sm" title={item.descricao}>
+    <div className="flex items-center gap-2">
+      {/* A descricao recebe toda a sobra: os demais elementos tem largura fixa
+          e nao encolhem. */}
+      <span className="min-w-0 flex-1 truncate text-sm" title={item.descricao}>
         {item.descricao || <span className="text-muted-foreground">Sem descrição</span>}
       </span>
 
-      <input
-        className="input-minimal w-14 text-right"
-        type="number"
-        step="0.001"
-        min="0"
-        value={item.quantidade}
-        disabled={!editavel}
-        onChange={(e) => onCampo('quantidade', Number(e.target.value) || 0)}
-        title="Quantidade"
-      />
+      <div className="w-16 shrink-0">
+        <input
+          className="input-minimal text-right"
+          type="number"
+          step="0.001"
+          min="0"
+          value={item.quantidade}
+          disabled={!editavel}
+          onChange={(e) => onCampo('quantidade', Number(e.target.value) || 0)}
+          title="Quantidade"
+        />
+      </div>
       <span className="w-6 shrink-0 text-xs text-muted-foreground">{item.unidade || ''}</span>
 
-      <input
-        className="input-minimal w-20 text-right"
-        type="number"
-        step="0.01"
-        min="0"
-        value={atual}
-        disabled={!editavel}
-        onChange={(e) => onCampo('preco_unitario', Number(e.target.value) || 0)}
-        title="Preço unitário"
-      />
+      <div className="w-24 shrink-0">
+        <input
+          className="input-minimal text-right"
+          type="number"
+          step="0.01"
+          min="0"
+          value={atual}
+          disabled={!editavel}
+          onChange={(e) => onCampo('preco_unitario', Number(e.target.value) || 0)}
+          title="Preço unitário"
+        />
+      </div>
 
       {/* Verde para cima, vermelho para baixo — o par já usado no resto do
           produto. Discreto: é uma nota, não um alerta. */}

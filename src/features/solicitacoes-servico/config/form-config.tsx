@@ -147,6 +147,22 @@ export const solicitacoesFormFields: FormField[] = [
     required: false,
     colSpan: 2,
   } as any,
+  // Proposta comercial, depois das instrucoes e antes do solicitante: ela nasce
+  // do que a instrucao traz, entao vem logo apos o escopo.
+  //
+  // excludeFromSubmit porque a proposta nao viaja no payload da solicitacao:
+  // ela tem endpoints proprios e grava sozinha, ja com os totais que o
+  // servidor calculou. O render vem da pagina (SolicitacoesPage), que e quem
+  // tem para onde mandar o rascunho enquanto a solicitacao nao existe.
+  {
+    key: 'proposta',
+    label: '',
+    type: 'custom',
+    colSpan: 2,
+    excludeFromSubmit: true,
+  } as any,
+  // O solicitante fecha o formulario, sempre — e quem pediu, nao parte do que
+  // sera feito.
   {
     key: 'solicitante',
     label: '',
@@ -155,19 +171,4 @@ export const solicitacoesFormFields: FormField[] = [
     colSpan: 2,
     excludeFromSubmit: true,
   },
-  // Proposta comercial — por ultimo: e o fechamento, e so faz sentido depois
-  // de escopo e instrucoes estarem definidos.
-  //
-  // excludeFromSubmit porque a proposta nao viaja no payload da solicitacao:
-  // ela tem endpoints proprios e grava sozinha, ja com os totais que o
-  // servidor calculou.
-  {
-    key: 'proposta',
-    label: '',
-    type: 'custom',
-    colSpan: 2,
-    excludeFromSubmit: true,
-    // O render vem da pagina (SolicitacoesPage): so ela tem para onde mandar o
-    // rascunho da proposta enquanto a solicitacao ainda nao existe.
-  } as any,
 ];
