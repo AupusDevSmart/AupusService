@@ -135,9 +135,9 @@ export const solicitacoesFormFields: FormField[] = [
     key: 'local',
     label: 'Local',
     type: 'text',
-    required: true,
+    required: false,
     colSpan: 2,
-    placeholder: 'Informe o local',
+    placeholder: 'Opcional — onde o serviço será feito',
   },
   // Instrucoes vinculadas
   {
