@@ -15,20 +15,22 @@ export function SolicitacoesDashboard({ data }: SolicitacoesDashboardProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-6">
+    // Numero e rotulo na mesma linha, nao empilhados.
+    //
+    // Cada cartao gastava tres faixas de altura — bolinha e icone em cima,
+    // numero no meio, rotulo embaixo — para dizer "12 registradas". O icone
+    // repetido em todos nao distinguia nada, e a bolinha colorida sozinha ja
+    // faz o papel de separar as categorias. Com tudo numa linha o bloco cai
+    // para cerca de um terco da altura.
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 md:mb-4">
       {cards.map((card) => (
         <div
           key={card.label}
-          className="bg-card border border-border rounded-lg p-2 md:p-3 hover:shadow-md transition-shadow"
+          className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2"
         >
-          <div className="flex items-center justify-between mb-1">
-            <div className={`w-2 h-2 rounded-full ${card.color}`} />
-            <FilePenLine className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
-          </div>
-          <div className="space-y-0.5">
-            <p className="text-lg md:text-xl font-bold text-foreground">{card.value}</p>
-            <p className="text-xs text-muted-foreground truncate">{card.label}</p>
-          </div>
+          <span className={`h-2 w-2 shrink-0 rounded-full ${card.color}`} />
+          <span className="text-base font-semibold leading-none text-foreground">{card.value}</span>
+          <span className="truncate text-xs text-muted-foreground">{card.label}</span>
         </div>
       ))}
     </div>
