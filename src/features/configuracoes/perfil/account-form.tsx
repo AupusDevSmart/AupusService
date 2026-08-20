@@ -385,6 +385,7 @@ export function AccountForm() {
                         <div className="relative">
                           <Input
                             type={showPassword ? "text" : "password"}
+                            autoComplete="new-password"
                             placeholder='********'
                             {...field}
                           />
@@ -415,6 +416,7 @@ export function AccountForm() {
                         <div className="relative">
                           <Input
                             type={showNewPassword ? "text" : "password"}
+                            autoComplete="new-password"
                             placeholder='********'
                             {...field}
                           />
@@ -445,6 +447,7 @@ export function AccountForm() {
                         <div className="relative">
                           <Input
                             type={showConfirmPassword ? "text" : "password"}
+                            autoComplete="new-password"
                             placeholder='********'
                             {...field}
                           />

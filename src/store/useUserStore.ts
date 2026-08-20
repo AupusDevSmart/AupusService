@@ -15,6 +15,25 @@ type UserStoreState = {
   isAdmin: () => boolean;
 };
 
+/**
+ * Nomes das permissoes, venham elas como for.
+ *
+ * O backend nao fala uma lingua so: `/auth/login` e `/auth/me` devolvem
+ * `all_permissions` como array de STRINGS (`permissionNames`), enquanto
+ * `PATCH /usuarios/:id` devolve array de OBJETOS (`{ id, name, guard_name }`).
+ *
+ * Guardar o array cru fazia o `hasPermission` comparar string com objeto e
+ * devolver false para tudo — o usuario perdia o menu inteiro depois de salvar
+ * o proprio perfil, e so voltava ao normal deslogando, porque o login grava a
+ * forma certa.
+ */
+const nomesDePermissao = (valor: unknown): Permissao[] => {
+  if (!Array.isArray(valor)) return [];
+  return valor
+    .map((p) => (typeof p === 'string' ? p : (p as { name?: string })?.name))
+    .filter((n): n is string => typeof n === 'string' && n.length > 0) as Permissao[];
+};
+
 export const useUserStore = create(
   persist<UserStoreState>(
     (set, get) => ({
@@ -23,11 +42,21 @@ export const useUserStore = create(
       plantasVinculadas: [],
 
       setUser: (newUser: UsuarioDTO) =>
-        set({
+        set((state) => ({
           user: newUser,
-          acessivel: (newUser.all_permissions || []) as Permissao[],
-          plantasVinculadas: newUser.plantas_vinculadas || [],
-        }),
+          // Campo ausente NAO zera o que ja havia. Nem toda resposta que passa
+          // por aqui e uma sessao: a de atualizar perfil traz o cadastro, sem
+          // permissao nem plantas, e zerar deixaria o usuario preso na tela e
+          // sem escopo de dados. Para revogar de fato existe o clearUser.
+          acessivel:
+            newUser.all_permissions === undefined
+              ? state.acessivel
+              : nomesDePermissao(newUser.all_permissions),
+          plantasVinculadas:
+            newUser.plantas_vinculadas === undefined
+              ? state.plantasVinculadas
+              : newUser.plantas_vinculadas,
+        })),
 
       updateUser: (partialUser: Partial<UsuarioDTO>) =>
         set((state) => {
@@ -35,7 +64,7 @@ export const useUserStore = create(
           const updatedUser = { ...state.user, ...partialUser };
           const acessivel =
             partialUser.all_permissions !== undefined
-              ? (partialUser.all_permissions as Permissao[])
+              ? nomesDePermissao(partialUser.all_permissions)
               : state.acessivel;
           const plantasVinculadas =
             partialUser.plantas_vinculadas !== undefined
