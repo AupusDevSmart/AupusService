@@ -28,6 +28,7 @@ export function useSolicitacoesSelectData() {
   return {
     proprietarios: selectDataCache.getProprietarios(),
     plantas: selectDataCache.getPlantasOptions.bind(selectDataCache),
+    proprietarioDaPlanta: selectDataCache.getProprietarioDaPlanta.bind(selectDataCache),
     unidades: selectDataCache.getUnidadesOptions.bind(selectDataCache),
     loading: loading,
     error,

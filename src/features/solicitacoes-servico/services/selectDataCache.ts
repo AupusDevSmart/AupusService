@@ -117,20 +117,30 @@ class SelectDataCache {
     return this.proprietarios;
   }
 
+  /**
+   * Sem proprietario, devolve TODAS as plantas.
+   *
+   * Antes devolvia lista vazia, o que obrigava a escolher o proprietario
+   * primeiro. Na solicitacao de servico isso era um passo a mais para chegar
+   * onde se queria: quem abre o formulario sabe a planta, e o proprietario e
+   * consequencia dela — nunca o contrario.
+   */
   getPlantasOptions(proprietarioId?: string): SelectOption[] {
-    if (!proprietarioId) {
-      return [];
-    }
+    const filtradas = proprietarioId
+      ? this.plantas.filter((p) => p.proprietarioId?.trim() === proprietarioId.trim())
+      : this.plantas;
 
-    // Filtrar plantas pelo proprietarioId (camelCase)
-    const filteredPlantas = this.plantas.filter(p =>
-      p.proprietarioId?.trim() === proprietarioId.trim()
-    );
-
-    return filteredPlantas.map(planta => ({
+    return filtradas.map(planta => ({
       value: planta.id,
       label: `${planta.nome}${planta.cidade ? ` - ${planta.cidade}/${planta.uf}` : ''}`,
     }));
+  }
+
+  /** O proprietario de uma planta, para preencher sozinho o que saiu da tela. */
+  getProprietarioDaPlanta(plantaId?: string): string {
+    if (!plantaId) return '';
+    const planta = this.plantas.find((p) => p.id?.trim() === plantaId.trim());
+    return planta?.proprietarioId?.trim() ?? '';
   }
 
   // Buscar uma unidade específica por ID

@@ -31,7 +31,8 @@ export const SimpleCascadeSelector: React.FC<SimpleCascadeSelectorProps> = ({
   const initializedEntityRef = useRef<string | null>(null);
 
   // Buscar dados
-  const { proprietarios, plantas, unidades, loading, error } = useSolicitacoesSelectData();
+  const { plantas, unidades, proprietarioDaPlanta, loading, error } =
+    useSolicitacoesSelectData();
 
   // Sincronizar com entity diretamente (mais confiável que formData para dados iniciais)
   useEffect(() => {
@@ -58,25 +59,19 @@ export const SimpleCascadeSelector: React.FC<SimpleCascadeSelectorProps> = ({
   }, [entity?.id, entity?.proprietario_id, entity?.planta_id, entity?.unidade_id,
       formData?.proprietario_id, formData?.planta_id, formData?.unidade_id]);
 
-  // Handler para mudança de proprietário
-  const handleProprietarioChange = (value: string) => {
-    const newState = {
-      proprietario_id: value,
-      planta_id: '',
-      unidade_id: ''
-    };
-
-    setLocalState(newState);
-
-    if (onMultipleChange) {
-      onMultipleChange(newState);
-    }
-  };
-
-  // Handler para mudança de planta
+  /**
+   * Planta escolhida: o proprietário vem junto, deduzido dela.
+   *
+   * O combo de proprietário saiu da tela — era um passo a mais para chegar
+   * onde se queria, e a informação é consequência da planta, nunca o
+   * contrário. Mas o campo continua existindo no registro, então é preenchido
+   * aqui: sem isso a solicitação nasceria sem dono.
+   */
   const handlePlantaChange = (value: string) => {
+    const proprietarioId = proprietarioDaPlanta(value);
+
     const newState = {
-      ...localState,
+      proprietario_id: proprietarioId,
       planta_id: value,
       unidade_id: ''
     };
@@ -84,10 +79,7 @@ export const SimpleCascadeSelector: React.FC<SimpleCascadeSelectorProps> = ({
     setLocalState(newState);
 
     if (onMultipleChange) {
-      onMultipleChange({
-        planta_id: value,
-        unidade_id: ''
-      });
+      onMultipleChange(newState);
     }
   };
 
@@ -105,8 +97,8 @@ export const SimpleCascadeSelector: React.FC<SimpleCascadeSelectorProps> = ({
     }
   };
 
-  // Obter opções filtradas
-  const plantasOptions = plantas(localState.proprietario_id);
+  // Todas as plantas: a lista deixou de depender do proprietário.
+  const plantasOptions = plantas();
   // IMPORTANTE: passar o unidade_id atual para garantir que ela apareça nas opções
   const unidadesOptions = unidades(localState.planta_id, localState.unidade_id);
 
@@ -134,73 +126,40 @@ export const SimpleCascadeSelector: React.FC<SimpleCascadeSelectorProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Seletor de Proprietário */}
+    // Lado a lado no desktop, empilhados no celular. São dois passos e ambos
+    // curtos: separá-los em linhas gastava altura sem ganhar clareza.
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <ComboboxField
-        label="Proprietário"
-        placeholder="Selecione o proprietário"
-        searchPlaceholder="Buscar proprietário..."
-        emptyText="Nenhum proprietário encontrado"
-        options={proprietarios}
-        value={localState.proprietario_id}
-        onChange={handleProprietarioChange}
-        disabled={disabled || loading}
+        label="Planta"
+        placeholder={
+          plantasOptions.length === 0 ? 'Nenhuma planta disponível' : 'Selecione a planta'
+        }
+        searchPlaceholder="Buscar planta..."
+        emptyText="Nenhuma planta encontrada"
+        options={plantasOptions}
+        value={localState.planta_id}
+        onChange={handlePlantaChange}
+        disabled={disabled || loading || plantasOptions.length === 0}
       />
 
-      {/* Seletor de Planta - só aparece se tiver proprietário selecionado */}
-      {localState.proprietario_id && (
-        <ComboboxField
-          label="Planta"
-          placeholder={
-            plantasOptions.length === 0
-              ? "Nenhuma planta disponível para este proprietário"
-              : "Selecione a planta"
-          }
-          searchPlaceholder="Buscar planta..."
-          emptyText="Nenhuma planta encontrada"
-          options={plantasOptions}
-          value={localState.planta_id}
-          onChange={handlePlantaChange}
-          disabled={disabled || loading || plantasOptions.length === 0}
-        />
-      )}
-
-      {/* Seletor de Unidade - só aparece se tiver planta selecionada */}
-      {localState.proprietario_id && localState.planta_id && (
-        <ComboboxField
-          label="Unidade"
-          placeholder={
-            unidadesOptions.length === 0
-              ? "Nenhuma unidade disponível para esta planta"
-              : "Selecione a unidade"
-          }
-          searchPlaceholder="Buscar unidade..."
-          emptyText="Nenhuma unidade encontrada"
-          options={unidadesOptions}
-          value={localState.unidade_id}
-          onChange={handleUnidadeChange}
-          disabled={disabled || loading || unidadesOptions.length === 0}
-        />
-      )}
-
-      {/* Mensagem informativa */}
-      {!localState.proprietario_id && (
-        <Alert>
-          <InfoIcon className="h-4 w-4" />
-          <AlertDescription>
-            Selecione um proprietário para visualizar as plantas disponíveis.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {localState.proprietario_id && !localState.planta_id && plantasOptions.length > 0 && (
-        <Alert>
-          <InfoIcon className="h-4 w-4" />
-          <AlertDescription>
-            Selecione uma planta para visualizar as unidades disponíveis.
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* A instalação fica visível desde o começo, apenas desabilitada: some
+          e volta, a linha inteira dançava a cada escolha de planta. */}
+      <ComboboxField
+        label="Instalação"
+        placeholder={
+          !localState.planta_id
+            ? 'Escolha a planta primeiro'
+            : unidadesOptions.length === 0
+              ? 'Nenhuma instalação nesta planta'
+              : 'Selecione a instalação'
+        }
+        searchPlaceholder="Buscar instalação..."
+        emptyText="Nenhuma instalação encontrada"
+        options={unidadesOptions}
+        value={localState.unidade_id}
+        onChange={handleUnidadeChange}
+        disabled={disabled || loading || !localState.planta_id || unidadesOptions.length === 0}
+      />
     </div>
   );
 };
