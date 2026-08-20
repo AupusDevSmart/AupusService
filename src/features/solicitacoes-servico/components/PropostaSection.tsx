@@ -298,7 +298,7 @@ export function PropostaSection({
               </div>
               <div className="w-16 shrink-0">
                 <input
-                  className="input-minimal text-right"
+                  className="input-minimal input-numero text-right"
                   type="number"
                   min="0"
                   placeholder="min"
@@ -316,8 +316,9 @@ export function PropostaSection({
                   }
                 />
               </div>
-              {/* Sem rotulo "min" separado: ele repetia o placeholder do campo
-                  e custava mais largura do que informacao. */}
+              {/* O rotulo volta: com o campo preenchido o placeholder some, e
+                  "0" sozinho nao diz se e minuto, hora ou quantidade. */}
+              <span className="w-6 shrink-0 text-xs text-muted-foreground">min</span>
               {editavel && (
                 <BotaoRemover
                   onClick={() =>
@@ -455,9 +456,12 @@ export function PropostaSection({
                     onChange={(e) => trocar({ descricao: e.target.value })}
                   />
                 </div>
+                {/* "R$" fora do campo, e nao como padding interno: o padding do
+                    .input-minimal venceria um pl-7 pela ordem do CSS. */}
+                <span className="shrink-0 text-xs text-muted-foreground">R$</span>
                 <div className="w-24 shrink-0">
                   <input
-                    className="input-minimal text-right"
+                    className="input-minimal input-numero text-right"
                     type="number"
                     step="0.01"
                     min="0"
@@ -517,7 +521,7 @@ export function PropostaSection({
               <label className="text-sm font-medium">Lucro</label>
               <div className="w-20 shrink-0">
                 <input
-                  className="input-minimal text-right"
+                  className="input-minimal input-numero text-right"
                   type="number"
                   step="0.01"
                   min="0"
@@ -611,7 +615,7 @@ function LinhaItem({
 
       <div className="w-16 shrink-0">
         <input
-          className="input-minimal text-right"
+          className="input-minimal input-numero text-right"
           type="number"
           step="0.001"
           min="0"
@@ -623,9 +627,10 @@ function LinhaItem({
       </div>
       <span className="w-6 shrink-0 text-xs text-muted-foreground">{item.unidade || ''}</span>
 
+      <span className="shrink-0 text-xs text-muted-foreground">R$</span>
       <div className="w-24 shrink-0">
         <input
-          className="input-minimal text-right"
+          className="input-minimal input-numero text-right"
           type="number"
           step="0.01"
           min="0"

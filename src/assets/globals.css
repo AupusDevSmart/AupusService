@@ -595,3 +595,25 @@
     opacity: 1 !important;
   }
 }
+/* Campo numérico sem as setinhas de incremento.
+ *
+ * O passo da seta segue o atributo `step`, então num campo de dinheiro
+ * (step 0,01) ela andava de centavo em centavo, e num de quantidade
+ * (step 0,001) de milésimo em milésimo. Ninguém ajusta preço assim — a seta
+ * dava a impressão de estar travada.
+ *
+ * Some com ela em vez de forçar passo 1: passo inteiro brigaria com o valor
+ * decimal digitado, que continua sendo o uso normal desses campos.
+ *
+ * Mora aqui, e não em src/styles/design-minimal-components.css: aquele arquivo
+ * não é importado por ninguém — o CSS que vale entra por globals.css e pelo
+ * style.css do shared-pages. */
+.input-numero {
+  -moz-appearance: textfield;
+}
+
+.input-numero::-webkit-outer-spin-button,
+.input-numero::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
