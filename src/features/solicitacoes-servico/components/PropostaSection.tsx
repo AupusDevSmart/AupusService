@@ -139,6 +139,7 @@ export function PropostaSection({
         propostaApi.salvarCondicoes(id, {
           lucro_percentual: novo.lucro_percentual,
           com_nota_fiscal: novo.com_nota_fiscal,
+          aliquota_percentual: novo.aliquota_percentual,
         }),
       'as condições',
     );
@@ -296,29 +297,33 @@ export function PropostaSection({
                   }
                 />
               </div>
+              {/* Em HORAS na tela, minutos no banco.
+                  `sub_instrucoes.tempo_estimado` guarda minutos, e o sheet de
+                  instrucao ja converte assim — mostrar minuto cru aqui faria o
+                  mesmo dado aparecer como "90" num lugar e "1,5" no outro. */}
               <div className="w-14 shrink-0">
                 <input
                   className="input-minimal input-numero text-center"
                   type="number"
                   min="0"
-                  placeholder="min"
-                  value={etapa.tempo_estimado ?? ''}
+                  step="0.25"
+                  placeholder="0"
+                  value={etapa.tempo_estimado ? etapa.tempo_estimado / 60 : ''}
                   disabled={!editavel}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const horas = Number(e.target.value);
                     salvarEtapas((p) => ({
                       ...p,
                       subinstrucoes: p.subinstrucoes.map((s, i) =>
                         i === indice
-                          ? { ...s, tempo_estimado: e.target.value === '' ? null : Number(e.target.value) }
+                          ? { ...s, tempo_estimado: horas > 0 ? Math.round(horas * 60) : null }
                           : s,
                       ),
-                    }))
-                  }
+                    }));
+                  }}
                 />
               </div>
-              {/* O rotulo volta: com o campo preenchido o placeholder some, e
-                  "0" sozinho nao diz se e minuto, hora ou quantidade. */}
-              <span className="w-6 shrink-0 text-xs text-muted-foreground">min</span>
+              <span className="w-6 shrink-0 text-xs text-muted-foreground">h</span>
               {editavel && (
                 <BotaoRemover
                   onClick={() =>
@@ -546,12 +551,35 @@ export function PropostaSection({
                 }
               />
               Com nota fiscal
-              {proposta.com_nota_fiscal && (
-                <span className="text-xs text-muted-foreground">
-                  ({proposta.aliquota_percentual}% por dentro)
-                </span>
-              )}
             </label>
+
+            {/* A aliquota nasce em 15% mas e por solicitacao: regime tributario
+                e natureza do servico mudam, e o valor usado fica gravado junto
+                da proposta — reajustar o padrao amanha nao reescreve o que ja
+                foi enviado ao cliente. */}
+            {proposta.com_nota_fiscal && (
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Alíquota</label>
+                <div className="w-16 shrink-0">
+                  <input
+                    className="input-minimal input-numero text-center"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="99"
+                    value={proposta.aliquota_percentual}
+                    disabled={!editavel}
+                    onChange={(e) =>
+                      salvarCondicoes((p) => ({
+                        ...p,
+                        aliquota_percentual: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+                <span className="text-sm text-muted-foreground">% por dentro</span>
+              </div>
+            )}
           </div>
 
           <dl className="space-y-1 border-t pt-3">

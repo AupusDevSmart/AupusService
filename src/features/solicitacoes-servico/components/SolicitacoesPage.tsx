@@ -157,6 +157,7 @@ export function SolicitacoesPage() {
     await propostaApi.salvarCondicoes(id, {
       lucro_percentual: rascunho.lucro_percentual,
       com_nota_fiscal: rascunho.com_nota_fiscal,
+      aliquota_percentual: rascunho.aliquota_percentual,
     });
   };
 
