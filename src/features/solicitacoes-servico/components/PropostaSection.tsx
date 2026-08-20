@@ -8,6 +8,8 @@ import {
   propostaApi,
   propostaVazia,
   calcularRascunho,
+  calcularBdi,
+  somaImpostos,
   montarDeInstrucoes,
   moeda,
   type ItemProposta,
@@ -137,12 +139,49 @@ export function PropostaSection({
       m,
       (id, novo) =>
         propostaApi.salvarCondicoes(id, {
-          lucro_percentual: novo.lucro_percentual,
-          com_nota_fiscal: novo.com_nota_fiscal,
-          aliquota_percentual: novo.aliquota_percentual,
+          bdi_regime: novo.bdi_regime,
+          bdi_administracao_central: novo.bdi_administracao_central,
+          bdi_seguro_garantia: novo.bdi_seguro_garantia,
+          bdi_taxa_risco: novo.bdi_taxa_risco,
+          bdi_despesas_financeiras: novo.bdi_despesas_financeiras,
+          bdi_lucro: novo.bdi_lucro,
+          bdi_pis: novo.bdi_pis,
+          bdi_cofins: novo.bdi_cofins,
+          bdi_cprb: novo.bdi_cprb,
+          bdi_issqn: novo.bdi_issqn,
         }),
-      'as condições',
+      'o BDI',
     );
+
+  /** Troca um componente do BDI. */
+  const mudarBdi = (campo: keyof Proposta) => (valor: number) =>
+    salvarCondicoes((p) => ({ ...p, [campo]: valor }));
+
+  /**
+   * O REIDI desonera PIS e COFINS.
+   *
+   * Marcar zera os dois; desmarcar devolve os padrões. Depois disso cada um
+   * continua editável — o regime é um atalho, não uma trava.
+   */
+  const trocarRegime = (comReidi: boolean) =>
+    salvarCondicoes((p) => ({
+      ...p,
+      bdi_regime: comReidi ? 'COM_REIDI' : 'SEM_REIDI',
+      bdi_pis: comReidi ? 0 : 0.65,
+      bdi_cofins: comReidi ? 0 : 3,
+    }));
+
+  // O percentual sai da conta local, e não de `bdi_percentual`: enquanto a
+  // resposta do servidor não chega, o campo gravado ainda é o anterior, e o
+  // número piscaria para o valor velho a cada ajuste. A fórmula é a mesma.
+  const bdi = calcularBdi(proposta) * 100;
+  const impostos = somaImpostos(proposta);
+
+  const faturamentoDireto = proposta.outros_custos
+    .filter((c) => c.faturamento_direto)
+    .reduce((soma, c) => soma + (c.valor || 0), 0);
+
+  const custoBase = proposta.total_custo - faturamentoDireto;
 
   /**
    * Preenche itens e etapas quando o conjunto de instruções muda.
@@ -520,74 +559,111 @@ export function PropostaSection({
           </Button>
         </div>
 
-        <div className="border-t px-4 py-3 space-y-3">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Lucro</label>
-              <div className="w-16 shrink-0">
-                <input
-                  className="input-minimal input-numero text-center"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={proposta.lucro_percentual}
-                  disabled={!editavel}
-                  onChange={(e) =>
-                    salvarCondicoes((p) => ({ ...p, lucro_percentual: Number(e.target.value) || 0 }))
-                  }
-                />
+        <div className="border-t px-4 py-3 space-y-4">
+          {/* O BDI, pela fórmula do acórdão 2.622/2013 do TCU. Os componentes
+              ficam à vista porque proposta com preço é auditável: quem pergunta
+              de onde veio o percentual precisa ver a memória de cálculo, e não
+              um número pronto. */}
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm font-medium">BDI</span>
+                <span className="text-base font-semibold tabular-nums">{percentual(bdi)}%</span>
               </div>
-              <span className="text-sm text-muted-foreground">%</span>
+
+              <label
+                className="flex items-center gap-2 text-sm"
+                title="Regime Especial de Incentivos para o Desenvolvimento da Infraestrutura — desonera PIS e COFINS"
+              >
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={proposta.bdi_regime === 'COM_REIDI'}
+                  disabled={!editavel}
+                  onChange={(e) => trocarRegime(e.target.checked)}
+                />
+                Com REIDI
+              </label>
             </div>
 
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="h-4 w-4"
-                checked={proposta.com_nota_fiscal}
-                disabled={!editavel}
-                onChange={(e) =>
-                  salvarCondicoes((p) => ({ ...p, com_nota_fiscal: e.target.checked }))
-                }
-              />
-              Com nota fiscal
-            </label>
-
-            {/* A aliquota nasce em 15% mas e por solicitacao: regime tributario
-                e natureza do servico mudam, e o valor usado fica gravado junto
-                da proposta — reajustar o padrao amanha nao reescreve o que ja
-                foi enviado ao cliente. */}
-            {proposta.com_nota_fiscal && (
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium">Alíquota</label>
-                <div className="w-16 shrink-0">
-                  <input
-                    className="input-minimal input-numero text-center"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="99"
-                    value={proposta.aliquota_percentual}
-                    disabled={!editavel}
-                    onChange={(e) =>
-                      salvarCondicoes((p) => ({
-                        ...p,
-                        aliquota_percentual: Number(e.target.value) || 0,
-                      }))
-                    }
-                  />
-                </div>
-                <span className="text-sm text-muted-foreground">% por dentro</span>
+            <div className="mt-3 grid gap-x-8 gap-y-2 sm:grid-cols-2">
+              <div className="space-y-2">
+                <CampoPercentual
+                  rotulo="Administração central"
+                  valor={proposta.bdi_administracao_central}
+                  editavel={editavel}
+                  onCommit={mudarBdi('bdi_administracao_central')}
+                />
+                <CampoPercentual
+                  rotulo="Seguro e garantia"
+                  valor={proposta.bdi_seguro_garantia}
+                  editavel={editavel}
+                  onCommit={mudarBdi('bdi_seguro_garantia')}
+                />
+                <CampoPercentual
+                  rotulo="Taxa de risco"
+                  valor={proposta.bdi_taxa_risco}
+                  editavel={editavel}
+                  onCommit={mudarBdi('bdi_taxa_risco')}
+                />
+                <CampoPercentual
+                  rotulo="Despesas financeiras"
+                  valor={proposta.bdi_despesas_financeiras}
+                  editavel={editavel}
+                  onCommit={mudarBdi('bdi_despesas_financeiras')}
+                />
+                <CampoPercentual
+                  rotulo="Lucro"
+                  valor={proposta.bdi_lucro}
+                  editavel={editavel}
+                  onCommit={mudarBdi('bdi_lucro')}
+                />
               </div>
-            )}
+
+              <div className="space-y-2">
+                <CampoPercentual
+                  rotulo="PIS"
+                  valor={proposta.bdi_pis}
+                  editavel={editavel}
+                  onCommit={mudarBdi('bdi_pis')}
+                />
+                <CampoPercentual
+                  rotulo="COFINS"
+                  valor={proposta.bdi_cofins}
+                  editavel={editavel}
+                  onCommit={mudarBdi('bdi_cofins')}
+                />
+                <CampoPercentual
+                  rotulo="CPRB"
+                  titulo="Contribuição Previdenciária sobre a Receita Bruta"
+                  valor={proposta.bdi_cprb}
+                  editavel={editavel}
+                  onCommit={mudarBdi('bdi_cprb')}
+                />
+                <CampoPercentual
+                  rotulo="ISSQN"
+                  titulo="Imposto Sobre Serviços de Qualquer Natureza"
+                  valor={proposta.bdi_issqn}
+                  editavel={editavel}
+                  onCommit={mudarBdi('bdi_issqn')}
+                />
+
+                <div className="flex items-center justify-between gap-2 border-t pt-2">
+                  <span className="text-sm text-muted-foreground">Impostos (I)</span>
+                  <span className="pr-5 text-sm tabular-nums">{percentual(impostos)}%</span>
+                </div>
+              </div>
+            </div>
           </div>
 
+          {/* O faturamento direto aparece em linha própria porque não recebe
+              BDI: o cliente paga o fornecedor, e o dinheiro não passa aqui. */}
           <dl className="space-y-1 border-t pt-3">
-            <Total rotulo="Custo" valor={proposta.total_custo} />
-            {proposta.total_imposto > 0 && (
-              <Total rotulo="Imposto" valor={proposta.total_imposto} />
+            <Total rotulo="Custo" valor={custoBase} />
+            <Total rotulo={`BDI (${percentual(bdi)}%)`} valor={proposta.total_bdi} />
+            {faturamentoDireto > 0 && (
+              <Total rotulo="Faturamento direto" valor={faturamentoDireto} />
             )}
-            <Total rotulo="Lucro" valor={proposta.total_lucro} />
             <Total rotulo="Total da proposta" valor={proposta.total_geral} destaque />
           </dl>
         </div>
@@ -692,6 +768,79 @@ function LinhaItem({
       {editavel && <BotaoRemover onClick={onRemover} />}
     </div>
   );
+}
+
+/**
+ * Um percentual do BDI.
+ *
+ * O texto fica em estado local e só é gravado no blur. Com nove campos, gravar
+ * a cada tecla dispararia um PUT por dígito — e duas respostas fora de ordem
+ * devolveriam o valor antigo para dentro do campo no meio da digitação.
+ */
+function CampoPercentual({
+  rotulo,
+  titulo,
+  valor,
+  editavel,
+  onCommit,
+}: {
+  rotulo: string;
+  titulo?: string;
+  valor: number;
+  editavel: boolean;
+  onCommit: (valor: number) => void;
+}) {
+  const [texto, setTexto] = useState(String(valor ?? 0));
+
+  // Muda por fora quando o REIDI zera PIS e COFINS.
+  useEffect(() => {
+    setTexto(String(valor ?? 0));
+  }, [valor]);
+
+  const gravar = () => {
+    const lido = Number(String(texto).replace(',', '.'));
+    const limpo = Number.isFinite(lido) && lido >= 0 ? lido : 0;
+    setTexto(String(limpo));
+    if (limpo !== valor) onCommit(limpo);
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <label className="min-w-0 truncate text-sm text-muted-foreground" title={titulo || rotulo}>
+        {rotulo}
+      </label>
+      <div className="flex shrink-0 items-center gap-1">
+        <div className="w-16">
+          <input
+            className="input-minimal input-numero text-center"
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            value={texto}
+            disabled={!editavel}
+            onChange={(e) => setTexto(e.target.value)}
+            onBlur={gravar}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+          />
+        </div>
+        <span className="w-4 text-xs text-muted-foreground">%</span>
+      </div>
+    </div>
+  );
+}
+
+/** Percentual com as duas casas sempre visíveis: 30,44. */
+function percentual(valor: number) {
+  return (Number.isFinite(valor) ? valor : 0).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function Total({

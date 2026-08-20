@@ -35,12 +35,21 @@ export interface Proposta {
   itens: ItemProposta[];
   subinstrucoes: SubinstrucaoProposta[];
   outros_custos: OutroCusto[];
-  lucro_percentual: number;
-  com_nota_fiscal: boolean;
-  aliquota_percentual: number;
+  /** SEM_REIDI ou COM_REIDI. O REIDI desonera PIS e COFINS. */
+  bdi_regime: string;
+  bdi_administracao_central: number;
+  bdi_seguro_garantia: number;
+  bdi_taxa_risco: number;
+  bdi_despesas_financeiras: number;
+  bdi_lucro: number;
+  bdi_pis: number;
+  bdi_cofins: number;
+  bdi_cprb: number;
+  bdi_issqn: number;
+  /** O resultado da fórmula, calculado pelo servidor. */
+  bdi_percentual: number;
   total_custo: number;
-  total_imposto: number;
-  total_lucro: number;
+  total_bdi: number;
   total_geral: number;
 }
 
@@ -99,7 +108,7 @@ class PropostaApiService {
 
   async salvarCondicoes(
     solicitacaoId: string,
-    dados: { lucro_percentual?: number; com_nota_fiscal?: boolean; aliquota_percentual?: number },
+    dados: Partial<Record<string, number | string>>,
   ): Promise<Proposta> {
     const resposta = await api.put(`${this.base(solicitacaoId)}/condicoes`, dados);
     return this.desembrulhar<Proposta>(resposta);
@@ -140,14 +149,45 @@ export const propostaVazia = (): Proposta => ({
   itens: [],
   subinstrucoes: [],
   outros_custos: [],
-  lucro_percentual: 0,
-  com_nota_fiscal: false,
-  aliquota_percentual: 15,
+  // Tabela GOINFRA sem REIDI: dá BDI de 30,44%.
+  bdi_regime: 'SEM_REIDI',
+  bdi_administracao_central: 5,
+  bdi_seguro_garantia: 0.5,
+  bdi_taxa_risco: 0,
+  bdi_despesas_financeiras: 0.5,
+  bdi_lucro: 5,
+  bdi_pis: 0.65,
+  bdi_cofins: 3,
+  bdi_cprb: 4.5,
+  bdi_issqn: 6.5,
+  bdi_percentual: 0,
   total_custo: 0,
-  total_imposto: 0,
-  total_lucro: 0,
+  total_bdi: 0,
   total_geral: 0,
 });
+
+/** Os quatro impostos somados, que é o I da fórmula. */
+export const somaImpostos = (p: Proposta) =>
+  (p.bdi_pis || 0) + (p.bdi_cofins || 0) + (p.bdi_cprb || 0) + (p.bdi_issqn || 0);
+
+/**
+ * O BDI pela fórmula do acórdão 2.622/2013 do TCU:
+ *
+ *   BDI = [ (1+AC+SG+R) × (1+DF) × (1+L) / (1-I) ] - 1
+ */
+export function calcularBdi(p: Proposta): number {
+  const f = (v: number) => (v || 0) / 100;
+  const i = f(somaImpostos(p));
+  if (i >= 1) return 0;
+
+  return (
+    ((1 + f(p.bdi_administracao_central) + f(p.bdi_seguro_garantia) + f(p.bdi_taxa_risco)) *
+      (1 + f(p.bdi_despesas_financeiras)) *
+      (1 + f(p.bdi_lucro))) /
+      (1 - i) -
+    1
+  );
+}
 
 /**
  * Os mesmos totais que o servidor calcula, para o rascunho ter numero antes de
@@ -164,18 +204,18 @@ export function calcularRascunho(p: Proposta): Proposta {
   const fd = p.outros_custos.filter((c) => c.faturamento_direto).reduce((s, c) => s + (c.valor || 0), 0);
   const comum = p.outros_custos.filter((c) => !c.faturamento_direto).reduce((s, c) => s + (c.valor || 0), 0);
 
-  const tributavel = custoItens + comum;
-  const aliquota = p.com_nota_fiscal ? (p.aliquota_percentual || 0) / 100 : 0;
-  const comImposto = aliquota > 0 && aliquota < 1 ? tributavel / (1 - aliquota) : tributavel;
-  const base = comImposto + fd;
-  const lucro = cent(base * ((p.lucro_percentual || 0) / 100));
+  // O faturamento direto fica FORA da base do BDI: é dinheiro que o cliente
+  // paga ao fornecedor, sem passar pela empresa.
+  const baseBdi = custoItens + comum;
+  const bdi = calcularBdi(p);
+  const totalBdi = cent(baseBdi * bdi);
 
   return {
     ...p,
+    bdi_percentual: Math.round(bdi * 100 * 1000) / 1000,
     total_custo: cent(custoItens + comum + fd),
-    total_imposto: cent(comImposto - tributavel),
-    total_lucro: lucro,
-    total_geral: cent(base + lucro),
+    total_bdi: totalBdi,
+    total_geral: cent(baseBdi + totalBdi + fd),
   };
 }
 

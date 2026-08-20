@@ -23,6 +23,14 @@ function PropostaDocumento({ proposta, numero, titulo, cliente }: DadosProposta)
   const custosFD = proposta.outros_custos.filter((c) => c.faturamento_direto);
   const custosComuns = proposta.outros_custos.filter((c) => !c.faturamento_direto);
 
+  // O faturamento direto fica fora da base do BDI, então sai do custo e volta
+  // como linha própria — assim as três parcelas fecham o total à vista.
+  const totalFD = custosFD.reduce((soma, c) => soma + (c.valor || 0), 0);
+  const custoBase = proposta.total_custo - totalFD;
+
+  const bdi = (Number.isFinite(proposta.bdi_percentual) ? proposta.bdi_percentual : 0)
+    .toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   return (
     <DocumentoAupus tipo="Proposta comercial" meta={meta}>
       {(titulo || cliente) && (
@@ -110,19 +118,9 @@ function PropostaDocumento({ proposta, numero, titulo, cliente }: DadosProposta)
 
       {/* ---------------- TOTAIS ---------------- */}
       <View style={{ marginTop: 14 }}>
-        <TotalPdf rotulo="Custo" valor={moeda(proposta.total_custo)} />
-        {proposta.total_imposto > 0 && (
-          <TotalPdf
-            rotulo={`Impostos (${proposta.aliquota_percentual}%)`}
-            valor={moeda(proposta.total_imposto)}
-          />
-        )}
-        {proposta.total_lucro > 0 && (
-          <TotalPdf
-            rotulo={`Lucro (${proposta.lucro_percentual}%)`}
-            valor={moeda(proposta.total_lucro)}
-          />
-        )}
+        <TotalPdf rotulo="Custo" valor={moeda(custoBase)} />
+        <TotalPdf rotulo={`BDI (${bdi}%)`} valor={moeda(proposta.total_bdi)} />
+        {totalFD > 0 && <TotalPdf rotulo="Faturamento direto" valor={moeda(totalFD)} />}
         <TotalPdf rotulo="Total" valor={moeda(proposta.total_geral)} destaque />
       </View>
     </DocumentoAupus>

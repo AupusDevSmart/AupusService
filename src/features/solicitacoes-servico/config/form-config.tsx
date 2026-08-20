@@ -1,6 +1,5 @@
 // src/features/solicitacoes-servico/config/form-config.tsx
 import { FormField } from '@/types/base';
-import { PropostaSection } from '../components/PropostaSection';
 import { SimpleCascadeSelector } from '../components/SimpleCascadeSelector';
 import { AuthService } from '@/services/auth.service';
 import { useEffect, useState } from 'react';

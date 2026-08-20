@@ -155,9 +155,16 @@ export function SolicitacoesPage() {
     }
     // Sempre por ultimo: e a gravacao que fecha o total com o que veio antes.
     await propostaApi.salvarCondicoes(id, {
-      lucro_percentual: rascunho.lucro_percentual,
-      com_nota_fiscal: rascunho.com_nota_fiscal,
-      aliquota_percentual: rascunho.aliquota_percentual,
+      bdi_regime: rascunho.bdi_regime,
+      bdi_administracao_central: rascunho.bdi_administracao_central,
+      bdi_seguro_garantia: rascunho.bdi_seguro_garantia,
+      bdi_taxa_risco: rascunho.bdi_taxa_risco,
+      bdi_despesas_financeiras: rascunho.bdi_despesas_financeiras,
+      bdi_lucro: rascunho.bdi_lucro,
+      bdi_pis: rascunho.bdi_pis,
+      bdi_cofins: rascunho.bdi_cofins,
+      bdi_cprb: rascunho.bdi_cprb,
+      bdi_issqn: rascunho.bdi_issqn,
     });
   };
 

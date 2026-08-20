@@ -1,5 +1,4 @@
 // src/features/solicitacoes-servico/components/SolicitacoesDashboard.tsx
-import { FilePenLine } from 'lucide-react';
 import { SolicitacoesStats } from '@/services/solicitacoes-servico.service';
 
 interface SolicitacoesDashboardProps {
