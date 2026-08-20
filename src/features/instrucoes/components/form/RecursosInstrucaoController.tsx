@@ -40,6 +40,29 @@ const moeda = (valor: number) =>
   valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 /**
+ * Apara o `recurso_id` assim que a lista entra no componente.
+ *
+ * `recursos.id` é `Char(26)` e o banco convive com duas gerações de id: os
+ * antigos, de `cuid()`, têm 25 caracteres e voltam do Postgres **com um espaço
+ * à direita**; os novos, em hex, têm 26 e voltam limpos.
+ *
+ * As opções do combobox são construídas com `id.trim()`. Passando o valor sem
+ * aparar, o id de 25 não casava com opção nenhuma e a caixa aparecia vazia —
+ * mesmo com o recurso salvo e o custo aparecendo na linha, porque aquela outra
+ * leitura aparava. Dois jeitos de ler o mesmo campo na mesma linha.
+ *
+ * Aparar na entrada resolve para todos os consumidores de uma vez, em vez de
+ * espalhar `.trim()` por cada leitura e esquecer de um.
+ */
+function normalizar(lista: unknown): Recurso[] {
+  if (!Array.isArray(lista)) return [];
+  return lista.map((item: Recurso) => ({
+    ...item,
+    recurso_id: item?.recurso_id?.trim() || null,
+  }));
+}
+
+/**
  * Os recursos de uma instrução, escolhidos do catálogo.
  *
  * Categoria, nome e unidade vêm do recurso; a instrução decide a quantidade e
@@ -57,15 +80,13 @@ export function RecursosInstrucaoController({
   disabled,
   subInstrucoes,
 }: RecursosInstrucaoControllerProps) {
-  const [recursos, setRecursos] = React.useState<Recurso[]>(
-    Array.isArray(value) ? value : []
-  );
+  const [recursos, setRecursos] = React.useState<Recurso[]>(() => normalizar(value));
   const [catalogo, setCatalogo] = React.useState<RecursoApiResponse[]>([]);
   const [carregando, setCarregando] = React.useState(true);
 
   React.useEffect(() => {
     if (Array.isArray(value)) {
-      setRecursos(value);
+      setRecursos(normalizar(value));
     }
   }, [value]);
 
@@ -196,7 +217,19 @@ export function RecursosInstrucaoController({
    * e encher a quantidade dele com as horas da instrução seria besteira.
    */
   const escolherRecurso = (index: number, recursoId: string) => {
-    const doCatalogo = porId.get(recursoId?.trim());
+    // O Combobox alterna: clicar na opção já marcada devolve string vazia. Isso
+    // caía num `return` silencioso — nada mudava e nada era dito. Limpar a
+    // linha é o que o clique pediu.
+    if (!recursoId?.trim()) {
+      aplicar(
+        recursos.map((item, i) =>
+          i === index ? { ...item, recurso_id: null, descricao: '', unidade: '' } : item,
+        ),
+      );
+      return;
+    }
+
+    const doCatalogo = porId.get(recursoId.trim());
     if (!doCatalogo) return;
 
     const emHoras = (doCatalogo.unidade || '').trim() === 'h';
