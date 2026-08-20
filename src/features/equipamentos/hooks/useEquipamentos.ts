@@ -704,13 +704,20 @@ export function useEquipamentos(): UseEquipamentosReturn {
       // console.log('📦 [GERENCIAR] response.data.componentes:', response.data?.componentes);
       // console.log('📦 [GERENCIAR] response.data.equipamentoUC:', response.data?.equipamentoUC);
 
-      // A API retorna: { success: true, data: { equipamentoUC: {...}, componentes: [...] } }
-      const componentes = response.data?.componentes || [];
+      // A API responde { success, data: { equipamentoUC, componentes } }, mas o
+      // interceptor do axios ja desembrulha e o service devolve response.data.
+      // Ou seja: aqui `response` JA E { equipamentoUC, componentes } — nao ha
+      // outro `.data` dentro.
+      //
+      // Lendo response.data?.componentes o resultado era undefined, virava []
+      // pelo fallback, e a lista de componentes ficava SEMPRE vazia, sem erro
+      // nenhum: o equipamento parecia nao ter UAR. A copia deste hook no
+      // AupusNexOn ja lia certo — as duas versoes derivaram.
+      const componentes = response?.componentes || [];
       const componentesTransformados = componentes.map(transformApiToFrontend);
-      // console.log('✅ [GERENCIAR] Componentes transformados:', componentesTransformados);
 
       return {
-        equipamentoUC: response.data?.equipamentoUC || null,
+        equipamentoUC: response?.equipamentoUC || null,
         componentes: componentesTransformados
       };
 
