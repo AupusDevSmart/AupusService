@@ -19,6 +19,12 @@ import type { FormField } from '@/types/base';
 interface PropsDoCampo {
   entity?: SolicitacaoServico | null;
   mode?: 'create' | 'edit' | 'view';
+  /**
+   * O estado VIVO do formulário. A selecao de instrucoes tem que sair daqui, e
+   * nao do `entity`: o entity e o que esta gravado, e a proposta precisa
+   * reagir no instante em que a instrucao e escolhida, antes de salvar.
+   */
+  formData?: { instrucoes_ids?: string[] };
 }
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { SolicitacaoServico, SolicitacaoServicoFormData } from '../types';
@@ -164,9 +170,10 @@ export function SolicitacoesPage() {
         campo.key === 'proposta'
           ? {
               ...campo,
-              render: ({ entity, mode }: PropsDoCampo) => (
+              render: ({ entity, mode, formData }: PropsDoCampo) => (
                 <PropostaSection
                   solicitacaoId={entity?.id ?? null}
+                  instrucoesIds={formData?.instrucoes_ids ?? []}
                   somenteLeitura={mode === 'view'}
                   numero={entity?.numero}
                   titulo={entity?.titulo}

@@ -179,6 +179,62 @@ export function calcularRascunho(p: Proposta): Proposta {
   };
 }
 
+/**
+ * Monta itens e etapas a partir das instruções escolhidas.
+ *
+ * Espelha o que o backend faz ao materializar, e existe porque a tela precisa
+ * preencher no INSTANTE do vínculo — esperar o salvamento deixaria a proposta
+ * em branco justamente enquanto o orçamento está sendo montado.
+ *
+ * O preço vem do catálogo e é copiado para `preco_unitario_original`, que é a
+ * régua da variação mostrada ao lado do campo.
+ */
+export async function montarDeInstrucoes(instrucaoIds: string[]): Promise<{
+  itens: ItemProposta[];
+  subinstrucoes: SubinstrucaoProposta[];
+}> {
+  if (instrucaoIds.length === 0) return { itens: [], subinstrucoes: [] };
+
+  const { instrucoesApi } = await import('@/services/instrucoes.services');
+
+  const detalhes = await Promise.all(
+    instrucaoIds.map((id) => instrucoesApi.findOne(id.trim()).catch(() => null)),
+  );
+
+  const itens: ItemProposta[] = [];
+  const subinstrucoes: SubinstrucaoProposta[] = [];
+
+  for (const instrucao of detalhes) {
+    if (!instrucao) continue;
+
+    for (const sub of instrucao.sub_instrucoes ?? []) {
+      subinstrucoes.push({
+        descricao: sub.descricao,
+        tempo_estimado: sub.tempo_estimado ?? null,
+      });
+    }
+
+    for (const recurso of instrucao.recursos ?? []) {
+      // `recurso` (o do catalogo, com preco) so existe nas linhas vinculadas;
+      // as antigas, digitadas antes do catalogo, vem sem preco.
+      const doCatalogo = (recurso as { recurso?: { preco_medio?: number | string } }).recurso;
+      const preco = Number(doCatalogo?.preco_medio ?? 0) || 0;
+
+      itens.push({
+        instrucao_id: instrucao.id,
+        recurso_id: (recurso as { recurso_id?: string }).recurso_id ?? null,
+        descricao: recurso.descricao,
+        unidade: recurso.unidade ?? null,
+        quantidade: Number(recurso.quantidade ?? 1) || 1,
+        preco_unitario_original: preco,
+        preco_unitario: preco,
+      });
+    }
+  }
+
+  return { itens, subinstrucoes };
+}
+
 /** Reais, com os dois centavos sempre visíveis. */
 export const moeda = (valor: number) =>
   (Number.isFinite(valor) ? valor : 0).toLocaleString('pt-BR', {

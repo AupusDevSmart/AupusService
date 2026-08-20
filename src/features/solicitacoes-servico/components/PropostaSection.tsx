@@ -1,5 +1,5 @@
 // src/features/solicitacoes-servico/components/PropostaSection.tsx
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Plus, Trash2, RefreshCw, Loader2, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import {
   propostaApi,
   propostaVazia,
   calcularRascunho,
+  montarDeInstrucoes,
   moeda,
   type ItemProposta,
   type OutroCusto,
@@ -18,6 +19,8 @@ import {
 interface PropostaSectionProps {
   /** Nulo enquanto a solicitação não foi salva. Aí a seção vira rascunho. */
   solicitacaoId: string | null;
+  /** As instruções escolhidas acima. Mudou aqui, a proposta se refaz. */
+  instrucoesIds?: string[];
   somenteLeitura?: boolean;
   numero?: string;
   titulo?: string;
@@ -44,6 +47,7 @@ interface PropostaSectionProps {
  */
 export function PropostaSection({
   solicitacaoId,
+  instrucoesIds = [],
   somenteLeitura = false,
   numero,
   titulo,
@@ -117,6 +121,17 @@ export function PropostaSection({
   const salvarEtapas = (m: (p: Proposta) => Proposta) =>
     void aplicar(m, (id, novo) => propostaApi.salvarSubinstrucoes(id, novo.subinstrucoes), 'a etapa');
 
+  /** Grava itens e etapas juntos — é o que a troca de instrução mexe. */
+  const salvarTudo = (m: (p: Proposta) => Proposta) =>
+    void aplicar(
+      m,
+      async (id, novo) => {
+        await propostaApi.salvarSubinstrucoes(id, novo.subinstrucoes);
+        return propostaApi.salvarItens(id, novo.itens);
+      },
+      'a proposta',
+    );
+
   const salvarCondicoes = (m: (p: Proposta) => Proposta) =>
     void aplicar(
       m,
@@ -127,6 +142,53 @@ export function PropostaSection({
         }),
       'as condições',
     );
+
+  /**
+   * Preenche itens e etapas quando o conjunto de instruções muda.
+   *
+   * A chave é a lista ordenada, e não o array: o pai recria esse array a cada
+   * render, e comparar por referência dispararia o efeito sem parar.
+   *
+   * Só age quando muda de verdade — e nunca no primeiro render de uma proposta
+   * já salva, senão sobrescreveria os preços que a pessoa ajustou antes.
+   */
+  const chaveInstrucoes = [...instrucoesIds].map((x) => String(x).trim()).sort().join('|');
+  const chaveAnteriorRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (somenteLeitura) return;
+    if (carregando) return;
+
+    // Primeira passagem: só registra o que já está lá.
+    if (chaveAnteriorRef.current === null) {
+      chaveAnteriorRef.current = chaveInstrucoes;
+      return;
+    }
+
+    if (chaveAnteriorRef.current === chaveInstrucoes) return;
+    chaveAnteriorRef.current = chaveInstrucoes;
+
+    let cancelado = false;
+
+    void (async () => {
+      const ids = chaveInstrucoes ? chaveInstrucoes.split('|') : [];
+      const { itens, subinstrucoes } = await montarDeInstrucoes(ids);
+      if (cancelado) return;
+
+      // Os itens avulsos sobrevivem: não vieram de instrução nenhuma e não
+      // são da conta desta troca.
+      salvarTudo((p) => ({
+        ...p,
+        subinstrucoes,
+        itens: [...itens, ...p.itens.filter((i) => !i.instrucao_id)],
+      }));
+    })();
+
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaveInstrucoes, somenteLeitura]);
 
   const gerarPdf = async () => {
     try {
@@ -206,7 +268,7 @@ export function PropostaSection({
                 }
               />
               <input
-                className="input-minimal w-20 text-right"
+                className="input-minimal w-14 text-right"
                 type="number"
                 min="0"
                 placeholder="min"
@@ -223,7 +285,8 @@ export function PropostaSection({
                   }))
                 }
               />
-              <span className="w-8 shrink-0 text-xs text-muted-foreground">min</span>
+              {/* Sem rotulo "min" separado: ele repetia o placeholder do campo
+                  e custava mais largura do que informacao. */}
               {editavel && (
                 <BotaoRemover
                   onClick={() =>
@@ -360,7 +423,7 @@ export function PropostaSection({
                   onChange={(e) => trocar({ descricao: e.target.value })}
                 />
                 <input
-                  className="input-minimal w-28 text-right"
+                  className="input-minimal w-20 text-right"
                   type="number"
                   step="0.01"
                   min="0"
@@ -503,12 +566,15 @@ function LinhaItem({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="min-w-0 flex-1 truncate text-sm" title={item.descricao}>
+      {/* basis-48 com flex-1: a descricao nunca desce abaixo de ~190px, e e a
+          primeira a receber a sobra. Antes ela era so flex-1 e ficava espremida
+          entre cinco elementos de largura fixa. */}
+      <span className="min-w-0 flex-1 basis-48 truncate text-sm" title={item.descricao}>
         {item.descricao || <span className="text-muted-foreground">Sem descrição</span>}
       </span>
 
       <input
-        className="input-minimal w-16 text-right"
+        className="input-minimal w-14 text-right"
         type="number"
         step="0.001"
         min="0"
@@ -517,10 +583,10 @@ function LinhaItem({
         onChange={(e) => onCampo('quantidade', Number(e.target.value) || 0)}
         title="Quantidade"
       />
-      <span className="w-8 shrink-0 text-xs text-muted-foreground">{item.unidade || ''}</span>
+      <span className="w-6 shrink-0 text-xs text-muted-foreground">{item.unidade || ''}</span>
 
       <input
-        className="input-minimal w-24 text-right"
+        className="input-minimal w-20 text-right"
         type="number"
         step="0.01"
         min="0"
@@ -532,7 +598,7 @@ function LinhaItem({
 
       {/* Verde para cima, vermelho para baixo — o par já usado no resto do
           produto. Discreto: é uma nota, não um alerta. */}
-      <span className="w-16 shrink-0 text-right text-[11px]">
+      <span className="w-12 shrink-0 text-right text-[11px]">
         {variacao !== null && (
           <span
             className={
@@ -546,7 +612,7 @@ function LinhaItem({
         )}
       </span>
 
-      <span className="w-24 shrink-0 text-right text-sm tabular-nums">
+      <span className="w-20 shrink-0 text-right text-sm tabular-nums">
         {moeda((item.quantidade || 0) * atual)}
       </span>
 
