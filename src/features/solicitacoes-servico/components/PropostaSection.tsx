@@ -296,9 +296,9 @@ export function PropostaSection({
                   }
                 />
               </div>
-              <div className="w-16 shrink-0">
+              <div className="w-14 shrink-0">
                 <input
-                  className="input-minimal input-numero text-right"
+                  className="input-minimal input-numero text-center"
                   type="number"
                   min="0"
                   placeholder="min"
@@ -459,9 +459,9 @@ export function PropostaSection({
                 {/* "R$" fora do campo, e nao como padding interno: o padding do
                     .input-minimal venceria um pl-7 pela ordem do CSS. */}
                 <span className="shrink-0 text-xs text-muted-foreground">R$</span>
-                <div className="w-24 shrink-0">
+                <div className="w-20 shrink-0">
                   <input
-                    className="input-minimal input-numero text-right"
+                    className="input-minimal input-numero text-center"
                     type="number"
                     step="0.01"
                     min="0"
@@ -519,9 +519,9 @@ export function PropostaSection({
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium">Lucro</label>
-              <div className="w-20 shrink-0">
+              <div className="w-16 shrink-0">
                 <input
-                  className="input-minimal input-numero text-right"
+                  className="input-minimal input-numero text-center"
                   type="number"
                   step="0.01"
                   min="0"
@@ -613,9 +613,9 @@ function LinhaItem({
         {item.descricao || <span className="text-muted-foreground">Sem descrição</span>}
       </span>
 
-      <div className="w-16 shrink-0">
+      <div className="w-14 shrink-0">
         <input
-          className="input-minimal input-numero text-right"
+          className="input-minimal input-numero text-center"
           type="number"
           step="0.001"
           min="0"
@@ -628,9 +628,9 @@ function LinhaItem({
       <span className="w-6 shrink-0 text-xs text-muted-foreground">{item.unidade || ''}</span>
 
       <span className="shrink-0 text-xs text-muted-foreground">R$</span>
-      <div className="w-24 shrink-0">
+      <div className="w-20 shrink-0">
         <input
-          className="input-minimal input-numero text-right"
+          className="input-minimal input-numero text-center"
           type="number"
           step="0.01"
           min="0"
