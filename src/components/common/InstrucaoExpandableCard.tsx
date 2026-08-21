@@ -98,9 +98,9 @@ export function InstrucaoExpandableCard({
   const label = `${tag ? tag + ' - ' : ''}${nome || 'Instrucao'}`;
 
   return (
-    <div className="border rounded-lg bg-muted/20 overflow-hidden">
+    <div className="overflow-hidden">
       {/* Header - sempre visivel */}
-      <div className="flex items-center justify-between p-3">
+      <div className="flex items-center justify-between py-1.5">
         <button
           type="button"
           onClick={handleToggle}
@@ -161,7 +161,7 @@ export function InstrucaoExpandableCard({
 
       {/* Details panel */}
       {expanded && (
-        <div className="border-t px-4 py-3 space-y-3 bg-muted/10">
+        <div className="px-4 pb-3 space-y-3">
           {loading && (
             <p className="text-sm text-muted-foreground">Carregando detalhes...</p>
           )}

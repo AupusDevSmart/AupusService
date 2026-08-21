@@ -73,8 +73,18 @@ export function OrigemOSSelector({
   const [carregandoTarefas, setCarregandoTarefas] = useState(false);
   const [passo, setPasso] = useState(0);
 
-  // Reabre o assistente por cima de uma escolha já feita.
-  const [trocando, setTrocando] = useState(false);
+  /**
+   * Se a pessoa está no meio da escolha.
+   *
+   * Não dá para deduzir isso do valor: no fluxo de plano a escolha fica
+   * COMPLETA assim que a primeira tarefa é marcada, e as tarefas são múltiplas —
+   * deduzir trocava o assistente pelo resumo no primeiro clique, no meio da
+   * seleção.
+   *
+   * Nasce falso para uma OS já salva abrir no resumo, e vira verdadeiro assim
+   * que a pessoa entra no assistente.
+   */
+  const [escolhendo, setEscolhendo] = useState(false);
 
   // O registro de origem aberto em leitura, por cima de tudo.
   const [detalhe, setDetalhe] = useState<OrigemAberta | null>(null);
@@ -112,6 +122,7 @@ export function OrigemOSSelector({
       solicitacaoServicoId: undefined,
       tarefasSelecionadas: [],
     });
+    setEscolhendo(true);
     setPasso(1);
   };
 
@@ -129,8 +140,8 @@ export function OrigemOSSelector({
 
     if (anomalia && onLocalAtivoChange) onLocalAtivoChange(anomalia.local, anomalia.ativo);
 
-    // Ultimo passo do fluxo de anomalia: escolher ja e concluir.
-    if (id) setTrocando(false);
+    // Último passo do fluxo de anomalia: escolher já é concluir.
+    if (id) setEscolhendo(false);
   };
 
   const escolherSolicitacao = (id: string) => {
@@ -145,7 +156,7 @@ export function OrigemOSSelector({
 
     if (solicitacao && onLocalAtivoChange) onLocalAtivoChange(solicitacao.local, '');
 
-    if (id) setTrocando(false);
+    if (id) setEscolhendo(false);
   };
 
   const escolherPlano = (id: string) => {
@@ -166,9 +177,14 @@ export function OrigemOSSelector({
       );
     }
 
-    // O plano nao e o fim do fluxo: sem tarefa escolhida nao ha OS, entao
-    // escolher o plano leva direto a lista delas.
-    if (id) setPasso(2);
+    // O plano NÃO é o fim do fluxo: sem tarefa escolhida não há OS. Escolher o
+    // plano leva direto à lista delas, e o assistente segue aberto até
+    // "Concluir" — as tarefas são múltiplas, e sair no primeiro clique
+    // interromperia a seleção.
+    if (id) {
+      setEscolhendo(true);
+      setPasso(2);
+    }
   };
 
   const alternarTarefa = (tarefaId: string, marcada: boolean) => {
@@ -277,9 +293,9 @@ export function OrigemOSSelector({
           ? { tipo: 'PLANO_MANUTENCAO', id: planoId }
           : null;
 
-  if (escolhido && !trocando) {
+  if (escolhido && !escolhendo) {
     return (
-      <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
+      <div className="flex items-start justify-between gap-3 py-1">
         <div className="min-w-0 flex-1">
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
             {rotuloDoTipo}
@@ -312,7 +328,7 @@ export function OrigemOSSelector({
               variant="ghost"
               size="sm"
               onClick={() => {
-                setTrocando(true);
+                setEscolhendo(true);
                 setPasso(0);
               }}
             >
@@ -451,7 +467,7 @@ export function OrigemOSSelector({
       onAtualChange={setPasso}
       disabled={disabled}
       rotuloFinal="Concluir"
-      onFinalizar={() => setTrocando(false)}
+      onFinalizar={() => setEscolhendo(false)}
     />
   );
 }
