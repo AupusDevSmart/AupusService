@@ -669,3 +669,16 @@ button:not(:disabled),
 label:has(> input[type='checkbox']:not(:disabled)) {
   cursor: pointer;
 }
+
+/* Campo de busca com a lupa dentro.
+ *
+ * O seletor e `input.input-busca` de proposito. A classe `.input-minimal` vem
+ * do shared-pages, que o consumidor importa DEPOIS deste arquivo — entao ela
+ * ganha de um `pl-8` utilitario pela ordem, e o padding dela deixa o texto
+ * comecando embaixo do icone.
+ *
+ * Elemento + classe (0,0,1,1) supera a classe sozinha (0,0,1,0), e a vitoria
+ * deixa de depender da ordem de importacao. */
+input.input-busca {
+  padding-left: 2rem;
+}

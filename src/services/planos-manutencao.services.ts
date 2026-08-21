@@ -197,6 +197,14 @@ export interface DashboardPlanosDto {
 
 // Parâmetros de consulta
 export interface QueryPlanosApiParams {
+  /**
+   * Lista os planos VINCULADOS a equipamento, em vez dos templates.
+   *
+   * A programacao de OS usa isto: a OS e para um ativo, e template nao tem
+   * equipamento. Sem o parametro a lista continua sendo a de templates, que e o
+   * que a tela de planos mostra.
+   */
+  vinculados?: boolean;
   search?: string;                  // Busca em nome, descrição, nome do equipamento
   equipamento_id?: string;          // Filtrar por ID do equipamento
   criado_por?: string;              // Filtrar por usuário criador

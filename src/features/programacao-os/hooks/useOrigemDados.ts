@@ -163,7 +163,10 @@ export const useOrigemDados = () => {
 
         response = await planosManutencaoApi.findAll({
           limit: 100,
-          page: 1
+          page: 1,
+          // Os planos ligados a um equipamento, e nao os templates: a OS e
+          // sempre para um ativo, e o template nao tem nenhum.
+          vinculados: true
         });
 
         console.log('📊 [useOrigemDados] Resposta do endpoint geral:', {
@@ -191,11 +194,13 @@ export const useOrigemDados = () => {
           totalEquipamentos: 1, // Cada plano tem 1 equipamento
           ativo: true,
           tarefasTemplate: plano.tarefas || [],
-          plantaId: plano.equipamento?.planta?.id || plano.equipamento?.unidade?.planta?.id,
+          plantaId:
+            (plano.equipamento as any)?.unidade?.planta?.id || plano.equipamento?.planta?.id,
           equipamentoId: plano.equipamento?.id,
           equipamentoNome: plano.equipamento?.nome,
-          plantaNome: plano.equipamento?.planta?.nome || plano.equipamento?.unidade?.planta?.nome,
-          unidadeNome: plano.equipamento?.unidade?.nome,
+          plantaNome:
+            (plano.equipamento as any)?.unidade?.planta?.nome || plano.equipamento?.planta?.nome,
+          unidadeNome: (plano.equipamento as any)?.unidade?.nome,
         };
 
         console.log(`✅ [useOrigemDados] Plano ${index + 1} formatado:`, planoFormatado);

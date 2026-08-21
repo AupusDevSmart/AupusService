@@ -233,15 +233,20 @@ export function OrigemOSSelector({
       planosDisponiveis.map((p) => ({
         id: String(p.id).trim(),
         titulo: p.nome,
-        // O equipamento primeiro: e ele que diz para qual ativo a OS vai.
+        // Equipamento e instalacao no subtitulo, que e o texto legivel; a planta
+        // desce para as etiquetas, em corpo menor. Duas plantas raramente
+        // convivem numa mesma decisao — o que separa dois planos parecidos e o
+        // ativo e onde ele esta.
         subtitulo: [
           p.equipamentoNome,
-          [p.plantaNome, p.unidadeNome].filter(Boolean).join(' / '),
+          p.unidadeNome,
           `${p.totalTarefas} ${p.totalTarefas === 1 ? 'tarefa' : 'tarefas'}`,
         ]
           .filter(Boolean)
           .join(' · '),
-        etiquetas: [{ texto: p.categoria }],
+        // A busca varre titulo, subtitulo E etiquetas, entao a planta continua
+        // pesquisavel mesmo em corpo menor.
+        etiquetas: [{ texto: p.categoria }, ...(p.plantaNome ? [{ texto: p.plantaNome }] : [])],
       })),
     [planosDisponiveis],
   );
@@ -432,7 +437,7 @@ export function OrigemOSSelector({
             opcoes={opcoesPlano}
             value={planoId}
             onChange={escolherPlano}
-            placeholder="Buscar por nome, tipo ou equipamento..."
+            placeholder="Buscar por plano, equipamento, instalação ou planta..."
             vazio="Nenhum plano disponível."
             loading={loading}
             disabled={disabled}
