@@ -1,7 +1,9 @@
 // src/features/programacao-os/config/form-config.tsx - CORRIGIDA COM MAPEAMENTO DE GRUPOS
+import { useState } from 'react';
 import type { FormField } from '@/types/base';
 import { OrigemOSSelector } from '../components/OrigemOSSelector';
 import { InstrucoesDaOrigem } from '../components/InstrucoesDaOrigem';
+import { RecursosDaOrigem } from '../components/RecursosDaOrigem';
 import { OrigemOSCard } from '../components/OrigemOSCard';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
@@ -9,6 +11,32 @@ import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManag
 import { OrcamentoCardManager } from '@/components/common/cards/OrcamentoCardManager';
 import { ReservaViaturaField } from '../components/ReservaViaturaField';
 import { ReservaVinculadaCard } from '../components/ReservaVinculadaCard';
+
+
+/**
+ * As instrucoes da origem, e os recursos que elas trazem.
+ *
+ * Um componente so porque as duas coisas dependem da MESMA lista: resolver o
+ * vinculo em dois lugares daria duas listas que podem divergir, e a pessoa
+ * veria uma instrucao na tela cujos materiais nao entraram.
+ */
+function InstrucoesOrigemComRecursos({
+  onMultipleChange,
+  ...props
+}: any) {
+  const [instrucaoIds, setInstrucaoIds] = useState<string[]>([]);
+
+  return (
+    <>
+      <InstrucoesDaOrigem {...props} onInstrucoes={setInstrucaoIds} />
+      <RecursosDaOrigem
+        instrucaoIds={instrucaoIds}
+        ativo={Boolean(onMultipleChange)}
+        onCarregar={(recursos) => onMultipleChange?.(recursos)}
+      />
+    </>
+  );
+}
 
 export const programacaoOSFormFields: FormField[] = [
   // Informações básicas - GRUPO: identificacao
@@ -99,7 +127,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'origem',
     colSpan: 2,
     excludeFromSubmit: true,
-    render: ({ entity, formData }: any) => {
+    render: ({ entity, formData, onMultipleChange }: any) => {
       // No cadastro a origem esta no formulario; numa OS ja salva, na entidade.
       const origem = formData?.origem;
       const tipo = origem?.tipo || entity?.origem?.tipo || entity?.origem || 'MANUAL';
@@ -111,7 +139,7 @@ export const programacaoOSFormFields: FormField[] = [
             .filter(Boolean);
 
       return (
-        <InstrucoesDaOrigem
+        <InstrucoesOrigemComRecursos
           tipo={tipo}
           anomaliaId={origem?.anomaliaId || entity?.anomalia?.id || entity?.anomalia_id}
           solicitacaoId={
@@ -121,6 +149,7 @@ export const programacaoOSFormFields: FormField[] = [
           }
           planoId={origem?.planoId || entity?.plano_manutencao?.id || entity?.plano_manutencao_id}
           tarefaIds={tarefaIds}
+          onMultipleChange={onMultipleChange}
         />
       );
     },
@@ -400,17 +429,6 @@ export const programacaoOSFormFields: FormField[] = [
   },
 
   // Observações - GRUPO: observacoes
-  {
-    key: 'observacoes',
-    label: '', // duplicava o titulo do grupo
-    type: 'textarea',
-    placeholder: 'Observações adicionais sobre a programação',
-    group: 'observacoes',
-    colSpan: 2,
-    computeDisabled: (entity: any) => {
-      return entity?.status && entity.status !== 'PENDENTE';
-    }
-  },
 
   // ============================
   // CAMPOS DE WORKFLOW ESPECÍFICOS
@@ -564,7 +582,10 @@ export const programacaoOSFormGroups = [
   {
     key: 'origem',
     title: 'Origem da Ordem de Serviço',
-    fields: ['origem', 'origemCard', 'planosManutencaoDetalhes']
+    // ATENCAO: com `groups` declarado, o BaseForm monta cada grupo por ESTA
+    // lista, e ignora o `group:` do campo. Campo que nao esta aqui simplesmente
+    // nao renderiza, sem erro nenhum.
+    fields: ['origem', 'origemCard', 'instrucoes_origem', 'planosManutencaoDetalhes']
   },
   {
     key: 'classificacao',
@@ -603,11 +624,6 @@ export const programacaoOSFormGroups = [
     key: 'orcamento',
     title: 'Orçamento',
     fields: ['itens_orcamento']
-  },
-  {
-    key: 'observacoes',
-    title: 'Observações',
-    fields: ['observacoes']
   },
   {
     key: 'workflow',

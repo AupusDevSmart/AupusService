@@ -9,7 +9,10 @@ import { CardLista, CardLinha, campoCard, type ColunaCard } from './card-lista';
 export interface FerramentaItem {
   id?: string;
   descricao: string;
+  /** Decimal: pode vir da instrucao, onde "2,5 m de cabo" e valido. */
   quantidade: number;
+  /** A unidade que veio da instrucao. Ausente nas linhas digitadas a mao. */
+  unidade?: string;
   utilizada?: boolean;
   condicao_antes?: string;
   condicao_depois?: string;
@@ -78,6 +81,7 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
   const colunas: ColunaCard[] = [
     { label: 'Ferramenta', largura: 'minmax(12rem, 1fr)' },
     { label: 'Qtd', largura: '4rem', alinhamento: 'center' },
+    { label: 'Un.', largura: '3.5rem', alinhamento: 'center' },
     ...(mode === 'execucao'
       ? [{ label: 'Utilizada', largura: '4.5rem', alinhamento: 'center' as const }]
       : []),
@@ -121,12 +125,24 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
                 disabled={disabled}
                 className={campoCard}
               />
+              {/* Decimal e min 0: a ferramenta pode vir da instrucao, onde
+                  "2,5 m de cabo" e valido. parseInt truncava para 2. */}
               <Input
                 type="number"
-                min="1"
+                min="0"
+                step="0.001"
                 value={ferramenta.quantidade}
-                onChange={(e) => atualizarFerramenta(index, 'quantidade', parseInt(e.target.value) || 1)}
+                onChange={(e) =>
+                  atualizarFerramenta(index, 'quantidade', parseFloat(e.target.value) || 0)
+                }
                 placeholder="Qtd"
+                disabled={disabled}
+                className={`${campoCard} text-center`}
+              />
+              <Input
+                value={ferramenta.unidade || ''}
+                onChange={(e) => atualizarFerramenta(index, 'unidade', e.target.value)}
+                placeholder="un"
                 disabled={disabled}
                 className={`${campoCard} text-center`}
               />

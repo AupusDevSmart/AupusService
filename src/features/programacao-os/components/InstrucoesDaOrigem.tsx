@@ -12,6 +12,13 @@ interface InstrucoesDaOrigemProps {
   /** Só as tarefas escolhidas — cada uma aponta para uma instrução. */
   tarefaIds?: string[];
   planoId?: string;
+  /**
+   * Sobe os ids das instrucoes encontradas.
+   *
+   * Quem herda os recursos precisa das MESMAS instrucoes que aparecem aqui, e
+   * resolver o vinculo duas vezes daria duas listas que podem divergir.
+   */
+  onInstrucoes?: (ids: string[]) => void;
 }
 
 interface InstrucaoResumida {
@@ -54,6 +61,7 @@ export function InstrucoesDaOrigem({
   solicitacaoId,
   tarefaIds = [],
   planoId,
+  onInstrucoes,
 }: InstrucoesDaOrigemProps) {
   const [instrucoes, setInstrucoes] = useState<InstrucaoResumida[]>([]);
   const [carregando, setCarregando] = useState(false);
@@ -101,7 +109,9 @@ export function InstrucoesDaOrigem({
       // sendo criada sem esta seção.
       .catch(() => [])
       .then((achadas) => {
-        if (!cancelado) setInstrucoes(achadas);
+        if (cancelado) return;
+        setInstrucoes(achadas);
+        onInstrucoes?.(achadas.map((i) => i.id));
       })
       .finally(() => {
         if (!cancelado) setCarregando(false);
