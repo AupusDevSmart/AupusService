@@ -1,16 +1,17 @@
 // src/features/programacao-os/components/OrigemOSSelector.tsx
-import React, { useState, useEffect } from 'react';
-import { Label } from '@/components/ui/label';
+import { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, FilePenLine, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AssistentePassos, type PassoDoAssistente } from '@/components/common/AssistentePassos';
 import { useOrigemDados } from '../hooks/useOrigemDados';
 
 import {
-  TipoOrigemSelector,
-  AnomaliaSelector,
-  SolicitacaoSelector,
-  PlanoSelector,
   TarefasSelector,
+  ListaSelecionavel,
+  type OpcaoDaLista,
   type OrigemOSValue,
-  type TarefaDisponivel
+  type TarefaDisponivel,
+  type TipoOrigem,
 } from './origem-selector';
 
 interface OrigemOSSelectorProps {
@@ -20,16 +21,40 @@ interface OrigemOSSelectorProps {
   disabled?: boolean;
 }
 
-export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
+const TIPOS: Array<{
+  tipo: TipoOrigem;
+  rotulo: string;
+  descricao: string;
+  Icone: typeof AlertTriangle;
+}> = [
+  { tipo: 'ANOMALIA', rotulo: 'Anomalia', descricao: 'Problema detectado', Icone: AlertTriangle },
+  { tipo: 'PLANO_MANUTENCAO', rotulo: 'Plano', descricao: 'Preventiva ou preditiva', Icone: Settings },
+  { tipo: 'SOLICITACAO_SERVICO', rotulo: 'Solicitação', descricao: 'Requisição', Icone: FilePenLine },
+];
+
+/**
+ * A origem da ordem de serviço, escolhida um passo por vez.
+ *
+ * Antes eram três blocos empilhados no mesmo scroll do sheet — tipo, busca e
+ * lista —, e a lista encadeava a rolagem: chegar ao fim dela continuava rolando
+ * o modal atrás e jogava a pessoa para o pé do formulário.
+ *
+ * Agora há uma pergunta por tela. O número de passos muda com o tipo: anomalia e
+ * solicitação terminam em dois, plano tem um terceiro para as tarefas.
+ *
+ * Completa a escolha, o assistente sai e fica um resumo — quem está preenchendo
+ * o resto do formulário precisa ver o que escolheu, não a máquina de escolher.
+ */
+export function OrigemOSSelector({
   value,
   onChange,
   onLocalAtivoChange,
-  disabled = false
-}) => {
+  disabled = false,
+}: OrigemOSSelectorProps) {
   const tipo = value.tipo || 'ANOMALIA';
   const anomaliaId = value.anomaliaId?.toString().trim() || '';
   const planoId = value.planoId?.toString().trim() || '';
-  const solicitacaoServicoId = value.solicitacaoServicoId?.toString().trim() || '';
+  const solicitacaoId = value.solicitacaoServicoId?.toString().trim() || '';
   const tarefasSelecionadas = value.tarefasSelecionadas || [];
 
   const {
@@ -40,61 +65,42 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
     carregarPlanos,
     carregarSolicitacoes,
     gerarTarefasDoPlano,
-    loading
+    loading,
   } = useOrigemDados();
 
   const [tarefasDoPlano, setTarefasDoPlano] = useState<TarefaDisponivel[]>([]);
-  const [loadingTarefas, setLoadingTarefas] = useState(false);
+  const [carregandoTarefas, setCarregandoTarefas] = useState(false);
+  const [passo, setPasso] = useState(0);
 
-  // Carregar anomalias quando tipo for ANOMALIA
+  // Reabre o assistente por cima de uma escolha já feita.
+  const [trocando, setTrocando] = useState(false);
+
   useEffect(() => {
-    if (tipo === 'ANOMALIA') {
-      carregarAnomalias();
-    }
+    if (tipo === 'ANOMALIA') carregarAnomalias();
+    if (tipo === 'SOLICITACAO_SERVICO') carregarSolicitacoes();
+    if (tipo === 'PLANO_MANUTENCAO') carregarPlanos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipo]);
 
-  // Carregar solicitações quando tipo for SOLICITACAO_SERVICO
   useEffect(() => {
-    if (tipo === 'SOLICITACAO_SERVICO') {
-      carregarSolicitacoes();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tipo]);
-
-  // Carregar planos quando tipo for PLANO_MANUTENCAO
-  useEffect(() => {
-    if (tipo === 'PLANO_MANUTENCAO') {
-      carregarPlanos();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tipo]);
-
-  // Carregar tarefas quando um plano for selecionado
-  useEffect(() => {
-    if (tipo === 'PLANO_MANUTENCAO' && planoId) {
-      setLoadingTarefas(true);
-      gerarTarefasDoPlano(planoId)
-        .then((tarefas) => {
-          setTarefasDoPlano((tarefas || []) as any);
-        })
-        .catch(() => {
-          setTarefasDoPlano([]);
-        })
-        .finally(() => {
-          setLoadingTarefas(false);
-        });
-    } else {
+    if (tipo !== 'PLANO_MANUTENCAO' || !planoId) {
       setTarefasDoPlano([]);
+      return;
     }
+
+    setCarregandoTarefas(true);
+    gerarTarefasDoPlano(planoId)
+      .then((tarefas) => setTarefasDoPlano((tarefas || []) as TarefaDisponivel[]))
+      .catch(() => setTarefasDoPlano([]))
+      .finally(() => setCarregandoTarefas(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planoId, tipo]);
 
   // ==================== HANDLERS ====================
 
-  const handleTipoChange = (novoTipo: typeof tipo) => {
+  const trocarTipo = (novo: TipoOrigem) => {
     onChange({
-      tipo: novoTipo,
+      tipo: novo,
       plantaId: '',
       unidadeId: '',
       anomaliaId: undefined,
@@ -102,135 +108,277 @@ export const OrigemOSSelector: React.FC<OrigemOSSelectorProps> = ({
       solicitacaoServicoId: undefined,
       tarefasSelecionadas: [],
     });
+    setPasso(1);
   };
 
-  const handleAnomaliaChange = (novaAnomaliaId: string) => {
-    const anomalia = anomaliasDisponiveis.find(a => String(a.id).trim() === novaAnomaliaId);
+  const escolherAnomalia = (id: string) => {
+    const anomalia = anomaliasDisponiveis.find((a) => String(a.id).trim() === id);
 
     onChange({
       ...value,
-      anomaliaId: novaAnomaliaId || undefined,
-      // Auto-preencher planta e unidade da anomalia selecionada
+      anomaliaId: id || undefined,
+      // A planta e a unidade vêm da anomalia: perguntá-las de novo seria pedir
+      // que a pessoa repita o que o registro já sabe.
       plantaId: anomalia?.plantaId || '',
       unidadeId: anomalia?.unidadeId || '',
     });
 
-    if (anomalia && onLocalAtivoChange) {
-      onLocalAtivoChange(anomalia.local, anomalia.ativo);
-    }
+    if (anomalia && onLocalAtivoChange) onLocalAtivoChange(anomalia.local, anomalia.ativo);
   };
 
-  const handleSolicitacaoChange = (novaSolicitacaoId: string) => {
-    const solicitacao = solicitacoesDisponiveis.find(s => String(s.id).trim() === novaSolicitacaoId);
+  const escolherSolicitacao = (id: string) => {
+    const solicitacao = solicitacoesDisponiveis.find((s) => String(s.id).trim() === id);
 
     onChange({
       ...value,
-      solicitacaoServicoId: novaSolicitacaoId || undefined,
-      // Auto-preencher planta e unidade da solicitação selecionada
+      solicitacaoServicoId: id || undefined,
       plantaId: solicitacao?.plantaId || '',
       unidadeId: solicitacao?.unidadeId || '',
     });
 
-    if (solicitacao && onLocalAtivoChange) {
-      onLocalAtivoChange(solicitacao.local, '');
+    if (solicitacao && onLocalAtivoChange) onLocalAtivoChange(solicitacao.local, '');
+  };
+
+  const escolherPlano = (id: string) => {
+    onChange({ ...value, planoId: id || undefined, tarefasSelecionadas: [] });
+  };
+
+  const alternarTarefa = (tarefaId: string, marcada: boolean) => {
+    onChange({
+      ...value,
+      tarefasSelecionadas: marcada
+        ? [...tarefasSelecionadas, tarefaId]
+        : tarefasSelecionadas.filter((id) => id !== tarefaId),
+    });
+  };
+
+  // ==================== OPÇÕES ====================
+
+  const opcoesAnomalia: OpcaoDaLista[] = useMemo(
+    () =>
+      anomaliasDisponiveis.map((a) => ({
+        id: String(a.id).trim(),
+        titulo: a.descricao,
+        subtitulo: [a.local, a.ativo, a.plantaNome, a.unidadeNome].filter(Boolean).join(' · '),
+        etiquetas: [
+          { texto: a.prioridade, alerta: a.prioridade === 'CRITICA' || a.prioridade === 'ALTA' },
+          { texto: a.status },
+        ],
+      })),
+    [anomaliasDisponiveis],
+  );
+
+  const opcoesSolicitacao: OpcaoDaLista[] = useMemo(
+    () =>
+      solicitacoesDisponiveis.map((s) => ({
+        id: String(s.id).trim(),
+        titulo: s.titulo,
+        subtitulo: [s.local, s.tipo, s.plantaNome, s.unidadeNome, s.solicitanteNome]
+          .filter(Boolean)
+          .join(' · '),
+        etiquetas: [
+          { texto: s.numero },
+          { texto: s.prioridade, alerta: s.prioridade === 'CRITICA' || s.prioridade === 'ALTA' },
+        ],
+      })),
+    [solicitacoesDisponiveis],
+  );
+
+  const opcoesPlano: OpcaoDaLista[] = useMemo(
+    () =>
+      planosDisponiveis.map((p) => ({
+        id: String(p.id).trim(),
+        titulo: p.nome,
+        subtitulo: `${p.totalTarefas} ${p.totalTarefas === 1 ? 'tarefa' : 'tarefas'}`,
+        etiquetas: [{ texto: p.categoria }],
+      })),
+    [planosDisponiveis],
+  );
+
+  // ==================== RESUMO ====================
+
+  const escolhido = useMemo(() => {
+    if (tipo === 'ANOMALIA' && anomaliaId) {
+      return opcoesAnomalia.find((o) => o.id === anomaliaId) ?? null;
     }
-  };
+    if (tipo === 'SOLICITACAO_SERVICO' && solicitacaoId) {
+      return opcoesSolicitacao.find((o) => o.id === solicitacaoId) ?? null;
+    }
+    if (tipo === 'PLANO_MANUTENCAO' && planoId && tarefasSelecionadas.length > 0) {
+      const plano = opcoesPlano.find((o) => o.id === planoId);
+      if (!plano) return null;
+      return {
+        ...plano,
+        subtitulo: [
+          plano.subtitulo,
+          `${tarefasSelecionadas.length} ${tarefasSelecionadas.length === 1 ? 'tarefa' : 'tarefas'}`,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+      };
+    }
+    return null;
+  }, [
+    tipo,
+    anomaliaId,
+    solicitacaoId,
+    planoId,
+    tarefasSelecionadas.length,
+    opcoesAnomalia,
+    opcoesSolicitacao,
+    opcoesPlano,
+  ]);
 
-  const handlePlanoChange = (novoPlanoId: string) => {
-    onChange({
-      ...value,
-      planoId: novoPlanoId || undefined,
-      tarefasSelecionadas: [],
-    });
-  };
+  const rotuloDoTipo = TIPOS.find((t) => t.tipo === tipo)?.rotulo ?? 'Origem';
 
-  const handleTarefaToggle = (tarefaId: string, checked: boolean) => {
-    const novasTarefas = checked
-      ? [...tarefasSelecionadas, tarefaId]
-      : tarefasSelecionadas.filter(id => id !== tarefaId);
-
-    onChange({
-      ...value,
-      tarefasSelecionadas: novasTarefas,
-    });
-  };
-
-  const handleSelectAllTarefas = () => {
-    onChange({
-      ...value,
-      tarefasSelecionadas: tarefasDoPlano.map(t => t.id),
-    });
-  };
-
-  const handleDeselectAllTarefas = () => {
-    onChange({
-      ...value,
-      tarefasSelecionadas: [],
-    });
-  };
-
-  // ==================== RENDER ====================
-
-  return (
-    <div className="space-y-6">
-      {/* Seletor de Tipo */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium text-foreground">Tipo de Origem</Label>
-        <TipoOrigemSelector
-          value={tipo}
-          onChange={handleTipoChange}
-          disabled={disabled}
-        />
-      </div>
-
-      {/* Divider */}
-      <div className="border-t border-border" />
-
-      {/* ANOMALIA Flow - pesquisa direta */}
-      {tipo === 'ANOMALIA' && (
-        <AnomaliaSelector
-          anomalias={anomaliasDisponiveis as any}
-          value={anomaliaId}
-          onChange={handleAnomaliaChange}
-          loading={loading}
-          disabled={disabled}
-        />
-      )}
-
-      {/* SOLICITACAO_SERVICO Flow - pesquisa direta */}
-      {tipo === 'SOLICITACAO_SERVICO' && (
-        <SolicitacaoSelector
-          solicitacoes={solicitacoesDisponiveis}
-          value={solicitacaoServicoId}
-          onChange={handleSolicitacaoChange}
-          loading={loading}
-          disabled={disabled}
-        />
-      )}
-
-      {/* PLANO_MANUTENCAO Flow */}
-      {tipo === 'PLANO_MANUTENCAO' && (
-        <div className="space-y-6">
-          <PlanoSelector
-            planos={planosDisponiveis as any}
-            value={planoId}
-            onChange={handlePlanoChange}
-            disabled={disabled}
-          />
-
-          {planoId && (
-            <TarefasSelector
-              tarefas={tarefasDoPlano}
-              selectedIds={tarefasSelecionadas}
-              onToggle={handleTarefaToggle}
-              onSelectAll={handleSelectAllTarefas}
-              onDeselectAll={handleDeselectAllTarefas}
-              loading={loadingTarefas}
-              disabled={disabled}
-            />
+  if (escolhido && !trocando) {
+    return (
+      <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            {rotuloDoTipo}
+          </p>
+          <p className="truncate text-sm font-medium">{escolhido.titulo}</p>
+          {escolhido.subtitulo && (
+            <p className="truncate text-xs text-muted-foreground">{escolhido.subtitulo}</p>
           )}
         </div>
-      )}
-    </div>
+
+        {!disabled && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setTrocando(true);
+              setPasso(0);
+            }}
+          >
+            Trocar
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  // ==================== PASSOS ====================
+
+  const passoDoTipo: PassoDoAssistente = {
+    rotulo: 'Tipo',
+    titulo: 'De onde vem esta ordem de serviço?',
+    concluido: true,
+    conteudo: (
+      <div className="grid gap-2 sm:grid-cols-3">
+        {TIPOS.map(({ tipo: t, rotulo, descricao, Icone }) => {
+          const ativo = tipo === t;
+
+          return (
+            <button
+              key={t}
+              type="button"
+              disabled={disabled}
+              onClick={() => trocarTipo(t)}
+              className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors ${
+                ativo ? 'border-primary bg-primary/10' : 'hover:bg-muted'
+              } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
+            >
+              <Icone className={`h-4 w-4 ${ativo ? 'text-primary' : 'text-muted-foreground'}`} />
+              <span className="text-sm font-medium">{rotulo}</span>
+              <span className="text-xs text-muted-foreground">{descricao}</span>
+            </button>
+          );
+        })}
+      </div>
+    ),
+  };
+
+  const passos: PassoDoAssistente[] = [passoDoTipo];
+
+  if (tipo === 'ANOMALIA') {
+    passos.push({
+      rotulo: 'Anomalia',
+      titulo: 'Qual anomalia origina a OS?',
+      concluido: Boolean(anomaliaId),
+      conteudo: (
+        <ListaSelecionavel
+          opcoes={opcoesAnomalia}
+          value={anomaliaId}
+          onChange={escolherAnomalia}
+          placeholder="Buscar por descrição, local, ativo, planta ou unidade..."
+          vazio="Nenhuma anomalia registrada disponível."
+          loading={loading}
+          disabled={disabled}
+        />
+      ),
+    });
+  }
+
+  if (tipo === 'SOLICITACAO_SERVICO') {
+    passos.push({
+      rotulo: 'Solicitação',
+      titulo: 'Qual solicitação origina a OS?',
+      concluido: Boolean(solicitacaoId),
+      conteudo: (
+        <ListaSelecionavel
+          opcoes={opcoesSolicitacao}
+          value={solicitacaoId}
+          onChange={escolherSolicitacao}
+          placeholder="Buscar por número, título, local ou solicitante..."
+          vazio="Nenhuma solicitação disponível."
+          loading={loading}
+          disabled={disabled}
+        />
+      ),
+    });
+  }
+
+  if (tipo === 'PLANO_MANUTENCAO') {
+    passos.push(
+      {
+        rotulo: 'Plano',
+        titulo: 'Qual plano de manutenção?',
+        concluido: Boolean(planoId),
+        conteudo: (
+          <ListaSelecionavel
+            opcoes={opcoesPlano}
+            value={planoId}
+            onChange={escolherPlano}
+            placeholder="Buscar por nome, tipo ou equipamento..."
+            vazio="Nenhum plano disponível."
+            loading={loading}
+            disabled={disabled}
+          />
+        ),
+      },
+      {
+        rotulo: 'Tarefas',
+        titulo: 'Quais tarefas entram nesta OS?',
+        concluido: tarefasSelecionadas.length > 0,
+        conteudo: (
+          <TarefasSelector
+            tarefas={tarefasDoPlano}
+            selectedIds={tarefasSelecionadas}
+            onToggle={alternarTarefa}
+            onSelectAll={() =>
+              onChange({ ...value, tarefasSelecionadas: tarefasDoPlano.map((t) => t.id) })
+            }
+            onDeselectAll={() => onChange({ ...value, tarefasSelecionadas: [] })}
+            loading={carregandoTarefas}
+            disabled={disabled}
+          />
+        ),
+      },
+    );
+  }
+
+  return (
+    <AssistentePassos
+      passos={passos}
+      atual={passo}
+      onAtualChange={setPasso}
+      disabled={disabled}
+      rotuloFinal="Concluir"
+      onFinalizar={() => setTrocando(false)}
+    />
   );
-};
+}

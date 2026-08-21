@@ -98,13 +98,13 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
         {!disabled && (
           <Button
             type="button"
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            title="Adicionar ferramenta"
             onClick={adicionarFerramenta}
-            className="h-7 text-xs gap-1"
+            className="h-8 w-8"
           >
-            <Plus className="h-3.5 w-3.5" />
-            Adicionar
+            <Plus className="h-4 w-4" />
           </Button>
         )}
       </div>
@@ -159,12 +159,6 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
         </CardLista>
       )}
 
-      {/* Empty state */}
-      {ferramentas.length === 0 && !disabled && (
-        <div className="text-center py-4 border border-dashed border-border rounded-md">
-          <p className="text-sm text-muted-foreground">Nenhuma ferramenta adicionada</p>
-        </div>
-      )}
     </div>
   );
 };

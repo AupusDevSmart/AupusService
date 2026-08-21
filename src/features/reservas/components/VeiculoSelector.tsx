@@ -206,7 +206,7 @@ export function VeiculoSelector({
       </div>
 
       {/* Lista de veículos */}
-      <div className="grid gap-3 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
+      <div className="grid gap-3 max-h-96 overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
         {veiculosOrdenados.map((veiculo) => {
           const isSelected = isVeiculoSelecionado(veiculo);
 

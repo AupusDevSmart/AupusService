@@ -60,15 +60,25 @@ export interface AnomaliaDisponivel {
 /**
  * Interface para planos de manutenção disponíveis
  */
+/**
+ * Plano oferecido na selecao de origem.
+ *
+ * Espelha o que o `useOrigemDados` monta a partir de `GET /planos-manutencao` —
+ * e nao o model do banco. Ja divergiu uma vez: declarava `descricao`, `tipo`,
+ * `frequencia` e `equipamentoNome`, que a API nao devolve, e o seletor antigo
+ * recebia a lista com `as any`, entao a divergencia nao aparecia no typecheck.
+ * Os cards mostravam linhas vazias.
+ */
 export interface PlanoDisponivel {
   id: string;
   nome: string;
-  descricao: string;
-  tipo: string;
-  frequencia: string;
-  equipamentoId?: string;
-  equipamentoNome?: string;
-  plantaId: string;
+  /** Tipo do equipamento do plano, ou 'GERAL'. */
+  categoria: string;
+  totalTarefas: number;
+  totalEquipamentos: number;
+  ativo: boolean;
+  tarefasTemplate: unknown[];
+  plantaId?: string;
 }
 
 /**

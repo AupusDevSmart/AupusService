@@ -153,13 +153,13 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
         {!disabled && (
           <Button
             type="button"
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            title="Adicionar técnico"
             onClick={adicionarTecnico}
-            className="h-7 text-xs gap-1"
+            className="h-8 w-8"
           >
-            <Plus className="h-3.5 w-3.5" />
-            Adicionar
+            <Plus className="h-4 w-4" />
           </Button>
         )}
       </div>
@@ -260,12 +260,6 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
         </div>
       )}
 
-      {/* Empty state */}
-      {tecnicos.length === 0 && !disabled && (
-        <div className="text-center py-4 border border-dashed border-border rounded-md">
-          <p className="text-sm text-muted-foreground">Nenhum técnico adicionado</p>
-        </div>
-      )}
     </div>
   );
 };

@@ -443,7 +443,7 @@ export const MultiplePlanosSelector: React.FC<MultiplePlanosSelectorProps> = ({
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
           </div>
         ) : (
-          <div className="grid gap-2 max-h-48 overflow-y-auto border border-border rounded-lg p-2 bg-muted/30">
+          <div className="grid gap-2 max-h-48 overflow-y-auto overscroll-contain border border-border rounded-lg p-2 bg-muted/30">
             <Button
               type="button"
               variant="outline"
@@ -513,7 +513,7 @@ export const MultiplePlanosSelector: React.FC<MultiplePlanosSelectorProps> = ({
           />
         </div>
 
-        <div className={`max-h-64 overflow-y-auto space-y-2 border border-border rounded-lg p-2 bg-muted/30 relative transition-opacity duration-300 ${
+        <div className={`max-h-64 overflow-y-auto overscroll-contain space-y-2 border border-border rounded-lg p-2 bg-muted/30 relative transition-opacity duration-300 ${
           isTransitioning ? 'opacity-70' : 'opacity-100'
         }`}>
           {loadingPlanos || isTransitioning ? (
@@ -646,7 +646,7 @@ export const MultiplePlanosSelector: React.FC<MultiplePlanosSelectorProps> = ({
                       </Button>
                     </div>
 
-                    <div className="grid gap-2 max-h-48 overflow-y-auto">
+                    <div className="grid gap-2 max-h-48 overflow-y-auto overscroll-contain">
                       {grupo.tarefas.map((tarefa) => {
                         const isChecked = value.tarefasSelecionadas.includes(tarefa.id);
 

@@ -86,7 +86,7 @@ export const TarefasSelector: React.FC<TarefasSelectorProps> = ({
       </div>
 
       {/* Lista de tarefas */}
-      <div className="grid gap-2 max-h-96 overflow-y-auto border border-border rounded-lg p-2 bg-muted/30">
+      <div className="grid gap-2 max-h-96 overflow-y-auto overscroll-contain border border-border rounded-lg p-2 bg-muted/30">
         {tarefas.map((tarefa) => {
           const isChecked = selectedIds.includes(tarefa.id);
 

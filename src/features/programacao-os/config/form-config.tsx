@@ -1,6 +1,7 @@
 // src/features/programacao-os/config/form-config.tsx - CORRIGIDA COM MAPEAMENTO DE GRUPOS
 import type { FormField } from '@/types/base';
 import { OrigemOSSelector } from '../components/OrigemOSSelector';
+import { InstrucoesDaOrigem } from '../components/InstrucoesDaOrigem';
 import { OrigemOSCard } from '../components/OrigemOSCard';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
@@ -90,6 +91,39 @@ export const programacaoOSFormFields: FormField[] = [
         />
       );
     }
+  },
+  {
+    key: 'instrucoes_origem',
+    label: '',
+    type: 'custom',
+    group: 'origem',
+    colSpan: 2,
+    excludeFromSubmit: true,
+    render: ({ entity, formData }: any) => {
+      // No cadastro a origem esta no formulario; numa OS ja salva, na entidade.
+      const origem = formData?.origem;
+      const tipo = origem?.tipo || entity?.origem?.tipo || entity?.origem || 'MANUAL';
+
+      const tarefaIds: string[] = origem?.tarefasSelecionadas?.length
+        ? origem.tarefasSelecionadas
+        : (entity?.tarefas_programacao || [])
+            .map((t: any) => t?.tarefa_id || t?.tarefa?.id || t?.id)
+            .filter(Boolean);
+
+      return (
+        <InstrucoesDaOrigem
+          tipo={tipo}
+          anomaliaId={origem?.anomaliaId || entity?.anomalia?.id || entity?.anomalia_id}
+          solicitacaoId={
+            origem?.solicitacaoServicoId ||
+            entity?.solicitacao_servico?.id ||
+            entity?.solicitacao_servico_id
+          }
+          planoId={origem?.planoId || entity?.plano_manutencao?.id || entity?.plano_manutencao_id}
+          tarefaIds={tarefaIds}
+        />
+      );
+    },
   },
 
 

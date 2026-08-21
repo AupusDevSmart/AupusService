@@ -1,235 +1,288 @@
 // src/features/programacao-os/components/ReservaViaturaField.tsx
-import React, { useState, useEffect } from 'react';
-import { Car, Calendar, Clock, AlertCircle } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Car, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { AssistentePassos, type PassoDoAssistente } from '@/components/common/AssistentePassos';
 import { VeiculoSelector } from '@/features/reservas/components/VeiculoSelector';
 import { useVeiculos } from '@/features/veiculos/hooks/useVeiculos';
 import { useReservas } from '@/features/reservas/hooks/useReservas';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 
-interface ReservaViaturaFieldProps {
-  value?: {
-    veiculo_id?: string;
-    reserva_data_inicio?: string;
-    reserva_data_fim?: string;
-    reserva_hora_inicio?: string;
-    reserva_hora_fim?: string;
-    reserva_finalidade?: string;
-  };
-  onChange: (value: any) => void;
-  disabled?: boolean;
-  dataProgramada?: string; // Data de programação da OS para usar como padrão
+interface ValorDaReserva {
+  veiculo_id?: string;
+  reserva_data_inicio?: string;
+  reserva_data_fim?: string;
+  reserva_hora_inicio?: string;
+  reserva_hora_fim?: string;
+  reserva_finalidade?: string;
 }
 
-export const ReservaViaturaField: React.FC<ReservaViaturaFieldProps> = ({
-  value = {},
+interface ReservaViaturaFieldProps {
+  value?: ValorDaReserva;
+  onChange: (value: ValorDaReserva) => void;
+  disabled?: boolean;
+  /** Data de programação da OS, usada como padrão do período. */
+  dataProgramada?: string;
+}
+
+const PADRAO: ValorDaReserva = {
+  veiculo_id: '',
+  reserva_data_inicio: '',
+  reserva_data_fim: '',
+  reserva_hora_inicio: '08:00',
+  reserva_hora_fim: '18:00',
+  reserva_finalidade: '',
+};
+
+/**
+ * A reserva de veículo, em dois passos.
+ *
+ * O período vem primeiro porque é ele que decide quais veículos estão livres —
+ * antes, a lista aparecia junto de uma caixa tracejada dizendo "preencha as
+ * datas para ver os veículos", ocupando meia tela para não mostrar nada.
+ *
+ * Escolhido o veículo, o assistente sai e fica um resumo, como na origem da OS.
+ */
+export function ReservaViaturaField({
+  value,
   onChange,
   disabled = false,
-  dataProgramada
-}) => {
-  // Estado local
-  const [localValue, setLocalValue] = useState({
-    veiculo_id: value?.veiculo_id || '',
-    reserva_data_inicio: value?.reserva_data_inicio || '',
-    reserva_data_fim: value?.reserva_data_fim || '',
-    reserva_hora_inicio: value?.reserva_hora_inicio || '08:00',
-    reserva_hora_fim: value?.reserva_hora_fim || '18:00',
-    reserva_finalidade: value?.reserva_finalidade || ''
-  });
+  dataProgramada,
+}: ReservaViaturaFieldProps) {
+  const [dados, setDados] = useState<ValorDaReserva>({ ...PADRAO, ...value });
+  const [passo, setPasso] = useState(0);
+  const [trocando, setTrocando] = useState(false);
 
-  // Hooks - desabilitar autoFetch para evitar carregamento desnecessário
-  const { veiculos, loading: loadingVeiculos, fetchVeiculos } = useVeiculos({ autoFetch: false });
-  const { reservas, loading: loadingReservas, fetchReservas } = useReservas({ autoFetch: false });
+  const { veiculos, loading: carregandoVeiculos, fetchVeiculos } = useVeiculos({ autoFetch: false });
+  const { reservas, loading: carregandoReservas, fetchReservas } = useReservas({ autoFetch: false });
 
-  // Atualizar estado local quando value externo mudar
-  useEffect(() => {
-    if (value) {
-      setLocalValue(prev => ({
-        ...prev,
-        ...value
-      }));
-    }
-  }, [value]);
-
-  // Carregar dados inicialmente apenas uma vez
   useEffect(() => {
     fetchVeiculos();
     fetchReservas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Executar apenas uma vez na montagem
+  }, []);
 
-  // Usar data programada como padrão se disponível
+  // Absorve mudança vinda de fora sem entrar em laço.
+  //
+  // O pai recria o objeto `value` a cada render; comparar por referência faria
+  // este efeito gravar estado em toda passagem, e gravar estado provoca outra.
+  // A comparação é pelo conteúdo.
+  const assinaturaExterna = JSON.stringify(value ?? {});
   useEffect(() => {
-    if (dataProgramada && !localValue.reserva_data_inicio) {
-      const dataProgramadaFormatted = dataProgramada.split('T')[0]; // YYYY-MM-DD
-      const updated = {
-        ...localValue,
-        reserva_data_inicio: dataProgramadaFormatted,
-        reserva_data_fim: dataProgramadaFormatted
-      };
-      setLocalValue(updated);
-      onChange(updated);
-    }
+    if (!value) return;
+    setDados((atual) => ({ ...atual, ...value }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataProgramada]); // Só reagir a mudanças em dataProgramada
+  }, [assinaturaExterna]);
 
-  // Handler para mudanças nos campos
-  const handleFieldChange = (field: string, newValue: any) => {
-    const updated = {
-      ...localValue,
-      [field]: newValue
-    };
-    setLocalValue(updated);
-    onChange(updated);
+  // A data da OS vira o período sugerido, uma vez só. Sem a trava, reabrir o
+  // sheet reescreveria por cima de um período que a pessoa já tinha ajustado.
+  const sugeridoRef = useRef(false);
+  useEffect(() => {
+    if (!dataProgramada || sugeridoRef.current) return;
+    if (dados.reserva_data_inicio) return;
+
+    sugeridoRef.current = true;
+    const dia = dataProgramada.split('T')[0];
+    atualizar({ reserva_data_inicio: dia, reserva_data_fim: dia });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataProgramada]);
+
+  const atualizar = (mudanca: Partial<ValorDaReserva>) => {
+    const novo = { ...dados, ...mudanca };
+    setDados(novo);
+    onChange(novo);
   };
 
-  // Handler para seleção de veículo
-  const handleVeiculoChange = (veiculoId: string) => {
-    handleFieldChange('veiculo_id', veiculoId);
-  };
+  const periodoCompleto = Boolean(
+    dados.reserva_data_inicio &&
+      dados.reserva_data_fim &&
+      dados.reserva_hora_inicio &&
+      dados.reserva_hora_fim,
+  );
 
-  // Verificar se os dados estão completos para mostrar o seletor
-  const dadosCompletos =
-    localValue.reserva_data_inicio &&
-    localValue.reserva_data_fim &&
-    localValue.reserva_hora_inicio &&
-    localValue.reserva_hora_fim;
+  // `VeiculoResponse.id` e number e o formulario guarda texto — comparar sem
+  // normalizar os dois lados nunca casa. E a mesma deriva de contrato do
+  // cadastro de veiculos, ainda por resolver na origem.
+  const veiculoEscolhido = useMemo(
+    () => (veiculos || []).find((v) => String(v.id).trim() === String(dados.veiculo_id ?? '').trim()),
+    [veiculos, dados.veiculo_id],
+  );
 
-  return (
-    <div className="space-y-6">
-      {/* Campos de período da reserva */}
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Data Início */}
-          <div className="space-y-2">
-            <Label htmlFor="reserva_data_inicio" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Data Início da Reserva <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="reserva_data_inicio"
-              type="date"
-              value={localValue.reserva_data_inicio}
-              onChange={(e) => handleFieldChange('reserva_data_inicio', e.target.value)}
-              disabled={disabled}
-              className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
-            />
+  // ==================== RESUMO ====================
+
+  if (veiculoEscolhido && periodoCompleto && !trocando) {
+    const v = veiculoEscolhido;
+    const periodo =
+      dados.reserva_data_inicio === dados.reserva_data_fim
+        ? `${formatarData(dados.reserva_data_inicio)} · ${dados.reserva_hora_inicio} às ${dados.reserva_hora_fim}`
+        : `${formatarData(dados.reserva_data_inicio)} ${dados.reserva_hora_inicio} até ${formatarData(dados.reserva_data_fim)} ${dados.reserva_hora_fim}`;
+
+    return (
+      <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <Car className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <p className="truncate text-sm font-medium">
+              {[v.nome || v.modelo, v.placa].filter(Boolean).join(' · ')}
+            </p>
           </div>
-
-          {/* Hora Início */}
-          <div className="space-y-2">
-            <Label htmlFor="reserva_hora_inicio" className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Hora Início <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="reserva_hora_inicio"
-              type="time"
-              value={localValue.reserva_hora_inicio}
-              onChange={(e) => handleFieldChange('reserva_hora_inicio', e.target.value)}
-              disabled={disabled}
-              className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
-            />
-          </div>
-
-          {/* Data Fim */}
-          <div className="space-y-2">
-            <Label htmlFor="reserva_data_fim" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Data Fim da Reserva <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="reserva_data_fim"
-              type="date"
-              value={localValue.reserva_data_fim}
-              onChange={(e) => handleFieldChange('reserva_data_fim', e.target.value)}
-              disabled={disabled}
-              className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
-            />
-          </div>
-
-          {/* Hora Fim */}
-          <div className="space-y-2">
-            <Label htmlFor="reserva_hora_fim" className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Hora Fim <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="reserva_hora_fim"
-              type="time"
-              value={localValue.reserva_hora_fim}
-              onChange={(e) => handleFieldChange('reserva_hora_fim', e.target.value)}
-              disabled={disabled}
-              className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
-            />
-          </div>
-        </div>
-
-        {/* Finalidade */}
-        <div className="space-y-2">
-          <Label htmlFor="reserva_finalidade">
-            Finalidade da Reserva
-          </Label>
-          <Textarea
-            id="reserva_finalidade"
-            value={localValue.reserva_finalidade}
-            onChange={(e) => handleFieldChange('reserva_finalidade', e.target.value)}
-            placeholder="Ex: Transporte de equipe para manutenção em planta remota"
-            disabled={disabled}
-            rows={2}
-            className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
-          />
-        </div>
-      </div>
-
-      {/* Seletor de Veículo */}
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-        <div className="mb-4">
-          <Label className="text-base font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <Car className="w-5 h-5" />
-            Selecionar Veículo <span className="text-red-500">*</span>
-          </Label>
-          {!dadosCompletos && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Configure as datas e horários acima para ver os veículos disponíveis
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">{periodo}</p>
+          {dados.reserva_finalidade && (
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              {dados.reserva_finalidade}
             </p>
           )}
         </div>
 
-        {dadosCompletos ? (
-          loadingVeiculos || loadingReservas ? (
-            <div className="flex items-center justify-center p-8 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
-              <div className="text-center">
-                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Carregando veículos...</p>
-              </div>
-            </div>
-          ) : (
+        {!disabled && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setTrocando(true);
+              setPasso(0);
+            }}
+          >
+            Trocar
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  // ==================== PASSOS ====================
+
+  const passos: PassoDoAssistente[] = [
+    {
+      rotulo: 'Período',
+      titulo: 'Quando o veículo será usado?',
+      concluido: periodoCompleto,
+      conteudo: (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <CampoDeData
+            rotulo="Início"
+            data={dados.reserva_data_inicio}
+            hora={dados.reserva_hora_inicio}
+            disabled={disabled}
+            onData={(d) => atualizar({ reserva_data_inicio: d })}
+            onHora={(h) => atualizar({ reserva_hora_inicio: h })}
+          />
+          <CampoDeData
+            rotulo="Fim"
+            data={dados.reserva_data_fim}
+            hora={dados.reserva_hora_fim}
+            disabled={disabled}
+            onData={(d) => atualizar({ reserva_data_fim: d })}
+            onHora={(h) => atualizar({ reserva_hora_fim: h })}
+          />
+        </div>
+      ),
+    },
+    {
+      rotulo: 'Veículo',
+      titulo: 'Qual veículo?',
+      concluido: Boolean(dados.veiculo_id),
+      conteudo:
+        carregandoVeiculos || carregandoReservas ? (
+          <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Carregando veículos...
+          </div>
+        ) : (
+          <div className="space-y-4">
             <VeiculoSelector
               veiculos={veiculos || []}
               reservas={reservas || []}
               filtrosDisponibilidade={{
-                dataInicio: localValue.reserva_data_inicio,
-                dataFim: localValue.reserva_data_fim,
-                horaInicio: localValue.reserva_hora_inicio,
-                horaFim: localValue.reserva_hora_fim
+                dataInicio: dados.reserva_data_inicio || '',
+                dataFim: dados.reserva_data_fim || '',
+                horaInicio: dados.reserva_hora_inicio || '',
+                horaFim: dados.reserva_hora_fim || '',
               }}
-              veiculoSelecionado={localValue.veiculo_id}
-              onVeiculoChange={handleVeiculoChange}
+              veiculoSelecionado={dados.veiculo_id}
+              onVeiculoChange={(id: string) => atualizar({ veiculo_id: id })}
               disabled={disabled}
             />
-          )
-        ) : (
-          <div className="p-8 bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-center">
-            <AlertCircle className="w-8 h-8 text-gray-400 dark:text-gray-600 mx-auto mb-2" />
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Preencha as datas e horários para visualizar os veículos disponíveis
-            </p>
-          </div>
-        )}
-      </div>
 
+            <div className="space-y-1.5">
+              <Label htmlFor="reserva_finalidade" className="text-sm">
+                Finalidade
+              </Label>
+              <Textarea
+                id="reserva_finalidade"
+                value={dados.reserva_finalidade}
+                onChange={(e) => atualizar({ reserva_finalidade: e.target.value })}
+                placeholder="Ex.: transporte da equipe até a planta"
+                disabled={disabled}
+                rows={2}
+              />
+            </div>
+          </div>
+        ),
+    },
+  ];
+
+  return (
+    <AssistentePassos
+      passos={passos}
+      atual={passo}
+      onAtualChange={setPasso}
+      disabled={disabled}
+      rotuloFinal="Concluir"
+      onFinalizar={() => setTrocando(false)}
+    />
+  );
+}
+
+/** Data e hora na mesma linha: elas só fazem sentido juntas. */
+function CampoDeData({
+  rotulo,
+  data,
+  hora,
+  disabled,
+  onData,
+  onHora,
+}: {
+  rotulo: string;
+  data?: string;
+  hora?: string;
+  disabled?: boolean;
+  onData: (valor: string) => void;
+  onHora: (valor: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm">{rotulo}</Label>
+      <div className="flex gap-2">
+        <input
+          className="input-minimal"
+          type="date"
+          value={data || ''}
+          disabled={disabled}
+          onChange={(e) => onData(e.target.value)}
+        />
+        <div className="w-28 shrink-0">
+          <input
+            className="input-minimal text-center"
+            type="time"
+            value={hora || ''}
+            disabled={disabled}
+            onChange={(e) => onHora(e.target.value)}
+          />
+        </div>
+      </div>
     </div>
   );
-};
+}
+
+/** AAAA-MM-DD para DD/MM. O ano só aparece quando não é o corrente. */
+function formatarData(iso?: string): string {
+  if (!iso) return '';
+  const [ano, mes, dia] = iso.split('-');
+  if (!ano || !mes || !dia) return iso;
+
+  const atual = String(new Date().getFullYear());
+  return ano === atual ? `${dia}/${mes}` : `${dia}/${mes}/${ano}`;
+}
