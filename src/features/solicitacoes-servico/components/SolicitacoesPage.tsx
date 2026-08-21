@@ -11,6 +11,8 @@ import { formatApiError } from '@/utils/api-error';
 import { propostaApi, type Proposta } from '@/services/proposta.services';
 import { PropostaSection } from './PropostaSection';
 import { PropostaCorrenteProvider, comBotaoDePdf } from './BotaoGerarPdf';
+import { AbrirInstrucaoContext } from './InstrucoesSelector';
+import { EditarInstrucaoSheet } from '@/features/instrucoes/components/EditarInstrucaoSheet';
 import type { FormField } from '@/types/base';
 
 /**
@@ -156,30 +158,28 @@ export function SolicitacoesPage() {
    */
   const [propostaAtual, setPropostaAtual] = useState<Proposta | null>(null);
 
-  /** Grava o rascunho em sequencia: cada rota devolve os totais recalculados. */
+  /**
+   * A instrucao aberta por cima do sheet da solicitacao.
+   *
+   * Fica na pagina porque ela e quem monta o BaseModal — e precisa desligar o
+   * `closeOnEscape` dele enquanto o de cima estiver aberto: os dois escutam a
+   * tecla no document, e um Escape fecharia os dois de uma vez.
+   */
+  const [instrucaoAberta, setInstrucaoAberta] = useState<string | null>(null);
+
+  /**
+   * Grava o rascunho em sequencia: cada rota devolve os totais recalculados.
+   *
+   * O BDI nao viaja: as colunas nascem com o padrao no proprio banco, e o
+   * `create` ja recalcula com ele. Mandar daqui so repetiria o mesmo numero.
+   */
   const gravarRascunhoProposta = async (id: string, rascunho: Proposta) => {
-    if (rascunho.subinstrucoes.length > 0) {
-      await propostaApi.salvarSubinstrucoes(id, rascunho.subinstrucoes);
-    }
     if (rascunho.itens.length > 0) {
       await propostaApi.salvarItens(id, rascunho.itens);
     }
     if (rascunho.outros_custos.length > 0) {
       await propostaApi.salvarOutrosCustos(id, rascunho.outros_custos);
     }
-    // Sempre por ultimo: e a gravacao que fecha o total com o que veio antes.
-    await propostaApi.salvarCondicoes(id, {
-      bdi_regime: rascunho.bdi_regime,
-      bdi_administracao_central: rascunho.bdi_administracao_central,
-      bdi_seguro_garantia: rascunho.bdi_seguro_garantia,
-      bdi_taxa_risco: rascunho.bdi_taxa_risco,
-      bdi_despesas_financeiras: rascunho.bdi_despesas_financeiras,
-      bdi_lucro: rascunho.bdi_lucro,
-      bdi_pis: rascunho.bdi_pis,
-      bdi_cofins: rascunho.bdi_cofins,
-      bdi_cprb: rascunho.bdi_cprb,
-      bdi_issqn: rascunho.bdi_issqn,
-    });
   };
 
   /**
@@ -347,25 +347,34 @@ export function SolicitacoesPage() {
 
         {modalState.isOpen && (
           <PropostaCorrenteProvider proposta={propostaAtual}>
-            <BaseModal
-              isOpen={modalState.isOpen}
-              mode={modalState.mode}
-              entity={modalState.entity as any}
-              title={getModalTitle()}
-              icon={<FilePenLine className="h-4 w-4 md:h-5 md:w-5 text-primary" />}
-              formFields={camposDoSheet}
-              onClose={handleClose}
-              onSubmit={handleSubmit}
-              width="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[800px]"
-            >
-              {/* Painel de confirmação de ação - aparece no final do form em modo view */}
-              {solicitacoesActions.pendingAction && modalState.mode === 'view' && (
-                <ActionConfirmPanel
-                  action={solicitacoesActions.pendingAction}
-                  onConfirm={solicitacoesActions.confirmAction}
-                />
-              )}
-            </BaseModal>
+            <AbrirInstrucaoContext.Provider value={setInstrucaoAberta}>
+              <BaseModal
+                isOpen={modalState.isOpen}
+                mode={modalState.mode}
+                entity={modalState.entity as any}
+                title={getModalTitle()}
+                icon={<FilePenLine className="h-4 w-4 md:h-5 md:w-5 text-primary" />}
+                formFields={camposDoSheet}
+                onClose={handleClose}
+                onSubmit={handleSubmit}
+                closeOnEscape={!instrucaoAberta}
+                closeOnBackdropClick={!instrucaoAberta}
+                width="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[800px]"
+              >
+                {/* Painel de confirmação de ação - aparece no final do form em modo view */}
+                {solicitacoesActions.pendingAction && modalState.mode === 'view' && (
+                  <ActionConfirmPanel
+                    action={solicitacoesActions.pendingAction}
+                    onConfirm={solicitacoesActions.confirmAction}
+                  />
+                )}
+              </BaseModal>
+
+              <EditarInstrucaoSheet
+                instrucaoId={instrucaoAberta}
+                onClose={() => setInstrucaoAberta(null)}
+              />
+            </AbrirInstrucaoContext.Provider>
           </PropostaCorrenteProvider>
         )}
       </Layout.Main>

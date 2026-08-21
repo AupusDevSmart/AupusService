@@ -13,6 +13,15 @@ interface InstrucoesSelectorProps {
   entity?: any;
 }
 
+/**
+ * Quem abre o sheet da instrucao.
+ *
+ * Por contexto, e nao por prop: o `formFields` do BaseModal e memoizado e cada
+ * `render` vira componente por React.createElement — passar por ali trocaria a
+ * identidade deste campo e o desmontaria a cada abertura.
+ */
+export const AbrirInstrucaoContext = React.createContext<((id: string) => void) | null>(null);
+
 interface InstrucaoMeta {
   tag?: string;
   nome?: string;
@@ -56,6 +65,7 @@ function extractEntityMeta(entity?: any): Record<string, InstrucaoMeta> {
 }
 
 export function InstrucoesSelector({ value, onChange, disabled, entity }: InstrucoesSelectorProps) {
+  const abrirInstrucao = React.useContext(AbrirInstrucaoContext);
   const [initialized, setInitialized] = React.useState(false);
   const selectedIds = extractIds(value, entity);
   const entityMeta = React.useMemo(() => extractEntityMeta(entity), [entity]);
@@ -161,6 +171,7 @@ export function InstrucoesSelector({ value, onChange, disabled, entity }: Instru
               tag={meta.tag}
               nome={meta.nome}
               onRemove={disabled ? undefined : () => handleRemove(id)}
+              onEditar={abrirInstrucao ?? undefined}
               disabled={disabled}
             />
           );

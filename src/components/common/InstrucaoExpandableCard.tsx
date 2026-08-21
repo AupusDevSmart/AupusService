@@ -1,6 +1,6 @@
 // src/components/common/InstrucaoExpandableCard.tsx
 import React, { useState, useCallback } from 'react';
-import { FileText, ChevronDown, ChevronRight, X, Clock, Wrench, ListChecks, AlertCircle } from 'lucide-react';
+import { FileText, ChevronDown, ChevronRight, X, Clock, Wrench, ListChecks, AlertCircle, SquarePen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { instrucoesApi, InstrucaoApiResponse, SubInstrucaoApiResponse, RecursoInstrucaoApiResponse } from '@/services/instrucoes.services';
 
@@ -10,6 +10,8 @@ interface InstrucaoExpandableCardProps {
   nome?: string;
   onRemove?: () => void;
   disabled?: boolean;
+  /** Ausente, o botao de editar nao aparece. */
+  onEditar?: (id: string) => void;
 }
 
 const tipoRecursoLabels: Record<string, string> = {
@@ -46,7 +48,7 @@ function formatMinutos(minutos?: number): string {
   return m > 0 ? `${h}h ${m}min` : `${h}h`;
 }
 
-export function InstrucaoExpandableCard({ id, tag, nome, onRemove, disabled }: InstrucaoExpandableCardProps) {
+export function InstrucaoExpandableCard({ id, tag, nome, onRemove, disabled, onEditar }: InstrucaoExpandableCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [details, setDetails] = useState<InstrucaoApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -94,11 +96,26 @@ export function InstrucaoExpandableCard({ id, tag, nome, onRemove, disabled }: I
           <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <span className="text-sm truncate font-medium">{label}</span>
         </button>
-        {!disabled && onRemove && (
-          <Button type="button" variant="ghost" size="sm" onClick={onRemove} className="flex-shrink-0 ml-2">
-            <X className="h-4 w-4" />
-          </Button>
-        )}
+        <div className="flex items-center flex-shrink-0 ml-2">
+          {/* Editar a instrucao, e nao o vinculo: abre o sheet dela por cima
+              deste, sem tirar ninguem do formulario que esta preenchendo. */}
+          {onEditar && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onEditar(id)}
+              title="Editar esta instrução"
+            >
+              <SquarePen className="h-4 w-4" />
+            </Button>
+          )}
+          {!disabled && onRemove && (
+            <Button type="button" variant="ghost" size="sm" onClick={onRemove} title="Desvincular">
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Details panel */}

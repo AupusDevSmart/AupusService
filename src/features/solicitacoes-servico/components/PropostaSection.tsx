@@ -9,19 +9,17 @@ import {
   propostaVazia,
   calcularRascunho,
   calcularBdi,
-  somaImpostos,
   montarDeInstrucoes,
   moeda,
   type ItemProposta,
   type OutroCusto,
   type Proposta,
-  type SubinstrucaoProposta,
 } from '@/services/proposta.services';
 
 interface PropostaSectionProps {
   /** Nulo enquanto a solicitação não foi salva. Aí a seção vira rascunho. */
   solicitacaoId: string | null;
-  /** As instruções escolhidas acima. Mudou aqui, a proposta se refaz. */
+  /** As instruções escolhidas acima. São elas que definem as linhas daqui. */
   instrucoesIds?: string[];
   somenteLeitura?: boolean;
   /** Sobe o rascunho para a página persistir depois de criar a solicitação. */
@@ -37,12 +35,15 @@ interface PropostaSectionProps {
 /**
  * A proposta comercial dentro do sheet da solicitação.
  *
+ * Uma linha por instrução vinculada, com o VALOR FECHADO daquela instrução —
+ * nada é copiado item a item. O valor nasce da soma dos recursos do catálogo,
+ * como sugestão, e a pessoa ajusta por cima. Quem quiser mudar a composição
+ * edita a instrução, pelo botão no card dela.
+ *
  * Funciona nos dois momentos. Com a solicitação já salva, cada mudança vai
  * direto para a API e os totais voltam calculados pelo servidor. No cadastro,
  * quando ainda não há id, a seção trabalha sobre um rascunho local e a página
- * o persiste assim que a solicitação nasce — antes, ela simplesmente sumia, e
- * o lucro, a nota fiscal e os outros custos ficavam invisíveis justamente na
- * hora de montar o orçamento.
+ * o persiste assim que a solicitação nasce.
  *
  * Segue o vocabulário visual das outras seções deste sheet: moldura
  * `border rounded-lg` sem tint (os tokens deste projeto não têm canal alpha,
@@ -115,67 +116,74 @@ export function PropostaSection({
   };
 
   const salvarItens = (m: (p: Proposta) => Proposta) =>
-    void aplicar(m, (id, novo) => propostaApi.salvarItens(id, novo.itens), 'o item');
+    void aplicar(m, (id, novo) => propostaApi.salvarItens(id, novo.itens), 'o valor');
 
   const salvarCustos = (m: (p: Proposta) => Proposta) =>
     void aplicar(m, (id, novo) => propostaApi.salvarOutrosCustos(id, novo.outros_custos), 'o custo');
 
-  const salvarEtapas = (m: (p: Proposta) => Proposta) =>
-    void aplicar(m, (id, novo) => propostaApi.salvarSubinstrucoes(id, novo.subinstrucoes), 'a etapa');
-
-  /** Grava itens e etapas juntos — é o que a troca de instrução mexe. */
-  const salvarTudo = (m: (p: Proposta) => Proposta) =>
-    void aplicar(
-      m,
-      async (id, novo) => {
-        await propostaApi.salvarSubinstrucoes(id, novo.subinstrucoes);
-        return propostaApi.salvarItens(id, novo.itens);
-      },
-      'a proposta',
-    );
-
-  const salvarCondicoes = (m: (p: Proposta) => Proposta) =>
-    void aplicar(
-      m,
-      (id, novo) =>
-        propostaApi.salvarCondicoes(id, {
-          bdi_regime: novo.bdi_regime,
-          bdi_administracao_central: novo.bdi_administracao_central,
-          bdi_seguro_garantia: novo.bdi_seguro_garantia,
-          bdi_taxa_risco: novo.bdi_taxa_risco,
-          bdi_despesas_financeiras: novo.bdi_despesas_financeiras,
-          bdi_lucro: novo.bdi_lucro,
-          bdi_pis: novo.bdi_pis,
-          bdi_cofins: novo.bdi_cofins,
-          bdi_cprb: novo.bdi_cprb,
-          bdi_issqn: novo.bdi_issqn,
-        }),
-      'o BDI',
-    );
-
-  /** Troca um componente do BDI. */
-  const mudarBdi = (campo: keyof Proposta) => (valor: number) =>
-    salvarCondicoes((p) => ({ ...p, [campo]: valor }));
-
   /**
-   * O REIDI desonera PIS e COFINS.
+   * Uma linha por instrução vinculada — nem mais, nem menos.
    *
-   * Marcar zera os dois; desmarcar devolve os padrões. Depois disso cada um
-   * continua editável — o regime é um atalho, não uma trava.
+   * A comparação é entre o conjunto de instruções do formulário e o conjunto
+   * que as linhas dizem representar. Divergiu, refaz. Isso cobre três casos com
+   * a mesma regra: vincular, desvincular, e encontrar dados do formato antigo
+   * (uma linha por recurso, ou linha avulsa sem instrução) numa proposta salva
+   * antes desta mudança.
+   *
+   * O `?` marca a linha que não pode representar uma instrução: sem
+   * `instrucao_id`, ou com `recurso_id` — este último é a assinatura do formato
+   * antigo, quando cada recurso virava uma linha. Nenhum id casa com `?`, então
+   * o conjunto diverge e a lista é refeita.
+   *
+   * O `recurso_id` importa no caso estreito de uma instrução com um único
+   * recurso: ali havia uma linha só, os conjuntos casariam, e a proposta ficaria
+   * mostrando o nome do parafuso onde devia estar o nome da instrução.
    */
-  const trocarRegime = (comReidi: boolean) =>
-    salvarCondicoes((p) => ({
-      ...p,
-      bdi_regime: comReidi ? 'COM_REIDI' : 'SEM_REIDI',
-      bdi_pis: comReidi ? 0 : 0.65,
-      bdi_cofins: comReidi ? 0 : 3,
-    }));
+  const chaveInstrucoes = [...instrucoesIds]
+    .map((x) => String(x).trim())
+    .filter(Boolean)
+    .sort()
+    .join('|');
 
-  // O percentual sai da conta local, e não de `bdi_percentual`: enquanto a
-  // resposta do servidor não chega, o campo gravado ainda é o anterior, e o
-  // número piscaria para o valor velho a cada ajuste. A fórmula é a mesma.
+  const chaveDasLinhas = proposta.itens
+    .map((i) => (i.recurso_id ? '?' : String(i.instrucao_id ?? '?').trim() || '?'))
+    .sort()
+    .join('|');
+
+  // A última chave que tentamos montar. Sem isso, uma instrução que o servidor
+  // não devolve deixaria os conjuntos divergentes para sempre, e o efeito
+  // ficaria tentando montar a lista em laço.
+  const tentadaRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (somenteLeitura || carregando) return;
+
+    if (chaveDasLinhas === chaveInstrucoes) {
+      tentadaRef.current = null;
+      return;
+    }
+
+    if (tentadaRef.current === chaveInstrucoes) return;
+    tentadaRef.current = chaveInstrucoes;
+
+    let cancelado = false;
+
+    void (async () => {
+      const ids = chaveInstrucoes ? chaveInstrucoes.split('|') : [];
+      const itens = await montarDeInstrucoes(ids, proposta.itens);
+      if (cancelado) return;
+      salvarItens((p) => ({ ...p, itens }));
+    })();
+
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaveInstrucoes, chaveDasLinhas, carregando, somenteLeitura]);
+
+  const editavel = !somenteLeitura;
+
   const bdi = calcularBdi(proposta) * 100;
-  const impostos = somaImpostos(proposta);
 
   const faturamentoDireto = proposta.outros_custos
     .filter((c) => c.faturamento_direto)
@@ -184,73 +192,19 @@ export function PropostaSection({
   const custoBase = proposta.total_custo - faturamentoDireto;
 
   /**
-   * Preenche itens e etapas quando o conjunto de instruções muda.
+   * Sem instrução vinculada não há proposta.
    *
-   * A chave é a lista ordenada, e não o array: o pai recria esse array a cada
-   * render, e comparar por referência dispararia o efeito sem parar.
+   * A seção nasce do que foi vinculado acima. Mostrar blocos vazios antes disso
+   * enche o sheet de campos que só vão se preencher depois, e dá a entender que
+   * há algo a fazer ali.
    *
-   * Só age quando muda de verdade — e nunca no primeiro render de uma proposta
-   * já salva, senão sobrescreveria os preços que a pessoa ajustou antes.
+   * A própria proposta também conta: uma solicitação antiga pode ter valores
+   * sem o vínculo estar carregado no formulário ainda, e escondê-los apagaria
+   * da tela um orçamento que existe.
    */
-  const chaveInstrucoes = [...instrucoesIds].map((x) => String(x).trim()).sort().join('|');
-  const chaveAnteriorRef = useRef<string | null>(null);
+  const temProposta = proposta.itens.length > 0 || proposta.outros_custos.length > 0;
 
-  useEffect(() => {
-    if (somenteLeitura) return;
-    if (carregando) return;
-
-    // Primeira passagem: só registra o que já está lá.
-    if (chaveAnteriorRef.current === null) {
-      chaveAnteriorRef.current = chaveInstrucoes;
-      return;
-    }
-
-    if (chaveAnteriorRef.current === chaveInstrucoes) return;
-    chaveAnteriorRef.current = chaveInstrucoes;
-
-    let cancelado = false;
-
-    void (async () => {
-      const ids = chaveInstrucoes ? chaveInstrucoes.split('|') : [];
-      const { itens, subinstrucoes } = await montarDeInstrucoes(ids);
-      if (cancelado) return;
-
-      // Os itens avulsos sobrevivem: não vieram de instrução nenhuma e não
-      // são da conta desta troca.
-      salvarTudo((p) => ({
-        ...p,
-        subinstrucoes,
-        itens: [...itens, ...p.itens.filter((i) => !i.instrucao_id)],
-      }));
-    })();
-
-    return () => {
-      cancelado = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chaveInstrucoes, somenteLeitura]);
-
-  const editavel = !somenteLeitura;
-
-  /**
-   * Sem instrucao vinculada nao ha proposta.
-   *
-   * As secoes nascem do que a instrucao traz — etapas e recursos. Mostrar tres
-   * blocos vazios antes disso enche o sheet de campos que so vao se preencher
-   * depois, e da a entender que ha algo a fazer ali.
-   *
-   * A propria proposta tambem conta: uma solicitacao antiga pode ter itens sem
-   * o vinculo estar carregado no formulario ainda, e escondel-los apagaria da
-   * tela um orcamento que existe.
-   */
-  const temProposta =
-    proposta.itens.length > 0 ||
-    proposta.subinstrucoes.length > 0 ||
-    proposta.outros_custos.length > 0;
-
-  // Quem imprime é o pé do formulário; quem TEM a proposta é esta seção. O
-  // efeito fica aqui, depois do `temProposta`, porque é a mesma condição que
-  // decide se existe algo na tela para imprimir.
+  // Quem imprime é o pé do formulário; quem TEM a proposta é esta seção.
   useEffect(() => {
     onPropostaChange?.(temProposta ? proposta : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -272,146 +226,24 @@ export function PropostaSection({
         </p>
       )}
 
-      {/* ---------------- ETAPAS ---------------- */}
+      {/* ---------------- INSTRUÇÕES ---------------- */}
       <div className="border rounded-lg">
         <div className="flex items-center justify-between p-3">
-          <span className="text-sm font-medium">
-            Etapas do serviço{proposta.subinstrucoes.length > 0 && ` (${proposta.subinstrucoes.length})`}
-          </span>
-          {editavel && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                salvarEtapas((p) => ({
-                  ...p,
-                  subinstrucoes: [...p.subinstrucoes, { descricao: '', tempo_estimado: null }],
-                }))
-              }
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Etapa
-            </Button>
-          )}
-        </div>
-
-        <div className="border-t px-4 py-3 space-y-2">
-          {proposta.subinstrucoes.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              Nenhuma etapa. Vincule uma instrução acima ou adicione à mão.
-            </p>
-          )}
-
-          {/* Mesmo formato do sheet de instrução: número, descrição e tempo em
-              campos — e não uma lista somente-leitura. Editar aqui ajusta o
-              escopo DESTA proposta, sem tocar na instrução de origem. */}
-          {proposta.subinstrucoes.map((etapa, indice) => (
-            <div key={indice} className="flex items-center gap-2">
-              <span className="w-5 shrink-0 text-right text-xs text-muted-foreground">
-                {indice + 1}.
-              </span>
-              {/* O tamanho vai no container, e o input ocupa 100% dele: a
-                  classe .input-minimal traz width:100% e ganharia de um w-14
-                  aplicado no proprio campo. */}
-              <div className="min-w-0 flex-1">
-                <input
-                  className="input-minimal"
-                  value={etapa.descricao}
-                  placeholder="O que será feito nesta etapa"
-                  disabled={!editavel}
-                  onChange={(e) =>
-                    salvarEtapas((p) => ({
-                      ...p,
-                      subinstrucoes: p.subinstrucoes.map((s, i) =>
-                        i === indice ? { ...s, descricao: e.target.value } : s,
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              {/* Em HORAS na tela, minutos no banco.
-                  `sub_instrucoes.tempo_estimado` guarda minutos, e o sheet de
-                  instrucao ja converte assim — mostrar minuto cru aqui faria o
-                  mesmo dado aparecer como "90" num lugar e "1,5" no outro. */}
-              <div className="w-14 shrink-0">
-                <input
-                  className="input-minimal input-numero text-center"
-                  type="number"
-                  min="0"
-                  step="0.25"
-                  placeholder="0"
-                  value={etapa.tempo_estimado ? etapa.tempo_estimado / 60 : ''}
-                  disabled={!editavel}
-                  onChange={(e) => {
-                    const horas = Number(e.target.value);
-                    salvarEtapas((p) => ({
-                      ...p,
-                      subinstrucoes: p.subinstrucoes.map((s, i) =>
-                        i === indice
-                          ? { ...s, tempo_estimado: horas > 0 ? Math.round(horas * 60) : null }
-                          : s,
-                      ),
-                    }));
-                  }}
-                />
-              </div>
-              <span className="w-6 shrink-0 text-xs text-muted-foreground">h</span>
-              {editavel && (
-                <BotaoRemover
-                  onClick={() =>
-                    salvarEtapas((p) => ({
-                      ...p,
-                      subinstrucoes: p.subinstrucoes.filter((_, i) => i !== indice),
-                    }))
-                  }
-                />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ---------------- ITENS ---------------- */}
-      <div className="border rounded-lg">
-        <div className="flex items-center justify-between p-3">
-          <span className="text-sm font-medium">Itens</span>
+          <span className="text-sm font-medium">Instruções</span>
           <div className="flex items-center gap-1">
             {salvando && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-            {editavel && (
-              <>
-                {!rascunho && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      void aplicar(
-                        (p) => p,
-                        (id) => propostaApi.recarregar(id),
-                        'a recarga',
-                      )
-                    }
-                    title="Refaz a lista a partir das instruções. Descarta os preços editados."
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    salvarItens((p) => ({
-                      ...p,
-                      itens: [...p.itens, { descricao: '', quantidade: 1, preco_unitario: 0 }],
-                    }))
-                  }
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Item
-                </Button>
-              </>
+            {editavel && !rascunho && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  void aplicar((p) => p, (id) => propostaApi.recarregar(id), 'a recarga')
+                }
+                title="Refaz os valores a partir do catálogo. Descarta o que foi ajustado."
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
             )}
           </div>
         </div>
@@ -421,23 +253,22 @@ export function PropostaSection({
 
           {!carregando && proposta.itens.length === 0 && (
             <p className="text-sm text-muted-foreground">
-              Nenhum item. Vincule uma instrução acima ou adicione à mão.
+              Nenhuma instrução vinculada.
             </p>
           )}
 
           {proposta.itens.map((item, indice) => (
-            <LinhaItem
-              key={item.id ?? `novo-${indice}`}
+            <LinhaInstrucao
+              key={item.id ?? item.instrucao_id ?? `novo-${indice}`}
               item={item}
               editavel={editavel}
-              onCampo={(campo, valor) =>
+              onValor={(valor) =>
                 salvarItens((p) => ({
                   ...p,
-                  itens: p.itens.map((it, i) => (i === indice ? { ...it, [campo]: valor } : it)),
+                  itens: p.itens.map((it, i) =>
+                    i === indice ? { ...it, preco_unitario: valor } : it,
+                  ),
                 }))
-              }
-              onRemover={() =>
-                salvarItens((p) => ({ ...p, itens: p.itens.filter((_, i) => i !== indice) }))
               }
             />
           ))}
@@ -497,9 +328,9 @@ export function PropostaSection({
                 {/* "R$" fora do campo, e nao como padding interno: o padding do
                     .input-minimal venceria um pl-7 pela ordem do CSS. */}
                 <span className="shrink-0 text-xs text-muted-foreground">R$</span>
-                <div className="w-20 shrink-0">
+                <div className="w-24 shrink-0">
                   <input
-                    className="input-minimal input-numero text-center"
+                    className="input-minimal input-numero text-right"
                     type="number"
                     step="0.01"
                     min="0"
@@ -512,7 +343,7 @@ export function PropostaSection({
                     força quebra num sheet estreito. */}
                 <label
                   className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
-                  title="Faturamento direto — o cliente paga o fornecedor. Fica fora da base do imposto."
+                  title="Faturamento direto — o cliente paga o fornecedor. Fica fora da base do BDI."
                 >
                   <input
                     type="checkbox"
@@ -545,114 +376,21 @@ export function PropostaSection({
           <span className="text-sm font-medium">Fechamento</span>
         </div>
 
-        <div className="border-t px-4 py-3 space-y-4">
-          {/* O BDI, pela fórmula do acórdão 2.622/2013 do TCU. Os componentes
-              ficam à vista porque proposta com preço é auditável: quem pergunta
-              de onde veio o percentual precisa ver a memória de cálculo, e não
-              um número pronto. */}
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-baseline gap-2">
-                <span className="text-sm font-medium">BDI</span>
-                <span className="text-base font-semibold tabular-nums">{percentual(bdi)}%</span>
-              </div>
+        {/* O BDI fica no padrão da tabela GOINFRA e não é editado aqui. Os nove
+            componentes continuam gravados por solicitação — o que saiu foi a
+            edição, não o registro: proposta com preço é auditável, e a memória
+            de cálculo tem que estar no banco mesmo sem estar na tela.
 
-              <label
-                className="flex items-center gap-2 text-sm"
-                title="Regime Especial de Incentivos para o Desenvolvimento da Infraestrutura — desonera PIS e COFINS"
-              >
-                <input
-                  type="checkbox"
-                  className="h-4 w-4"
-                  checked={proposta.bdi_regime === 'COM_REIDI'}
-                  disabled={!editavel}
-                  onChange={(e) => trocarRegime(e.target.checked)}
-                />
-                Com REIDI
-              </label>
-            </div>
-
-            <div className="mt-3 grid gap-x-8 gap-y-2 sm:grid-cols-2">
-              <div className="space-y-2">
-                <CampoPercentual
-                  rotulo="Administração central"
-                  valor={proposta.bdi_administracao_central}
-                  editavel={editavel}
-                  onCommit={mudarBdi('bdi_administracao_central')}
-                />
-                <CampoPercentual
-                  rotulo="Seguro e garantia"
-                  valor={proposta.bdi_seguro_garantia}
-                  editavel={editavel}
-                  onCommit={mudarBdi('bdi_seguro_garantia')}
-                />
-                <CampoPercentual
-                  rotulo="Taxa de risco"
-                  valor={proposta.bdi_taxa_risco}
-                  editavel={editavel}
-                  onCommit={mudarBdi('bdi_taxa_risco')}
-                />
-                <CampoPercentual
-                  rotulo="Despesas financeiras"
-                  valor={proposta.bdi_despesas_financeiras}
-                  editavel={editavel}
-                  onCommit={mudarBdi('bdi_despesas_financeiras')}
-                />
-                <CampoPercentual
-                  rotulo="Lucro"
-                  valor={proposta.bdi_lucro}
-                  editavel={editavel}
-                  onCommit={mudarBdi('bdi_lucro')}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <CampoPercentual
-                  rotulo="PIS"
-                  valor={proposta.bdi_pis}
-                  editavel={editavel}
-                  onCommit={mudarBdi('bdi_pis')}
-                />
-                <CampoPercentual
-                  rotulo="COFINS"
-                  valor={proposta.bdi_cofins}
-                  editavel={editavel}
-                  onCommit={mudarBdi('bdi_cofins')}
-                />
-                <CampoPercentual
-                  rotulo="CPRB"
-                  titulo="Contribuição Previdenciária sobre a Receita Bruta"
-                  valor={proposta.bdi_cprb}
-                  editavel={editavel}
-                  onCommit={mudarBdi('bdi_cprb')}
-                />
-                <CampoPercentual
-                  rotulo="ISSQN"
-                  titulo="Imposto Sobre Serviços de Qualquer Natureza"
-                  valor={proposta.bdi_issqn}
-                  editavel={editavel}
-                  onCommit={mudarBdi('bdi_issqn')}
-                />
-
-                <div className="flex items-center justify-between gap-2 border-t pt-2">
-                  <span className="text-sm text-muted-foreground">Impostos (I)</span>
-                  <span className="pr-5 text-sm tabular-nums">{percentual(impostos)}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* O faturamento direto aparece em linha própria porque não recebe
-              BDI: o cliente paga o fornecedor, e o dinheiro não passa aqui. */}
-          <dl className="space-y-1 border-t pt-3">
-            <Total rotulo="Custo" valor={custoBase} />
-            <Total rotulo={`BDI (${percentual(bdi)}%)`} valor={proposta.total_bdi} />
-            {faturamentoDireto > 0 && (
-              <Total rotulo="Faturamento direto" valor={faturamentoDireto} />
-            )}
-            <Total rotulo="Total da proposta" valor={proposta.total_geral} destaque />
-          </dl>
-        </div>
+            O faturamento direto aparece em linha própria porque não recebe BDI:
+            o cliente paga o fornecedor, e o dinheiro não passa aqui. */}
+        <dl className="border-t px-4 py-3 space-y-1">
+          <Total rotulo="Custo" valor={custoBase} />
+          <Total rotulo={`BDI (${percentual(bdi)}%)`} valor={proposta.total_bdi} />
+          {faturamentoDireto > 0 && (
+            <Total rotulo="Faturamento direto" valor={faturamentoDireto} />
+          )}
+          <Total rotulo="Total da proposta" valor={proposta.total_geral} destaque />
+        </dl>
       </div>
     </div>
   );
@@ -673,20 +411,38 @@ function BotaoRemover({ onClick }: { onClick: () => void }) {
   );
 }
 
-/** Uma linha de item, com a variação de preço ao lado. */
-function LinhaItem({
+/**
+ * Uma instrução e o valor fechado dela.
+ *
+ * O texto fica em estado local e só grava no blur: gravar a cada tecla
+ * dispararia um PUT por dígito, e duas respostas fora de ordem devolveriam o
+ * valor antigo para dentro do campo no meio da digitação.
+ */
+function LinhaInstrucao({
   item,
   editavel,
-  onCampo,
-  onRemover,
+  onValor,
 }: {
   item: ItemProposta;
   editavel: boolean;
-  onCampo: (campo: 'quantidade' | 'preco_unitario', valor: number) => void;
-  onRemover: () => void;
+  onValor: (valor: number) => void;
 }) {
-  const original = item.preco_unitario_original ?? null;
   const atual = item.preco_unitario ?? 0;
+  const [texto, setTexto] = useState(String(atual));
+
+  // Muda por fora quando a recarga refaz os valores a partir do catálogo.
+  useEffect(() => {
+    setTexto(String(atual));
+  }, [atual]);
+
+  const gravar = () => {
+    const lido = Number(String(texto).replace(',', '.'));
+    const limpo = Number.isFinite(lido) && lido >= 0 ? lido : 0;
+    setTexto(String(limpo));
+    if (limpo !== atual) onValor(limpo);
+  };
+
+  const original = item.preco_unitario_original ?? null;
 
   // Só compara quando há régua e ela não é zero — dividir por zero daria
   // Infinity, e "aumentou ∞%" não diz nada a ninguém.
@@ -703,119 +459,36 @@ function LinhaItem({
         {item.descricao || <span className="text-muted-foreground">Sem descrição</span>}
       </span>
 
-      <div className="w-14 shrink-0">
-        <input
-          className="input-minimal input-numero text-center"
-          type="number"
-          step="0.001"
-          min="0"
-          value={item.quantidade}
-          disabled={!editavel}
-          onChange={(e) => onCampo('quantidade', Number(e.target.value) || 0)}
-          title="Quantidade"
-        />
-      </div>
-      <span className="w-6 shrink-0 text-xs text-muted-foreground">{item.unidade || ''}</span>
+      {variacao !== null && (
+        <span
+          className={`shrink-0 text-[11px] tabular-nums ${
+            variacao > 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'
+          }`}
+          title={`Sugerido pelo catálogo: ${moeda(original ?? 0)}`}
+        >
+          {variacao > 0 ? '+' : ''}
+          {percentual(variacao)}%
+        </span>
+      )}
 
       <span className="shrink-0 text-xs text-muted-foreground">R$</span>
-      <div className="w-20 shrink-0">
+      <div className="w-24 shrink-0">
         <input
-          className="input-minimal input-numero text-center"
+          className="input-minimal input-numero text-right"
           type="number"
           step="0.01"
           min="0"
-          value={atual}
+          value={texto}
           disabled={!editavel}
-          onChange={(e) => onCampo('preco_unitario', Number(e.target.value) || 0)}
-          title="Preço unitário"
-        />
-      </div>
-
-      {/* Verde para cima, vermelho para baixo — o par já usado no resto do
-          produto. Discreto: é uma nota, não um alerta. */}
-      <span className="w-12 shrink-0 text-right text-[11px]">
-        {variacao !== null && (
-          <span
-            className={
-              variacao > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'
+          onChange={(e) => setTexto(e.target.value)}
+          onBlur={gravar}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              (e.target as HTMLInputElement).blur();
             }
-            title={`Catálogo: ${moeda(original ?? 0)}`}
-          >
-            {variacao > 0 ? '+' : ''}
-            {variacao.toFixed(1).replace('.', ',')}%
-          </span>
-        )}
-      </span>
-
-      <span className="w-20 shrink-0 text-right text-sm tabular-nums">
-        {moeda((item.quantidade || 0) * atual)}
-      </span>
-
-      {editavel && <BotaoRemover onClick={onRemover} />}
-    </div>
-  );
-}
-
-/**
- * Um percentual do BDI.
- *
- * O texto fica em estado local e só é gravado no blur. Com nove campos, gravar
- * a cada tecla dispararia um PUT por dígito — e duas respostas fora de ordem
- * devolveriam o valor antigo para dentro do campo no meio da digitação.
- */
-function CampoPercentual({
-  rotulo,
-  titulo,
-  valor,
-  editavel,
-  onCommit,
-}: {
-  rotulo: string;
-  titulo?: string;
-  valor: number;
-  editavel: boolean;
-  onCommit: (valor: number) => void;
-}) {
-  const [texto, setTexto] = useState(String(valor ?? 0));
-
-  // Muda por fora quando o REIDI zera PIS e COFINS.
-  useEffect(() => {
-    setTexto(String(valor ?? 0));
-  }, [valor]);
-
-  const gravar = () => {
-    const lido = Number(String(texto).replace(',', '.'));
-    const limpo = Number.isFinite(lido) && lido >= 0 ? lido : 0;
-    setTexto(String(limpo));
-    if (limpo !== valor) onCommit(limpo);
-  };
-
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <label className="min-w-0 truncate text-sm text-muted-foreground" title={titulo || rotulo}>
-        {rotulo}
-      </label>
-      <div className="flex shrink-0 items-center gap-1">
-        <div className="w-16">
-          <input
-            className="input-minimal input-numero text-center"
-            type="number"
-            step="0.01"
-            min="0"
-            max="100"
-            value={texto}
-            disabled={!editavel}
-            onChange={(e) => setTexto(e.target.value)}
-            onBlur={gravar}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                (e.target as HTMLInputElement).blur();
-              }
-            }}
-          />
-        </div>
-        <span className="w-4 text-xs text-muted-foreground">%</span>
+          }}
+        />
       </div>
     </div>
   );
@@ -849,5 +522,3 @@ function Total({
     </div>
   );
 }
-
-export type { SubinstrucaoProposta };
