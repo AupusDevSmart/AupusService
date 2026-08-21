@@ -82,13 +82,13 @@ const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
         {!disabled && (
           <Button
             type="button"
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            title="Adicionar custo"
             onClick={adicionarItem}
-            className="h-7 text-xs gap-1"
+            className="h-8 w-8"
           >
-            <Plus className="h-3.5 w-3.5" />
-            Adicionar
+            <Plus className="h-4 w-4" />
           </Button>
         )}
       </div>
@@ -132,15 +132,9 @@ const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
         </CardLista>
       )}
 
-      {/* Empty state */}
-      {itens.length === 0 && !disabled && (
-        <div className="text-center py-4 border border-dashed border-border rounded-md">
-          <p className="text-sm text-muted-foreground">Nenhum custo adicional</p>
-        </div>
-      )}
-
-      {/* Resumo do orcamento */}
-      <div className="border border-border rounded-md px-3 py-2 space-y-1">
+      {/* Resumo do orcamento. Sem moldura e sem divisoria — o alinhamento a
+          direita e o peso da ultima linha ja separam o total das parcelas. */}
+      <div className="space-y-1">
         {custoMateriais > 0 && (
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Materiais</span>
@@ -159,7 +153,7 @@ const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
             <span>R$ {custoOutros.toFixed(2)}</span>
           </div>
         )}
-        <div className="flex justify-between text-sm font-medium text-foreground border-t border-border pt-1">
+        <div className="flex justify-between text-sm font-medium text-foreground">
           <span>Orçamento previsto</span>
           <span>R$ {custoTotal.toFixed(2)}</span>
         </div>
