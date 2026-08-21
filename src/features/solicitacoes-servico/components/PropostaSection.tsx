@@ -1,5 +1,5 @@
 // src/features/solicitacoes-servico/components/PropostaSection.tsx
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Trash2, RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -11,10 +11,10 @@ import {
   calcularBdi,
   montarDeInstrucoes,
   moeda,
-  type ItemProposta,
   type OutroCusto,
   type Proposta,
 } from '@/services/proposta.services';
+import type { ValoresDaProposta } from './proposta-contexto';
 
 interface PropostaSectionProps {
   /** Nulo enquanto a solicitação não foi salva. Aí a seção vira rascunho. */
@@ -30,26 +30,30 @@ interface PropostaSectionProps {
    * nada a imprimir.
    */
   onPropostaChange?: (proposta: Proposta | null) => void;
+  /**
+   * Sobe os valores por instrução, para o card de cada uma poder editá-los.
+   *
+   * O valor mora aqui, mas é editado lá em cima — os dois campos são irmãos no
+   * formulário e não se alcançam. A página faz a ponte.
+   */
+  onValoresChange?: (valores: ValoresDaProposta | null) => void;
 }
 
 /**
  * A proposta comercial dentro do sheet da solicitação.
  *
- * Uma linha por instrução vinculada, com o VALOR FECHADO daquela instrução —
- * nada é copiado item a item. O valor nasce da soma dos recursos do catálogo,
- * como sugestão, e a pessoa ajusta por cima. Quem quiser mudar a composição
- * edita a instrução, pelo botão no card dela.
+ * Guarda um VALOR FECHADO por instrução vinculada — nada é copiado item a item.
+ * O valor nasce da soma dos recursos do catálogo, como sugestão, e é editado no
+ * card da própria instrução, logo depois do nome: listá-las de novo aqui faria
+ * cada instrução aparecer duas vezes na tela, uma para ser lida e outra para
+ * ser precificada.
+ *
+ * Restam então dois blocos visíveis: os outros custos e o fechamento.
  *
  * Funciona nos dois momentos. Com a solicitação já salva, cada mudança vai
  * direto para a API e os totais voltam calculados pelo servidor. No cadastro,
  * quando ainda não há id, a seção trabalha sobre um rascunho local e a página
  * o persiste assim que a solicitação nasce.
- *
- * Segue o vocabulário visual das outras seções deste sheet: moldura
- * `border rounded-lg` sem tint (os tokens deste projeto não têm canal alpha,
- * então o `bg-muted/20` dos vizinhos não pinta nada, e imitá-lo com `bg-muted`
- * deixaria esta seção mais marcada que as outras), cabeçalho em
- * `flex items-center justify-between p-3` e corpo em `border-t px-4 py-3`.
  */
 export function PropostaSection({
   solicitacaoId,
@@ -57,6 +61,7 @@ export function PropostaSection({
   somenteLeitura = false,
   onRascunhoChange,
   onPropostaChange,
+  onValoresChange,
 }: PropostaSectionProps) {
   const rascunho = !solicitacaoId;
   const [proposta, setProposta] = useState<Proposta>(propostaVazia);
@@ -183,6 +188,44 @@ export function PropostaSection({
 
   const editavel = !somenteLeitura;
 
+  // ------------------------------------------------------------------
+  // Os valores, publicados para o card de cada instrução.
+  // ------------------------------------------------------------------
+
+  const valores = useMemo(() => {
+    const mapa: Record<string, number> = {};
+    for (const item of proposta.itens) {
+      const id = String(item.instrucao_id ?? '').trim();
+      if (id && !item.recurso_id) mapa[id] = item.preco_unitario ?? 0;
+    }
+    return mapa;
+  }, [proposta.itens]);
+
+  // O setter precisa enxergar a proposta do render atual, mas mudar de
+  // identidade a cada tecla remontaria o contexto inteiro. O ref resolve os
+  // dois: a função exposta é estável, o que ela chama é sempre o mais recente.
+  const definirRef = useRef<(instrucaoId: string, valor: number) => void>(() => {});
+  definirRef.current = (instrucaoId, valor) => {
+    salvarItens((p) => ({
+      ...p,
+      itens: p.itens.map((it) =>
+        String(it.instrucao_id ?? '').trim() === instrucaoId
+          ? { ...it, preco_unitario: valor }
+          : it,
+      ),
+    }));
+  };
+
+  const definir = useCallback(
+    (instrucaoId: string, valor: number) => definirRef.current(instrucaoId, valor),
+    [],
+  );
+
+  useEffect(() => {
+    onValoresChange?.({ valores, definir, editavel });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valores, definir, editavel]);
+
   const bdi = calcularBdi(proposta) * 100;
 
   const faturamentoDireto = proposta.outros_custos
@@ -219,24 +262,119 @@ export function PropostaSection({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       {rascunho && (
         <p className="text-xs text-muted-foreground">
           A proposta será gravada junto com a solicitação.
         </p>
       )}
 
-      {/* ---------------- INSTRUÇÕES ---------------- */}
-      <div className="border rounded-lg">
-        <div className="flex items-center justify-between p-3">
-          <span className="text-sm font-medium">Instruções</span>
+      {/* ---------------- OUTROS CUSTOS ---------------- */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">Outros custos</span>
+          {editavel && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              title="Adicionar custo"
+              onClick={() =>
+                salvarCustos((p) => ({
+                  ...p,
+                  outros_custos: [
+                    ...p.outros_custos,
+                    { descricao: '', valor: 0, faturamento_direto: false },
+                  ],
+                }))
+              }
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+
+        {proposta.outros_custos.length === 0 && (
+          <p className="text-sm text-muted-foreground">Nenhum custo adicional.</p>
+        )}
+
+        {proposta.outros_custos.map((custo, indice) => {
+          const trocar = (dados: Partial<OutroCusto>) =>
+            salvarCustos((p) => ({
+              ...p,
+              outros_custos: p.outros_custos.map((c, i) => (i === indice ? { ...c, ...dados } : c)),
+            }));
+
+          return (
+            <div key={custo.id ?? `novo-${indice}`} className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <input
+                  className="input-minimal"
+                  value={custo.descricao}
+                  placeholder="Ex.: frete, hospedagem"
+                  disabled={!editavel}
+                  onChange={(e) => trocar({ descricao: e.target.value })}
+                />
+              </div>
+              {/* "R$" fora do campo, e nao como padding interno: o padding do
+                  .input-minimal venceria um pl-7 pela ordem do CSS. */}
+              <span className="shrink-0 text-xs text-muted-foreground">R$</span>
+              <div className="w-20 shrink-0">
+                <input
+                  className="input-minimal input-numero text-center"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={custo.valor}
+                  disabled={!editavel}
+                  onChange={(e) => trocar({ valor: Number(e.target.value) || 0 })}
+                />
+              </div>
+              {/* FD na tela, nome por extenso no hover: cabe na linha e não
+                  força quebra num sheet estreito. */}
+              <label
+                className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
+                title="Faturamento direto — o cliente paga o fornecedor. Fica fora da base do BDI."
+              >
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5"
+                  checked={custo.faturamento_direto}
+                  disabled={!editavel}
+                  onChange={(e) => trocar({ faturamento_direto: e.target.checked })}
+                />
+                FD
+              </label>
+              {editavel && (
+                <BotaoRemover
+                  onClick={() =>
+                    salvarCustos((p) => ({
+                      ...p,
+                      outros_custos: p.outros_custos.filter((_, i) => i !== indice),
+                    }))
+                  }
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ---------------- FECHAMENTO ---------------- */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">Fechamento</span>
           <div className="flex items-center gap-1">
-            {salvando && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+            {(salvando || carregando) && (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            )}
             {editavel && !rascunho && (
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
+                size="icon"
+                className="h-8 w-8"
                 onClick={() =>
                   void aplicar((p) => p, (id) => propostaApi.recarregar(id), 'a recarga')
                 }
@@ -248,134 +386,6 @@ export function PropostaSection({
           </div>
         </div>
 
-        <div className="border-t px-4 py-3 space-y-2">
-          {carregando && <p className="text-sm text-muted-foreground">Carregando...</p>}
-
-          {!carregando && proposta.itens.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              Nenhuma instrução vinculada.
-            </p>
-          )}
-
-          {proposta.itens.map((item, indice) => (
-            <LinhaInstrucao
-              key={item.id ?? item.instrucao_id ?? `novo-${indice}`}
-              item={item}
-              editavel={editavel}
-              onValor={(valor) =>
-                salvarItens((p) => ({
-                  ...p,
-                  itens: p.itens.map((it, i) =>
-                    i === indice ? { ...it, preco_unitario: valor } : it,
-                  ),
-                }))
-              }
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* ---------------- OUTROS CUSTOS ---------------- */}
-      <div className="border rounded-lg">
-        <div className="flex items-center justify-between p-3">
-          <span className="text-sm font-medium">Outros custos</span>
-          {editavel && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                salvarCustos((p) => ({
-                  ...p,
-                  outros_custos: [
-                    ...p.outros_custos,
-                    { descricao: '', valor: 0, faturamento_direto: false },
-                  ],
-                }))
-              }
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Custo
-            </Button>
-          )}
-        </div>
-
-        <div className="border-t px-4 py-3 space-y-2">
-          {proposta.outros_custos.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nenhum custo adicional.</p>
-          )}
-
-          {proposta.outros_custos.map((custo, indice) => {
-            const trocar = (dados: Partial<OutroCusto>) =>
-              salvarCustos((p) => ({
-                ...p,
-                outros_custos: p.outros_custos.map((c, i) =>
-                  i === indice ? { ...c, ...dados } : c,
-                ),
-              }));
-
-            return (
-              <div key={custo.id ?? `novo-${indice}`} className="flex items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <input
-                    className="input-minimal"
-                    value={custo.descricao}
-                    placeholder="Ex.: frete, hospedagem"
-                    disabled={!editavel}
-                    onChange={(e) => trocar({ descricao: e.target.value })}
-                  />
-                </div>
-                {/* "R$" fora do campo, e nao como padding interno: o padding do
-                    .input-minimal venceria um pl-7 pela ordem do CSS. */}
-                <span className="shrink-0 text-xs text-muted-foreground">R$</span>
-                <div className="w-24 shrink-0">
-                  <input
-                    className="input-minimal input-numero text-right"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={custo.valor}
-                    disabled={!editavel}
-                    onChange={(e) => trocar({ valor: Number(e.target.value) || 0 })}
-                  />
-                </div>
-                {/* FD na tela, nome por extenso no hover: cabe na linha e não
-                    força quebra num sheet estreito. */}
-                <label
-                  className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
-                  title="Faturamento direto — o cliente paga o fornecedor. Fica fora da base do BDI."
-                >
-                  <input
-                    type="checkbox"
-                    className="h-3.5 w-3.5"
-                    checked={custo.faturamento_direto}
-                    disabled={!editavel}
-                    onChange={(e) => trocar({ faturamento_direto: e.target.checked })}
-                  />
-                  FD
-                </label>
-                {editavel && (
-                  <BotaoRemover
-                    onClick={() =>
-                      salvarCustos((p) => ({
-                        ...p,
-                        outros_custos: p.outros_custos.filter((_, i) => i !== indice),
-                      }))
-                    }
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ---------------- FECHAMENTO ---------------- */}
-      <div className="border rounded-lg">
-        <div className="p-3">
-          <span className="text-sm font-medium">Fechamento</span>
-        </div>
-
         {/* O BDI fica no padrão da tabela GOINFRA e não é editado aqui. Os nove
             componentes continuam gravados por solicitação — o que saiu foi a
             edição, não o registro: proposta com preço é auditável, e a memória
@@ -383,7 +393,7 @@ export function PropostaSection({
 
             O faturamento direto aparece em linha própria porque não recebe BDI:
             o cliente paga o fornecedor, e o dinheiro não passa aqui. */}
-        <dl className="border-t px-4 py-3 space-y-1">
+        <dl className="space-y-1">
           <Total rotulo="Custo" valor={custoBase} />
           <Total rotulo={`BDI (${percentual(bdi)}%)`} valor={proposta.total_bdi} />
           {faturamentoDireto > 0 && (
@@ -408,89 +418,6 @@ function BotaoRemover({ onClick }: { onClick: () => void }) {
     >
       <Trash2 className="h-3.5 w-3.5" />
     </Button>
-  );
-}
-
-/**
- * Uma instrução e o valor fechado dela.
- *
- * O texto fica em estado local e só grava no blur: gravar a cada tecla
- * dispararia um PUT por dígito, e duas respostas fora de ordem devolveriam o
- * valor antigo para dentro do campo no meio da digitação.
- */
-function LinhaInstrucao({
-  item,
-  editavel,
-  onValor,
-}: {
-  item: ItemProposta;
-  editavel: boolean;
-  onValor: (valor: number) => void;
-}) {
-  const atual = item.preco_unitario ?? 0;
-  const [texto, setTexto] = useState(String(atual));
-
-  // Muda por fora quando a recarga refaz os valores a partir do catálogo.
-  useEffect(() => {
-    setTexto(String(atual));
-  }, [atual]);
-
-  const gravar = () => {
-    const lido = Number(String(texto).replace(',', '.'));
-    const limpo = Number.isFinite(lido) && lido >= 0 ? lido : 0;
-    setTexto(String(limpo));
-    if (limpo !== atual) onValor(limpo);
-  };
-
-  const original = item.preco_unitario_original ?? null;
-
-  // Só compara quando há régua e ela não é zero — dividir por zero daria
-  // Infinity, e "aumentou ∞%" não diz nada a ninguém.
-  const variacao =
-    original !== null && original > 0 && atual !== original
-      ? ((atual - original) / original) * 100
-      : null;
-
-  return (
-    <div className="flex items-center gap-2">
-      {/* A descricao recebe toda a sobra: os demais elementos tem largura fixa
-          e nao encolhem. */}
-      <span className="min-w-0 flex-1 truncate text-sm" title={item.descricao}>
-        {item.descricao || <span className="text-muted-foreground">Sem descrição</span>}
-      </span>
-
-      {variacao !== null && (
-        <span
-          className={`shrink-0 text-[11px] tabular-nums ${
-            variacao > 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'
-          }`}
-          title={`Sugerido pelo catálogo: ${moeda(original ?? 0)}`}
-        >
-          {variacao > 0 ? '+' : ''}
-          {percentual(variacao)}%
-        </span>
-      )}
-
-      <span className="shrink-0 text-xs text-muted-foreground">R$</span>
-      <div className="w-24 shrink-0">
-        <input
-          className="input-minimal input-numero text-right"
-          type="number"
-          step="0.01"
-          min="0"
-          value={texto}
-          disabled={!editavel}
-          onChange={(e) => setTexto(e.target.value)}
-          onBlur={gravar}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              (e.target as HTMLInputElement).blur();
-            }
-          }}
-        />
-      </div>
-    </div>
   );
 }
 

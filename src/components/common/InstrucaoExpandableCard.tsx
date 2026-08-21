@@ -1,5 +1,5 @@
 // src/components/common/InstrucaoExpandableCard.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { FileText, ChevronDown, ChevronRight, X, Clock, Wrench, ListChecks, AlertCircle, SquarePen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { instrucoesApi, InstrucaoApiResponse, SubInstrucaoApiResponse, RecursoInstrucaoApiResponse } from '@/services/instrucoes.services';
@@ -12,6 +12,13 @@ interface InstrucaoExpandableCardProps {
   disabled?: boolean;
   /** Ausente, o botao de editar nao aparece. */
   onEditar?: (id: string) => void;
+  /**
+   * O valor desta instrucao na proposta. Indefinido esconde o campo — ha telas
+   * que listam instrucao sem haver proposta nenhuma.
+   */
+  valor?: number;
+  onValor?: (valor: number) => void;
+  valorEditavel?: boolean;
 }
 
 const tipoRecursoLabels: Record<string, string> = {
@@ -48,7 +55,17 @@ function formatMinutos(minutos?: number): string {
   return m > 0 ? `${h}h ${m}min` : `${h}h`;
 }
 
-export function InstrucaoExpandableCard({ id, tag, nome, onRemove, disabled, onEditar }: InstrucaoExpandableCardProps) {
+export function InstrucaoExpandableCard({
+  id,
+  tag,
+  nome,
+  onRemove,
+  disabled,
+  onEditar,
+  valor,
+  onValor,
+  valorEditavel = true,
+}: InstrucaoExpandableCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [details, setDetails] = useState<InstrucaoApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -96,14 +113,31 @@ export function InstrucaoExpandableCard({ id, tag, nome, onRemove, disabled, onE
           <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <span className="text-sm truncate font-medium">{label}</span>
         </button>
-        <div className="flex items-center flex-shrink-0 ml-2">
+        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+          {/* O valor logo depois do nome, e nao numa lista separada abaixo: a
+              instrucao aparecia duas vezes na tela, uma para ser lida e outra
+              para ser precificada. */}
+          {valor !== undefined && (
+            <>
+              <span className="text-xs text-muted-foreground">R$</span>
+              <div className="w-20">
+                <ValorDaInstrucao
+                  valor={valor}
+                  editavel={valorEditavel && !disabled}
+                  onValor={onValor}
+                />
+              </div>
+            </>
+          )}
+
           {/* Editar a instrucao, e nao o vinculo: abre o sheet dela por cima
               deste, sem tirar ninguem do formulario que esta preenchendo. */}
           {onEditar && (
             <Button
               type="button"
               variant="ghost"
-              size="sm"
+              size="icon"
+              className="h-8 w-8"
               onClick={() => onEditar(id)}
               title="Editar esta instrução"
             >
@@ -111,7 +145,14 @@ export function InstrucaoExpandableCard({ id, tag, nome, onRemove, disabled, onE
             </Button>
           )}
           {!disabled && onRemove && (
-            <Button type="button" variant="ghost" size="sm" onClick={onRemove} title="Desvincular">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={onRemove}
+              title="Desvincular"
+            >
               <X className="h-4 w-4" />
             </Button>
           )}
@@ -238,6 +279,56 @@ export function InstrucaoExpandableCard({ id, tag, nome, onRemove, disabled, onE
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * O valor da instrucao na proposta.
+ *
+ * O texto fica em estado local e so grava no blur: gravar a cada tecla
+ * dispararia um PUT por digito, e duas respostas fora de ordem devolveriam o
+ * valor antigo para dentro do campo no meio da digitacao.
+ */
+function ValorDaInstrucao({
+  valor,
+  editavel,
+  onValor,
+}: {
+  valor: number;
+  editavel: boolean;
+  onValor?: (valor: number) => void;
+}) {
+  const [texto, setTexto] = useState(String(valor ?? 0));
+
+  // Muda por fora quando a recarga refaz os valores a partir do catalogo.
+  useEffect(() => {
+    setTexto(String(valor ?? 0));
+  }, [valor]);
+
+  const gravar = () => {
+    const lido = Number(String(texto).replace(',', '.'));
+    const limpo = Number.isFinite(lido) && lido >= 0 ? lido : 0;
+    setTexto(String(limpo));
+    if (limpo !== valor) onValor?.(limpo);
+  };
+
+  return (
+    <input
+      className="input-minimal input-numero text-center"
+      type="number"
+      step="0.01"
+      min="0"
+      value={texto}
+      disabled={!editavel}
+      onChange={(e) => setTexto(e.target.value)}
+      onBlur={gravar}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+    />
   );
 }
 

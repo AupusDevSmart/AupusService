@@ -74,7 +74,7 @@ class PropostaApiService {
 
   async obter(solicitacaoId: string): Promise<Proposta> {
     const resposta = await api.get(this.base(solicitacaoId));
-    return this.desembrulhar<Proposta>(resposta);
+    return normalizar(this.desembrulhar<Proposta>(resposta));
   }
 
   async salvarItens(solicitacaoId: string, itens: ItemProposta[]): Promise<Proposta> {
@@ -91,7 +91,7 @@ class PropostaApiService {
         preco_unitario_original: i.preco_unitario_original ?? null,
       })),
     });
-    return this.desembrulhar<Proposta>(resposta);
+    return normalizar(this.desembrulhar<Proposta>(resposta));
   }
 
   async salvarOutrosCustos(solicitacaoId: string, custos: OutroCusto[]): Promise<Proposta> {
@@ -102,7 +102,7 @@ class PropostaApiService {
         faturamento_direto: c.faturamento_direto,
       })),
     });
-    return this.desembrulhar<Proposta>(resposta);
+    return normalizar(this.desembrulhar<Proposta>(resposta));
   }
 
   /**
@@ -118,17 +118,34 @@ class PropostaApiService {
     dados: Partial<Record<string, number | string>>,
   ): Promise<Proposta> {
     const resposta = await api.put(`${this.base(solicitacaoId)}/condicoes`, dados);
-    return this.desembrulhar<Proposta>(resposta);
+    return normalizar(this.desembrulhar<Proposta>(resposta));
   }
 
   /** Refaz os valores a partir do catálogo. Descarta o que foi ajustado. */
   async recarregar(solicitacaoId: string): Promise<Proposta> {
     const resposta = await api.post(`${this.base(solicitacaoId)}/recarregar`);
-    return this.desembrulhar<Proposta>(resposta);
+    return normalizar(this.desembrulhar<Proposta>(resposta));
   }
 }
 
 export const propostaApi = new PropostaApiService();
+
+/**
+ * Garante que as listas existam.
+ *
+ * A tela percorre `itens` e `outros_custos` sem checar, e um campo que
+ * suma da resposta derruba a seção inteira em vez de mostrá-la vazia. Foi
+ * assim que o front anterior quebrou quando o backend parou de mandar
+ * `subinstrucoes`: o backend sobe primeiro no deploy, e por alguns minutos as
+ * duas versões conversam.
+ */
+function normalizar(p: Proposta): Proposta {
+  return {
+    ...p,
+    itens: Array.isArray(p?.itens) ? p.itens : [],
+    outros_custos: Array.isArray(p?.outros_custos) ? p.outros_custos : [],
+  };
+}
 
 /**
  * Proposta em branco, para o sheet de cadastro.

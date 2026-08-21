@@ -11,7 +11,7 @@ import { formatApiError } from '@/utils/api-error';
 import { propostaApi, type Proposta } from '@/services/proposta.services';
 import { PropostaSection } from './PropostaSection';
 import { PropostaCorrenteProvider, comBotaoDePdf } from './BotaoGerarPdf';
-import { AbrirInstrucaoContext } from './InstrucoesSelector';
+import { AbrirInstrucaoContext, ValoresDaPropostaContext, type ValoresDaProposta } from './proposta-contexto';
 import { EditarInstrucaoSheet } from '@/features/instrucoes/components/EditarInstrucaoSheet';
 import type { FormField } from '@/types/base';
 
@@ -168,6 +168,15 @@ export function SolicitacoesPage() {
   const [instrucaoAberta, setInstrucaoAberta] = useState<string | null>(null);
 
   /**
+   * Os valores da proposta, publicados pela secao e devolvidos ao card.
+   *
+   * A pagina e o unico ponto que enxerga os dois campos — `instrucoes_ids`, que
+   * desenha os cards, e `proposta`, que tem os valores. Eles sao irmaos no
+   * formulario e nao se alcancam.
+   */
+  const [valoresProposta, setValoresProposta] = useState<ValoresDaProposta | null>(null);
+
+  /**
    * Grava o rascunho em sequencia: cada rota devolve os totais recalculados.
    *
    * O BDI nao viaja: as colunas nascem com o padrao no proprio banco, e o
@@ -199,6 +208,7 @@ export function SolicitacoesPage() {
                   somenteLeitura={mode === 'view'}
                   onRascunhoChange={setRascunhoProposta}
                   onPropostaChange={setPropostaAtual}
+                  onValoresChange={setValoresProposta}
                 />
               ),
             }
@@ -348,6 +358,7 @@ export function SolicitacoesPage() {
         {modalState.isOpen && (
           <PropostaCorrenteProvider proposta={propostaAtual}>
             <AbrirInstrucaoContext.Provider value={setInstrucaoAberta}>
+            <ValoresDaPropostaContext.Provider value={valoresProposta}>
               <BaseModal
                 isOpen={modalState.isOpen}
                 mode={modalState.mode}
@@ -374,6 +385,7 @@ export function SolicitacoesPage() {
                 instrucaoId={instrucaoAberta}
                 onClose={() => setInstrucaoAberta(null)}
               />
+            </ValoresDaPropostaContext.Provider>
             </AbrirInstrucaoContext.Provider>
           </PropostaCorrenteProvider>
         )}

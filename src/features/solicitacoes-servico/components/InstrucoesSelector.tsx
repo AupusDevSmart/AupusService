@@ -5,6 +5,7 @@ import { Plus, X, FileText } from 'lucide-react';
 import { Combobox } from '@aupus/shared-pages';
 import { instrucoesApi } from '@/services/instrucoes.services';
 import { InstrucaoExpandableCard } from '@/components/common/InstrucaoExpandableCard';
+import { AbrirInstrucaoContext, ValoresDaPropostaContext } from './proposta-contexto';
 
 interface InstrucoesSelectorProps {
   value: any;
@@ -12,15 +13,6 @@ interface InstrucoesSelectorProps {
   disabled?: boolean;
   entity?: any;
 }
-
-/**
- * Quem abre o sheet da instrucao.
- *
- * Por contexto, e nao por prop: o `formFields` do BaseModal e memoizado e cada
- * `render` vira componente por React.createElement — passar por ali trocaria a
- * identidade deste campo e o desmontaria a cada abertura.
- */
-export const AbrirInstrucaoContext = React.createContext<((id: string) => void) | null>(null);
 
 interface InstrucaoMeta {
   tag?: string;
@@ -66,6 +58,7 @@ function extractEntityMeta(entity?: any): Record<string, InstrucaoMeta> {
 
 export function InstrucoesSelector({ value, onChange, disabled, entity }: InstrucoesSelectorProps) {
   const abrirInstrucao = React.useContext(AbrirInstrucaoContext);
+  const proposta = React.useContext(ValoresDaPropostaContext);
   const [initialized, setInitialized] = React.useState(false);
   const selectedIds = extractIds(value, entity);
   const entityMeta = React.useMemo(() => extractEntityMeta(entity), [entity]);
@@ -129,9 +122,16 @@ export function InstrucoesSelector({ value, onChange, disabled, entity }: Instru
       <div className="flex items-center justify-between">
         <label className="text-sm font-medium">Instruções Vinculadas</label>
         {!disabled && (
-          <Button type="button" variant="outline" size="sm" onClick={() => setAdding(true)} disabled={!loaded || availableOptions.length === 0}>
-            <Plus className="h-4 w-4 mr-1" />
-            Vincular
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setAdding(true)}
+            disabled={!loaded || availableOptions.length === 0}
+            title="Vincular instrução"
+          >
+            <Plus className="h-4 w-4" />
           </Button>
         )}
       </div>
@@ -172,6 +172,9 @@ export function InstrucoesSelector({ value, onChange, disabled, entity }: Instru
               nome={meta.nome}
               onRemove={disabled ? undefined : () => handleRemove(id)}
               onEditar={abrirInstrucao ?? undefined}
+              valor={proposta?.valores[id.trim()]}
+              onValor={(valor) => proposta?.definir(id.trim(), valor)}
+              valorEditavel={proposta?.editavel ?? false}
               disabled={disabled}
             />
           );
