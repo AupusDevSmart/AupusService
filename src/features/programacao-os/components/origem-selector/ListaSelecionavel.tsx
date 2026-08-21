@@ -95,7 +95,7 @@ export function ListaSelecionavel({
               disabled={disabled}
               onClick={() => onChange(opcao.id)}
               className={`flex w-full items-start gap-2 rounded-md px-3 py-2 text-left transition-colors ${
-                escolhida ? 'bg-primary/10 text-foreground' : 'hover:bg-muted'
+                escolhida ? 'bg-muted' : 'hover:bg-muted'
               } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
             >
               <div className="min-w-0 flex-1">

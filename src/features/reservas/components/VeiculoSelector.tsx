@@ -1,6 +1,7 @@
 // src/features/reservas/components/VeiculoSelector.tsx
 import { useMemo, useState, useEffect } from 'react';
 import { Car, Users, Fuel, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Veiculo, ReservaVeiculo, FiltrosDisponibilidade } from '../types';
 
 interface VeiculoSelectorProps {
@@ -137,168 +138,123 @@ export function VeiculoSelector({
     );
   }
 
-  // Veículo selecionado - mostrar resumo compacto
+  // Veículo já escolhido: resumo, com o botão de voltar à lista.
   if (veiculoAtual && !mostrarLista) {
     return (
-      <div className="space-y-4">
-        <div className="p-4 border border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded ring-2 ring-blue-200 dark:ring-blue-800 relative">
-          <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 dark:bg-blue-400 rounded-full flex items-center justify-center shadow-md">
-            <CheckCircle className="w-4 h-4 text-white dark:text-gray-900" />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Car className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              <div>
-                <h3 className="font-medium text-blue-900 dark:text-blue-100">
-                  {veiculoAtual.nome}
-                </h3>
-                <div className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">
-                  {veiculoAtual.marca} {veiculoAtual.modelo} • {veiculoAtual.placa}
-                </div>
-                <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  <div className="flex items-center gap-1">
-                    <Users className="w-3 h-3" />
-                    <span>{veiculoAtual.capacidadePassageiros || 0} passageiros</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Fuel className="w-3 h-3" />
-                    <span className="capitalize">{veiculoAtual.tipoCombustivel}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {!disabled && (
-              <button
-                type="button"
-                onClick={() => setMostrarLista(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground border border-border rounded transition-colors"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Trocar
-              </button>
-            )}
+      <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <Car className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{veiculoAtual.nome}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {[veiculoAtual.marca, veiculoAtual.modelo, veiculoAtual.placa]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+            <FichaDoVeiculo veiculo={veiculoAtual} />
           </div>
         </div>
+
+        {!disabled && (
+          <Button type="button" variant="ghost" size="sm" onClick={() => setMostrarLista(true)}>
+            <RefreshCw className="mr-1 h-3.5 w-3.5" />
+            Trocar
+          </Button>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Resumo da disponibilidade */}
-      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-        <div className="text-sm text-gray-600 dark:text-gray-300">
-          Período: {filtrosDisponibilidade.dataInicio} a {filtrosDisponibilidade.dataFim}
+    <div className="space-y-2">
+      {/* Quantos livres, quantos ocupados. O verde e o vermelho são os únicos
+          acentos: o resto sai dos tokens, para a seção não destoar do sheet. */}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="text-muted-foreground">
+          {filtrosDisponibilidade.dataInicio} a {filtrosDisponibilidade.dataFim}
           {filtrosDisponibilidade.horaInicio && filtrosDisponibilidade.horaFim && (
-            <span> ({filtrosDisponibilidade.horaInicio} às {filtrosDisponibilidade.horaFim})</span>
+            <> · {filtrosDisponibilidade.horaInicio} às {filtrosDisponibilidade.horaFim}</>
           )}
-        </div>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-green-600 dark:text-green-400 font-medium">
-            {veiculosDisponiveis.length} disponíveis
+        </span>
+        <span className="flex items-center gap-3">
+          <span className="text-emerald-600 dark:text-emerald-500">
+            {veiculosDisponiveis.length} livres
           </span>
-          <span className="text-red-600 dark:text-red-400">
-            {veiculosIndisponiveis.length} indisponíveis
-          </span>
-        </div>
+          {veiculosIndisponiveis.length > 0 && (
+            <span className="text-muted-foreground">
+              {veiculosIndisponiveis.length} ocupados
+            </span>
+          )}
+        </span>
       </div>
 
-      {/* Lista de veículos */}
-      <div className="grid gap-3 max-h-96 overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
+      <div className="max-h-72 space-y-0.5 overflow-y-auto overscroll-contain">
         {veiculosOrdenados.map((veiculo) => {
-          const isSelected = isVeiculoSelecionado(veiculo);
+          const escolhido = isVeiculoSelecionado(veiculo);
+          const livre = veiculo.disponivel;
 
           return (
             <button
               key={veiculo.id}
               type="button"
-              className={`
-                p-4 border rounded text-left transition-all relative
-                ${veiculo.disponivel
-                  ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20'
-                  : 'border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed opacity-75'
-                }
-                ${isSelected
-                  ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-950/30 ring-2 ring-blue-200 dark:ring-blue-800'
-                  : ''
-                }
-              `}
               onClick={() => handleVeiculoClick(veiculo)}
-              disabled={!veiculo.disponivel || disabled}
+              disabled={!livre || disabled}
+              className={`flex w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-colors ${
+                escolhido ? 'bg-muted' : 'hover:bg-muted'
+              } ${!livre || disabled ? 'cursor-not-allowed opacity-50' : ''}`}
             >
-              {/* Indicador visual de seleção */}
-              {isSelected && (
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 dark:bg-blue-400 rounded-full flex items-center justify-center shadow-md">
-                  <CheckCircle className="w-4 h-4 text-white dark:text-gray-900" />
-                </div>
-              )}
+              <Car className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
 
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3 flex-1">
-                  <Car className={`w-6 h-6 mt-1 ${
-                    veiculo.disponivel
-                      ? (isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-blue-600 dark:text-blue-400')
-                      : 'text-gray-400 dark:text-gray-600'
-                  }`} />
-
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className={`font-medium ${
-                        isSelected
-                          ? 'text-blue-900 dark:text-blue-100'
-                          : 'text-gray-900 dark:text-gray-100'
-                      }`}>
-                        {veiculo.nome}
-                      </h3>
-                      {veiculo.disponivel ? (
-                        <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400" />
-                      ) : (
-                        <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400" />
-                      )}
-                    </div>
-
-                    <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                      {veiculo.marca} {veiculo.modelo} • {veiculo.placa}
-                    </div>
-
-                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                      <div className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        <span>{veiculo.capacidadePassageiros || 0} passageiros</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Fuel className="w-3 h-3" />
-                        <span className="capitalize">{veiculo.tipoCombustivel}</span>
-                      </div>
-                    </div>
-
-                    {!veiculo.disponivel && veiculo.motivo && (
-                      <div className="mt-2 p-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-300">
-                        {veiculo.motivo}
-                      </div>
-                    )}
-                  </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-sm">{veiculo.nome}</p>
+                  {!livre && (
+                    <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
+                      ocupado
+                    </span>
+                  )}
                 </div>
 
-                {isSelected && (
-                  <div className="w-4 h-4 bg-blue-500 dark:bg-blue-400 rounded-full flex items-center justify-center ml-2 shadow-sm">
-                    <div className="w-2 h-2 bg-white dark:bg-gray-900 rounded-full"></div>
-                  </div>
+                <p className="truncate text-xs text-muted-foreground">
+                  {[veiculo.marca, veiculo.modelo, veiculo.placa].filter(Boolean).join(' · ')}
+                </p>
+
+                <FichaDoVeiculo veiculo={veiculo} />
+
+                {!livre && veiculo.motivo && (
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">{veiculo.motivo}</p>
                 )}
               </div>
+
+              {escolhido && <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
             </button>
           );
         })}
-      </div>
 
-      {veiculosOrdenados.length === 0 && (
-        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-          <Car className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-          <p>Nenhum veículo encontrado</p>
-        </div>
-      )}
+        {veiculosOrdenados.length === 0 && (
+          <p className="py-6 text-center text-sm text-muted-foreground">Nenhum veículo encontrado</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Passageiros e combustível, a linha que decide entre dois veículos parecidos. */
+function FichaDoVeiculo({
+  veiculo,
+}: {
+  veiculo: { capacidadePassageiros?: number; tipoCombustivel?: string };
+}) {
+  return (
+    <div className="mt-0.5 flex items-center gap-3 text-xs text-muted-foreground">
+      <span className="flex items-center gap-1">
+        <Users className="h-3 w-3" />
+        {veiculo.capacidadePassageiros || 0}
+      </span>
+      <span className="flex items-center gap-1 capitalize">
+        <Fuel className="h-3 w-3" />
+        {veiculo.tipoCombustivel}
+      </span>
     </div>
   );
 }

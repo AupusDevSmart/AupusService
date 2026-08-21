@@ -81,7 +81,7 @@ export function AssistentePassos({
                     aqui
                       ? 'bg-primary text-primary-foreground'
                       : feito
-                        ? 'bg-primary/10 text-primary'
+                        ? 'bg-muted text-primary'
                         : 'bg-muted text-muted-foreground'
                   }`}
                 >
@@ -99,7 +99,7 @@ export function AssistentePassos({
               {/* O traço entre um marcador e o próximo. Não vai depois do último. */}
               {i < passos.length - 1 && (
                 <span
-                  className={`h-px min-w-4 flex-1 ${i < indice ? 'bg-primary/30' : 'bg-border'}`}
+                  className={`h-px min-w-4 flex-1 ${i < indice ? 'bg-primary' : 'bg-border'}`}
                 />
               )}
             </li>

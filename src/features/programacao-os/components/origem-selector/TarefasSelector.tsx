@@ -1,11 +1,7 @@
 // src/features/programacao-os/components/origem-selector/TarefasSelector.tsx
-import React from 'react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Wrench } from 'lucide-react';
 import { TarefaDisponivel } from './types';
 
 interface TarefasSelectorProps {
@@ -19,138 +15,116 @@ interface TarefasSelectorProps {
 }
 
 /**
- * Componente para seleção de tarefas de um plano de manutenção
- * Permite seleção múltipla de tarefas com checkboxes
+ * As tarefas de um plano, para escolher quais entram na OS.
+ *
+ * Linhas sobre o fundo do sheet, e não `Card` dentro de `Card`. No dark mode o
+ * `--card` deste projeto é preto puro sobre um fundo azul-escuro: uma lista de
+ * cards virava uma parede de retângulos pretos, e as tarefas sumiam.
+ *
+ * Os estados vinham de `bg-primary/5`, `bg-muted/30` e `bg-accent/50` — os
+ * tokens daqui são `var()` puro, sem canal alpha, então esses modificadores não
+ * geram regra nenhuma e o selecionado ficava igual ao não selecionado.
  */
-export const TarefasSelector: React.FC<TarefasSelectorProps> = ({
+export function TarefasSelector({
   tarefas,
   selectedIds,
   onToggle,
   onSelectAll,
   onDeselectAll,
   loading = false,
-  disabled = false
-}) => {
-  // Se está carregando
+  disabled = false,
+}: TarefasSelectorProps) {
   if (loading) {
     return (
-      <div className="space-y-4">
-        <Label className="text-sm font-medium text-foreground">Carregando Tarefas...</Label>
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-        </div>
+      <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Carregando tarefas...
       </div>
     );
   }
 
-  // Se não há tarefas
   if (tarefas.length === 0) {
     return (
-      <div className="space-y-4">
-        <Label className="text-sm font-medium text-foreground">Tarefas do Plano</Label>
-        <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
-          <Wrench className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>Nenhuma tarefa encontrada para este plano</p>
-        </div>
-      </div>
+      <p className="py-6 text-center text-sm text-muted-foreground">
+        Este plano não tem tarefas.
+      </p>
     );
   }
 
+  const todasMarcadas = selectedIds.length === tarefas.length;
+
   return (
-    <div className="space-y-4">
-      {/* Header com botões de ação */}
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium text-foreground">
-          Tarefas do Plano ({tarefas.length})
-        </Label>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onSelectAll}
-            disabled={disabled}
-          >
-            Selecionar Todas
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onDeselectAll}
-            disabled={disabled}
-          >
-            Limpar
-          </Button>
-        </div>
+        <span className="text-xs text-muted-foreground">
+          {selectedIds.length} de {tarefas.length} selecionadas
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs"
+          onClick={todasMarcadas ? onDeselectAll : onSelectAll}
+          disabled={disabled}
+        >
+          {todasMarcadas ? 'Limpar' : 'Selecionar todas'}
+        </Button>
       </div>
 
-      {/* Lista de tarefas */}
-      <div className="grid gap-2 max-h-96 overflow-y-auto overscroll-contain border border-border rounded-lg p-2 bg-muted/30">
+      <div className="max-h-72 space-y-0.5 overflow-y-auto overscroll-contain">
         {tarefas.map((tarefa) => {
-          const isChecked = selectedIds.includes(tarefa.id);
+          const marcada = selectedIds.includes(tarefa.id);
+          const instrucao = tarefa.instrucao;
+
+          const detalhe = [
+            instrucao?.tag,
+            instrucao?.nome,
+            instrucao?.sub_instrucoes?.length
+              ? `${instrucao.sub_instrucoes.length} etapa${instrucao.sub_instrucoes.length === 1 ? '' : 's'}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(' · ');
+
+          const etiquetas = [instrucao?.categoria, instrucao?.tipo_manutencao].filter(
+            Boolean,
+          ) as string[];
 
           return (
-            <Card
+            <label
               key={tarefa.id}
-              className={`border-border transition-colors ${
-                isChecked
-                  ? 'bg-primary/5 border-primary/30'
-                  : 'bg-card hover:bg-accent/50'
-              }`}
+              className={`flex cursor-pointer items-start gap-3 rounded-md px-3 py-2 transition-colors ${
+                marcada ? 'bg-muted' : 'hover:bg-muted'
+              } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
             >
-              <CardContent className="p-3">
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    checked={isChecked}
-                    onCheckedChange={(checked) => {
-                      onToggle(tarefa.id, checked as boolean);
-                    }}
-                    disabled={disabled}
-                    className="mt-0.5"
-                  />
+              <Checkbox
+                checked={marcada}
+                onCheckedChange={(estado) => onToggle(tarefa.id, estado as boolean)}
+                disabled={disabled}
+                className="mt-0.5"
+              />
 
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Wrench className="h-4 w-4 text-primary" />
-                      {tarefa.instrucao?.categoria && (
-                        <Badge variant="outline" className="text-xs">
-                          {tarefa.instrucao.categoria}
-                        </Badge>
-                      )}
-                      {tarefa.instrucao?.tipo_manutencao && (
-                        <Badge variant="secondary" className="text-xs">
-                          {tarefa.instrucao.tipo_manutencao}
-                        </Badge>
-                      )}
-                    </div>
-
-                    <h4 className="font-medium text-sm text-foreground">{tarefa.nome}</h4>
-                    {tarefa.instrucao && (
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                        {tarefa.instrucao.tag ? `${tarefa.instrucao.tag} · ` : ''}
-                        {tarefa.instrucao.nome}
-                        {tarefa.instrucao.sub_instrucoes?.length
-                          ? ` · ${tarefa.instrucao.sub_instrucoes.length} etapa(s)`
-                          : ''}
-                      </p>
-                    )}
+              <div className="min-w-0 flex-1">
+                {etiquetas.length > 0 && (
+                  <div className="mb-0.5 flex flex-wrap gap-1.5">
+                    {etiquetas.map((etiqueta) => (
+                      <span
+                        key={etiqueta}
+                        className="text-[10px] uppercase tracking-wide text-muted-foreground"
+                      >
+                        {etiqueta}
+                      </span>
+                    ))}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                )}
+
+                <p className="truncate text-sm">{tarefa.nome}</p>
+                {detalhe && <p className="truncate text-xs text-muted-foreground">{detalhe}</p>}
+              </div>
+            </label>
           );
         })}
       </div>
-
-      {/* Resumo das tarefas selecionadas */}
-      {selectedIds.length > 0 && (
-        <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
-          <p className="text-sm text-primary">
-            <strong>{selectedIds.length}</strong> tarefa(s) selecionada(s)
-          </p>
-        </div>
-      )}
     </div>
   );
-};
+}

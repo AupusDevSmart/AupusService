@@ -263,9 +263,9 @@ function CampoDeData({
           disabled={disabled}
           onChange={(e) => onData(e.target.value)}
         />
-        <div className="w-28 shrink-0">
+        <div className="w-24 shrink-0">
           <input
-            className="input-minimal text-center"
+            className="input-minimal input-hora"
             type="time"
             value={hora || ''}
             disabled={disabled}

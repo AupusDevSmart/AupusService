@@ -134,6 +134,13 @@
   }
 
   .dark {
+    /* Diz ao navegador para desenhar os controles NATIVOS em tema escuro.
+       Sem isto, o icone do calendario de <input type="date"> e o do relogio de
+       <input type="time"> saem pretos sobre o input preto — some da tela, e nao
+       da para estiliza-los por CSS. Vale tambem para a barra de rolagem e para
+       os menus nativos de select. */
+    color-scheme: dark;
+
     --background: hsl(225, 38%, 16%);
     --foreground: hsl(210, 40%, 98%);
 
@@ -616,4 +623,22 @@
 .input-numero::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+/* Campo de hora nativo.
+ *
+ * O <input type="time"> do Chrome monta o valor em campos internos
+ * (hora, minuto) que ignoram `text-align` do elemento — centralizar exige
+ * empurrar o container desses campos, e nao o texto.
+ *
+ * O ::-webkit-calendar-picker-indicator e o icone do relogio; `color-scheme`
+ * ja o pinta certo no dark, aqui so encostamos ele na direita para o numero
+ * ficar de fato no meio do que sobra. */
+.input-hora::-webkit-datetime-edit {
+  display: flex;
+  justify-content: center;
+}
+
+.input-hora::-webkit-datetime-edit-fields-wrapper {
+  flex: 0 0 auto;
 }

@@ -273,18 +273,26 @@ export function OrigemOSSelector({
           const ativo = tipo === t;
 
           return (
+            // Uma linha por opção. Empilhar ícone, rótulo e descrição deixava
+            // três cartões altos e quase vazios; a pergunta do passo já diz o
+            // que se está escolhendo, e a descrição cabe no `title`.
+            //
+            // `bg-primary/10` no ativo não pintava nada: os tokens deste projeto
+            // são `var()` puro, sem canal alpha.
             <button
               key={t}
               type="button"
               disabled={disabled}
+              title={descricao}
               onClick={() => trocarTipo(t)}
-              className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors ${
-                ativo ? 'border-primary bg-primary/10' : 'hover:bg-muted'
+              className={`flex items-center gap-2 rounded-md border px-3 py-2 text-left transition-colors ${
+                ativo ? 'border-primary bg-muted' : 'hover:bg-muted'
               } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
             >
-              <Icone className={`h-4 w-4 ${ativo ? 'text-primary' : 'text-muted-foreground'}`} />
-              <span className="text-sm font-medium">{rotulo}</span>
-              <span className="text-xs text-muted-foreground">{descricao}</span>
+              <Icone
+                className={`h-4 w-4 shrink-0 ${ativo ? 'text-primary' : 'text-muted-foreground'}`}
+              />
+              <span className="truncate text-sm">{rotulo}</span>
             </button>
           );
         })}
