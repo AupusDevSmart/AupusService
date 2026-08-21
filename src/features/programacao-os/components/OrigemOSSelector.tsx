@@ -1,8 +1,9 @@
 // src/features/programacao-os/components/OrigemOSSelector.tsx
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, FilePenLine, Settings } from 'lucide-react';
+import { AlertTriangle, ExternalLink, FilePenLine, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AssistentePassos, type PassoDoAssistente } from '@/components/common/AssistentePassos';
+import { DetalheDaOrigemSheet, type OrigemAberta } from './DetalheDaOrigemSheet';
 import { useOrigemDados } from '../hooks/useOrigemDados';
 
 import {
@@ -75,6 +76,9 @@ export function OrigemOSSelector({
   // Reabre o assistente por cima de uma escolha já feita.
   const [trocando, setTrocando] = useState(false);
 
+  // O registro de origem aberto em leitura, por cima de tudo.
+  const [detalhe, setDetalhe] = useState<OrigemAberta | null>(null);
+
   useEffect(() => {
     if (tipo === 'ANOMALIA') carregarAnomalias();
     if (tipo === 'SOLICITACAO_SERVICO') carregarSolicitacoes();
@@ -124,6 +128,9 @@ export function OrigemOSSelector({
     });
 
     if (anomalia && onLocalAtivoChange) onLocalAtivoChange(anomalia.local, anomalia.ativo);
+
+    // Ultimo passo do fluxo de anomalia: escolher ja e concluir.
+    if (id) setTrocando(false);
   };
 
   const escolherSolicitacao = (id: string) => {
@@ -137,10 +144,31 @@ export function OrigemOSSelector({
     });
 
     if (solicitacao && onLocalAtivoChange) onLocalAtivoChange(solicitacao.local, '');
+
+    if (id) setTrocando(false);
   };
 
   const escolherPlano = (id: string) => {
-    onChange({ ...value, planoId: id || undefined, tarefasSelecionadas: [] });
+    const plano = planosDisponiveis.find((p) => String(p.id).trim() === id);
+
+    onChange({
+      ...value,
+      planoId: id || undefined,
+      tarefasSelecionadas: [],
+      // O plano e de um equipamento so, e a OS herda a localizacao dele.
+      plantaId: plano?.plantaId || value.plantaId || '',
+    });
+
+    if (plano && onLocalAtivoChange) {
+      onLocalAtivoChange(
+        [plano.plantaNome, plano.unidadeNome].filter(Boolean).join(' / '),
+        plano.equipamentoNome || '',
+      );
+    }
+
+    // O plano nao e o fim do fluxo: sem tarefa escolhida nao ha OS, entao
+    // escolher o plano leva direto a lista delas.
+    if (id) setPasso(2);
   };
 
   const alternarTarefa = (tarefaId: string, marcada: boolean) => {
@@ -189,7 +217,14 @@ export function OrigemOSSelector({
       planosDisponiveis.map((p) => ({
         id: String(p.id).trim(),
         titulo: p.nome,
-        subtitulo: `${p.totalTarefas} ${p.totalTarefas === 1 ? 'tarefa' : 'tarefas'}`,
+        // O equipamento primeiro: e ele que diz para qual ativo a OS vai.
+        subtitulo: [
+          p.equipamentoNome,
+          [p.plantaNome, p.unidadeNome].filter(Boolean).join(' / '),
+          `${p.totalTarefas} ${p.totalTarefas === 1 ? 'tarefa' : 'tarefas'}`,
+        ]
+          .filter(Boolean)
+          .join(' · '),
         etiquetas: [{ texto: p.categoria }],
       })),
     [planosDisponiveis],
@@ -231,6 +266,17 @@ export function OrigemOSSelector({
 
   const rotuloDoTipo = TIPOS.find((t) => t.tipo === tipo)?.rotulo ?? 'Origem';
 
+  // Qual registro o botão de detalhes abre. No plano é o plano em si — as
+  // tarefas escolhidas aparecem dentro dele.
+  const origemParaDetalhe: OrigemAberta | null =
+    tipo === 'ANOMALIA' && anomaliaId
+      ? { tipo: 'ANOMALIA', id: anomaliaId }
+      : tipo === 'SOLICITACAO_SERVICO' && solicitacaoId
+        ? { tipo: 'SOLICITACAO_SERVICO', id: solicitacaoId }
+        : tipo === 'PLANO_MANUTENCAO' && planoId
+          ? { tipo: 'PLANO_MANUTENCAO', id: planoId }
+          : null;
+
   if (escolhido && !trocando) {
     return (
       <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
@@ -244,19 +290,38 @@ export function OrigemOSSelector({
           )}
         </div>
 
-        {!disabled && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setTrocando(true);
-              setPasso(0);
-            }}
-          >
-            Trocar
-          </Button>
-        )}
+        <div className="flex shrink-0 items-center gap-1">
+          {/* Detalhes vale também em leitura: quem só consulta a OS costuma
+              querer justamente conferir o que a origem pedia. */}
+          {origemParaDetalhe && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              title={`Ver ${rotuloDoTipo.toLowerCase()}`}
+              onClick={() => setDetalhe(origemParaDetalhe)}
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          )}
+
+          {!disabled && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setTrocando(true);
+                setPasso(0);
+              }}
+            >
+              Trocar
+            </Button>
+          )}
+        </div>
+
+        <DetalheDaOrigemSheet origem={detalhe} onClose={() => setDetalhe(null)} />
       </div>
     );
   }

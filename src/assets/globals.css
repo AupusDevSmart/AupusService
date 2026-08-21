@@ -642,3 +642,30 @@
 .input-hora::-webkit-datetime-edit-fields-wrapper {
   flex: 0 0 auto;
 }
+
+/* Cursor nos controles nativos de data e hora.
+ *
+ * O navegador desenha o icone do calendario e o do relogio dentro do input, mas
+ * nao lhes da `cursor: pointer` — o ponteiro continua sendo o I-beam do campo de
+ * texto, e o icone nao parece clicavel, embora seja.
+ *
+ * `::-webkit-calendar-picker-indicator` e o unico gancho que o Chrome expoe. */
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator,
+input[type='month']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+/* Botao habilitado pede ponteiro.
+ *
+ * O padrao do navegador para <button> e `cursor: default`, e o Preflight do
+ * Tailwind nao mexe nisso na v3 — entao botao sem classe explicita nao dava
+ * nenhum sinal de que era clicavel.
+ *
+ * `:not(:disabled)` preserva o `cursor-not-allowed` de quem ja o declara. */
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']),
+label:has(> input[type='checkbox']:not(:disabled)) {
+  cursor: pointer;
+}

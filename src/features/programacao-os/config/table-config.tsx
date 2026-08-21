@@ -3,7 +3,7 @@
 import type { TableColumn } from '@aupus/shared-pages';
 import type { ProgramacaoResponse } from '@/services/programacao-os.service';
 import { StatusCell } from '../components/table-cells/StatusCell';
-import { tipoLabels, prioridadeLabels, origemLabels, formatarDataHora } from './labels';
+import { tipoLabels, prioridadeLabels, formatarDataHora } from './labels';
 
 /**
  * Colunas da tabela de Programacao de OS.
@@ -39,7 +39,7 @@ export const programacaoOSTableColumns: TableColumn<ProgramacaoResponse>[] = [
   {
     key: 'descricao',
     label: 'Descrição',
-    width: '26%',
+    width: '46%',
     render: (item) =>
       item.descricao
         ? <Texto>{item.descricao}</Texto>
@@ -61,13 +61,6 @@ export const programacaoOSTableColumns: TableColumn<ProgramacaoResponse>[] = [
     ),
   },
   {
-    key: 'origem',
-    label: 'Origem',
-    hideOnTablet: true,
-    width: '10%',
-    render: (item) => <Texto>{origemLabels[item.origem] || item.origem}</Texto>,
-  },
-  {
     key: 'status',
     label: 'Status',
     width: '11%',
@@ -85,15 +78,5 @@ export const programacaoOSTableColumns: TableColumn<ProgramacaoResponse>[] = [
         ? <Texto>{quando}</Texto>
         : <Texto fraco>Não programada</Texto>;
     },
-  },
-  {
-    key: 'responsavel',
-    label: 'Responsável',
-    hideOnMobile: true,
-    width: '10%',
-    render: (item) =>
-      item.responsavel
-        ? <Texto>{item.responsavel}</Texto>
-        : <Texto fraco>Não atribuído</Texto>,
   },
 ];

@@ -79,6 +79,11 @@ export interface PlanoDisponivel {
   ativo: boolean;
   tarefasTemplate: unknown[];
   plantaId?: string;
+  /** O plano e de UM equipamento — e a OS herda esse ativo. */
+  equipamentoId?: string;
+  equipamentoNome?: string;
+  plantaNome?: string;
+  unidadeNome?: string;
 }
 
 /**

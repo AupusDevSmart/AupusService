@@ -28,6 +28,12 @@ interface PlanoDisponivel {
   ativo: boolean;
   tarefasTemplate: any[];
   plantaId?: string;
+  /// Plano de manutencao e sempre de UM equipamento. Sem o nome dele na lista,
+  /// dois planos parecidos ficam indistinguiveis e a OS sai para o ativo errado.
+  equipamentoId?: string;
+  equipamentoNome?: string;
+  plantaNome?: string;
+  unidadeNome?: string;
 }
 
 interface SolicitacaoDisponivel {
@@ -185,7 +191,11 @@ export const useOrigemDados = () => {
           totalEquipamentos: 1, // Cada plano tem 1 equipamento
           ativo: true,
           tarefasTemplate: plano.tarefas || [],
-          plantaId: plano.equipamento?.planta?.id
+          plantaId: plano.equipamento?.planta?.id || plano.equipamento?.unidade?.planta?.id,
+          equipamentoId: plano.equipamento?.id,
+          equipamentoNome: plano.equipamento?.nome,
+          plantaNome: plano.equipamento?.planta?.nome || plano.equipamento?.unidade?.planta?.nome,
+          unidadeNome: plano.equipamento?.unidade?.nome,
         };
 
         console.log(`✅ [useOrigemDados] Plano ${index + 1} formatado:`, planoFormatado);

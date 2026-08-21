@@ -295,10 +295,6 @@ export function PropostaSection({
           )}
         </div>
 
-        {proposta.outros_custos.length === 0 && (
-          <p className="text-sm text-muted-foreground">Nenhum custo adicional.</p>
-        )}
-
         {proposta.outros_custos.map((custo, indice) => {
           const trocar = (dados: Partial<OutroCusto>) =>
             salvarCustos((p) => ({

@@ -569,11 +569,16 @@ export const programacaoOSFormGroups = [
   {
     key: 'classificacao',
     title: 'Classificação',
+    // Os tres cabem numa linha so: sao escolhas curtas de uma palavra.
+    columns: 3,
     fields: ['tipo', 'prioridade', 'condicoes']
   },
   {
     key: 'planejamento',
     title: 'Planejamento',
+    // Inicio, fim e duracao lado a lado — a duracao so faz sentido lida
+    // junto das datas que ela mede.
+    columns: 3,
     fields: ['data_previsao_inicio', 'data_previsao_fim', 'duracao_estimada']
   },
   // TODO: Descomentar quando implementar programação detalhada
