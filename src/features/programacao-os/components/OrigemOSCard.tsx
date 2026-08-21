@@ -539,12 +539,17 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
   };
 
   return (
-    <Card className="border border-gray-200 dark:border-gray-700 shadow-sm">
+    <Card className="border shadow-sm">
+      {/* Padding simetrico: o CardHeader do shadcn vem com p-6, e o pb-3
+          antigo baixava so o rodape — o texto ficava colado no topo da faixa.
+          Vale para qualquer origem, que era o pedido. */}
       <CardHeader
-        className="pb-3 bg-gray-50 dark:bg-gray-800/50 cursor-pointer select-none"
+        className="p-3 bg-muted cursor-pointer select-none"
         onClick={() => hasDetails && setExpanded(!expanded)}
       >
-        <CardTitle className="text-sm flex items-center justify-between text-gray-700 dark:text-gray-300">
+        {/* Cinzas cravados a mao trocados por tokens: gray-50/gray-800 nao
+            acompanha o tema e destoava do resto do sheet. */}
+        <CardTitle className="text-sm flex items-center justify-between text-foreground">
           <div className="flex items-center gap-2">
             {(anomaliaLoading || solicitacaoLoading || tarefasLoading) ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -555,8 +560,8 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
           </div>
           {hasDetails && (
             expanded
-              ? <ChevronUp className="h-4 w-4 text-gray-400" />
-              : <ChevronDown className="h-4 w-4 text-gray-400" />
+              ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              : <ChevronDown className="h-4 w-4 text-muted-foreground" />
           )}
         </CardTitle>
       </CardHeader>

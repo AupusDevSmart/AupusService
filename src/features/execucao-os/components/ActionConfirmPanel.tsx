@@ -351,6 +351,7 @@ export function ActionConfirmPanel({ action, entity, onConfirm }: ActionConfirmP
         return (
           <Input
             type="number"
+            className="text-center"
             value={value}
             onChange={(e) => setValue(field.key, e.target.value)}
             placeholder={field.placeholder}

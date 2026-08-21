@@ -113,7 +113,7 @@ const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
                 onChange={(e) => atualizarItem(index, 'valor', parseFloat(e.target.value) || 0)}
                 placeholder="0.00"
                 disabled={disabled}
-                className={`${campoCard} text-right`}
+                className={`${campoCard} text-center`}
               />
               {!disabled && (
                 <Button

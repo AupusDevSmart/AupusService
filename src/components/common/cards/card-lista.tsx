@@ -51,10 +51,16 @@ export function CardLista({
   const template = colunas.map((c) => c.largura).join(' ');
 
   return (
-    <div className="border border-border rounded-md overflow-x-auto">
+    // Sem moldura, sem faixa no cabecalho e sem divisoria entre as linhas: a
+    // borda de cada campo ja delimita o que e editavel, e o resto so somava
+    // tracos ao redor de tracos.
+    //
+    // A rolagem horizontal fica: as larguras sao fixas, e num sheet estreito a
+    // alternativa e a linha quebrar em duas metades desalinhadas.
+    <div className="overflow-x-auto">
       <div style={{ minWidth: larguraMinima }}>
         <div
-          className="grid gap-2 px-3 py-1.5 bg-muted/50 border-b border-border text-xs text-muted-foreground"
+          className="grid gap-2 px-1 pb-1 text-xs text-muted-foreground"
           style={{ gridTemplateColumns: template }}
         >
           {colunas.map((coluna, i) => (
@@ -63,7 +69,7 @@ export function CardLista({
             </span>
           ))}
         </div>
-        <div className="divide-y divide-border">{children}</div>
+        <div>{children}</div>
       </div>
     </div>
   );
@@ -78,7 +84,7 @@ export function CardLinha({
 }) {
   return (
     <div
-      className="grid gap-2 px-3 py-1.5 items-center"
+      className="grid gap-2 px-1 py-1 items-center"
       style={{ gridTemplateColumns: colunas.map((c) => c.largura).join(' ') }}
     >
       {children}

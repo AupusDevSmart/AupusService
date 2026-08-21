@@ -296,7 +296,7 @@ export function TarefasExpandedRow({
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               placeholder="Digite o nome da tarefa"
-              className="h-9"
+              className="h-9 text-center"
             />
           </div>
 
@@ -333,7 +333,7 @@ export function TarefasExpandedRow({
                 min={1}
                 value={frequenciaPersonalizada}
                 onChange={(e) => setFrequenciaPersonalizada(Number(e.target.value))}
-                className="h-9"
+                className="h-9 text-center"
               />
             </div>
           )}
@@ -412,7 +412,7 @@ export function TarefasExpandedRow({
                     value={edicao.nome}
                     onChange={(e) => setEdicao((prev) => ({ ...prev, nome: e.target.value }))}
                     placeholder="Digite o nome da tarefa"
-                    className="h-9"
+                    className="h-9 text-center"
                   />
                 </div>
 
@@ -451,7 +451,7 @@ export function TarefasExpandedRow({
                       onChange={(e) =>
                         setEdicao((prev) => ({ ...prev, frequencia_personalizada: Number(e.target.value) }))
                       }
-                      className="h-9"
+                      className="h-9 text-center"
                     />
                   </div>
                 )}
