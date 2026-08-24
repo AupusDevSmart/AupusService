@@ -201,7 +201,22 @@ export const LocalizacaoController = ({
   }
 
   return (
-    <div className="space-y-4">
+    /**
+     * Os três na mesma linha a partir de 768px, empilhados abaixo disso.
+     *
+     * O breakpoint é do VIEWPORT, não do sheet: com `lg` (1024px) o grid nunca
+     * virava três colunas numa janela menor, mesmo o sheet tendo largura de
+     * sobra.
+     *
+     * Unidade e equipamento aparecem SEMPRE, desabilitados até a etapa
+     * anterior ser escolhida — antes eles só existiam depois do passo anterior,
+     * e num grid isso fazia a planta ocupar um terço da linha com dois vazios
+     * ao lado, com o resto surgindo e reposicionando tudo a cada escolha.
+     *
+     * Desabilitado e visível também mostra o caminho: dá para ver que ainda
+     * faltam dois passos.
+     */
+    <div className="grid gap-4 md:grid-cols-3">
       <ComboboxField
         label="Planta/Local"
         placeholder="Selecione a planta..."
@@ -214,45 +229,54 @@ export const LocalizacaoController = ({
         required
       />
 
-      {plantaId && (
-        <ComboboxField
-          label="Unidade"
-          placeholder={
-            loadingUnidades
+      <ComboboxField
+        label="Unidade"
+        placeholder={
+          !plantaId
+            ? "Escolha a planta primeiro"
+            : loadingUnidades
               ? "Carregando unidades..."
               : unidadesOptions.length === 0
                 ? "Nenhuma unidade disponivel"
                 : "Selecione a unidade..."
-          }
-          searchPlaceholder="Buscar unidade..."
-          emptyText="Nenhuma unidade encontrada"
-          options={unidadesOptions}
-          value={unidadeId}
-          onChange={handleUnidadeChange}
-          disabled={disabled || isViewMode || loadingUnidades || unidadesOptions.length === 0}
-          required
-        />
-      )}
+        }
+        searchPlaceholder="Buscar unidade..."
+        emptyText="Nenhuma unidade encontrada"
+        options={unidadesOptions}
+        value={unidadeId}
+        onChange={handleUnidadeChange}
+        disabled={
+          disabled || isViewMode || !plantaId || loadingUnidades || unidadesOptions.length === 0
+        }
+        required
+      />
 
-      {plantaId && unidadeId && (
-        <ComboboxField
-          label="Equipamento"
-          placeholder={
-            loadingEquipamentos
+      <ComboboxField
+        label="Equipamento"
+        placeholder={
+          !unidadeId
+            ? "Escolha a instalação primeiro"
+            : loadingEquipamentos
               ? "Carregando equipamentos..."
               : equipamentosOptions.length === 0
                 ? "Nenhum equipamento disponivel"
                 : "Selecione o equipamento..."
-          }
-          searchPlaceholder="Buscar equipamento..."
-          emptyText="Nenhum equipamento encontrado"
-          options={equipamentosOptions}
-          value={equipamentoId}
-          onChange={handleEquipamentoChange}
-          disabled={disabled || isViewMode || loadingEquipamentos || equipamentosOptions.length === 0}
-          required
-        />
-      )}
+        }
+        searchPlaceholder="Buscar equipamento..."
+        emptyText="Nenhum equipamento encontrado"
+        options={equipamentosOptions}
+        value={equipamentoId}
+        onChange={handleEquipamentoChange}
+        disabled={
+          disabled ||
+          isViewMode ||
+          !plantaId ||
+          !unidadeId ||
+          loadingEquipamentos ||
+          equipamentosOptions.length === 0
+        }
+        required
+      />
     </div>
   );
 };

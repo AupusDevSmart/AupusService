@@ -287,23 +287,16 @@ export function AnomaliasPage() {
           {/* Dashboard */}
           <AnomaliasDashboard data={stats} />
 
-          {/* Alertas de Anomalias Críticas */}
+          {/* O aviso de criticas em uma linha.
+              Eram tres linhas — titulo, texto e a moldura em volta — para dizer
+              um numero que o proprio card de criticas ja mostra logo acima. */}
           {stats.criticas > 0 && (
-            <div className="mb-4 md:mb-6">
-              <div className="p-3 md:p-4 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800/50 rounded-lg">
-                <div className="flex items-start gap-2 md:gap-3">
-                  <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-red-600 dark:text-red-500 mt-0.5 flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <h4 className="font-medium text-sm md:text-base text-red-900 dark:text-red-100 mb-1">
-                      Anomalias Críticas Detectadas
-                    </h4>
-                    <p className="text-xs md:text-sm text-red-700 dark:text-red-300">
-                      {stats.criticas} anomalia(s) com prioridade crítica identificadas. Verifique
-                      urgentemente para evitar problemas operacionais.
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className="mb-3 flex items-center gap-2 text-sm text-red-600 dark:text-red-500">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>
+                {stats.criticas} {stats.criticas === 1 ? 'anomalia crítica' : 'anomalias críticas'}{' '}
+                aguardando atendimento.
+              </span>
             </div>
           )}
 

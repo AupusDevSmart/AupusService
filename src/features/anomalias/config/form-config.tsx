@@ -25,17 +25,6 @@ const AnexosRender = ({ value, onChange, disabled, mode, entity }: any) => (
 );
 
 export const anomaliasFormFields: FormField[] = [
-  // Informações Básicas
-  {
-    key: 'descricao',
-    label: 'Descrição da Anomalia',
-    type: 'textarea',
-    required: true,
-    placeholder: 'Descreva detalhadamente a anomalia identificada...',
-    group: 'informacoes_basicas',
-    colSpan: 2, // ✅ Ocupa 100% da largura (S maiúsculo!)
-  },
-
   // Localização - ✅ CORRIGIDO: Usar função estável
   {
     key: 'localizacao',
@@ -104,31 +93,31 @@ export const anomaliasFormFields: FormField[] = [
     width: 'half',
   },
 
-  // Observações
+  /**
+   * A descrição, no lugar onde ficavam as observações.
+   *
+   * Grava em `descricao` — a mesma coluna do campo curto que existia no topo.
+   * Havia dois textos livres pedindo quase a mesma coisa, e o de cima aparecia
+   * antes de a pessoa ter escolhido o equipamento, quando ainda não dava para
+   * descrever direito o que foi visto.
+   *
+   * A coluna `observacoes` continua no banco com o que já foi escrito; ela só
+   * deixou de ter campo na tela.
+   */
   {
-    key: 'observacoes',
-    label: 'Observações Adicionais',
+    key: 'descricao',
+    label: '', // duplicava o titulo do grupo
     type: 'textarea',
-    required: false,
-    placeholder: 'Informações adicionais, contexto, detalhes técnicos...',
-    group: 'observacoes',
-    colSpan: 2, // ✅ Ocupa 100% da largura (S maiúsculo!)
-  },
-
-  // Instrucoes vinculadas (editável)
-  {
-    key: 'instrucoes_ids',
-    label: '',
-    type: 'custom',
-    required: false,
+    required: true,
+    placeholder: 'O que foi identificado, em que condição, e o que se observou...',
+    group: 'descricao',
     colSpan: 2,
-    group: 'instrucoes_vinculadas',
-  } as any,
+  },
 
   // Anexos - ✅ CORRIGIDO: Usar função estável
   {
     key: 'anexos',
-    label: 'Anexos',
+    label: '', // duplicava o titulo do grupo
     type: 'custom',
     required: false,
     render: AnexosRender, // ✅ Referência estável

@@ -3,7 +3,6 @@ import { useState, useCallback, useMemo } from 'react';
 import { FilterConfig } from '@/types/base';
 import { AnomaliasFilters } from '../types';
 import { anomaliasFormFields } from '../config/form-config';
-import { InstrucoesSelector } from '@/features/solicitacoes-servico/components/InstrucoesSelector';
 
 export function useAnomaliasFilters(_initialFilters: Partial<AnomaliasFilters>) {
   const [unidades, setUnidades] = useState<Array<{ value: string; label: string }>>([]);
@@ -65,7 +64,9 @@ export function useAnomaliasFilters(_initialFilters: Partial<AnomaliasFilters>) 
       label: 'Status',
       placeholder: 'Todos os status',
       options: [
-        { value: 'all', label: 'Todos' },
+        // O BaseFilters mostra o rotulo da OPCAO selecionada, nao o placeholder.
+        // Encurtar aqui fazia o filtro exibir so 'Todos', sem dizer de que.
+        { value: 'all', label: 'Todos os status' },
         { value: 'REGISTRADA', label: 'Registrada' },
         { value: 'PROGRAMADA', label: 'Programada' },
         { value: 'FINALIZADA', label: 'Finalizada' },
@@ -99,18 +100,8 @@ export function useAnomaliasFilters(_initialFilters: Partial<AnomaliasFilters>) 
     },
   ], [unidades]);
 
-  // Form fields para o modal - injeta InstrucoesSelector no campo instrucoes_ids
-  const formFields = useMemo(() => {
-    return anomaliasFormFields.map(field => {
-      if (field.key === 'instrucoes_ids') {
-        return {
-          ...field,
-          render: InstrucoesSelector,
-        };
-      }
-      return field;
-    });
-  }, []);
+  // Sem injecao: o campo de instrucoes vinculadas saiu do sheet de anomalia.
+  const formFields = anomaliasFormFields;
 
   return {
     filterConfigs,

@@ -12,12 +12,12 @@ import type { FormField, ModalMode } from '@/types/base';
  * divergirem entre os dois usos.
  */
 
+// ATENCAO: o BaseForm monta cada grupo por ESTA lista e ignora o `group:` do
+// campo. Campo que nao esta aqui simplesmente nao renderiza, sem erro nenhum.
 const grupos = [
-  { key: 'informacoes_basicas', title: 'Informações Básicas', fields: ['descricao'] },
   { key: 'localizacao', title: 'Localização', fields: ['localizacao'] },
   { key: 'classificacao', title: 'Classificação', fields: ['condicao', 'origem', 'prioridade', 'status'] },
-  { key: 'observacoes', title: 'Observações Adicionais', fields: ['observacoes'] },
-  { key: 'instrucoes_vinculadas', title: 'Instrucoes Vinculadas', fields: ['instrucoes_ids'] },
+  { key: 'descricao', title: 'Descrição Detalhada', fields: ['descricao'] },
   { key: 'anexos', title: 'Anexos', fields: ['anexos'] },
 ];
 
