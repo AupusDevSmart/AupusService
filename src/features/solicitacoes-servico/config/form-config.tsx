@@ -142,6 +142,19 @@ export const solicitacoesFormFields: FormField[] = [
     ],
   },
   {
+    // Junto da prioridade: sao a mesma pergunta vista de dois angulos — "quao
+    // urgente" e "ate quando". Longe uma da outra, da para marcar URGENTE e
+    // nao dar data nenhuma.
+    //
+    // Grava em `data_necessidade`, coluna que ja existia e atravessava o DTO,
+    // mas viajava sempre vazia porque nao havia campo que a preenchesse: 0 de
+    // 25 solicitacoes tinham valor.
+    key: 'data_necessidade',
+    label: 'Precisa até',
+    type: 'datetime-local',
+    required: false,
+  },
+  {
     key: 'local',
     label: 'Local',
     type: 'text',

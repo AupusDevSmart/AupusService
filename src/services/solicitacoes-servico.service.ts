@@ -155,6 +155,9 @@ class SolicitacoesServicoApiService {
       riscos_nao_execucao: data.riscos_nao_execucao,
       requisitos_especiais: data.requisitos_especiais,
       // observacoes: data.observacoes, // Campo removido - backend não aceita
+      // O prazo tem que viajar no update tambem: sem ele, editar qualquer
+      // outro campo apagaria a data que ja estava gravada.
+      data_necessidade: data.data_necessidade,
       tempo_estimado: data.tempo_estimado,
       custo_estimado: data.custo_estimado,
       materiais_necessarios: data.materiais_necessarios,

@@ -4,6 +4,7 @@ import type { FormField } from '@/types/base';
 import { OrigemOSSelector } from '../components/OrigemOSSelector';
 import { InstrucoesDaOrigem } from '../components/InstrucoesDaOrigem';
 import { RecursosDaOrigem } from '../components/RecursosDaOrigem';
+import { PrazoDaOrigem } from '../components/PrazoDaOrigem';
 import { OrigemOSCard } from '../components/OrigemOSCard';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
@@ -228,6 +229,42 @@ export const programacaoOSFormFields: FormField[] = [
     computeDisabled: (entity: any) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
+  },
+  {
+    /**
+     * O prazo que a origem impoe, ao lado das datas de planejamento.
+     *
+     * Sem isto o prazo so pintava uma celula na lista de anomalias, que ninguem
+     * abre para programar — a cobranca nao alcancava o momento da decisao. Dava
+     * para agendar para o dia 30 uma anomalia que vence dia 25, sem aviso.
+     *
+     * Avisa, nao impede: as vezes nao da mesmo, e uma trava faria a pessoa
+     * contornar por fora, tirando do sistema a informacao de que aquela OS
+     * nasceu atrasada.
+     */
+    key: 'prazo_origem',
+    label: '',
+    type: 'custom',
+    group: 'planejamento',
+    colSpan: 2,
+    excludeFromSubmit: true,
+    render: ({ entity, formData }: any) => {
+      const origem = formData?.origem;
+      const tipo = origem?.tipo || entity?.origem?.tipo || entity?.origem;
+
+      return (
+        <PrazoDaOrigem
+          tipo={tipo}
+          anomaliaId={origem?.anomaliaId || entity?.anomalia?.id || entity?.anomalia_id}
+          solicitacaoId={
+            origem?.solicitacaoServicoId ||
+            entity?.solicitacao_servico?.id ||
+            entity?.solicitacao_servico_id
+          }
+          previsaoFim={formData?.data_previsao_fim || entity?.data_previsao_fim}
+        />
+      );
+    },
   },
   {
     key: 'duracao_estimada',
@@ -600,7 +637,7 @@ export const programacaoOSFormGroups = [
     // Inicio, fim e duracao lado a lado — a duracao so faz sentido lida
     // junto das datas que ela mede.
     columns: 3,
-    fields: ['data_previsao_inicio', 'data_previsao_fim', 'duracao_estimada']
+    fields: ['data_previsao_inicio', 'data_previsao_fim', 'duracao_estimada', 'prazo_origem']
   },
   // TODO: Descomentar quando implementar programação detalhada
   /*
