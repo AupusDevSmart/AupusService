@@ -18,6 +18,10 @@ export interface Anomalia extends BaseEntity {
   status: StatusAnomalia;
   prioridade: PrioridadeAnomalia;
   observacoes?: string;
+  /** ANO-0000. Ausente nas anomalias anteriores ao campo. */
+  numero?: string;
+  /** Ate quando precisa estar resolvida. */
+  prazo?: string;
   criadoPor?: string;
   atualizadoEm?: string;
   ordemServicoId?: string;

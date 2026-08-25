@@ -6,47 +6,58 @@ import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-// Render function para o campo de solicitante - mostra o usuário logado como readonly
-const SolicitanteRender = ({ value: _value, onChange, disabled: _disabled, mode }: any) => {
-  const [userName, setUserName] = useState<string>('Carregando...');
-  const [userId, setUserId] = useState<string>('');
-  const [loaded, setLoaded] = useState(false);
+/**
+ * O solicitante, sempre em leitura.
+ *
+ * No CADASTRO é quem está logado — a pessoa está registrando agora. Em edição e
+ * visualização é quem REGISTROU, lido do próprio registro.
+ *
+ * Antes o campo buscava o usuário logado nos três modos, então abrir uma
+ * solicitação de outra pessoa mostrava o seu nome no lugar do dela: a tabela
+ * dizia uma coisa e o sheet dizia outra sobre o mesmo registro.
+ */
+const SolicitanteRender = ({ value, onChange, mode, entity }: any) => {
+  const registrado = entity?.solicitante_nome || (typeof value === 'string' ? value : '');
+  const cadastrando = mode === 'create';
+
+  const [logado, setLogado] = useState('Carregando...');
+  const [usuarioId, setUsuarioId] = useState('');
 
   useEffect(() => {
-    // Evitar múltiplas chamadas
-    if (loaded) return;
+    // Só o cadastro precisa saber quem está logado. Nos outros modos o nome
+    // vem do registro, e buscar o usuário seria trabalho para descartar.
+    if (!cadastrando) return;
 
-    // Buscar dados do usuário logado
+    let cancelado = false;
+
     AuthService.getCurrentUser()
       .then((user) => {
-        setUserName(user.nome || 'Usuário');
-        setUserId(user.id || '');
-        setLoaded(true);
-        // Preencher automaticamente o nome do solicitante (não será enviado para API)
-        if (mode === 'create' && onChange) {
-          onChange(user.nome || 'Usuário');
-        }
+        if (cancelado) return;
+        const nome = user.nome || 'Usuário';
+        setLogado(nome);
+        setUsuarioId(user.id || '');
+        onChange?.(nome);
       })
-      .catch((error) => {
-        console.error('Erro ao buscar usuário:', error);
-        setUserName('Erro ao carregar usuário');
-        setLoaded(true);
+      .catch(() => {
+        if (!cancelado) setLogado('Erro ao carregar usuário');
       });
-  }, []); // Remover dependências para executar apenas uma vez
+
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cadastrando]);
+
+  const exibido = cadastrando ? logado : registrado || '—';
 
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium text-foreground">
         Solicitante
-        <span className="text-red-500 ml-1">*</span>
+        {cadastrando && <span className="text-red-500 ml-1">*</span>}
       </Label>
-      <Input
-        value={userName}
-        disabled={true}
-        className="bg-gray-50 dark:bg-gray-800 dark:text-gray-200 cursor-not-allowed"
-        readOnly
-      />
-      <input type="hidden" name="solicitante_id" value={userId} />
+      <Input value={exibido} disabled readOnly className="cursor-not-allowed" />
+      {cadastrando && <input type="hidden" name="solicitante_id" value={usuarioId} />}
     </div>
   );
 };

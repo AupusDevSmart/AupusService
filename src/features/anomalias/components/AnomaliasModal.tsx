@@ -16,7 +16,10 @@ import type { FormField, ModalMode } from '@/types/base';
 // campo. Campo que nao esta aqui simplesmente nao renderiza, sem erro nenhum.
 const grupos = [
   { key: 'localizacao', title: 'Localização', fields: ['localizacao'] },
-  { key: 'classificacao', title: 'Classificação', fields: ['condicao', 'origem', 'prioridade', 'status'] },
+  // O prazo entra junto da prioridade: sao a mesma pergunta vista de dois
+  // angulos — "quao urgente" e "ate quando". Longe uma da outra, da para marcar
+  // CRITICA e nao dar data nenhuma.
+  { key: 'classificacao', title: 'Classificação', fields: ['condicao', 'origem', 'prioridade', 'status', 'prazo'] },
   { key: 'descricao', title: 'Descrição Detalhada', fields: ['descricao'] },
   { key: 'anexos', title: 'Anexos', fields: ['anexos'] },
 ];

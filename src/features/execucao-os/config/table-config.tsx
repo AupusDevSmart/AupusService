@@ -47,6 +47,27 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
     },
   },
   {
+    // A origem diz de onde a OS nasceu — solicitacao, anomalia ou plano. Sem
+    // ela, duas OS identicas na tabela podem ter vindo de lugares diferentes,
+    // e e a origem que diz a quem prestar contas.
+    key: 'origem',
+    label: 'Origem',
+    width: '13%',
+    sortable: true,
+    hideOnMobile: true,
+    render: (item) => {
+      const rotulos: Record<string, string> = {
+        SOLICITACAO_SERVICO: 'Solicitação',
+        ANOMALIA: 'Anomalia',
+        PLANO_MANUTENCAO: 'Plano',
+        TAREFA: 'Plano',
+        MANUAL: 'Manual',
+      };
+      const origem = (item as any).origem || (item as any).os?.origem;
+      return origem ? <Texto>{rotulos[origem] || origem}</Texto> : <Texto fraco>-</Texto>;
+    },
+  },
+  {
     key: 'tipo',
     label: 'Tipo',
     width: '12%',

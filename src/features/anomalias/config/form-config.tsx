@@ -93,6 +93,18 @@ export const anomaliasFormFields: FormField[] = [
     width: 'half',
   },
 
+  // O prazo entra junto da prioridade: sao a mesma pergunta vista de dois
+  // angulos — "quao urgente" e "ate quando". Longe uma da outra, da para
+  // marcar CRITICA e nao dar data nenhuma.
+  {
+    key: 'prazo',
+    label: 'Prazo para Resolução',
+    type: 'datetime-local',
+    required: false,
+    group: 'classificacao',
+    width: 'half',
+  },
+
   /**
    * A descrição, no lugar onde ficavam as observações.
    *

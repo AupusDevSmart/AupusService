@@ -124,6 +124,14 @@ export interface TableColumn<T = any> {
   sortable?: boolean;
   hideOnMobile?: boolean;
   hideOnTablet?: boolean;
+  /**
+   * No celular esta coluna vira o TITULO do cartao.
+   *
+   * O BaseTable ja suportava; este tipo e uma copia local do que vive no
+   * shared-pages, e estava atrasado. Sem a propriedade declarada, usar o
+   * recurso quebrava o typecheck e o cartao caia na primeira coluna visivel.
+   */
+  primaryOnMobile?: boolean;
   render?: (item: T) => React.ReactElement | string;
   className?: string;
   width?: string;
