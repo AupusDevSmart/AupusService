@@ -150,11 +150,16 @@ export interface Equipamento extends BaseEntity {
   totalComponentes?: number;
 
   // Tipo de equipamento completo (relação com tipos_equipamentos)
+  // `categoria` vem como o NOME em texto por este caminho (o transform achata
+  // o objeto), e como objeto pela rota /tipos-equipamentos. Quem le precisa
+  // normalizar antes — `categoria.nome` sobre um texto e `undefined` calado.
   tipoEquipamentoObj?: {
     id?: string;
     codigo?: string;
     nome?: string;
-    categoria?: string;
+    categoria?: string | { id: string; nome: string };
+    categoriaId?: string;
+    fabricante?: string;
     larguraPadrao?: number;
     alturaPadrao?: number;
     iconeSvg?: string;
