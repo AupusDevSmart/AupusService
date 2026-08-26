@@ -33,29 +33,40 @@ export const programacaoOSTableColumns: TableColumn<ProgramacaoResponse>[] = [
   {
     key: 'codigo',
     label: 'Código',
-    width: '10%',
+    width: '12%',
     render: (item) => <Texto mono>{item.codigo || '-'}</Texto>,
   },
+  // Local no lugar da Descricao.
+  //
+  // A descricao e um texto livre e longo. Numa tabela de layout automatico, a
+  // coluna reivindica a largura do MAIOR texto da pagina — uma unica descricao
+  // grande empurrava Tipo, Prioridade, Status e Data para fora da tela. Nao era
+  // a tabela que estava larga demais: era uma coluna.
+  //
+  // Local identifica a linha em 93% dos registros (82 de 88 em dev) e ja vem na
+  // listagem, sem tocar no backend. Equipamento seria o substituto natural — e o
+  // que se fez em anomalias — mas so existe em metade das OPs (44 de 88) e nem e
+  // incluido no `findAll`: metade da coluna sairia vazia.
   {
-    key: 'descricao',
-    label: 'Descrição',
-    width: '46%',
+    key: 'local',
+    label: 'Local',
+    width: '26%',
     render: (item) =>
-      item.descricao
-        ? <Texto>{item.descricao}</Texto>
-        : <Texto fraco>Sem descrição</Texto>,
+      item.local
+        ? <Texto>{item.local}</Texto>
+        : <Texto fraco>Sem local</Texto>,
   },
   {
     key: 'tipo',
     label: 'Tipo',
-    width: '11%',
+    width: '12%',
     render: (item) => <Texto>{tipoLabels[item.tipo] || item.tipo}</Texto>,
   },
   {
     key: 'prioridade',
     label: 'Prioridade',
     hideOnTablet: true,
-    width: '9%',
+    width: '12%',
     render: (item) => (
       <Texto>{prioridadeLabels[item.prioridade] || item.prioridade}</Texto>
     ),
@@ -63,14 +74,14 @@ export const programacaoOSTableColumns: TableColumn<ProgramacaoResponse>[] = [
   {
     key: 'status',
     label: 'Status',
-    width: '11%',
+    width: '14%',
     sortable: true,
     render: (item) => <StatusCell status={item.status} />,
   },
   {
     key: 'data_programada',
     label: 'Data Programada',
-    width: '13%',
+    width: '24%',
     sortable: true,
     render: (item) => {
       // Duas colunas guardam "quando": `data_hora_programada` vem da programacao

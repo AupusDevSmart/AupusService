@@ -35,15 +35,24 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
     width: '10%',
     render: (item) => <Texto mono>{item.numeroOS || item.numero_os || '-'}</Texto>,
   },
+  // Local no lugar da Descricao — mesmo motivo da tabela de OP.
+  //
+  // Texto livre e longo numa tabela de layout automatico faz a coluna
+  // reivindicar a largura do MAIOR texto da pagina, e o excedente empurra as
+  // colunas seguintes para fora da tela. Uma descricao grande basta.
+  //
+  // Local esta preenchido em 90% das OS (46 de 51 em dev) e ja chega pelo
+  // transform. Equipamento identificaria melhor, mas so existe em 63% (32 de
+  // 51) — um terco da coluna sairia vazia.
   {
-    key: 'descricao',
-    label: 'Descrição',
-    width: '26%',
+    key: 'local',
+    label: 'Local',
+    width: '18%',
     render: (item) => {
-      const descricao = item.descricao || item.os?.descricao;
-      return descricao
-        ? <Texto>{descricao}</Texto>
-        : <Texto fraco>Sem descrição</Texto>;
+      const local = item.local || item.os?.local;
+      return local
+        ? <Texto>{local}</Texto>
+        : <Texto fraco>Sem local</Texto>;
     },
   },
   {
