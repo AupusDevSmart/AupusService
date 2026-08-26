@@ -73,7 +73,16 @@ export const programacaoOSTableColumns: TableColumn<ProgramacaoResponse>[] = [
     width: '13%',
     sortable: true,
     render: (item) => {
-      const quando = formatarDataHora(item.data_hora_programada);
+      // Duas colunas guardam "quando": `data_hora_programada` vem da programacao
+      // detalhada (hoje comentada no formulario, so preenchida ao aprovar) e
+      // `data_previsao_inicio` e o campo que o usuario preenche ao criar a OP.
+      //
+      // Lendo so a primeira, toda OP criada pelo formulario atual aparecia como
+      // "Não programada" mesmo tendo data — o dado estava salvo, na outra coluna.
+      // Mesma precedencia ja usada no detalhe da OP.
+      const quando = formatarDataHora(
+        item.data_hora_programada || item.data_previsao_inicio,
+      );
       return quando
         ? <Texto>{quando}</Texto>
         : <Texto fraco>Não programada</Texto>;
