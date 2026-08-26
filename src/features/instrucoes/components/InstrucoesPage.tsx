@@ -222,7 +222,7 @@ export function InstrucoesPage() {
   return (
     <Layout>
       <Layout.Main>
-        <div className="flex flex-col h-full w-full">
+        <div className="flex flex-col w-full sm:h-full">
           <InstrucoesBreadcrumb />
 
           <TitleCard
@@ -243,7 +243,7 @@ export function InstrucoesPage() {
             </button>
           </div>
 
-          <div className="flex-1 min-h-0">
+          <div className="sm:flex-1 sm:min-h-0">
             <BaseTable
               data={instrucoes}
               columns={instrucoesTableColumns}

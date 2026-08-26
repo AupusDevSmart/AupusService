@@ -64,7 +64,7 @@ export function RecursosPage() {
   return (
     <Layout>
       <Layout.Main>
-        <div className="flex flex-col h-full w-full">
+        <div className="flex flex-col w-full sm:h-full">
           <TitleCard
             title="Recursos"
             description="Peças, materiais, ferramentas, técnicos e viaturas usados nas instruções, com o custo médio de cada um"
@@ -91,7 +91,7 @@ export function RecursosPage() {
             )}
           </div>
 
-          <div className="flex-1 min-h-0">
+          <div className="sm:flex-1 sm:min-h-0">
             <BaseTable
               data={recursos}
               columns={recursosTableColumns}

@@ -303,7 +303,7 @@ export function ReservasPage() {
   return (
     <Layout>
       <Layout.Main>
-        <div className="flex flex-col h-full w-full">
+        <div className="flex flex-col w-full sm:h-full">
           <TitleCard
             title="Reservas de Veículos"
             description="Gerencie as reservas de viaturas da empresa"
@@ -369,7 +369,7 @@ export function ReservasPage() {
             </div>
           )}
 
-          <div className="flex-1 min-h-0">
+          <div className="sm:flex-1 sm:min-h-0">
             <BaseTable
               data={reservas}
               columns={reservasTableColumns}

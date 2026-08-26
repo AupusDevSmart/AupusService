@@ -248,7 +248,7 @@ export function FeriadosPage() {
   return (
     <Layout>
       <Layout.Main>
-        <div className="flex flex-col h-full w-full">
+        <div className="flex flex-col w-full sm:h-full">
           {/* Header */}
           <TitleCard
             title="Feriados"
@@ -304,7 +304,7 @@ export function FeriadosPage() {
           )}
 
           {/* Tabela */}
-          <div className="flex-1 min-h-0">
+          <div className="sm:flex-1 sm:min-h-0">
             <BaseTable
               data={feriados}
               columns={feriadosTableColumns}

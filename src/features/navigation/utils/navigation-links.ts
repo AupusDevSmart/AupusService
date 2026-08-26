@@ -78,17 +78,11 @@ export const navigationLinks: Array<NavigationLink> = [
     icon: ClipboardList,
     label: 'Controle',
     hint: 'Controle',
+    // A ordem segue o caminho do trabalho, do que se define ao que se executa:
+    // a instrucao descreve o servico, o plano diz quando repetir, anomalia e
+    // solicitacao sao as duas portas de entrada de demanda, a programacao agenda
+    // e a execucao fecha.
     links: [
-      {
-        key: 'planos-manutencao',
-        featureKey: 'manutencao.manage',
-        path: '/planos-manutencao',
-        icon: Layers,
-        label: 'Planos de Manutenção',
-        hint: 'Planos de Manutenção',
-      },
-      // Tarefas nao tem mais pagina propria: sao cadastradas e editadas dentro
-      // da linha expandida de cada plano em /planos-manutencao.
       {
         key: 'instrucoes',
         featureKey: 'manutencao.manage',
@@ -97,21 +91,15 @@ export const navigationLinks: Array<NavigationLink> = [
         label: 'Instruções',
         hint: 'Instruções',
       },
+      // Tarefas nao tem mais pagina propria: sao cadastradas e editadas dentro
+      // da linha expandida de cada plano em /planos-manutencao.
       {
-        key: 'programacao-os',
-        featureKey: 'programacao_os.view',
-        path: '/programacao-os',
-        icon: Calendar,
-        label: 'Programação OS',
-        hint: 'Programação OS',
-      },
-      {
-        key: 'execucao-os',
-        featureKey: 'execucao_os.view',
-        path: '/execucao-os',
-        icon: PlayCircle,
-        label: 'Execução OS',
-        hint: 'Execução OS',
+        key: 'planos-manutencao',
+        featureKey: 'manutencao.manage',
+        path: '/planos-manutencao',
+        icon: Layers,
+        label: 'Planos de Manutenção',
+        hint: 'Planos de Manutenção',
       },
       {
         key: 'anomalias',
@@ -128,6 +116,22 @@ export const navigationLinks: Array<NavigationLink> = [
         icon: FilePenLine,
         label: 'Solicitações de Serviço',
         hint: 'Solicitações de Serviço',
+      },
+      {
+        key: 'programacao-os',
+        featureKey: 'programacao_os.view',
+        path: '/programacao-os',
+        icon: Calendar,
+        label: 'Programação OS',
+        hint: 'Programação OS',
+      },
+      {
+        key: 'execucao-os',
+        featureKey: 'execucao_os.view',
+        path: '/execucao-os',
+        icon: PlayCircle,
+        label: 'Execução OS',
+        hint: 'Execução OS',
       }
     ]
   },

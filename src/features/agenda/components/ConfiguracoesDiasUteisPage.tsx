@@ -269,7 +269,7 @@ export function ConfiguracoesDiasUteisPage() {
   return (
     <Layout>
       <Layout.Main>
-        <div className="flex flex-col h-full w-full">
+        <div className="flex flex-col w-full sm:h-full">
           {/* Header */}
           <TitleCard
             title="Configurações de Dias Úteis"
@@ -325,7 +325,7 @@ export function ConfiguracoesDiasUteisPage() {
           )}
 
           {/* Tabela */}
-          <div className="flex-1 min-h-0">
+          <div className="sm:flex-1 sm:min-h-0">
             <BaseTable
               data={configuracoes}
               columns={configuracoesDiasUteisTableColumns}

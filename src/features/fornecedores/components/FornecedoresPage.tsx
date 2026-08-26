@@ -153,7 +153,7 @@ export function FornecedoresPage() {
   return (
     <Layout>
       <Layout.Main>
-        <div className="flex flex-col h-full w-full">
+        <div className="flex flex-col w-full sm:h-full">
           <TitleCard title="Fornecedores" description="Gerencie fornecedores PF e PJ" />
           
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
@@ -170,7 +170,7 @@ export function FornecedoresPage() {
             </Button>
           </div>
 
-          <div className="flex-1 min-h-0">
+          <div className="sm:flex-1 sm:min-h-0">
             <BaseTable
               data={fornecedores}
               columns={fornecedoresTableColumns}

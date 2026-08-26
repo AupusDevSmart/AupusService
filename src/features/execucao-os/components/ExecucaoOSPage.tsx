@@ -247,7 +247,7 @@ export function ExecucaoOSPage() {
   return (
     <Layout>
       <Layout.Main>
-        <div className="flex flex-col h-full w-full space-y-4">
+        <div className="flex flex-col w-full sm:h-full space-y-4">
           {/* Header */}
           <TitleCard
             title="Execução de Ordens de Serviço"
@@ -298,7 +298,7 @@ export function ExecucaoOSPage() {
           </div>
 
           {/* Tabela */}
-          <div className="flex-1 min-h-0">
+          <div className="sm:flex-1 sm:min-h-0">
             <BaseTable
               data={items}
               columns={execucaoOSTableColumns}

@@ -269,7 +269,7 @@ export function VeiculosPage() {
   return (
     <Layout>
       <Layout.Main>
-        <div className="flex flex-col h-full w-full">
+        <div className="flex flex-col w-full sm:h-full">
           <TitleCard
             title="Veículos da Frota"
             description="Gerencie os veículos e viaturas da empresa"
@@ -317,7 +317,7 @@ export function VeiculosPage() {
           )}
 
           {/* Tabela */}
-          <div className="flex-1 min-h-0">
+          <div className="sm:flex-1 sm:min-h-0">
             <BaseTable
               data={veiculos as any}
               columns={veiculosTableColumns as any}
