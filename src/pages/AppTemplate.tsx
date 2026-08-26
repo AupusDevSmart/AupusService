@@ -22,7 +22,18 @@ export function AppTemplate() {
       <SidebarProvider defaultOpen={false}>
         <div className="flex h-screen w-screen overflow-hidden bg-secondary">
           <AppSidebar />
-          <SidebarInset className="flex flex-col w-full h-full bg-secondary">
+            {/* `SidebarInset` ja e `flex-1`. O `w-full` que estava aqui pedia
+                100% da LINHA — que tambem contem a sidebar. Aberta a sidebar, o
+                conteudo passava a medir viewport + 256px e o `overflow-hidden`
+                do pai cortava a sobra: a tabela era empurrada para fora da area
+                visivel, sem nem barra de rolagem para alcanca-la.
+
+                `min-w-0` e o que permite encolher de verdade. Item flex tem
+                `min-width: auto`, entao se recusa a ficar menor que o proprio
+                conteudo e transborda em vez de ceder — e uma tabela larga nunca
+                cede sozinha. Com `min-w-0`, a area util acompanha a sidebar e o
+                scroll horizontal da propria tabela passa a funcionar. */}
+          <SidebarInset className="flex flex-col min-w-0 h-full bg-secondary">
             <header className="flex items-center justify-between bg-secondary">
               <div className="flex h-12 items-center gap-2 px-4 bg-secondary">
                 <SidebarTrigger className="w-4 h-4 mr-2" />
@@ -30,7 +41,10 @@ export function AppTemplate() {
               </div>
               <NotificacoesSheet />
             </header>
-            <main className="flex-1 overflow-y-auto overflow-x-hidden bg-secondary mx-auto w-full items-center justify-center">
+            {/* `overflow-x-hidden` escondia o sintoma e destruia a saida: o que
+                nao coubesse era descartado, sem rolagem. Com `auto`, conteudo
+                largo demais continua alcancavel. */}
+            <main className="flex-1 min-w-0 overflow-auto bg-secondary">
               <Outlet />
             </main>
             <CommandPallete />
