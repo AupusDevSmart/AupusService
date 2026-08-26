@@ -13,13 +13,27 @@ import { tipoLabels, prioridadeLabels, formatarTempo, formatarData } from './lab
  */
 
 /** Celula de uma linha so. `truncate` precisa de `block` para valer. */
-const Texto = ({ children, mono = false, fraco = false }: {
+/**
+ * `limite` da o teto que `truncate` sozinho nao tem.
+ *
+ * Numa tabela de layout automatico a celula cresce ate caber o texto inteiro,
+ * entao nunca ha excedente para truncar — uma descricao longa empurrava as
+ * colunas seguintes para fora da tela em vez de virar reticencias. Com o teto, a
+ * coluna para de crescer e o `title` guarda o texto completo.
+ *
+ * Gemeo do helper em programacao-os/config/table-config.tsx. Se um mudar, o
+ * outro precisa mudar junto.
+ */
+const Texto = ({ children, mono = false, fraco = false, limite = '', titulo }: {
   children: React.ReactNode;
   mono?: boolean;
   fraco?: boolean;
+  limite?: string;
+  titulo?: string;
 }) => (
   <span
-    className={`block truncate text-sm ${mono ? 'font-mono' : ''} ${
+    title={titulo}
+    className={`block truncate text-sm ${limite} ${mono ? 'font-mono' : ''} ${
       fraco ? 'text-muted-foreground' : 'text-foreground'
     }`}
   >
@@ -35,24 +49,19 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
     width: '10%',
     render: (item) => <Texto mono>{item.numeroOS || item.numero_os || '-'}</Texto>,
   },
-  // Local no lugar da Descricao — mesmo motivo da tabela de OP.
+  // A descricao volta, com teto — mesmo raciocinio da tabela de OP.
   //
-  // Texto livre e longo numa tabela de layout automatico faz a coluna
-  // reivindicar a largura do MAIOR texto da pagina, e o excedente empurra as
-  // colunas seguintes para fora da tela. Uma descricao grande basta.
-  //
-  // Local esta preenchido em 90% das OS (46 de 51 em dev) e ja chega pelo
-  // transform. Equipamento identificaria melhor, mas so existe em 63% (32 de
-  // 51) — um terco da coluna sairia vazia.
+  // Teto menor aqui: esta tabela tem nove colunas contra seis, entao a
+  // descricao pode ocupar menos sem espremer o resto. ~40 caracteres.
   {
-    key: 'local',
-    label: 'Local',
+    key: 'descricao',
+    label: 'Descrição',
     width: '18%',
     render: (item) => {
-      const local = item.local || item.os?.local;
-      return local
-        ? <Texto>{local}</Texto>
-        : <Texto fraco>Sem local</Texto>;
+      const descricao = item.descricao || item.os?.descricao;
+      return descricao
+        ? <Texto limite="max-w-[40ch]" titulo={descricao}>{descricao}</Texto>
+        : <Texto fraco>Sem descrição</Texto>;
     },
   },
   {

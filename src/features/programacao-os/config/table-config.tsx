@@ -14,14 +14,27 @@ import { tipoLabels, prioridadeLabels, formatarDataHora } from './labels';
  * mesma informacao — "quando".
  */
 
-/** Celula de uma linha so. `truncate` precisa de `block` para valer. */
-const Texto = ({ children, mono = false, fraco = false }: {
+/**
+ * Celula de uma linha so.
+ *
+ * `truncate` sozinho nao trunca nada aqui: ele corta o que passa da largura, e
+ * numa tabela de layout automatico a celula CRESCE ate caber o texto inteiro —
+ * nunca ha excedente. Por isso uma descricao longa empurrava as colunas
+ * seguintes para fora da tela em vez de virar reticencias.
+ *
+ * `limite` da o teto que faltava. Com ele a coluna para de crescer, o texto
+ * ganha as reticencias e o `title` guarda o resto para quem passar o mouse.
+ */
+const Texto = ({ children, mono = false, fraco = false, limite = '', titulo }: {
   children: React.ReactNode;
   mono?: boolean;
   fraco?: boolean;
+  limite?: string;
+  titulo?: string;
 }) => (
   <span
-    className={`block truncate text-sm ${mono ? 'font-mono' : ''} ${
+    title={titulo}
+    className={`block truncate text-sm ${limite} ${mono ? 'font-mono' : ''} ${
       fraco ? 'text-muted-foreground' : 'text-foreground'
     }`}
   >
@@ -36,25 +49,22 @@ export const programacaoOSTableColumns: TableColumn<ProgramacaoResponse>[] = [
     width: '12%',
     render: (item) => <Texto mono>{item.codigo || '-'}</Texto>,
   },
-  // Local no lugar da Descricao.
+  // A descricao volta, com teto.
   //
-  // A descricao e um texto livre e longo. Numa tabela de layout automatico, a
-  // coluna reivindica a largura do MAIOR texto da pagina — uma unica descricao
-  // grande empurrava Tipo, Prioridade, Status e Data para fora da tela. Nao era
-  // a tabela que estava larga demais: era uma coluna.
+  // Local chegava a 93% dos registros, mas dizia pouco: "Múltiplos locais" nao
+  // identifica servico nenhum. O problema nunca foi a descricao existir — foi
+  // ela poder crescer sem limite.
   //
-  // Local identifica a linha em 93% dos registros (82 de 88 em dev) e ja vem na
-  // listagem, sem tocar no backend. Equipamento seria o substituto natural — e o
-  // que se fez em anomalias — mas so existe em metade das OPs (44 de 88) e nem e
-  // incluido no `findAll`: metade da coluna sairia vazia.
+  // ~60 caracteres cabem o suficiente para reconhecer o servico, e o texto
+  // completo fica no title.
   {
-    key: 'local',
-    label: 'Local',
+    key: 'descricao',
+    label: 'Descrição',
     width: '26%',
     render: (item) =>
-      item.local
-        ? <Texto>{item.local}</Texto>
-        : <Texto fraco>Sem local</Texto>,
+      item.descricao
+        ? <Texto limite="max-w-[60ch]" titulo={item.descricao}>{item.descricao}</Texto>
+        : <Texto fraco>Sem descrição</Texto>,
   },
   {
     key: 'tipo',
