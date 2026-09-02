@@ -1551,6 +1551,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         <div className="pt-2">
           <HistoricoDaPosicao
             posicaoId={formData.ativoFuncionalId}
+            unidadeId={formData.unidadeId}
             readOnly={isReadonly}
           />
         </div>
