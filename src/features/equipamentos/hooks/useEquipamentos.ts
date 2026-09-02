@@ -160,6 +160,16 @@ export const transformApiToFrontend = (apiEquipamento: EquipamentoApiResponse): 
       unidade: dt.unidade
     })) || [],
 
+   // A POSICAO onde o equipamento esta instalado.
+    //
+    // O transform monta um objeto NOVO com campos explicitos: o que nao esta
+    // listado aqui e descartado em silencio, por mais que a API devolva. Foi
+    // assim que o historico da posicao nao aparecia no sheet de edicao.
+    ativo_funcional_id: (apiEquipamento as any).ativo_funcional_id?.trim(),
+    ativoFuncionalId: (apiEquipamento as any).ativo_funcional_id?.trim(),
+    ativo_funcional: (apiEquipamento as any).ativo_funcional,
+    nome_proprio: (apiEquipamento as any).nome_proprio,
+
     // Tipo de equipamento completo (relação com tipos_equipamentos)
     tipoEquipamentoObj: (apiEquipamento as any).tipo_equipamento_rel ? {
       id: (apiEquipamento as any).tipo_equipamento_rel.id?.trim(),

@@ -98,6 +98,13 @@ export interface Equipamento extends BaseEntity {
   tipoEquipamento?: string;
   // `categoria` chega como texto (o nome) por este caminho e como objeto pela
   // rota /tipos-equipamentos. Use `normalizarTipoEquipamento` antes de ler.
+  /** A POSICAO onde este equipamento esta instalado. */
+  ativo_funcional_id?: string;
+  ativoFuncionalId?: string;
+  ativo_funcional?: { id: string; nome: string; categoria_id?: string };
+  /** O nome proprio do equipamento — `nome` traz o da posicao. */
+  nome_proprio?: string;
+
   tipoEquipamentoObj?: {
     id: string;
     nome: string;

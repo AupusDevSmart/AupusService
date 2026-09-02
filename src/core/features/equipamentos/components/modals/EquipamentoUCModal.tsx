@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { Separator } from '@/core/components/ui/separator';
 import { normalizarTipoEquipamento } from '@/core/features/equipamentos/utils/tipo-equipamento';
 import { PosicaoSelector } from '@/core/features/equipamentos/components/PosicaoSelector';
+import { HistoricoDaPosicao } from '@/core/features/equipamentos/components/HistoricoDaPosicao';
 import type { AtivoFuncional } from '@/core/features/equipamentos/hooks/useAtivosFuncionais';
 import { camposDaCategoria } from '@/core/features/equipamentos/config/campos-por-categoria';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/core/components/ui/tabs';
@@ -642,6 +643,12 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         criticidade: dadosCompletos.criticidade || '3',
         tipoEquipamento: codigoTipo?.trim() || '',
         tipoEquipamentoId: tipoCompleto?.id?.trim() || '',
+        // A posicao onde este equipamento esta. Sem isto o historico nunca
+        // aparece em edicao, e o campo de posicao volta em branco num
+        // equipamento que ja tem uma.
+        ativoFuncionalId: (dadosCompletos.ativo_funcional_id
+          ?? dadosCompletos.ativoFuncionalId
+          ?? dadosCompletos.ativo_funcional?.id)?.toString().trim() || '',
         plantaId: dadosCompletos.unidade?.plantaId || '',
         unidadeId: dadosCompletos.unidadeId || dadosCompletos.unidade?.id || '',  // ✅ CORRIGIDO: pegar unidade.id se unidadeId não existir
         proprietarioId: dadosCompletos.proprietarioId || '',
@@ -1537,6 +1544,17 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         readOnly={isReadonly}
         equipamentoAtualId={entity?.id}
       />
+
+      {/* So em edicao/visualizacao: num cadastro novo a posicao ainda nao tem
+          historico, e a secao vazia so ocuparia espaco. */}
+      {!isCreating && formData.ativoFuncionalId && (
+        <div className="pt-2">
+          <HistoricoDaPosicao
+            posicaoId={formData.ativoFuncionalId}
+            readOnly={isReadonly}
+          />
+        </div>
+      )}
       
       <div className="grid-equal-cols-2 gap-x-2 gap-y-4">
         {/* Nome — no lote ele é por item e vive na aba Equipamentos. */}

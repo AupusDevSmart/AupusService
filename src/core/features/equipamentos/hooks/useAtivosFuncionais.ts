@@ -75,3 +75,55 @@ export function useAtivosFuncionais(unidadeId?: string | null) {
 
   return { ativos, loading, erro, refetch: buscar, criar };
 }
+
+export interface VinculoDaPosicao {
+  id: string;
+  equipamento_id: string;
+  instalado_em: string;
+  removido_em: string | null;
+  motivo_remocao: string | null;
+  equipamento?: EquipamentoDaPosicao & { fabricante?: string | null };
+}
+
+export interface PosicaoDetalhada extends AtivoFuncional {
+  unidade?: { id: string; nome: string };
+  anteriores: VinculoDaPosicao[];
+}
+
+/**
+ * As operacoes do vinculo: ver o historico, remover e transferir.
+ *
+ * Separado de `useAtivosFuncionais` porque este e por POSICAO, nao por
+ * instalacao — e o sheet so precisa dele quando ja existe uma posicao escolhida.
+ */
+export function useVinculoDaPosicao() {
+  const httpClient = useHttpClient();
+  const [carregando, setCarregando] = useState(false);
+
+  const buscar = useCallback(async (posicaoId: string): Promise<PosicaoDetalhada | null> => {
+    const id = posicaoId?.trim();
+    if (!id) return null;
+    setCarregando(true);
+    try {
+      const resp = await httpClient.get(`/ativos-funcionais/${id}`);
+      return resp.data?.data ?? resp.data ?? null;
+    } finally {
+      setCarregando(false);
+    }
+  }, [httpClient]);
+
+  /** Fecha o vinculo aberto e libera a posicao. O motivo fica no historico. */
+  const remover = useCallback(async (posicaoId: string, motivo?: string) => {
+    return httpClient.post(`/ativos-funcionais/${posicaoId.trim()}/remover`, { motivo });
+  }, [httpClient]);
+
+  /** Fecha o vinculo de origem e abre o de destino, na mesma transacao. */
+  const transferir = useCallback(async (equipamentoId: string, destinoId: string, motivo?: string) => {
+    return httpClient.post(`/ativos-funcionais/equipamentos/${equipamentoId.trim()}/transferir`, {
+      ativo_funcional_id: destinoId.trim(),
+      motivo,
+    });
+  }, [httpClient]);
+
+  return { buscar, remover, transferir, carregando };
+}
