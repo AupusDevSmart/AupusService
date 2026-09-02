@@ -1,7 +1,7 @@
 // src/features/planos-manutencao/components/SeletorDePlanoField.tsx
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Combobox } from '@aupus/shared-pages';
+import { Combobox } from '@/core';
 import { Link2, Unlink, AlertTriangle } from 'lucide-react';
 import { usePlanoDoEquipamento } from './PlanoDoEquipamentoContext';
 import {

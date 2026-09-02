@@ -2,9 +2,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable } from '@aupus/shared-pages';
-import { BaseFilters } from '@aupus/shared-pages';
-import { BaseModal } from '@aupus/shared-pages';
+import { BaseTable } from '@/core';
+import { BaseFilters } from '@/core';
+import { BaseModal } from '@/core';
 import { Button } from '@/components/ui/button';
 import { Plus, Users } from 'lucide-react';
 import { useGenericTable } from '@/hooks/useGenericTable';

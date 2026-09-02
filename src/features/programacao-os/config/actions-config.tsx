@@ -1,7 +1,7 @@
 // src/features/programacao-os/config/actions-config.tsx
 
 import { Eye, Edit, CheckCircle, Ban, Trash2 } from 'lucide-react';
-import type { TableAction } from '@aupus/shared-pages';
+import type { TableAction } from '@/core';
 import type { ProgramacaoResponse } from '@/services/programacao-os.service';
 
 interface CreateProgramacaoOSActionsProps {

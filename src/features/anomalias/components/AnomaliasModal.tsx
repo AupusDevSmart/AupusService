@@ -1,5 +1,5 @@
 // src/features/anomalias/components/AnomaliasModal.tsx
-import { BaseModal } from '@aupus/shared-pages';
+import { BaseModal } from '@/core';
 import { AlertTriangle } from 'lucide-react';
 import type { FormField, ModalMode } from '@/types/base';
 

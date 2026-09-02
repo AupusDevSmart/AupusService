@@ -1,6 +1,6 @@
 // src/features/anomalias/config/actions-config.tsx
 import { Eye, Edit, Trash2 } from 'lucide-react';
-import { TableAction } from '@aupus/shared-pages';
+import { TableAction } from '@/core';
 import { Anomalia } from '../types';
 
 interface CreateAnomaliasActionsProps {

@@ -21,7 +21,7 @@ import { AlertTriangle, RefreshCw, ChevronRight, X } from 'lucide-react';
 import { Layout } from '@/components/common/Layout';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Combobox } from '@aupus/shared-pages';
+import { Combobox } from '@/core';
 import { formatApiError } from '@/utils/api-error';
 import {
   dashboardManutencaoApi,

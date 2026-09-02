@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable, BaseFilters } from '@aupus/shared-pages';
+import { BaseTable, BaseFilters } from '@/core';
 import {
   Dialog,
   DialogContent,

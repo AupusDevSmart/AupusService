@@ -2,9 +2,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable, CustomAction } from '@aupus/shared-pages';
-import { BaseFilters } from '@aupus/shared-pages';
-import { BaseModal } from '@aupus/shared-pages';
+import { BaseTable, CustomAction } from '@/core';
+import { BaseFilters } from '@/core';
+import { BaseModal } from '@/core';
 import { ReservaModal } from './ReservaModal';
 import { Plus, Calendar, CheckCircle, XCircle, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';

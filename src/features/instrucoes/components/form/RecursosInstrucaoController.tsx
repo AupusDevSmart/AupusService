@@ -2,7 +2,7 @@
 import React from 'react';
 import { FormFieldProps } from '@/types/base';
 import { Input } from '@/components/ui/input';
-import { Combobox } from '@aupus/shared-pages';
+import { Combobox } from '@/core';
 import { AlertCircle, Wallet, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatApiError } from '@/utils/api-error';

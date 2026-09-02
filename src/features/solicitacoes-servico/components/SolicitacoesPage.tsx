@@ -2,9 +2,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable } from '@aupus/shared-pages';
-import { BaseFilters } from '@aupus/shared-pages';
-import { BaseModal } from '@aupus/shared-pages';
+import { BaseTable } from '@/core';
+import { BaseFilters } from '@/core';
+import { BaseModal } from '@/core';
 import { Plus, FilePenLine, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatApiError } from '@/utils/api-error';

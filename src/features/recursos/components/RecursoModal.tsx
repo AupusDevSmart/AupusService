@@ -7,7 +7,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Combobox } from '@aupus/shared-pages';
+import { Combobox } from '@/core';
 import { Save, X, Loader2, Package } from 'lucide-react';
 import {
   CATEGORIAS_RECURSO,

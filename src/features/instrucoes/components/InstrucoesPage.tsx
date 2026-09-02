@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable } from '@aupus/shared-pages';
-import { BaseFilters } from '@aupus/shared-pages';
+import { BaseTable } from '@/core';
+import { BaseFilters } from '@/core';
 import { Plus, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatApiError } from '@/utils/api-error';

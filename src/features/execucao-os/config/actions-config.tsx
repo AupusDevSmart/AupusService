@@ -9,7 +9,7 @@ import {
   RotateCcw,
   Ban,
 } from 'lucide-react';
-import type { TableAction } from '@aupus/shared-pages';
+import type { TableAction } from '@/core';
 import type { ExecucaoOS } from '../types';
 
 interface CreateExecucaoOSActionsProps {

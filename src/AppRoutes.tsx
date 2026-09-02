@@ -26,13 +26,13 @@ import { EsqueciSenhaPage } from './pages/esqueci-senha/EsqueciSenhaPage';
 import { RedefinirSenhaPage } from './pages/redefinir-senha/RedefinirSenhaPage';
 import { useUserStore } from './store/useUserStore';
 
-// Shared pages (previously from @nexon, now from @aupus/shared-pages)
+// Paginas do nucleo (src/core, antes o pacote @aupus/shared-pages)
 import {
   EquipamentosPage,
   UsuariosPage,
   PlantasPage,
   ConcessionariasPage,
-} from '@aupus/shared-pages';
+} from '@/core';
 
 /**
  * Componente de rota protegida
@@ -96,7 +96,7 @@ export const appRoutes = createBrowserRouter([
           </FeatureWrapper>
         )
       },
-      // Rotas de Cadastros (from @aupus/shared-pages)
+      // Rotas de Cadastros (paginas do nucleo)
       {
         path: 'cadastros/usuarios',
         element: (

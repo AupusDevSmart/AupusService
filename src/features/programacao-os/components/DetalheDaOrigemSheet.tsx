@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
-import { BaseModal } from '@aupus/shared-pages';
+import { BaseModal } from '@/core';
 import { formatApiError } from '@/utils/api-error';
 import { AnomaliaViewSheet } from '@/features/anomalias/components/AnomaliaViewSheet';
 import { useSolicitacoesFilters } from '@/features/solicitacoes-servico/hooks/useSolicitacoesFilters';

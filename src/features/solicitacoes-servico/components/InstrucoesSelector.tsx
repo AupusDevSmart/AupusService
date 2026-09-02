@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, X, FileText } from 'lucide-react';
-import { Combobox } from '@aupus/shared-pages';
+import { Combobox } from '@/core';
 import { instrucoesApi } from '@/services/instrucoes.services';
 import { InstrucaoExpandableCard } from '@/components/common/InstrucaoExpandableCard';
 import { AbrirInstrucaoContext, ValoresDaPropostaContext } from './proposta-contexto';

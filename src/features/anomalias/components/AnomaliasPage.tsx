@@ -2,8 +2,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable } from '@aupus/shared-pages';
-import { BaseFilters } from '@aupus/shared-pages';
+import { BaseTable } from '@/core';
+import { BaseFilters } from '@/core';
 import { AnomaliasModal } from './AnomaliasModal';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';

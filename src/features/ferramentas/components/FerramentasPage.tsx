@@ -2,9 +2,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
-import { BaseTable, CustomAction } from '@aupus/shared-pages';
-import { BaseFilters } from '@aupus/shared-pages';
-import { BaseModal } from '@aupus/shared-pages';
+import { BaseTable, CustomAction } from '@/core';
+import { BaseFilters } from '@/core';
+import { BaseModal } from '@/core';
 import { Button } from '@/components/ui/button';
 import { Plus, Wrench, AlertTriangle, CheckCircle, Calendar, Settings, Package } from 'lucide-react';
 import { useGenericTable } from '@/hooks/useGenericTable';

@@ -1,10 +1,10 @@
 // src/shared-pages-adapter.tsx
-// Adapter to integrate @aupus/shared-pages into the AupusService project.
+// Adapter que liga as paginas do nucleo (src/core) ao AupusService.
 // Maps Service hooks/stores to the SharedHooks/SharedStores contracts.
 
 import React from 'react';
-import { SharedPagesProvider } from '@aupus/shared-pages';
-import type { SharedHooks, SharedStores } from '@aupus/shared-pages';
+import { SharedPagesProvider } from '@/core';
+import type { SharedHooks, SharedStores } from '@/core';
 import { api } from '@/config/api';
 
 // ============================================================

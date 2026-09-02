@@ -1,6 +1,6 @@
 // src/features/planos-manutencao/components/CategoriaSelector.tsx
 import React from 'react';
-import { Combobox } from '@aupus/shared-pages';
+import { Combobox } from '@/core';
 import { categoriasEquipamentosApi, type CategoriaEquipamento } from '@/services/tipos-equipamentos.services';
 
 interface CategoriaSelectorProps {

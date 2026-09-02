@@ -1,6 +1,6 @@
 // src/features/instrucoes/components/InstrucoesModal.tsx
 import { useEffect, useMemo, useState } from 'react';
-import { BaseModal } from '@aupus/shared-pages';
+import { BaseModal } from '@/core';
 import { FileText, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { InstrucaoApiResponse } from '@/services/instrucoes.services';
