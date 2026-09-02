@@ -19,6 +19,8 @@ import { Alert, AlertDescription } from '@/core/components/ui/alert';
 import { toast } from 'sonner';
 import { Separator } from '@/core/components/ui/separator';
 import { normalizarTipoEquipamento } from '@/core/features/equipamentos/utils/tipo-equipamento';
+import { PosicaoSelector } from '@/core/features/equipamentos/components/PosicaoSelector';
+import type { AtivoFuncional } from '@/core/features/equipamentos/hooks/useAtivosFuncionais';
 import { camposDaCategoria } from '@/core/features/equipamentos/config/campos-por-categoria';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/core/components/ui/tabs';
 import { Checkbox } from '@/core/components/ui/checkbox';
@@ -1323,6 +1325,8 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         nome: formData.nome,
         classificacao: 'UC',
         unidade_id: isCreating ? locationCascade.selectedUnidadeId : formData.unidadeId,
+        // A posicao onde este equipamento fica instalado.
+        ativo_funcional_id: formData.ativoFuncionalId || undefined,
         fabricante: formData.fabricante,
         fabricante_custom: formData.fabricanteCustom || undefined, // ✅ NOVO: Fabricante customizado se divergir do modelo
         modelo: formData.modelo,
@@ -1497,11 +1501,42 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     />
   );
 
+  /**
+   * A POSICAO escolhida define categoria e localizacao — o equipamento so traz
+   * modelo, serie e fabricante. Trocar de posicao troca a categoria, e por isso
+   * limpa o modelo: um modelo de outra categoria nao serve na posicao nova.
+   */
+  const handlePosicaoChange = (posicao: AtivoFuncional | null) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      ativoFuncionalId: posicao?.id?.trim() ?? "",
+      nome: prev.nome?.trim() ? prev.nome : (posicao?.nome ?? prev.nome),
+    }));
+
+    const categoria = posicao?.categoria_id?.trim() ?? "";
+    if (categoria !== categoriaIdSelecionada) {
+      setCategoriaIdSelecionada(categoria);
+      setModeloSelecionado(null);
+      setFormData((prev: any) => ({ ...prev, tipoEquipamento: "", tipoEquipamentoId: "" }));
+    }
+  };
+
   const renderDadosBasicos = () => (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold text-foreground pb-2 border-b">
         Dados Básicos
       </h3>
+
+      {/* Onde antes do que: a posicao vem primeiro porque e a ordem em que a
+          pessoa pensa, e porque e ela que define a categoria. */}
+      <PosicaoSelector
+        unidadeId={isCreating ? locationCascade.selectedUnidadeId : formData.unidadeId}
+        value={formData.ativoFuncionalId}
+        onChange={handlePosicaoChange}
+        categorias={categorias}
+        readOnly={isReadonly}
+        equipamentoAtualId={entity?.id}
+      />
       
       <div className="grid-equal-cols-2 gap-x-2 gap-y-4">
         {/* Nome — no lote ele é por item e vive na aba Equipamentos. */}
@@ -1639,8 +1674,13 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
               placeholder={loadingCategorias ? 'Carregando...' : 'Selecione a categoria'}
               searchPlaceholder="Buscar categoria..."
               emptyText="Nenhuma categoria encontrada."
-              disabled={loadingCategorias}
+              disabled={loadingCategorias || !!formData.ativoFuncionalId}
             />
+          )}
+          {/* Com posicao escolhida a categoria e DELA. Editavel aqui existiriam
+              dois caminhos para o mesmo dado, e eles poderiam divergir. */}
+          {formData.ativoFuncionalId && (
+            <p className="text-xs text-muted-foreground">Definida pela posição.</p>
           )}
         </div>
 
