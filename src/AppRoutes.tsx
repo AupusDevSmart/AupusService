@@ -7,6 +7,7 @@ import { FerramentasPage } from './features/ferramentas/components/FerramentasPa
 import { FornecedoresPage } from './features/fornecedores/components/FornecedoresPage';
 import { PlanosManutencaoPage } from './features/planos-manutencao/components/PlanosManutencaoPage';
 import { PlanoDoEquipamentoWrapper } from './features/planos-manutencao/components/PlanoDoEquipamentoWrapper';
+import { HerancaDePlanoSection } from './features/planos-manutencao/components/HerancaDePlanoSection';
 import { PlanoDoEquipamentoProvider } from './features/planos-manutencao/components/PlanoDoEquipamentoContext';
 import { SeletorDePlanoField } from './features/planos-manutencao/components/SeletorDePlanoField';
 import { HistoricoDoEquipamentoSection } from './features/planos-manutencao/components/HistoricoDoEquipamentoSection';
@@ -143,11 +144,21 @@ export const appRoutes = createBrowserRouter([
                   />
                 )}
                 renderSecaoExtraUC={(equipamento, mode) => (
-                  <PlanoDoEquipamentoWrapper
-                    equipamentoId={equipamento?.id ?? null}
-                    classificacao={equipamento?.classificacao}
-                    somenteLeitura={mode === 'view'}
-                  />
+                  <>
+                    {/* Antes das tarefas: se a posicao tinha plano, a decisao de
+                        herdar vem antes de olhar uma lista vazia. */}
+                    <HerancaDePlanoSection
+                      equipamentoId={equipamento?.id ?? null}
+                      posicaoId={equipamento?.ativoFuncionalId}
+                      classificacao={equipamento?.classificacao}
+                      somenteLeitura={mode === 'view'}
+                    />
+                    <PlanoDoEquipamentoWrapper
+                      equipamentoId={equipamento?.id ?? null}
+                      classificacao={equipamento?.classificacao}
+                      somenteLeitura={mode === 'view'}
+                    />
+                  </>
                 )}
                 renderHistoricoUC={(equipamento) => (
                   <HistoricoDoEquipamentoSection
