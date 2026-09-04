@@ -26,7 +26,7 @@ import { camposDaCategoria } from '@/core/features/equipamentos/config/campos-po
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/core/components/ui/tabs';
 import { Checkbox } from '@/core/components/ui/checkbox';
 import { Combobox } from '@/core/components/ui/combobox';
-import { Wrench, Save, X, AlertCircle, Loader2, Eye, Edit2, Plus, Minus, Trash2, Component } from 'lucide-react';
+import { Wrench, Save, X, AlertCircle, Loader2, Eye, Edit2, Plus, Minus, Trash2, Component, History, ArrowLeft } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -34,7 +34,7 @@ import {
 } from "@/core/components/ui/popover";
 import { Equipamento } from '../../types';
 
-type AbaSheet = 'dados' | 'itens' | 'tarefas' | 'historico' | 'anexos';
+type AbaSheet = 'dados' | 'itens' | 'tarefas' | 'posicao' | 'historico' | 'anexos';
 
 /**
  * O que o sheet oferece a quem preenche os slots.
@@ -260,12 +260,6 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     setQuantidade(alvo);
   };
 
-  const temAbaTarefas = Boolean(renderSecaoExtra);
-  const temAbaHistorico = Boolean(renderHistorico && entity && mode !== 'create');
-  // Anexos e nativo: o backend vive no api-shared e os dois produtos falam com
-  // ele, entao nao ha o que particularizar por app.
-  const temAbaAnexos = true;
-  const usarAbas = temAbaTarefas || temAbaHistorico || temAbaAnexos || modoLote;
   const [abaAtiva, setAbaAtiva] = useState<AbaSheet>('dados');
 
   /**
@@ -359,8 +353,39 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   // Hook de seleção cascateada para modo create
   const locationCascade = useLocationCascade();
 
-  const isReadonly = mode === 'view';  // ✅ CORRIGIDO: apenas 'view' é readonly, 'edit' permite edição
-  const isCreating = mode === 'create';
+  /**
+   * Equipamento ANTERIOR da posicao que se esta olhando agora.
+   *
+   * O sheet troca de conteudo em vez de abrir um segundo por cima: sheet dentro
+   * de sheet empilha mal em tela pequena e prende foco e rolagem — o mesmo
+   * motivo pelo qual o modal de instrucao vive no nivel de cima, e nao dentro
+   * da secao que o abre.
+   *
+   * Sempre em leitura: quem clica no historico quer VER o que aquele
+   * equipamento era, nao edita-lo por engano a partir da ficha de outro.
+   */
+  const [visitando, setVisitando] = useState<Equipamento | null>(null);
+  const entidadeEfetiva = visitando ?? entity;
+  const modoEfetivo: typeof mode = visitando ? 'view' : mode;
+
+  const isReadonly = modoEfetivo === 'view';  // ✅ CORRIGIDO: apenas 'view' é readonly, 'edit' permite edição
+  const isCreating = modoEfetivo === 'create';
+
+  const temAbaTarefas = Boolean(renderSecaoExtra);
+  const temAbaHistorico = Boolean(renderHistorico && entidadeEfetiva && modoEfetivo !== 'create');
+  /**
+   * Aba propria para o historico da posicao.
+   *
+   * Estava inline na aba Dados, no meio do formulario. Uma posicao acumula
+   * ocupantes com o tempo: a lista cresce sem limite e ia empurrando os campos
+   * do equipamento para baixo, ate o cadastro virar rolagem atras de um
+   * historico que quase nunca e o motivo de abrir o sheet.
+   */
+  const temAbaPosicao = Boolean(!isCreating && formData?.ativoFuncionalId);
+  // Anexos e nativo: o backend vive no api-shared e os dois produtos falam com
+  // ele, entao nao ha o que particularizar por app.
+  const temAbaAnexos = true;
+  const usarAbas = temAbaTarefas || temAbaHistorico || temAbaAnexos || modoLote;
 
   /**
    * O texto sem o número do fim: "Inversor 03" vira "Inversor".
@@ -446,20 +471,26 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   useEffect(() => {
     if (!isOpen) {
       inicializadoRef.current = null;
+      // Sem isto o sheet reabriria mostrando o equipamento antigo que alguem
+      // visitou da ultima vez, e nao o que acabou de ser clicado.
+      setVisitando(null);
       return;
     }
 
-    if (entity && (mode === 'edit' || mode === 'view')) {
+    if (entidadeEfetiva && (modoEfetivo === 'edit' || modoEfetivo === 'view')) {
       // Edição depende da lista: é dela que sai o código do tipo do
       // equipamento e a lista de campos técnicos.
       if (loadingTipos || tiposEquipamentos.length === 0) return;
 
-      const chave = `${mode}:${entity.id}`;
+      // A chave carrega o id EFETIVO, entao visitar um equipamento anterior
+      // recarrega o formulario pelo mesmo caminho de sempre — sem duplicar a
+      // logica de hidratacao so para a visita.
+      const chave = `${modoEfetivo}:${entidadeEfetiva.id}`;
       if (inicializadoRef.current === chave) return;
       inicializadoRef.current = chave;
 
       setError(null);
-      initializeWithEntity(entity);
+      initializeWithEntity(entidadeEfetiva);
       return;
     }
 
@@ -498,7 +529,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       setError(null);
       initializeForCreate();
     }
-  }, [isOpen, entity, mode, loadingTipos, tiposEquipamentos, duplicarDe?.id]);
+  }, [isOpen, entidadeEfetiva, modoEfetivo, loadingTipos, tiposEquipamentos, duplicarDe?.id]);
 
   /**
    * Preenche a cascata de localização quando o sheet abre em modo create já
@@ -1469,14 +1500,38 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     return (
       <SheetHeader className="space-y-3">
         <SheetTitle className="flex items-center gap-2 text-lg">
-          {icons[mode]}
-          {titles[mode]}
-          {mode === 'view' && formData.nome && (
+          {icons[modoEfetivo]}
+          {titles[modoEfetivo]}
+          {modoEfetivo === 'view' && formData.nome && (
             <Badge variant="outline" className="ml-2">
               {formData.nome}
             </Badge>
           )}
         </SheetTitle>
+
+        {/* Visitando um equipamento ANTERIOR da posicao.
+            A faixa existe porque sem ela o sheet fica indistinguivel do sheet
+            normal: a pessoa veria a ficha de um equipamento que saiu ha meses
+            achando que e o atual. E o caminho de volta precisa ser visivel —
+            fechar e reabrir para voltar seria perder o contexto da posicao. */}
+        {visitando && (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border p-2.5">
+            <History className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm text-muted-foreground min-w-0">
+              Equipamento que já ocupou esta posição — somente leitura.
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 sm:h-8 ml-auto"
+              onClick={() => setVisitando(null)}
+            >
+              <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+              Voltar
+            </Button>
+          </div>
+        )}
       </SheetHeader>
     );
   };
@@ -1545,18 +1600,6 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         equipamentoAtualId={entity?.id}
       />
 
-      {/* So em edicao/visualizacao: num cadastro novo a posicao ainda nao tem
-          historico, e a secao vazia so ocuparia espaco. */}
-      {!isCreating && formData.ativoFuncionalId && (
-        <div className="pt-2">
-          <HistoricoDaPosicao
-            posicaoId={formData.ativoFuncionalId}
-            unidadeId={formData.unidadeId}
-            readOnly={isReadonly}
-          />
-        </div>
-      )}
-      
       <div className="grid-equal-cols-2 gap-x-2 gap-y-4">
         {/* Nome — no lote ele é por item e vive na aba Equipamentos. */}
         {!modoLote && (
@@ -2915,6 +2958,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
                   <TabsTrigger value="dados">Dados técnicos</TabsTrigger>
                   {modoLote && <TabsTrigger value="itens">Equipamentos ({quantidade})</TabsTrigger>}
                   {temAbaTarefas && <TabsTrigger value="tarefas">Tarefas</TabsTrigger>}
+                  {temAbaPosicao && <TabsTrigger value="posicao">Posição</TabsTrigger>}
                   {temAbaHistorico && <TabsTrigger value="historico">Histórico</TabsTrigger>}
                   {temAbaAnexos && <TabsTrigger value="anexos">Anexos</TabsTrigger>}
                 </TabsList>
@@ -2949,8 +2993,28 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
                 </TabsContent>
               )}
 
+              {temAbaPosicao && (
+                <TabsContent value="posicao">
+                  <HistoricoDaPosicao
+                    posicaoId={formData.ativoFuncionalId}
+                    unidadeId={formData.unidadeId}
+                    // Visitando um equipamento antigo, a posicao vira registro:
+                    // remover ou transferir dali seria operar a posicao a partir
+                    // da ficha de quem ja saiu dela.
+                    readOnly={isReadonly || !!visitando}
+                    onVerEquipamento={(eq) => {
+                      setVisitando(eq as any);
+                      // Volta para Dados: quem clica quer ver a ficha, e ficar
+                      // na aba de historico esconderia justamente o que abriu.
+                      setAbaAtiva('dados');
+                    }}
+                    equipamentoVisitadoId={visitando?.id}
+                  />
+                </TabsContent>
+              )}
+
               {temAbaHistorico && (
-                <TabsContent value="historico">{renderHistorico!(entity!, mode)}</TabsContent>
+                <TabsContent value="historico">{renderHistorico!(entidadeEfetiva!, modoEfetivo)}</TabsContent>
               )}
 
               {temAbaAnexos && (

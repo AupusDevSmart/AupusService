@@ -6,6 +6,7 @@ import { Button } from '@/core/components/ui/button';
 import {
   useVinculoDaPosicao,
   type PosicaoDetalhada,
+  type EquipamentoDaPosicao,
 } from '../hooks/useAtivosFuncionais';
 
 interface Props {
@@ -15,6 +16,16 @@ interface Props {
   readOnly?: boolean;
   /** Chamado depois de remover, para o sheet recarregar o que exibe. */
   onMudou?: () => void;
+  /**
+   * Abrir a ficha de um equipamento que passou por aqui.
+   *
+   * Sem isto o historico mostra so nome e datas: quem quer saber os dados
+   * tecnicos de um equipamento que saiu ha meses teria de procura-lo na lista
+   * geral, sem nem saber o nome proprio dele (a lista mostra o nome da POSICAO).
+   */
+  onVerEquipamento?: (equipamento: EquipamentoDaPosicao) => void;
+  /** Qual esta sendo visitado agora, para marcar na lista. */
+  equipamentoVisitadoId?: string;
 }
 
 const data = (iso?: string | null) =>
@@ -30,7 +41,9 @@ const data = (iso?: string | null) =>
  * O ocupante atual aparece separado dos anteriores porque a tela trata os dois
  * de forma diferente — um e operavel, os outros sao registro.
  */
-export function HistoricoDaPosicao({ posicaoId, unidadeId, readOnly, onMudou }: Props) {
+export function HistoricoDaPosicao({
+  posicaoId, unidadeId, readOnly, onMudou, onVerEquipamento, equipamentoVisitadoId,
+}: Props) {
   const { buscar, remover, transferir, carregando } = useVinculoDaPosicao();
   const { ativos } = useAtivosFuncionais(unidadeId);
   const [transferindo, setTransferindo] = useState(false);
@@ -113,7 +126,18 @@ export function HistoricoDaPosicao({ posicaoId, unidadeId, readOnly, onMudou }: 
             {posicao?.equipamento_ativo ? (
               <div className="flex items-start justify-between gap-3 rounded-md border p-3">
                 <div className="text-sm min-w-0">
-                  <p className="font-medium truncate">{posicao.equipamento_ativo.nome}</p>
+                  {onVerEquipamento ? (
+                    <button
+                      type="button"
+                      onClick={() => onVerEquipamento(posicao.equipamento_ativo!)}
+                      className="font-medium truncate text-left hover:underline w-full"
+                      title="Ver a ficha deste equipamento"
+                    >
+                      {posicao.equipamento_ativo.nome}
+                    </button>
+                  ) : (
+                    <p className="font-medium truncate">{posicao.equipamento_ativo.nome}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     {posicao.equipamento_ativo.modelo || 'sem modelo'}
                     {posicao.equipamento_ativo.numero_serie
@@ -232,17 +256,50 @@ export function HistoricoDaPosicao({ posicaoId, unidadeId, readOnly, onMudou }: 
               </p>
             ) : (
               <ul className="space-y-1.5">
-                {anteriores.map(v => (
-                  <li key={v.id} className="rounded-md border p-2.5 text-sm">
-                    <p className="font-medium truncate">
-                      {v.equipamento?.nome ?? 'Equipamento removido'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {data(v.instalado_em)} até {data(v.removido_em)}
-                      {v.motivo_remocao ? ` · ${v.motivo_remocao}` : ''}
-                    </p>
-                  </li>
-                ))}
+                {anteriores.map(v => {
+                  const eq = v.equipamento;
+                  const visitado = !!eq?.id && eq.id.trim() === equipamentoVisitadoId?.trim();
+                  const conteudo = (
+                    <>
+                      <p className="font-medium truncate">
+                        {eq?.nome ?? 'Equipamento removido'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {data(v.instalado_em)} até {data(v.removido_em)}
+                        {v.motivo_remocao ? ` · ${v.motivo_remocao}` : ''}
+                      </p>
+                    </>
+                  );
+
+                  // Sem `onVerEquipamento` (ou sem o equipamento, que some do
+                  // vinculo quando e excluido) a linha continua sendo so
+                  // registro — botao que nao leva a lugar nenhum e pior do que
+                  // texto.
+                  if (!onVerEquipamento || !eq) {
+                    return (
+                      <li key={v.id} className="rounded-md border p-2.5 text-sm">
+                        {conteudo}
+                      </li>
+                    );
+                  }
+
+                  return (
+                    <li key={v.id}>
+                      <button
+                        type="button"
+                        onClick={() => onVerEquipamento(eq)}
+                        // 44px de alvo no celular: sao duas linhas de texto, e
+                        // o dedo erra o que o ponteiro acerta.
+                        className={`w-full min-h-11 sm:min-h-0 rounded-md border p-2.5 text-sm text-left hover:bg-accent ${
+                          visitado ? 'border-foreground' : ''
+                        }`}
+                        title="Ver a ficha deste equipamento"
+                      >
+                        {conteudo}
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
