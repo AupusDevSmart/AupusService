@@ -13,6 +13,8 @@ interface UsuariosTableProps {
   onView: (usuario: Usuario) => void;
   onEdit: (usuario: Usuario) => void;
   onPlantasClick: (usuario: Usuario) => void; // ✅ Mantido para compatibilidade mas não usado na tabela
+  /** Acoes extras de linha (ex.: compartilhar com o outro produto). */
+  customActions?: any[];
 }
 
 export function UsuariosTable({ 
@@ -22,7 +24,8 @@ export function UsuariosTable({
   onPageChange, 
   onView, 
   onEdit,
-  onPlantasClick: _onPlantasClick // ✅ Recebido mas não usado - só pelo modal
+  onPlantasClick: _onPlantasClick, // ✅ Recebido mas não usado - só pelo modal
+  customActions,
 }: UsuariosTableProps) {
 
   return (
@@ -34,6 +37,7 @@ export function UsuariosTable({
       onPageChange={onPageChange}
       onView={onView}
       onEdit={onEdit}
+      customActions={customActions}
       emptyMessage="Nenhum usuário encontrado."
       emptyIcon={<Users className="h-8 w-8 text-muted-foreground/50" />}
     />

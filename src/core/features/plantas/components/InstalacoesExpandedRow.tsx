@@ -1,6 +1,6 @@
 // src/features/plantas/components/InstalacoesExpandedRow.tsx
 import { Button } from '@/core/components/ui/button';
-import { Eye, Pencil } from 'lucide-react';
+import { Eye, Pencil, Share2, Unlink } from 'lucide-react';
 import type { Unidade } from '@/core/features/unidades/types';
 
 /**
@@ -29,6 +29,14 @@ interface InstalacoesExpandedRowProps {
    */
   plantaId?: string;
   proprietarioId?: string;
+  /**
+   * Compartilhamento com o outro produto. Vem de fora porque o DIALOGO de
+   * confirmacao vive na pagina: aqui dentro seria um por instalacao, e a linha
+   * expandida ja e filha de uma linha de tabela.
+   */
+  estaCompartilhada?: (unidade: Unidade) => boolean;
+  onCompartilhar?: (unidade: Unidade) => void;
+  onPararDeCompartilhar?: (unidade: Unidade) => void;
 }
 
 /**
@@ -64,6 +72,9 @@ export function InstalacoesExpandedRow({
   onEditar,
   plantaId,
   proprietarioId,
+  estaCompartilhada,
+  onCompartilhar,
+  onPararDeCompartilhar,
 }: InstalacoesExpandedRowProps) {
   if (carregando) {
     return (
@@ -97,7 +108,7 @@ export function InstalacoesExpandedRow({
         <div className="hidden md:block w-28 flex-shrink-0">Perfil</div>
         <div className="hidden md:block w-24 flex-shrink-0">Tensão</div>
         <div className="hidden lg:block w-44 flex-shrink-0">Grupo tarifário</div>
-        <div className="w-[3.75rem] flex-shrink-0" />
+        <div className="w-[5.5rem] flex-shrink-0" />
       </div>
 
       <div className="divide-y">
@@ -133,8 +144,10 @@ export function InstalacoesExpandedRow({
 
             {/* Largura fixa e alinhado à direita: em somente leitura sobra só
                 um botão, e sem isso a coluna encolhia e desalinhava do
-                cabeçalho. */}
-            <div className="flex w-[3.75rem] items-center justify-end gap-0.5 flex-shrink-0">
+                cabeçalho. Passou de 3.75rem para 5.5rem ao ganhar o terceiro
+                botão (compartilhar) — a largura precisa caber o caso cheio,
+                senão volta a desalinhar quando os três aparecem. */}
+            <div className="flex w-[5.5rem] items-center justify-end gap-0.5 flex-shrink-0">
               <Button
                 variant="ghost"
                 size="icon"
@@ -154,6 +167,29 @@ export function InstalacoesExpandedRow({
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
+              )}
+              {!somenteLeitura && onCompartilhar && onPararDeCompartilhar && (
+                estaCompartilhada?.(unidade) ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => onPararDeCompartilhar(unidade)}
+                    title="Parar de compartilhar"
+                  >
+                    <Unlink className="h-3.5 w-3.5" />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => onCompartilhar(unidade)}
+                    title="Compartilhar com o outro produto"
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                  </Button>
+                )
               )}
             </div>
           </div>

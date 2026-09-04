@@ -10,6 +10,7 @@ import { UsuariosTable } from './usuarios-table';
 import { UsuariosFilters } from './usuarios-filters';
 import { UsuarioModal } from './usuario-modal';
 import { useUsuarios } from '@/core/context/hooks';
+import { useAcoesDeCompartilhamento } from '@/core/features/sincronizacao';
 import { Usuario, ModalState } from '../types';
 
 export function UsuariosPage() {
@@ -26,6 +27,13 @@ export function UsuariosPage() {
     refetch
   } = useUsuarios();
 
+  // Usuario e o topo da hierarquia: nao depende de nada, entao a previa dele
+  // sempre vem vazia. A acao existe do mesmo jeito — e por ela que um usuario
+  // passa a existir no outro produto sem precisar de uma planta como carona.
+  const compartilhamento = useAcoesDeCompartilhamento({
+    recurso: 'usuarios',
+    registros: usuarios,
+  });
 
   // Estado do modal de usuário
   const [modalState, setModalState] = useState<ModalState>({
@@ -102,9 +110,12 @@ export function UsuariosPage() {
               onView={(usuario) => handleOpenModal('view', usuario)}
               onEdit={(usuario) => handleOpenModal('edit', usuario)}
               onPlantasClick={handleGerenciarPlantas}
+              customActions={compartilhamento.acoes}
             />
           </div>
         </div>
+
+        {compartilhamento.dialogo}
 
         {/* Modal do Usuário */}
         <UsuarioModal

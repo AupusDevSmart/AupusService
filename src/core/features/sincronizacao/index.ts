@@ -1,3 +1,4 @@
 export * from './useSincronizacao';
 export * from './SeloSincronizacao';
-export * from './AcaoCompartilhar';
+export * from './DialogoCompartilhar';
+export * from './useAcoesDeCompartilhamento';

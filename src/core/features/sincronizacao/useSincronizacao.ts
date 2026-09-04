@@ -13,6 +13,21 @@ export interface EstadoSincronizacao {
   com_erro: boolean;
 }
 
+export interface EloDaCadeia {
+  recurso: RecursoSincronizavel;
+  registro_id: string;
+  /** Como chamar na tela: "o proprietário", "a planta". */
+  comoChamar: string;
+  nome: string;
+  ja_compartilhado: boolean;
+}
+
+export interface PreviaDaCadeia {
+  alvo: EloDaCadeia;
+  /** O que vai JUNTO, do mais basico ao mais especifico. */
+  faltando: EloDaCadeia[];
+}
+
 /** O nome do outro produto, para os rotulos dizerem para ONDE vai. */
 export const OUTRO_PRODUTO = import.meta.env.VITE_OUTRO_PRODUTO || 'NexOn';
 
@@ -53,6 +68,18 @@ export function useSincronizacao(recurso: RecursoSincronizavel, ids: string[]) {
 
   useEffect(() => { void buscar(); }, [buscar]);
 
+  /**
+   * O que vai atravessar junto com este registro.
+   *
+   * Consultado ANTES de compartilhar para a confirmacao poder listar tudo. Nao
+   * existe planta sem proprietario nem instalacao sem planta: sem esta consulta
+   * a tela pediria consentimento para uma coisa e mandaria quatro.
+   */
+  const buscarPrevia = useCallback(async (id: string): Promise<PreviaDaCadeia> => {
+    const { data } = await api.get(`/sincronizacao/vinculos/${recurso}/${id.trim()}/previa`);
+    return data?.data ?? data;
+  }, [recurso]);
+
   const compartilhar = useCallback(async (id: string) => {
     await api.post(`/sincronizacao/vinculos/${recurso}/${id.trim()}`);
     await buscar();
@@ -63,5 +90,5 @@ export function useSincronizacao(recurso: RecursoSincronizavel, ids: string[]) {
     await buscar();
   }, [recurso, buscar]);
 
-  return { estados, carregando, recarregar: buscar, compartilhar, pararDeCompartilhar };
+  return { estados, carregando, recarregar: buscar, buscarPrevia, compartilhar, pararDeCompartilhar };
 }

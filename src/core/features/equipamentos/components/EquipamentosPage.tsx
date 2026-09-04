@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Layout } from '@/core/components/common/Layout';
 import { TitleCard } from '@/core/components/common/TitleCard';
 import { BaseTable } from '@/core/components/common/base-table/BaseTable';
+import { useAcoesDeCompartilhamento } from '@/core/features/sincronizacao';
 import { BaseFilters } from '@/core/components/common/base-filters/BaseFilters';
 import { Button } from '@/core/components/ui/button';
 import { Alert, AlertDescription } from '@/core/components/ui/alert';
@@ -125,6 +126,14 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
     error: filtersError,
     clearError: clearFiltersError
   } = useEquipamentoFilters();
+
+  // Compartilhamento com o outro produto: estado em lote, acoes de linha e o
+  // dialogo de confirmacao que lista a hierarquia (instalacao, planta, dono).
+  const compartilhamento = useAcoesDeCompartilhamento({
+    recurso: 'equipamentos',
+    registros: equipamentos,
+    habilitado: isAdmin(),
+  });
 
   // Estados locais
   const [filters, setFilters] = useState<EquipamentosFilters>(() =>
@@ -699,6 +708,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
                           equipamento.classificacao === 'UC' ||
                           Boolean(equipamento.equipamentoPaiId || equipamento.equipamentoPai),
                       },
+                      ...compartilhamento.acoes,
                     ]
                   : []
               }
@@ -782,6 +792,10 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* UM dialogo por pagina. Com 250+ equipamentos, um por linha seriam
+            250 AlertDialogs no DOM para no maximo um aparecer. */}
+        {compartilhamento.dialogo}
       </Layout.Main>
     </Layout>
   );
