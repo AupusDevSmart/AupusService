@@ -76,6 +76,12 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     localAtivo: [apiData.local, apiData.ativo].filter(Boolean).join(' - '),
     ativo: apiData.ativo,
 
+    // Este transform e uma lista de permissao: campo que nao aparece aqui e
+    // descartado em silencio, por mais que a API o mande. A instalacao entra
+    // como veio — vazia significa "a origem nao tem", e trocar por `[]` a mais
+    // ou a menos apagaria a distincao que a celula usa.
+    instalacoes: apiData.instalacoes,
+
     // Classificação
     condicoes: apiData.condicoes,
     status: apiData.status,

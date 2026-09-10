@@ -1,5 +1,6 @@
 // src/features/execucao-os/types/index.ts - VERSÃO FINAL
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
+import type { InstalacaoDaOrigem } from '@/utils/instalacao';
 import { ProgramacaoResponse, ItemOrcamento } from '../../programacao-os/types';
 
 // ========================================
@@ -163,6 +164,13 @@ export interface HistoricoOS {
 // ========================================
 
 export interface OrdemServico extends BaseEntity {
+  /**
+   * Instalacao (`unidades`) derivada da origem pelo backend — a OS nao guarda
+   * `unidade_id`. Vazia quando a origem nao tem instalacao (a OS MANUAL nao
+   * tem); ausente quando o endpoint nao apurou. Ver `@/utils/instalacao`.
+   */
+  instalacoes?: InstalacaoDaOrigem[];
+
   // Relacionamento com programação
   programacao_id: string;
 

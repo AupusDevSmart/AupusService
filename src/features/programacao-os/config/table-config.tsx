@@ -2,6 +2,7 @@
 
 import type { TableColumn } from '@/core';
 import type { ProgramacaoResponse } from '@/services/programacao-os.service';
+import { rotuloDaInstalacao } from '@/utils/instalacao';
 import { StatusCell } from '../components/table-cells/StatusCell';
 import { tipoLabels, prioridadeLabels, formatarDataHora } from './labels';
 
@@ -46,7 +47,7 @@ export const programacaoOSTableColumns: TableColumn<ProgramacaoResponse>[] = [
   {
     key: 'codigo',
     label: 'Código',
-    width: '12%',
+    width: '11%',
     render: (item) => <Texto mono>{item.codigo || '-'}</Texto>,
   },
   // A descricao volta, com teto.
@@ -60,23 +61,40 @@ export const programacaoOSTableColumns: TableColumn<ProgramacaoResponse>[] = [
   {
     key: 'descricao',
     label: 'Descrição',
-    width: '26%',
+    width: '21%',
     render: (item) =>
       item.descricao
         ? <Texto limite="max-w-[60ch]" titulo={item.descricao}>{item.descricao}</Texto>
         : <Texto fraco>Sem descrição</Texto>,
   },
   {
+    // ONDE o servico acontece — a pergunta que "Local" tentava responder e nao
+    // respondia. A instalacao nao e coluna da programacao: o backend a deriva
+    // da origem, e nem toda origem tem (a MANUAL nao aponta equipamento nem
+    // unidade). Por isso a celula sabe mostrar ausencia.
+    key: 'instalacao',
+    label: 'Instalação',
+    width: '16%',
+    render: (item) => {
+      const rotulo = rotuloDaInstalacao(item.instalacoes);
+      return (
+        <Texto fraco={rotulo.ausente} limite="max-w-[28ch]" titulo={rotulo.titulo}>
+          {rotulo.texto}
+        </Texto>
+      );
+    },
+  },
+  {
     key: 'tipo',
     label: 'Tipo',
-    width: '12%',
+    width: '11%',
     render: (item) => <Texto>{tipoLabels[item.tipo] || item.tipo}</Texto>,
   },
   {
     key: 'prioridade',
     label: 'Prioridade',
     hideOnTablet: true,
-    width: '12%',
+    width: '10%',
     render: (item) => (
       <Texto>{prioridadeLabels[item.prioridade] || item.prioridade}</Texto>
     ),
@@ -84,14 +102,14 @@ export const programacaoOSTableColumns: TableColumn<ProgramacaoResponse>[] = [
   {
     key: 'status',
     label: 'Status',
-    width: '14%',
+    width: '13%',
     sortable: true,
     render: (item) => <StatusCell status={item.status} />,
   },
   {
     key: 'data_programada',
     label: 'Data Programada',
-    width: '24%',
+    width: '18%',
     sortable: true,
     render: (item) => {
       // Duas colunas guardam "quando": `data_hora_programada` vem da programacao

@@ -204,7 +204,19 @@ export interface HistoricoProgramacaoResponse {
   dados_extras?: any;
 }
 
+/** Instalacao (`unidades`) derivada da origem — ver `instalacao.ts`. */
+export interface InstalacaoDaOrigem {
+  id: string;
+  nome: string;
+}
+
 export interface ProgramacaoResponse {
+  /**
+   * Derivada no backend a partir da origem, porque a programacao nao guarda
+   * `unidade_id`. Vazia quando a origem nao tem instalacao (a OP MANUAL nao
+   * tem); ausente quando o endpoint nao apurou.
+   */
+  instalacoes?: InstalacaoDaOrigem[];
   id: string;
   criado_em: string;
   atualizado_em: string;

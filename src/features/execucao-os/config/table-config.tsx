@@ -1,6 +1,7 @@
 // src/features/execucao-os/config/table-config.tsx
 import type { TableColumn } from '@/types/base';
 import type { ExecucaoOS } from '../types';
+import { rotuloDaInstalacao } from '@/utils/instalacao';
 import { StatusCell } from '../components/table-cells/StatusCell';
 import { tipoLabels, prioridadeLabels, formatarTempo, formatarData } from './labels';
 
@@ -56,7 +57,7 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
   {
     key: 'descricao',
     label: 'Descrição',
-    width: '18%',
+    width: '15%',
     render: (item) => {
       const descricao = item.descricao || item.os?.descricao;
       return descricao
@@ -65,12 +66,33 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
     },
   },
   {
+    // Entrou no lugar de Responsavel: quem executa ja aparece no detalhe da OS
+    // e mudava ao longo da execucao, enquanto ONDE o servico acontece e o que
+    // se procura ao varrer a lista.
+    //
+    // A instalacao nao e coluna da OS — o backend a deriva da origem —, e nem
+    // toda origem tem: a MANUAL nao aponta equipamento nem unidade. Por isso a
+    // celula sabe mostrar ausencia em vez de inventar a planta.
+    key: 'instalacao',
+    label: 'Instalação',
+    hideOnMobile: true,
+    width: '15%',
+    render: (item) => {
+      const rotulo = rotuloDaInstalacao(item.instalacoes);
+      return (
+        <Texto fraco={rotulo.ausente} limite="max-w-[26ch]" titulo={rotulo.titulo}>
+          {rotulo.texto}
+        </Texto>
+      );
+    },
+  },
+  {
     // A origem diz de onde a OS nasceu — solicitacao, anomalia ou plano. Sem
     // ela, duas OS identicas na tabela podem ter vindo de lugares diferentes,
     // e e a origem que diz a quem prestar contas.
     key: 'origem',
     label: 'Origem',
-    width: '13%',
+    width: '12%',
     sortable: true,
     hideOnMobile: true,
     render: (item) => {
@@ -88,7 +110,7 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
   {
     key: 'tipo',
     label: 'Tipo',
-    width: '12%',
+    width: '11%',
     render: (item) => {
       const tipo = item.tipo || item.os?.tipo || 'PREVENTIVA';
       return <Texto>{tipoLabels[tipo] || tipo}</Texto>;
@@ -110,18 +132,6 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
     sortable: true,
     width: '12%',
     render: (item) => <StatusCell status={item.statusExecucao || item.status} />,
-  },
-  {
-    key: 'responsavel',
-    label: 'Responsável',
-    hideOnMobile: true,
-    width: '15%',
-    render: (item) => {
-      const responsavel = item.responsavelExecucao || item.responsavel;
-      return responsavel
-        ? <Texto>{responsavel}</Texto>
-        : <Texto fraco>Não atribuído</Texto>;
-    },
   },
   {
     // A barra de progresso saiu: a porcentagem era derivada do proprio status
