@@ -18,9 +18,15 @@ import {
 } from '@/services/planos-manutencao.services';
 import { PlanosModal } from './PlanosModal';
 import { TarefasExpandedRow } from './TarefasExpandedRow';
-import { InstrucoesApiService, type InstrucaoApiResponse } from '@/services/instrucoes.services';
+import {
+  InstrucoesApiService,
+  opcaoDaInstrucao,
+  type InstrucaoApiResponse,
+  type OpcaoDeInstrucao,
+} from '@/services/instrucoes.services';
 import { InstrucoesModal } from '@/features/instrucoes/components/InstrucoesModal';
 import { instrucoesFormFields } from '@/features/instrucoes/config/form-config';
+import { useNovaInstrucao } from '@/features/instrucoes/hooks/useNovaInstrucao';
 
 const instrucoesApi = new InstrucoesApiService();
 import { type TarefaApiResponse } from '@/services/tarefas.services';
@@ -46,7 +52,7 @@ export function PlanosManutencaoPage() {
   const [filters, setFilters] = useState<PlanosFiltersApi>(initialFilters);
 
   // Opcoes de instrucao para o cadastro rapido da linha expandida
-  const [instrucoesOptions, setInstrucoesOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [instrucoesOptions, setInstrucoesOptions] = useState<OpcaoDeInstrucao[]>([]);
   // Linha expandida da tabela (uma por vez) + gatilho de recarga das tarefas
   // Sheet de instrução aberto pelo "ver detalhes" de uma tarefa
   const [instrucaoModal, setInstrucaoModal] = useState<{
@@ -76,18 +82,45 @@ export function PlanosManutencaoPage() {
 
   const { modalState, openModal, closeModal: originalCloseModal } = useGenericModal<PlanoManutencaoApiResponse>();
 
-  // Carregar opções de instruções para o modal de tarefa
+  // Opções de instrução do cadastro rápido de tarefa.
+  //
+  // `listarTodasAtivas` pagina: pedir uma página de 100 (o teto do DTO)
+  // truncava o catálogo em silêncio a partir da 101ª instrução. E o `value`
+  // sai de `opcaoDaInstrucao`, que apara o id — aqui ele ia cru, e o id de 25
+  // chars não casava com o da tarefa (que o backend devolve aparado), deixando
+  // o combobox em branco na edição.
   useEffect(() => {
-    instrucoesApi.findAll({ limit: 100, status: 'ATIVA' as any }).then((res) => {
-      const options = (res.data || [])
-        .filter((inst: any) => inst.id && inst.nome)
-        .map((inst: any) => ({
-          value: inst.id,
-          label: `${inst.tag ? inst.tag + ' - ' : ''}${inst.nome}`
-        }));
-      setInstrucoesOptions(options);
-    }).catch(() => {});
+    instrucoesApi
+      .listarTodasAtivas()
+      .then((lista) =>
+        setInstrucoesOptions(
+          lista.filter((inst) => inst.id && inst.nome).map((inst) => opcaoDaInstrucao(inst)),
+        ),
+      )
+      .catch((error) => {
+        toast({
+          title: 'Erro ao carregar as instruções',
+          description: formatApiError(error),
+          variant: 'destructive'
+        });
+      });
   }, []);
+
+  /**
+   * Cadastrar a instrução que falta sem sair da tela do plano — quem monta um
+   * plano descobre a falta no momento de escolher no combobox.
+   */
+  const { abrirNovaInstrucao, novaInstrucaoModal } = useNovaInstrucao((nova) =>
+    setInstrucoesOptions((atuais) => {
+      const opcao = opcaoDaInstrucao(nova);
+      return [opcao, ...atuais.filter((existente) => existente.value !== opcao.value)];
+    })
+  );
+
+  const criarInstrucao = useCallback(async () => {
+    const nova = await abrirNovaInstrucao();
+    return nova ? opcaoDaInstrucao(nova) : null;
+  }, [abrirNovaInstrucao]);
 
   // Funções de carregamento
   const loadData = async () => {
@@ -298,6 +331,7 @@ export function PlanosManutencaoPage() {
                 <TarefasExpandedRow
                   planoId={plano.id}
                   instrucoesOptions={instrucoesOptions}
+                  onCriarInstrucao={criarInstrucao}
                   refreshToken={tarefasRefreshToken}
                   onVerTarefa={abrirInstrucaoDaTarefa}
                   onTarefasChange={handleTarefasChange}
@@ -319,6 +353,9 @@ export function PlanosManutencaoPage() {
           onClose={closeModal}
           onSubmit={handleSubmit}
         />
+
+        {/* Cadastro rápido de instrução, disparado pelo "+" da linha de tarefa */}
+        {novaInstrucaoModal}
 
         {/* Detalhe da tarefa = sheet da instrução, em modo leitura */}
         <InstrucoesModal

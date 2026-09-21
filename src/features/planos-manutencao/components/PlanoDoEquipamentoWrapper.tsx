@@ -1,9 +1,15 @@
 // src/features/planos-manutencao/components/PlanoDoEquipamentoWrapper.tsx
 import React from 'react';
 import { TarefasDoEquipamentoSection } from './TarefasDoEquipamentoSection';
+import { usePlanoDoEquipamento } from './PlanoDoEquipamentoContext';
 import { InstrucoesModal } from '@/features/instrucoes/components/InstrucoesModal';
 import { instrucoesFormFields } from '@/features/instrucoes/config/form-config';
-import { InstrucoesApiService, type InstrucaoApiResponse } from '@/services/instrucoes.services';
+import { useNovaInstrucao } from '@/features/instrucoes/hooks/useNovaInstrucao';
+import {
+  InstrucoesApiService,
+  opcaoDaInstrucao,
+  type InstrucaoApiResponse,
+} from '@/services/instrucoes.services';
 import type { TarefaApiResponse } from '@/services/tarefas.services';
 import { toast } from '@/hooks/use-toast';
 import { formatApiError } from '@/utils/api-error';
@@ -26,6 +32,20 @@ interface PlanoDoEquipamentoWrapperProps {
 export function PlanoDoEquipamentoWrapper(props: PlanoDoEquipamentoWrapperProps) {
   const [instrucao, setInstrucao] = React.useState<InstrucaoApiResponse | null>(null);
 
+  const { registrarInstrucaoCriada } = usePlanoDoEquipamento(
+    props.equipamentoId ?? '',
+    props.classificacao,
+  );
+
+  // O cadastro de instrucao tambem mora aqui, pelo mesmo motivo do sheet de
+  // visualizacao: ele abre por cima do sheet do equipamento.
+  const { abrirNovaInstrucao, novaInstrucaoModal } = useNovaInstrucao(registrarInstrucaoCriada);
+
+  const criarInstrucao = React.useCallback(async () => {
+    const nova = await abrirNovaInstrucao();
+    return nova ? opcaoDaInstrucao(nova) : null;
+  }, [abrirNovaInstrucao]);
+
   const abrirInstrucao = async (tarefa: TarefaApiResponse) => {
     const instrucaoId = tarefa.instrucao_id?.trim();
     if (!instrucaoId) {
@@ -46,7 +66,13 @@ export function PlanoDoEquipamentoWrapper(props: PlanoDoEquipamentoWrapperProps)
 
   return (
     <>
-      <TarefasDoEquipamentoSection {...props} onVerInstrucao={abrirInstrucao} />
+      <TarefasDoEquipamentoSection
+        {...props}
+        onVerInstrucao={abrirInstrucao}
+        onCriarInstrucao={props.somenteLeitura ? undefined : criarInstrucao}
+      />
+
+      {novaInstrucaoModal}
 
       <InstrucoesModal
         isOpen={!!instrucao}

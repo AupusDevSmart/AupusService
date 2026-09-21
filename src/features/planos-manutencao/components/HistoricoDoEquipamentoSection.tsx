@@ -1,15 +1,10 @@
 // src/features/planos-manutencao/components/HistoricoDoEquipamentoSection.tsx
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History, ExternalLink, ChevronDown } from 'lucide-react';
+import { History, ExternalLink, ChevronDown, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePlanoDoEquipamento } from './PlanoDoEquipamentoContext';
-import {
-  historicoEquipamentoApi,
-  type HistoricoDoEquipamento,
-  type ItemHistoricoOS,
-} from '@/services/historico-equipamento.services';
-import { formatApiError } from '@/utils/api-error';
+import { type ItemHistoricoOS, type SituacaoDaTarefa } from '@/services/historico-equipamento.services';
 
 interface HistoricoDoEquipamentoSectionProps {
   equipamentoId: string;
@@ -77,43 +72,98 @@ const rotuloStatus = (status: string) => ROTULO_STATUS[status] ?? humanizar(stat
 
 const corrretiva = (origem: string) => origem === 'ANOMALIA';
 
+/**
+ * Quando a tarefa roda de novo, em dias.
+ *
+ * Em dias e não em data porque é a forma que responde à pergunta de quem abre
+ * esta tela — "o que está vencendo?" — sem obrigar a contar no calendário. A
+ * data continua na coluna ao lado.
+ */
+const rotuloPrazo = (dias: number | null): string => {
+  if (dias === null) return 'sem periodicidade';
+  if (dias < 0) return `atrasada ${Math.abs(dias)} dia${Math.abs(dias) === 1 ? '' : 's'}`;
+  if (dias === 0) return 'vence hoje';
+  return `em ${dias} dia${dias === 1 ? '' : 's'}`;
+};
+
+/** Frequências do backend, sem acento e em maiúsculas. */
+const ROTULO_FREQUENCIA: Record<string, string> = {
+  DIARIA: 'Diária',
+  SEMANAL: 'Semanal',
+  QUINZENAL: 'Quinzenal',
+  MENSAL: 'Mensal',
+  BIMESTRAL: 'Bimestral',
+  TRIMESTRAL: 'Trimestral',
+  SEMESTRAL: 'Semestral',
+  ANUAL: 'Anual',
+  PERSONALIZADA: 'Personalizada',
+};
+
+const rotuloFrequencia = (frequencia: string | null) =>
+  frequencia ? (ROTULO_FREQUENCIA[frequencia] ?? humanizar(frequencia)) : 'Sem periodicidade';
+
+/**
+ * A situação de UMA tarefa: quando foi feita e quando roda de novo.
+ *
+ * A última execução NÃO sai de `tarefas.data_ultima_execucao` — aquela coluna é
+ * cache gravado ao finalizar a OS e pode ficar para trás. O backend lê as OS
+ * finalizadas (`tarefas_os.data_conclusao`), que é o registro de que o trabalho
+ * aconteceu.
+ */
+function LinhaDeSituacao({ situacao }: { situacao: SituacaoDaTarefa }) {
+  const atrasada = situacao.dias_ate_proxima !== null && situacao.dias_ate_proxima < 0;
+  const nunca = !situacao.ultima_execucao;
+
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm text-foreground truncate">{situacao.nome}</p>
+        <p className="text-xs text-muted-foreground">
+          {rotuloFrequencia(situacao.frequencia)}
+          {situacao.numero_execucoes > 0 &&
+            ` · ${situacao.numero_execucoes} execução${situacao.numero_execucoes === 1 ? '' : 'ões'}`}
+        </p>
+      </div>
+
+      {/* Última execução: a coluna que esta tela existe para responder. Fica
+          antes da próxima porque é dela que a próxima é derivada. */}
+      <span
+        className={`w-28 flex-shrink-0 text-xs ${nunca ? 'text-muted-foreground' : 'text-foreground/80'}`}
+        title={nunca ? 'Nenhuma ordem de serviço finalizada registrou esta tarefa' : undefined}
+      >
+        {nunca ? 'nunca executada' : formatarData(situacao.ultima_execucao)}
+      </span>
+
+      <span className="hidden sm:block w-24 flex-shrink-0 text-xs text-foreground/80">
+        {formatarData(situacao.proxima_execucao)}
+      </span>
+
+      <span
+        className={`w-28 flex-shrink-0 text-xs ${atrasada ? 'text-foreground' : 'text-muted-foreground'}`}
+      >
+        {rotuloPrazo(situacao.dias_ate_proxima)}
+      </span>
+    </div>
+  );
+}
+
 export function HistoricoDoEquipamentoSection({
   equipamentoId,
   classificacao,
 }: HistoricoDoEquipamentoSectionProps) {
   const navigate = useNavigate();
-  const { ehUC, refreshTarefas } = usePlanoDoEquipamento(equipamentoId, classificacao);
+  // O histórico é carregado pelo contexto, e não aqui: a aba Tarefas mostra a
+  // última execução ao lado de cada tarefa e precisa exatamente destes dados.
+  // Duas buscas do mesmo endpoint dariam, depois de finalizar uma OS, duas
+  // respostas divergentes nas duas abas do mesmo sheet.
+  const {
+    ehUC,
+    historico: dados,
+    carregandoHistorico: carregando,
+    erroHistorico: erro,
+  } = usePlanoDoEquipamento(equipamentoId, classificacao);
 
-  const [dados, setDados] = useState<HistoricoDoEquipamento>({ tarefas: [], ordens: [] });
-  const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
   const [expandido, setExpandido] = useState<string | null>(null);
-
-  const id = equipamentoId?.trim();
-
-  useEffect(() => {
-    if (!id) return;
-
-    let cancelado = false;
-    setCarregando(true);
-    setErro(null);
-
-    historicoEquipamentoApi
-      .obter(id)
-      .then((resposta) => {
-        if (!cancelado) setDados(resposta);
-      })
-      .catch((error) => {
-        if (!cancelado) setErro(formatApiError(error));
-      })
-      .finally(() => {
-        if (!cancelado) setCarregando(false);
-      });
-
-    return () => {
-      cancelado = true;
-    };
-  }, [id, refreshTarefas]);
 
   const abrir = (item: ItemHistoricoOS) => {
     // Não precisa fechar o sheet: navegar desmonta a página de equipamentos
@@ -131,7 +181,38 @@ export function HistoricoDoEquipamentoSection({
   if (erro) return <p className="text-sm text-destructive">{erro}</p>;
 
   return (
-    <div>
+    <div className="space-y-6">
+      {/* Primeiro bloco: "cada tarefa está em dia?".
+          Vem antes das ordens porque é a pergunta do presente — o que precisa
+          ser feito. A lista de ordens é o passado, e serve para conferir. */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <CalendarClock className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Situação das tarefas</h3>
+        </div>
+
+        {dados.tarefas.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma tarefa de manutenção neste equipamento. Vincule um plano em Dados técnicos.
+          </p>
+        ) : (
+          <div>
+            {/* Cabeçalho das colunas: sem ele, "12/08/2026 · 12/08/2027" são
+                duas datas sem papel definido. */}
+            <div className="flex items-center gap-3 pb-1 border-b text-xs text-muted-foreground">
+              <span className="min-w-0 flex-1">Tarefa</span>
+              <span className="w-28 flex-shrink-0">Última execução</span>
+              <span className="hidden sm:block w-24 flex-shrink-0">Próxima</span>
+              <span className="w-28 flex-shrink-0">Prazo</span>
+            </div>
+
+            {dados.tarefas.map((situacao) => (
+              <LinhaDeSituacao key={situacao.id} situacao={situacao} />
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Não depende do plano vinculado: lê o que foi congelado nas ordens,
           então continua ali depois de trocar ou desvincular o plano. */}
       <div className="space-y-3">

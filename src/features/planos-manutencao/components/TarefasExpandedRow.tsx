@@ -1,5 +1,5 @@
 // src/features/planos-manutencao/components/TarefasExpandedRow.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,7 +7,12 @@ import { Combobox } from '@/core';
 import { Eye, Pencil, Trash2, Plus, Check, X } from 'lucide-react';
 import { useUserStore } from '@/store/useUserStore';
 import { tarefasApi, type TarefaApiResponse } from '@/services/tarefas.services';
-import { type FrequenciaTarefa } from '@/services/instrucoes.services';
+import {
+  opcaoDaInstrucao,
+  type FrequenciaTarefa,
+  type OpcaoDeInstrucao,
+} from '@/services/instrucoes.services';
+import { type SituacaoDaTarefa } from '@/services/historico-equipamento.services';
 import { toast } from '@/hooks/use-toast';
 import { formatApiError } from '@/utils/api-error';
 
@@ -43,9 +48,47 @@ const labelFrequencia = (tarefa: TarefaApiResponse): string => {
 const labelCriticidade = (criticidade?: number): string =>
   criticidadeOptions.find(opt => opt.value === criticidade)?.label || 'N/A';
 
+const formatarData = (valor?: string | Date | null): string | null => {
+  if (!valor) return null;
+  const data = new Date(valor);
+  return Number.isNaN(data.getTime()) ? null : data.toLocaleDateString('pt-BR');
+};
+
+/** Negativo é atraso; o backend já devolve a conta pronta. */
+const estaAtrasada = (situacao?: SituacaoDaTarefa) =>
+  typeof situacao?.dias_ate_proxima === 'number' && situacao.dias_ate_proxima < 0;
+
+/**
+ * Quando roda de novo, em dias, porque é assim que se decide o que entra na
+ * próxima janela — "vence 12/08/2027" obriga a fazer a conta de cabeça.
+ * A data completa fica no bloco de situação, na aba Histórico.
+ */
+const rotuloProxima = (situacao?: SituacaoDaTarefa): string | null => {
+  const dias = situacao?.dias_ate_proxima;
+  if (typeof dias !== 'number') return null;
+  if (dias < 0) return `atrasada ${Math.abs(dias)} dia${Math.abs(dias) === 1 ? '' : 's'}`;
+  if (dias === 0) return 'vence hoje';
+  return `vence em ${dias} dia${dias === 1 ? '' : 's'}`;
+};
+
 interface TarefasExpandedRowProps {
   planoId: string;
-  instrucoesOptions: Array<{ value: string; label: string }>;
+  instrucoesOptions: OpcaoDeInstrucao[];
+  /**
+   * Abre o cadastro de instrucao e resolve com a que foi criada (ou null se
+   * desistiram). Ausente, o botao de nova instrucao nao aparece — e o caso da
+   * tela de planos em modo leitura.
+   */
+  onCriarInstrucao?: () => Promise<OpcaoDeInstrucao | null>;
+  /**
+   * Quando a tarefa rodou pela ultima vez e quando roda de novo, por id de
+   * tarefa. So existe no sheet do equipamento: template nao executa nada.
+   *
+   * Vem do backend (`/equipamentos/:id/historico-os`) e NAO de
+   * `tarefa.data_ultima_execucao` — aquele campo e cache da finalizacao da OS
+   * e pode ficar defasado; este e lido das OS finalizadas.
+   */
+  situacaoPorTarefa?: Record<string, SituacaoDaTarefa>;
   // Muda quando a página salva uma tarefa pelo sheet, forçando o recarregamento.
   refreshToken?: number;
   onVerTarefa: (tarefa: TarefaApiResponse) => void;
@@ -100,6 +143,8 @@ const RECUO = {
 export function TarefasExpandedRow({
   planoId,
   instrucoesOptions,
+  onCriarInstrucao,
+  situacaoPorTarefa,
   refreshToken = 0,
   onVerTarefa,
   onTarefasChange,
@@ -194,6 +239,52 @@ export function TarefasExpandedRow({
     carregarTarefas();
   }, [carregarTarefas, refreshToken]);
 
+  /**
+   * As opções do catálogo MAIS as instruções que as tarefas desta lista já
+   * apontam.
+   *
+   * O catálogo que chega por prop traz só as instruções ATIVAS. Uma tarefa
+   * antiga pode apontar para uma instrução que depois foi inativada ou
+   * arquivada — e como o `Combobox` casa opção com valor por igualdade exata,
+   * sem opção correspondente ele mostrava o placeholder "Selecione uma
+   * instrução...". A tarefa TINHA instrução; a tela é que dizia o contrário, e
+   * quem editasse a periodicidade nem desconfiava.
+   *
+   * A instrução vem aninhada na própria tarefa (`tarefa.instrucao`), então
+   * reconstruir a opção que falta não custa requisição nenhuma. O sufixo
+   * separa o que está fora do catálogo ativo — o que se escolhe para tarefa
+   * nova continua sendo só o de cima.
+   */
+  const opcoesDeInstrucao = useMemo(() => {
+    const porValor = new Map(instrucoesOptions.map((opcao) => [opcao.value, opcao]));
+
+    for (const tarefa of tarefas) {
+      const id = (tarefa.instrucao_id || '').trim();
+      if (!id || porValor.has(id)) continue;
+
+      const base = tarefa.instrucao
+        ? opcaoDaInstrucao({ ...tarefa.instrucao, id })
+        : { value: id, label: tarefa.nome || 'Instrução removida do catálogo' };
+
+      porValor.set(id, { ...base, label: `${base.label} · fora do catálogo ativo` });
+    }
+
+    return [...porValor.values()];
+  }, [instrucoesOptions, tarefas]);
+
+  /**
+   * Cadastra a instrução sem sair daqui e já a deixa escolhida na linha.
+   *
+   * Sem isto, faltando uma instrução o caminho era abandonar a tarefa, ir até
+   * Manutenção → Instruções e voltar — no sheet do equipamento, perdendo o que
+   * estava preenchido.
+   */
+  const criarInstrucao = async (aplicar: (opcao: OpcaoDeInstrucao) => void) => {
+    if (!onCriarInstrucao) return;
+    const nova = await onCriarInstrucao();
+    if (nova) aplicar(nova);
+  };
+
   useEffect(() => {
     const id = planoId?.trim();
     if (!id || abrirCadastroPara !== id || somenteLeitura) return;
@@ -209,9 +300,12 @@ export function TarefasExpandedRow({
 
     try {
       // Sem nome digitado, herda o da instrução — que é o caso comum
-      const nomeInstrucao = instrucoesOptions
+      const nomeInstrucao = opcoesDeInstrucao
         .find((o) => o.value === instrucaoId.trim())
-        ?.label?.replace(/^[^-]+ - /, '');
+        ?.label?.replace(/^[^-]+ - /, '')
+        // O sufixo das opções fora do catálogo ativo é rótulo de tela; não
+        // pode virar nome de tarefa.
+        ?.replace(/ · fora do catálogo ativo$/, '');
 
       await tarefasApi.create({
         nome: (nome || nomeInstrucao || '').trim(),
@@ -301,11 +395,29 @@ export function TarefasExpandedRow({
           </div>
 
           <div className="flex-[2] min-w-[14rem]">
-            <Label className="text-xs text-muted-foreground mb-1 block">Instrução</Label>
+            {/* O botao de cadastrar sobe para a linha do rotulo, como no
+                sheet do equipamento: ao lado da caixa ele encurtaria o unico
+                campo de texto longo da linha. */}
+            <div className="flex items-center gap-1 mb-1 h-5">
+              <Label className="text-xs text-muted-foreground">Instrução</Label>
+              {onCriarInstrucao && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 -my-0.5 shrink-0"
+                  onClick={() => criarInstrucao((nova) => setInstrucaoId(nova.value))}
+                  title="Cadastrar nova instrução"
+                  aria-label="Cadastrar nova instrução"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
             <Combobox
-              options={instrucoesOptions}
+              options={opcoesDeInstrucao}
               value={instrucaoId || undefined}
-              onValueChange={(val) => setInstrucaoId(val || '')}
+              onValueChange={(val) => setInstrucaoId((val || '').trim())}
               placeholder="Selecione uma instrução..."
               searchPlaceholder="Buscar instrução..."
               emptyText="Nenhuma instrução encontrada"
@@ -397,8 +509,11 @@ export function TarefasExpandedRow({
         // internas transformavam uma lista curta num emaranhado de tracos. O
         // espacamento vertical ja separa uma tarefa da outra.
         <div>
-          {tarefas.map((tarefa) =>
-            editandoId === tarefa.id ? (
+          {tarefas.map((tarefa) => {
+            const situacao = situacaoPorTarefa?.[tarefa.id.trim()];
+            const ultima = formatarData(situacao?.ultima_execucao);
+
+            return editandoId === tarefa.id ? (
               // Edicao inline com os quatro campos. O sheet completo de tarefa
               // mostrava campos que sairam do DTO e devolvia 400 ao salvar.
               <div key={tarefa.id} className="py-2 bg-muted/30">
@@ -417,9 +532,28 @@ export function TarefasExpandedRow({
                 </div>
 
                 <div className="flex-[2] min-w-[14rem]">
-                  <Label className="text-xs text-muted-foreground mb-1 block">Instrução</Label>
+                  <div className="flex items-center gap-1 mb-1 h-5">
+                    <Label className="text-xs text-muted-foreground">Instrução</Label>
+                    {onCriarInstrucao && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 -my-0.5 shrink-0"
+                        onClick={() =>
+                          criarInstrucao((nova) =>
+                            setEdicao((e) => ({ ...e, instrucao_id: nova.value })),
+                          )
+                        }
+                        title="Cadastrar nova instrução"
+                        aria-label="Cadastrar nova instrução"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
                   <Combobox
-                    options={instrucoesOptions}
+                    options={opcoesDeInstrucao}
                     value={edicao.instrucao_id || undefined}
                     onValueChange={(val) => setEdicao((e) => ({ ...e, instrucao_id: (val || '').trim() }))}
                     placeholder="Selecione uma instrução..."
@@ -519,6 +653,38 @@ export function TarefasExpandedRow({
                   {tarefa.origem_status === 'PROPRIA' && (
                     <span title="Criada neste equipamento">própria</span>
                   )}
+
+                  {/* Quando esta tarefa foi feita pela ultima vez.
+                      Fica aqui, colado no nome, e nao numa coluna a direita:
+                      e a pergunta que se faz olhando a lista ("essa ja foi
+                      feita?"), e coluna estreita dentro de sheet corta data.
+                      So aparece no equipamento — template nao executa nada. */}
+                  {situacao && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span
+                        title={
+                          ultima
+                            ? `${situacao.numero_execucoes} execução(ões) registrada(s) em ordens de serviço finalizadas`
+                            : 'Nenhuma ordem de serviço finalizada registrou esta tarefa'
+                        }
+                      >
+                        {ultima ? `última: ${ultima}` : 'nunca executada'}
+                      </span>
+
+                      {rotuloProxima(situacao) && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span
+                            className={estaAtrasada(situacao) ? 'text-foreground' : undefined}
+                            title="Calculada pela mesma regra do agendador que gera as ordens"
+                          >
+                            {rotuloProxima(situacao)}
+                          </span>
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -565,8 +731,8 @@ export function TarefasExpandedRow({
               </div>
               )}
             </div>
-            )
-          )}
+            );
+          })}
         </div>
       )}
 

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { TarefasExpandedRow } from './TarefasExpandedRow';
 import { usePlanoDoEquipamento } from './PlanoDoEquipamentoContext';
 import type { TarefaApiResponse } from '@/services/tarefas.services';
+import type { OpcaoDeInstrucao } from '@/services/instrucoes.services';
 
 interface TarefasDoEquipamentoSectionProps {
   /** Nulo no cadastro, quando o equipamento ainda nao existe. */
@@ -13,6 +14,8 @@ interface TarefasDoEquipamentoSectionProps {
   somenteLeitura?: boolean;
   /** Abre o sheet da instrução ao clicar em "ver" numa tarefa. */
   onVerInstrucao?: (tarefa: TarefaApiResponse) => void;
+  /** Cadastra uma instrução sem sair daqui; resolve com a que foi criada. */
+  onCriarInstrucao?: () => Promise<OpcaoDeInstrucao | null>;
 }
 
 /**
@@ -31,11 +34,13 @@ export function TarefasDoEquipamentoSection({
   classificacao,
   somenteLeitura = false,
   onVerInstrucao,
+  onCriarInstrucao,
 }: TarefasDoEquipamentoSectionProps) {
   const {
     planoAtual,
     previa,
     instrucoesOptions,
+    situacaoPorTarefa,
     carregando,
     refreshTarefas,
     ehUC,
@@ -98,6 +103,10 @@ export function TarefasDoEquipamentoSection({
         <TarefasExpandedRow
           planoId={planoParaListar}
           instrucoesOptions={instrucoesOptions}
+          onCriarInstrucao={onCriarInstrucao}
+          // No cadastro a lista é do TEMPLATE: não há execução para mostrar, e
+          // a situação carregada é a do equipamento (que ainda não existe).
+          situacaoPorTarefa={criando ? undefined : situacaoPorTarefa}
           refreshToken={refreshTarefas}
           onVerTarefa={onVerInstrucao ?? (() => {})}
           onTarefasChange={recarregar}

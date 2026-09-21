@@ -3,7 +3,9 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, X, FileText } from 'lucide-react';
 import { Combobox } from '@/core';
-import { instrucoesApi } from '@/services/instrucoes.services';
+import { toast } from 'sonner';
+import { instrucoesApi, opcaoDaInstrucao } from '@/services/instrucoes.services';
+import { formatApiError } from '@/utils/api-error';
 import { InstrucaoExpandableCard } from '@/components/common/InstrucaoExpandableCard';
 import { AbrirInstrucaoContext, ValoresDaPropostaContext } from './proposta-contexto';
 
@@ -31,15 +33,26 @@ function getEntityInstrucoes(entity?: any): any[] {
   return [];
 }
 
+/**
+ * Apara o id na entrada, para todo mundo aqui comparar a mesma coisa.
+ *
+ * O banco convive com ids de 25 chars (cuid antigo) e de 26, e as opções do
+ * combobox são construídas com `id.trim()` (`opcaoDaInstrucao`). Sem aparar
+ * aqui, uma instrução já escolhida não sumiria da lista de disponíveis — daria
+ * para adicioná-la duas vezes — e `getMeta` erraria a opção.
+ */
+const apararId = (id: unknown): string => (typeof id === 'string' ? id.trim() : '');
+
 // Extrai IDs de instrucoes a partir de diferentes formatos
 function extractIds(value: any, entity?: any): string[] {
   if (Array.isArray(value) && value.length > 0) {
-    if (typeof value[0] === 'string') return value;
-    if (typeof value[0] === 'object' && value[0]?.id) return value.map((v: any) => v.id);
+    if (typeof value[0] === 'string') return value.map(apararId).filter(Boolean);
+    if (typeof value[0] === 'object' && value[0]?.id)
+      return value.map((v: any) => apararId(v.id)).filter(Boolean);
   }
   const instrucoes = getEntityInstrucoes(entity);
   if (instrucoes.length > 0) {
-    return instrucoes.map((inst: any) => inst.id).filter(Boolean);
+    return instrucoes.map((inst: any) => apararId(inst.id)).filter(Boolean);
   }
   return [];
 }
@@ -49,8 +62,9 @@ function extractEntityMeta(entity?: any): Record<string, InstrucaoMeta> {
   const meta: Record<string, InstrucaoMeta> = {};
   const instrucoes = getEntityInstrucoes(entity);
   instrucoes.forEach((inst: any) => {
-    if (inst.id) {
-      meta[inst.id] = { tag: inst.tag, nome: inst.nome };
+    const id = apararId(inst.id);
+    if (id) {
+      meta[id] = { tag: inst.tag, nome: inst.nome };
     }
   });
   return meta;
@@ -79,21 +93,23 @@ export function InstrucoesSelector({ value, onChange, disabled, entity }: Instru
 
   React.useEffect(() => {
     if (loaded) return;
-    instrucoesApi.findAll({ limit: 100, status: 'ATIVA' as any })
-      .then(response => {
-        setOptions((response.data || [])
-          .filter((inst: any) => inst.id && inst.nome)
-          .map((inst: any) => ({
-            value: inst.id,
-            label: `${inst.tag ? inst.tag + ' - ' : ''}${inst.nome}`,
-            tag: inst.tag,
-            nome: inst.nome,
-          }))
+    // `listarTodasAtivas` pagina. Pedir uma página de 100 (o teto do DTO)
+    // truncava o catálogo em silêncio a partir da 101ª instrução: quem
+    // procurasse uma das de fora concluía que ela não existia.
+    instrucoesApi
+      .listarTodasAtivas()
+      .then(lista => {
+        setOptions(
+          lista
+            .filter(inst => inst.id && inst.nome)
+            .map(inst => ({ ...opcaoDaInstrucao(inst), tag: inst.tag, nome: inst.nome })),
         );
         setLoaded(true);
       })
       .catch(err => {
-        console.error('Erro ao carregar instrucoes:', err);
+        // Sem aviso, a lista vazia se lê como "não há instruções cadastradas"
+        // quando na verdade a busca falhou.
+        toast.error('Erro ao carregar as instruções', { description: formatApiError(err) });
         setLoaded(true);
       });
   }, [loaded]);

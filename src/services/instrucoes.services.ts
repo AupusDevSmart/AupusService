@@ -209,6 +209,28 @@ export interface InstrucoesListApiResponse {
   };
 }
 
+/** Opção de combobox a partir de uma instrução. */
+export interface OpcaoDeInstrucao {
+  value: string;
+  label: string;
+}
+
+/**
+ * A forma única de virar opção de combobox.
+ *
+ * O `.trim()` no id não é decorativo: o banco convive com ids de 25 chars (os
+ * antigos, de `cuid()`) e de 26, e o `Combobox` casa opção com valor por
+ * igualdade exata — um lado aparado e o outro não deixa a caixa em branco com
+ * a instrução salva. Havia três cópias desta mesma linha, uma delas sem o
+ * trim.
+ */
+export const opcaoDaInstrucao = (
+  instrucao: Pick<InstrucaoApiResponse, 'id' | 'nome'> & { tag?: string },
+): OpcaoDeInstrucao => ({
+  value: (instrucao.id || '').trim(),
+  label: `${instrucao.tag ? instrucao.tag + ' - ' : ''}${instrucao.nome}`,
+});
+
 export interface AnomaliaAssociadaResponse {
   id: string;
   anomalia_id: string;
@@ -317,6 +339,40 @@ export class InstrucoesApiService {
     } catch (error: any) {
       throw error;
     }
+  }
+
+  /**
+   * Todas as instruções ativas, para alimentar combobox.
+   *
+   * Pagina até a lista acabar em vez de pedir `limit: 100` e parar: o DTO do
+   * backend limita `limit` a 100, então quem pedia uma página só via o
+   * catálogo truncado a partir da 101ª instrução — e sem erro nenhum, o que
+   * aparecia como "essa instrução sumiu do combobox".
+   *
+   * O teto de páginas é só um freio contra laço infinito se a paginação vier
+   * quebrada; 20 × 100 cobre um catálogo de manutenção com folga.
+   */
+  async listarTodasAtivas(): Promise<InstrucaoApiResponse[]> {
+    const LIMITE_POR_PAGINA = 100;
+    const MAX_PAGINAS = 20;
+
+    const todas: InstrucaoApiResponse[] = [];
+
+    for (let page = 1; page <= MAX_PAGINAS; page++) {
+      const resposta = await this.findAll({
+        page,
+        limit: LIMITE_POR_PAGINA,
+        status: 'ATIVA' as StatusInstrucao,
+      });
+
+      const lote = resposta?.data || [];
+      todas.push(...lote);
+
+      const totalDePaginas = resposta?.pagination?.pages ?? 1;
+      if (lote.length < LIMITE_POR_PAGINA || page >= totalDePaginas) break;
+    }
+
+    return todas;
   }
 
   async findOne(id: string): Promise<InstrucaoApiResponse> {

@@ -2,7 +2,17 @@
 import React from 'react';
 import { toast } from '@/hooks/use-toast';
 import { formatApiError } from '@/utils/api-error';
-import { InstrucoesApiService } from '@/services/instrucoes.services';
+import {
+  InstrucoesApiService,
+  opcaoDaInstrucao,
+  type InstrucaoApiResponse,
+  type OpcaoDeInstrucao,
+} from '@/services/instrucoes.services';
+import {
+  historicoEquipamentoApi,
+  type HistoricoDoEquipamento,
+  type SituacaoDaTarefa,
+} from '@/services/historico-equipamento.services';
 import {
   planosManutencaoApi,
   type PlanoManutencaoApiResponse,
@@ -27,7 +37,23 @@ interface PlanoDoEquipamentoValue {
   planoAtual: PlanoManutencaoApiResponse | null;
   templates: PlanoManutencaoApiResponse[];
   previa: PreviaDesvinculoApiResponse | null;
-  instrucoesOptions: Array<{ value: string; label: string }>;
+  instrucoesOptions: OpcaoDeInstrucao[];
+  /** Põe no combobox, já selecionável, a instrução recém-cadastrada. */
+  registrarInstrucaoCriada: (instrucao: InstrucaoApiResponse) => void;
+  /**
+   * Ordens e programações que passaram pelo equipamento, e a situação de cada
+   * tarefa (última execução, próxima, atraso).
+   *
+   * Carregado aqui, e não dentro da aba Histórico, porque as duas abas do
+   * sheet precisam: a de Tarefas mostra a última execução ao lado de cada
+   * tarefa, e a de Histórico mostra o quadro completo. Duas buscas do mesmo
+   * endpoint dariam respostas que divergem entre si depois de finalizar uma OS.
+   */
+  historico: HistoricoDoEquipamento;
+  /** A mesma situação, indexada por id de tarefa, para a lista consultar. */
+  situacaoPorTarefa: Record<string, SituacaoDaTarefa>;
+  carregandoHistorico: boolean;
+  erroHistorico: string | null;
   carregando: boolean;
   salvando: boolean;
   /** Sobe a cada vínculo/troca para a lista de tarefas recarregar. */
@@ -59,24 +85,50 @@ export function PlanoDoEquipamentoProvider({ children }: { children: React.React
   const [salvando, setSalvando] = React.useState(false);
   const [refreshTarefas, setRefreshTarefas] = React.useState(0);
   const [planoEscolhidoNoCadastro, setPlanoEscolhidoNoCadastro] = React.useState('');
-  const [instrucoesOptions, setInstrucoesOptions] = React.useState<
-    Array<{ value: string; label: string }>
-  >([]);
+  const [instrucoesOptions, setInstrucoesOptions] = React.useState<OpcaoDeInstrucao[]>([]);
+
+  const [historico, setHistorico] = React.useState<HistoricoDoEquipamento>({
+    tarefas: [],
+    ordens: [],
+  });
+  // Nasce carregando: entre o mount e a primeira busca a lista está vazia, e
+  // com `false` a aba Histórico piscaria "nenhuma tarefa" antes de ter olhado.
+  // As duas saídas de `recarregarHistorico` desligam, inclusive a do caso vazio.
+  const [carregandoHistorico, setCarregandoHistorico] = React.useState(true);
+  const [erroHistorico, setErroHistorico] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    // `listarTodasAtivas` pagina: pedir uma página de 100 (o teto do DTO)
+    // truncava o catálogo em silêncio a partir da 101ª instrução, e a tarefa
+    // que apontasse para uma delas aparecia com o combobox em branco.
     instrucoesApi
-      .findAll({ limit: 100, status: 'ATIVA' as never })
-      .then((res) => {
+      .listarTodasAtivas()
+      .then((lista) =>
         setInstrucoesOptions(
-          (res.data || [])
-            .filter((inst) => inst.id && inst.nome)
-            .map((inst) => ({
-              value: inst.id.trim(),
-              label: `${inst.tag ? inst.tag + ' - ' : ''}${inst.nome}`,
-            })),
-        );
-      })
-      .catch(() => setInstrucoesOptions([]));
+          lista.filter((inst) => inst.id && inst.nome).map((inst) => opcaoDaInstrucao(inst)),
+        ),
+      )
+      .catch((error) => {
+        setInstrucoesOptions([]);
+        toast({
+          title: 'Erro ao carregar as instruções',
+          description: formatApiError(error),
+          variant: 'destructive',
+        });
+      });
+  }, []);
+
+  /**
+   * A instrução acabou de nascer no cadastro rápido: entra no topo da lista,
+   * porque é a que vai ser escolhida em seguida, e sem recarregar o catálogo
+   * inteiro só por causa de uma linha.
+   */
+  const registrarInstrucaoCriada = React.useCallback((instrucao: InstrucaoApiResponse) => {
+    const opcao = opcaoDaInstrucao(instrucao);
+    setInstrucoesOptions((atuais) => [
+      opcao,
+      ...atuais.filter((existente) => existente.value !== opcao.value),
+    ]);
   }, []);
 
   const registrar = React.useCallback((id: string, classif?: string) => {
@@ -87,7 +139,53 @@ export function PlanoDoEquipamentoProvider({ children }: { children: React.React
 
   const ehUC = !classificacao || classificacao === 'UC';
 
+  /**
+   * Situação das tarefas + ordens que passaram pelo equipamento.
+   *
+   * Em chamada separada do plano de propósito: não depende do vínculo atual
+   * (lê o que foi congelado nas ordens) e uma falha aqui não pode esconder o
+   * plano, nem o contrário.
+   */
+  const recarregarHistorico = React.useCallback(async () => {
+    if (!equipamentoId || !ehUC) {
+      setHistorico({ tarefas: [], ordens: [] });
+      setCarregandoHistorico(false);
+      return;
+    }
+
+    setCarregandoHistorico(true);
+    setErroHistorico(null);
+    try {
+      setHistorico(await historicoEquipamentoApi.obter(equipamentoId));
+    } catch (error) {
+      setHistorico({ tarefas: [], ordens: [] });
+      setErroHistorico(formatApiError(error));
+    } finally {
+      setCarregandoHistorico(false);
+    }
+  }, [equipamentoId, ehUC]);
+
+  // Sem efeito próprio: quem dispara é o `recarregar` abaixo, que roda no mount
+  // e a cada mudança de tarefa ou de vínculo. Com os dois, abrir o sheet fazia
+  // duas buscas iguais do mesmo endpoint.
+
+  const situacaoPorTarefa = React.useMemo(() => {
+    const mapa: Record<string, SituacaoDaTarefa> = {};
+    // O id vem aparado do backend; aparar de novo aqui protege a consulta de
+    // quem indexar com o id cru da tarefa (Char(26) volta com padding).
+    for (const situacao of historico.tarefas) mapa[situacao.id.trim()] = situacao;
+    return mapa;
+  }, [historico.tarefas]);
+
   const recarregar = React.useCallback(async () => {
+    // Antes do corte por equipamento/classificação: `recarregarHistorico` trata
+    // o caso vazio limpando o que tinha, e é ele quem zera a lista ao trocar de
+    // equipamento. Mexeu em tarefa ou em vínculo, a situação muda junto — sem
+    // isto a aba Tarefas continuaria mostrando a última execução de uma tarefa
+    // que acabou de ser trocada. Não é aguardado: as ordens são o bloco de
+    // baixo, e travar o plano por elas atrasaria a tela toda.
+    void recarregarHistorico();
+
     if (!equipamentoId || !ehUC) {
       setCarregando(false);
       return;
@@ -116,7 +214,7 @@ export function PlanoDoEquipamentoProvider({ children }: { children: React.React
     } finally {
       setCarregando(false);
     }
-  }, [equipamentoId, ehUC]);
+  }, [equipamentoId, ehUC, recarregarHistorico]);
 
   React.useEffect(() => {
     recarregar();
@@ -202,6 +300,11 @@ export function PlanoDoEquipamentoProvider({ children }: { children: React.React
     templates,
     previa,
     instrucoesOptions,
+    registrarInstrucaoCriada,
+    historico,
+    situacaoPorTarefa,
+    carregandoHistorico,
+    erroHistorico,
     carregando,
     salvando,
     refreshTarefas,
