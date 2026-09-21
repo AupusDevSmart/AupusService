@@ -11,7 +11,6 @@ import {
   Settings,
   CheckCircle,
   AlertTriangle,
-  User,
   FileText,
   Wrench,
   Package
@@ -118,13 +117,30 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
             console.log('✅ [PlanosViewer] Planos carregados:', planosCarregados.length);
             setPlanos(planosCarregados);
 
-            // Extrair tarefas dos planos carregados
-            const todasTarefasDoPlano: TarefaDetalhada[] = [];
-            planosCarregados.forEach(plano => {
-              if (plano.tarefas && plano.tarefas.length > 0) {
-                todasTarefasDoPlano.push(...plano.tarefas as TarefaDetalhada[]);
-              }
-            });
+            // Extrair tarefas dos planos carregados.
+            //
+            // O plano devolve só SEIS campos de cada tarefa (id, tag, nome,
+            // ordem, criticidade, instrucao_id) — não a tarefa inteira. Antes
+            // isso era empurrado aqui com um `as TarefaDetalhada[]`, e o painel
+            // de detalhes desta tela ficava vazio: periodicidade, descrição,
+            // condição e etapas vêm da instrução, que o plano não traz.
+            // Buscar cada tarefa dá a mesma forma da estratégia 1.
+            const idsDasTarefas = planosCarregados.flatMap(plano =>
+              (plano.tarefas || []).map(t => t.id?.trim()).filter(Boolean) as string[],
+            );
+
+            const todasTarefasDoPlano = (
+              await Promise.all(
+                idsDasTarefas.map(async id => {
+                  try {
+                    return await tarefasApi.findOne(id);
+                  } catch (error) {
+                    console.warn('⚠️ [PlanosViewer] Tarefa do plano não encontrada:', id, error);
+                    return null;
+                  }
+                }),
+              )
+            ).filter(Boolean) as TarefaDetalhada[];
 
             console.log('✅ [PlanosViewer] Tarefas extraídas dos planos:', todasTarefasDoPlano.length);
             setTarefas(todasTarefasDoPlano);
@@ -385,13 +401,11 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                             <CollapsibleContent>
                               <div className="px-3 pb-3 space-y-3">
                                 {/* Descrição da Tarefa */}
+                                {/* `tarefa.observacoes` saiu daqui: a coluna foi
+                                    droppada no PR6 e o bloco nunca renderizava
+                                    — o campo chegava sempre `undefined`. */}
                                 <div className="bg-muted/50 dark:bg-muted/30 rounded p-3">
                                   <p className="text-sm text-foreground">{tarefa.instrucao?.descricao}</p>
-                                  {tarefa.observacoes && (
-                                    <p className="text-xs text-muted-foreground mt-2 italic">
-                                      Observações: {tarefa.observacoes}
-                                    </p>
-                                  )}
                                 </div>
 
                                 {/* Detalhes técnicos */}
@@ -404,15 +418,9 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                                     <span className="font-medium text-foreground">Condição:</span>
                                     <span className="ml-2">{tarefa.instrucao?.condicao_ativo ?? '-'}</span>
                                   </div>
-                                  {tarefa.responsavel && (
-                                    <div className="col-span-2">
-                                      <span className="font-medium text-foreground">Responsável:</span>
-                                      <span className="ml-2 flex items-center gap-1">
-                                        <User className="h-3 w-3" />
-                                        {tarefa.responsavel}
-                                      </span>
-                                    </div>
-                                  )}
+                                  {/* "Responsável" saiu: a coluna foi droppada
+                                      no PR6 e o bloco nunca renderizava. Quem
+                                      executa fica na OS, não na tarefa. */}
                                 </div>
 
                                 {/* Etapas da instrucao vinculada. A tarefa nao

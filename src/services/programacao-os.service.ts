@@ -131,13 +131,15 @@ export interface TarefaProgramacaoResponse {
   observacoes?: string;
   created_at: string;
   updated_at: string;
+  /**
+   * Ponte para a tarefa viva. Só id e nome: `categoria`, `tipo_manutencao`,
+   * `tempo_estimado` e `duracao_estimada` foram droppadas da tabela no PR6 —
+   * as duas primeiras chegavam `undefined` e as duas últimas `null` (vinham
+   * como NaN do backend). O conteúdo é da instrução.
+   */
   tarefa: {
     id: string;
     nome: string;
-    categoria: string;
-    tipo_manutencao: string;
-    tempo_estimado: number;
-    duracao_estimada: number;
   };
 }
 

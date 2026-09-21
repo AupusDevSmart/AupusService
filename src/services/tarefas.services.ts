@@ -135,6 +135,17 @@ export interface AnexoTarefaDetalhesDto extends AnexoTarefaApiResponse {
 
 export type OrigemTarefa = 'HERDADA' | 'CUSTOMIZADA' | 'REMOVIDA' | 'PROPRIA';
 
+/**
+ * A tarefa tem quatro campos de definição — nome, instrução, periodicidade e
+ * criticidade — mais o estado de sistema.
+ *
+ * `descricao`, `categoria`, `tipo_manutencao`, `condicao_ativo`,
+ * `duracao_estimada`, `tempo_estimado`, `planejador`, `responsavel`,
+ * `observacoes` e `status` foram droppados no PR6 e **não são mais declarados
+ * aqui**: como opcionais, faziam o front compilar lendo campo que o backend não
+ * manda, e a tela mostrava vazio sem ninguém perceber. O conteúdo vive em
+ * `instrucao`.
+ */
 export interface TarefaApiResponse {
   id: string;
   plano_manutencao_id: string;
@@ -144,29 +155,27 @@ export interface TarefaApiResponse {
   tarefa_origem_id?: string;
   tag: string;                        // TAG única da tarefa
   nome: string;
-  descricao: string;
-  categoria: CategoriaTarefa;
-  tipo_manutencao: TipoManutencao;
   frequencia: FrequenciaTarefa;
   frequencia_personalizada?: number;
-  condicao_ativo: CondicaoAtivo;
   criticidade: number;
-  duracao_estimada: number;
-  tempo_estimado: number;
   ordem: number;
   planta_id?: string;
   equipamento_id?: string;
-  planejador?: string;
-  responsavel?: string;
-  observacoes?: string;
-  status: StatusTarefa;
   ativo: boolean;
   created_at: Date;
   updated_at: Date;
   criado_por?: string;
   atualizado_por?: string;
-  data_ultima_execucao?: Date;        // Data da última execução
+  /**
+   * Cache da última execução, gravado quando a OS é finalizada. Serve para
+   * ordenar e para o agendador; para MOSTRAR "quando foi feita" prefira a
+   * situação vinda de `/equipamentos/:id/historico-os`, que lê as OS
+   * finalizadas e não depende deste campo ter sido atualizado.
+   */
+  data_ultima_execucao?: Date;
   numero_execucoes: number;           // Número de execuções
+  /** Base do ciclo: a próxima execução sai do maior entre ela e a última. */
+  data_ancora?: Date;
   
   // Relacionamentos
   /**

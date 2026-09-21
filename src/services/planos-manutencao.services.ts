@@ -100,17 +100,24 @@ export interface UsuarioResumoDto {
   email?: string;
 }
 
+/**
+ * O que o plano devolve de cada tarefa quando pedido com `incluir_tarefas`.
+ *
+ * São SEIS campos, não a tarefa inteira — é o que
+ * `PlanosManutencaoService.mapearParaResponse` monta. Este tipo declarava
+ * `categoria`, `tipo_manutencao`, `status` e `tempo_estimado`, que o backend
+ * não manda (colunas droppadas no PR6), e omitia `instrucao_id`, que manda.
+ *
+ * Para o conteúdo da tarefa, busque-a por `GET /tarefas/:id`, que traz a
+ * instrução aninhada.
+ */
 export interface TarefaResumoDto {
   id: string;
   tag: string;
   nome: string;
-  categoria: string;
-  tipo_manutencao: string;
-  status: string;
-  ativo: boolean;
   ordem: number;
   criticidade: number;
-  tempo_estimado: number;
+  instrucao_id?: string;
 }
 
 export interface PlanoManutencaoApiResponse {
