@@ -1,5 +1,6 @@
 // src/features/anomalias/components/AnomaliasPage.tsx - REFATORADA
 import { useState, useEffect, useMemo } from 'react';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/core';
@@ -19,7 +20,7 @@ import { AnomaliasStats } from '@/services/anomalias.service';
 const initialFilters = {
   search: '',
   page: 1,
-  limit: 10,
+  limit: LINHAS_POR_PAGINA_PADRAO,
 };
 
 const initialStats: AnomaliasStats = {
@@ -32,7 +33,11 @@ const initialStats: AnomaliasStats = {
 
 export function AnomaliasPage() {
   // Estados
-  const [filters, setFilters] = useState(initialFilters);
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('anomalias');
+  const [filters, setFilters] = useState(() => ({
+    ...initialFilters,
+    limit: linhasPorPagina,
+  }));
   const [stats, setStats] = useState<AnomaliasStats>(initialStats);
 
   // Hook de API
@@ -208,6 +213,13 @@ export function AnomaliasPage() {
     setFilters((prev) => ({ ...prev, ...cleanedFilters, page: 1 }));
   };
 
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = (limit: number) => {
+    setLinhasPorPagina(limit);
+    setFilters((prev) => ({ ...prev, limit, page: 1 }));
+  };
+
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
   };
@@ -327,12 +339,13 @@ export function AnomaliasPage() {
               columns={anomaliasTableColumns}
               pagination={{
                 page: currentPage,
-                limit: filters.limit || 10,
+                limit: filters.limit || LINHAS_POR_PAGINA_PADRAO,
                 total,
                 totalPages,
               }}
               loading={loading}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               onView={anomaliasActions.handleView}
               onEdit={anomaliasActions.handleEdit}
               emptyMessage="Nenhuma anomalia encontrada."

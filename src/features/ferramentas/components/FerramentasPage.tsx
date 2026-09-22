@@ -43,9 +43,18 @@ interface FerramentaFormShape {
   foto?: string;
 }
 
+/**
+ * Sem API ainda (TODO: integrar com API de ferramentas).
+ *
+ * Constante FORA do componente de proposito. Um `[]` literal dentro dele era um
+ * array novo a cada render; o efeito das estatisticas depende dele e chama
+ * setStats com objeto novo, que renderiza de novo — loop infinito ("Maximum
+ * update depth exceeded") que derrubava a tela inteira no ErrorBoundary.
+ */
+const FERRAMENTAS_SEM_API: Ferramenta[] = [];
+
 export function FerramentasPage() {
-  // TODO: Integrar com API de ferramentas
-  const ferramentasData: Ferramenta[] = [];
+  const ferramentasData = FERRAMENTAS_SEM_API;
 
   const {
     paginatedData: ferramentas,
@@ -54,10 +63,12 @@ export function FerramentasPage() {
     loading,
     setLoading,
     handleFilterChange,
-    handlePageChange
+    handlePageChange,
+    handleLimitChange
   } = useGenericTable({
     data: ferramentasData,
     initialFilters,
+    tabela: 'ferramentas',
     searchFields: ['nome', 'codigoPatrimonial', 'fabricante', 'modelo', 'numeroSerie', 'responsavel']
   });
 
@@ -378,6 +389,7 @@ export function FerramentasPage() {
               pagination={pagination}
               loading={loading}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               onView={handleView}
               onEdit={handleEdit}
               customActions={customActions}

@@ -1,5 +1,6 @@
 // src/features/reservas/components/ReservasPage.tsx
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable, CustomAction } from '@/core';
@@ -29,7 +30,7 @@ const initialFilters: LocalReservasFilters = {
   dataFimFrom: '',
   dataFimTo: '',
   page: 1,
-  limit: 10
+  limit: LINHAS_POR_PAGINA_PADRAO
 };
 
 export function ReservasPage() {
@@ -37,7 +38,11 @@ export function ReservasPage() {
   const initialLoadRef = useRef(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [filters, setFilters] = useState<LocalReservasFilters>(initialFilters);
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('reservas');
+  const [filters, setFilters] = useState<LocalReservasFilters>(() => ({
+    ...initialFilters,
+    limit: linhasPorPagina,
+  }));
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [reservaParaCancelar, setReservaParaCancelar] = useState<ReservaResponse | null>(null);
   const [motivoCancelamento, setMotivoCancelamento] = useState('');
@@ -113,7 +118,9 @@ export function ReservasPage() {
   useEffect(() => {
     if (!initialLoadRef.current) {
       initialLoadRef.current = true;
-      fetchReservasWithFilters(initialFilters);
+      // O estado inicial, e nao initialFilters: e ele que carrega o numero de
+      // linhas que o usuario escolheu.
+      fetchReservasWithFilters(filters);
     }
   }, []);
 
@@ -132,6 +139,13 @@ export function ReservasPage() {
 
     return () => clearTimeout(timeoutId);
   }, [filters, fetchReservasWithFilters]);
+
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = (limit: number) => {
+    setLinhasPorPagina(limit);
+    handleFilterChange({ limit, page: 1 });
+  };
 
   const handlePageChange = useCallback((newPage: number) => {
     const updatedFilters = { ...filters, page: newPage };
@@ -270,9 +284,9 @@ export function ReservasPage() {
 
   const pagination = {
     page: filters.page || 1,
-    limit: filters.limit || 10,
+    limit: filters.limit || LINHAS_POR_PAGINA_PADRAO,
     total: totalReservas,
-    totalPages: Math.ceil(totalReservas / (filters.limit || 10))
+    totalPages: Math.ceil(totalReservas / (filters.limit || LINHAS_POR_PAGINA_PADRAO))
   };
 
   const customActions: CustomAction<ReservaResponse>[] = useMemo(() => [
@@ -376,6 +390,7 @@ export function ReservasPage() {
               pagination={pagination}
               loading={loading}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               onView={(r) => openModal('view', r)}
               onEdit={(r) => r.status === 'ativa' ? openModal('edit', r) : null}
               customActions={customActions}

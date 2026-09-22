@@ -1,5 +1,6 @@
 // src/features/agenda/components/ConfiguracoesDiasUteisPage.tsx
 import { useEffect, useState, useMemo } from 'react';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/core';
@@ -31,7 +32,7 @@ const initialFilters: ConfiguracoesDiasUteisFilters = {
   sabado: 'all',
   domingo: 'all',
   page: 1,
-  limit: 10
+  limit: LINHAS_POR_PAGINA_PADRAO
 };
 
 export function ConfiguracoesDiasUteisPage() {
@@ -40,7 +41,11 @@ export function ConfiguracoesDiasUteisPage() {
   const [configuracoes, setConfiguracoes] = useState<ConfiguracaoDiasUteisResponse[]>([]);
   const [totalConfiguracoes, setTotalConfiguracoes] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<ConfiguracoesDiasUteisFilters>(initialFilters);
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('agenda-dias-uteis');
+  const [filters, setFilters] = useState<ConfiguracoesDiasUteisFilters>(() => ({
+    ...initialFilters,
+    limit: linhasPorPagina,
+  }));
 
   // Hook para plantas
   const { plantas, loading: loadingPlantas, error: plantasError } = usePlantas();
@@ -105,7 +110,9 @@ export function ConfiguracoesDiasUteisPage() {
 
   // Efeito inicial
   useEffect(() => {
-    fetchConfiguracoes(initialFilters);
+    // O estado inicial, e nao initialFilters: e ele que carrega o numero de
+    // linhas que o usuario escolheu.
+    fetchConfiguracoes(filters);
   }, []);
 
   // Handler: Mudança de filtros
@@ -121,6 +128,13 @@ export function ConfiguracoesDiasUteisPage() {
   };
 
   // Handler: Mudança de página
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = (limit: number) => {
+    setLinhasPorPagina(limit);
+    handleFilterChange({ limit, page: 1 });
+  };
+
   const handlePageChange = (newPage: number) => {
     handleFilterChange({ page: newPage });
   };
@@ -261,9 +275,9 @@ export function ConfiguracoesDiasUteisPage() {
   // Calcular paginação
   const pagination = {
     page: filters.page || 1,
-    limit: filters.limit || 10,
+    limit: filters.limit || LINHAS_POR_PAGINA_PADRAO,
     total: totalConfiguracoes,
-    totalPages: Math.ceil(totalConfiguracoes / (filters.limit || 10))
+    totalPages: Math.ceil(totalConfiguracoes / (filters.limit || LINHAS_POR_PAGINA_PADRAO))
   };
 
   return (
@@ -332,6 +346,7 @@ export function ConfiguracoesDiasUteisPage() {
               pagination={pagination}
               loading={loading}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               onView={handleView}
               onEdit={handleEdit}
               emptyMessage="Nenhuma configuração encontrada"

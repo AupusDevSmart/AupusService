@@ -1,12 +1,19 @@
 // src/hooks/useGenericTable.ts
 import { useState, useMemo, useCallback } from 'react';
 import { BaseEntity, BaseFilters, Pagination } from '@/types/base';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 
 interface UseGenericTableProps<T extends BaseEntity, F extends BaseFilters> {
   data: T[];
   initialFilters: F;
   searchFields?: (keyof T)[];
   customFilters?: Record<string, (item: T, value: any) => boolean>;
+  /**
+   * Chave da preferencia "linhas por pagina" desta tabela. Com ela, o tamanho
+   * inicial vem do que o usuario escolheu da ultima vez e `handleLimitChange`
+   * passa a lembrar a escolha. Sem ela, vale o `limit` de `initialFilters`.
+   */
+  tabela?: string;
 }
 
 interface UseGenericTableReturn<T, F> {
@@ -18,6 +25,8 @@ interface UseGenericTableReturn<T, F> {
   setLoading: (loading: boolean) => void;
   handleFilterChange: (newFilters: Partial<F>) => void;
   handlePageChange: (page: number) => void;
+  /** Troca o tamanho da pagina e volta para a primeira. */
+  handleLimitChange: (limit: number) => void;
   resetFilters: () => void;
 }
 
@@ -25,10 +34,23 @@ export function useGenericTable<T extends BaseEntity, F extends BaseFilters>({
   data,
   initialFilters,
   searchFields = [],
-  customFilters = {}
+  customFilters = {},
+  tabela
 }: UseGenericTableProps<T, F>): UseGenericTableReturn<T, F> {
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState<F>(initialFilters);
+
+  // Chamado sempre, com ou sem chave: hook nao pode ser condicional. Sem
+  // `tabela` o valor lido e simplesmente ignorado.
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina(tabela ?? '');
+
+  // Os filtros "de fabrica" desta tabela ja com o tamanho escolhido — e deles
+  // que o estado nasce e para eles que o reset volta.
+  const filtrosIniciais = useMemo<F>(
+    () => (tabela ? { ...initialFilters, limit: linhasPorPagina } : initialFilters),
+    [initialFilters, tabela, linhasPorPagina],
+  );
+
+  const [filters, setFilters] = useState<F>(filtrosIniciais);
 
   // Filtrar dados
   const filteredData = useMemo(() => {
@@ -63,7 +85,7 @@ export function useGenericTable<T extends BaseEntity, F extends BaseFilters>({
   // Paginar dados
   const paginatedData = useMemo(() => {
     const page = filters.page ?? 1;
-    const limit = filters.limit ?? 10;
+    const limit = filters.limit ?? LINHAS_POR_PAGINA_PADRAO;
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
     return filteredData.slice(startIndex, endIndex);
@@ -71,7 +93,7 @@ export function useGenericTable<T extends BaseEntity, F extends BaseFilters>({
 
   const pagination = useMemo<Pagination>(() => {
     const page = filters.page ?? 1;
-    const limit = filters.limit ?? 10;
+    const limit = filters.limit ?? LINHAS_POR_PAGINA_PADRAO;
     return {
       page,
       limit,
@@ -93,9 +115,17 @@ export function useGenericTable<T extends BaseEntity, F extends BaseFilters>({
     setFilters(prev => ({ ...prev, page }));
   }, []);
 
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = useCallback((limit: number) => {
+    if (tabela) setLinhasPorPagina(limit);
+    setFilters(prev => ({ ...prev, limit, page: 1 }));
+  }, [tabela, setLinhasPorPagina]);
+
+  // Limpar os filtros nao esquece quantas linhas o usuario quer ver.
   const resetFilters = useCallback(() => {
-    setFilters(initialFilters);
-  }, [initialFilters]);
+    setFilters(filtrosIniciais);
+  }, [filtrosIniciais]);
 
   return {
     filteredData,
@@ -106,6 +136,7 @@ export function useGenericTable<T extends BaseEntity, F extends BaseFilters>({
     setLoading,
     handleFilterChange,
     handlePageChange,
+    handleLimitChange,
     resetFilters
   };
 }

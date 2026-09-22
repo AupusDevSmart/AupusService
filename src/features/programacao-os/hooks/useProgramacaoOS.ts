@@ -66,7 +66,9 @@ export const useProgramacaoOS = () => {
         data: [],
         pagination: {
           page: 1,
-          limit: 10,
+          // O que foi pedido, e nao um 10 fixo: senao o seletor de linhas
+          // por pagina pulava para 10 sozinho quando a busca falhava.
+          limit: filters?.limit ?? 10,
           total: 0,
           totalPages: 0
         },

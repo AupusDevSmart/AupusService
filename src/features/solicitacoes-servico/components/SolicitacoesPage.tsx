@@ -1,5 +1,6 @@
 // src/features/solicitacoes-servico/components/SolicitacoesPage.tsx
 import { useState, useEffect, useMemo } from 'react';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/core';
@@ -43,7 +44,7 @@ import { SolicitacoesStats } from '@/services/solicitacoes-servico.service';
 const initialFilters = {
   search: '',
   page: 1,
-  limit: 10,
+  limit: LINHAS_POR_PAGINA_PADRAO,
 };
 
 const initialStats: SolicitacoesStats = {
@@ -56,7 +57,11 @@ const initialStats: SolicitacoesStats = {
 };
 
 export function SolicitacoesPage() {
-  const [filters, setFilters] = useState(initialFilters);
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('solicitacoes-servico');
+  const [filters, setFilters] = useState(() => ({
+    ...initialFilters,
+    limit: linhasPorPagina,
+  }));
   const [stats, setStats] = useState<SolicitacoesStats>(initialStats);
 
   const {
@@ -278,12 +283,21 @@ export function SolicitacoesPage() {
     });
   };
 
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = (limit: number) => {
+    setLinhasPorPagina(limit);
+    setFilters((prev) => ({ ...prev, limit, page: 1 }));
+  };
+
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
   };
 
+  // Limpar filtros nao e esquecer quantas linhas o usuario quer ver: sem o
+  // limit aqui, o botao voltava a tabela para o padrao em silencio.
   const handleClearFilters = () => {
-    setFilters(initialFilters);
+    setFilters({ ...initialFilters, limit: linhasPorPagina });
   };
 
   // Título do modal muda se tem ação pendente
@@ -340,12 +354,13 @@ export function SolicitacoesPage() {
               columns={solicitacoesTableColumns}
               pagination={{
                 page: currentPage,
-                limit: filters.limit || 10,
+                limit: filters.limit || LINHAS_POR_PAGINA_PADRAO,
                 total,
                 totalPages,
               }}
               loading={loading}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               onView={solicitacoesActions.handleView}
               onEdit={solicitacoesActions.handleEdit}
               emptyMessage="Nenhuma solicitação encontrada."

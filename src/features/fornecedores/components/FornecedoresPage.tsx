@@ -92,10 +92,12 @@ export function FornecedoresPage() {
     loading,
     setLoading,
     handleFilterChange,
-    handlePageChange
+    handlePageChange,
+    handleLimitChange
   } = useGenericTable({
     data: [], // TODO: Integrar com API de fornecedores
     initialFilters,
+    tabela: 'fornecedores',
     searchFields: ['email', 'telefone']
   });
 
@@ -177,6 +179,7 @@ export function FornecedoresPage() {
               pagination={pagination}
               loading={loading}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               onView={(f) => openModal('view', f)}
               onEdit={(f) => openModal('edit', f)}
               emptyMessage="Nenhum fornecedor encontrado."

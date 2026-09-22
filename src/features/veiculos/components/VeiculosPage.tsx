@@ -1,5 +1,6 @@
 // src/features/veiculos/components/VeiculosPage.tsx
 import { useState, useEffect, useCallback } from 'react';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/core';
@@ -23,12 +24,16 @@ const initialFilters: VeiculosFilters = {
   marca: '',
   disponivel: 'all',
   page: 1,
-  limit: 10
+  limit: LINHAS_POR_PAGINA_PADRAO
 };
 
 export function VeiculosPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [filters, setFilters] = useState<VeiculosFilters>(initialFilters);
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('veiculos');
+  const [filters, setFilters] = useState<VeiculosFilters>(() => ({
+    ...initialFilters,
+    limit: linhasPorPagina,
+  }));
 
   const {
     veiculos,
@@ -68,7 +73,9 @@ export function VeiculosPage() {
   }, [fetchVeiculos, clearError]);
 
   useEffect(() => {
-    fetchVeiculosWithFilters(initialFilters);
+    // O estado inicial, e nao initialFilters: e ele que carrega o numero de
+    // linhas que o usuario escolheu.
+    fetchVeiculosWithFilters(filters);
   }, []);
 
   // Handlers de filtros e paginação
@@ -77,6 +84,13 @@ export function VeiculosPage() {
     setFilters(updatedFilters);
     fetchVeiculosWithFilters(updatedFilters);
   }, [filters, fetchVeiculosWithFilters]);
+
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = (limit: number) => {
+    setLinhasPorPagina(limit);
+    handleFilterChange({ limit, page: 1 });
+  };
 
   const handlePageChange = useCallback((newPage: number) => {
     handleFilterChange({ page: newPage });
@@ -261,9 +275,9 @@ export function VeiculosPage() {
   // Paginação
   const pagination = {
     page: filters.page || 1,
-    limit: filters.limit || 10,
+    limit: filters.limit || LINHAS_POR_PAGINA_PADRAO,
     total: totalVeiculos,
-    totalPages: Math.ceil(totalVeiculos / (filters.limit || 10))
+    totalPages: Math.ceil(totalVeiculos / (filters.limit || LINHAS_POR_PAGINA_PADRAO))
   };
 
   return (
@@ -324,6 +338,7 @@ export function VeiculosPage() {
               pagination={pagination}
               loading={loading}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               onView={(v: any) => openModal('view', v)}
               onEdit={(v: any) => openModal('edit', v)}
               emptyMessage="Nenhum veículo encontrado"

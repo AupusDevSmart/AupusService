@@ -1,5 +1,6 @@
 // src/features/execucao-os/components/ExecucaoOSPage.tsx
 import { useState, useEffect } from 'react';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -32,12 +33,16 @@ const initialFilters: ExecucaoOSFilters = {
   tipo: 'all',
   prioridade: 'all',
   page: 1,
-  limit: 10,
+  limit: LINHAS_POR_PAGINA_PADRAO,
 };
 
 export function ExecucaoOSPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [filters, setFilters] = useState<ExecucaoOSFilters>(initialFilters);
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('execucao-os');
+  const [filters, setFilters] = useState<ExecucaoOSFilters>(() => ({
+    ...initialFilters,
+    limit: linhasPorPagina,
+  }));
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
   // Hook de API
@@ -201,6 +206,13 @@ export function ExecucaoOSPage() {
     }));
   };
 
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = (limit: number) => {
+    setLinhasPorPagina(limit);
+    setFilters((prev) => ({ ...prev, limit, page: 1 }));
+  };
+
   const handlePageChange = (page: number) => {
     setFilters(prev => ({ ...prev, page }));
   };
@@ -313,11 +325,12 @@ export function ExecucaoOSPage() {
               loading={loading}
               pagination={{
                 page: currentPage,
-                limit: filters.limit || 10,
+                limit: filters.limit || LINHAS_POR_PAGINA_PADRAO,
                 total,
                 totalPages,
               }}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               onView={handleView}
               onEdit={handleEdit}
               emptyMessage="Nenhuma execução de OS encontrada."

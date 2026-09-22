@@ -14,13 +14,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Plus, Package } from 'lucide-react';
 import { useUserStore } from '@/store/useUserStore';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import type { QueryRecursosParams, RecursoApiResponse } from '@/services/recursos.services';
 import { recursosTableColumns } from '../config/table-config';
 import { recursosFilterConfig } from '../config/filter-config';
 import { useRecursos } from '../hooks/useRecursos';
 import { RecursoModal } from './RecursoModal';
 
-const FILTROS_INICIAIS: QueryRecursosParams = { search: '', page: 1, limit: 10 };
+const FILTROS_INICIAIS: QueryRecursosParams = { search: '', page: 1, limit: LINHAS_POR_PAGINA_PADRAO };
 
 /**
  * Catálogo de recursos: o que se usa para executar uma instrução, com o custo
@@ -29,7 +30,11 @@ const FILTROS_INICIAIS: QueryRecursosParams = { search: '', page: 1, limit: 10 }
 export function RecursosPage() {
   const { isAdmin } = useUserStore();
 
-  const [filtrosBrutos, setFiltrosBrutos] = useState<Record<string, any>>(FILTROS_INICIAIS);
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('recursos');
+  const [filtrosBrutos, setFiltrosBrutos] = useState<Record<string, any>>(() => ({
+    ...FILTROS_INICIAIS,
+    limit: linhasPorPagina,
+  }));
 
   // "all" é como o BaseFilters representa "sem filtro"; mandar isso para a API
   // viraria uma categoria inexistente e a lista voltaria vazia.
@@ -39,7 +44,7 @@ export function RecursosPage() {
       ...(categoria && categoria !== 'all' ? { categoria } : {}),
       ...(search ? { search } : {}),
       page: page || 1,
-      limit: limit || 10,
+      limit: limit || LINHAS_POR_PAGINA_PADRAO,
     };
   }, [filtrosBrutos]);
 
@@ -55,6 +60,13 @@ export function RecursosPage() {
 
   const mudarFiltro = (novos: Record<string, any>) => {
     setFiltrosBrutos((atuais) => ({ ...atuais, ...novos, page: 1 }));
+  };
+
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const mudarLinhas = (limit: number) => {
+    setLinhasPorPagina(limit);
+    setFiltrosBrutos((atuais) => ({ ...atuais, limit, page: 1 }));
   };
 
   const mudarPagina = (page: number) => {
@@ -98,6 +110,7 @@ export function RecursosPage() {
               pagination={paginacao}
               loading={carregando}
               onPageChange={mudarPagina}
+              onLimitChange={mudarLinhas}
               onEdit={
                 isAdmin()
                   ? (recurso) => setModal({ aberto: true, modo: 'edit', recurso })

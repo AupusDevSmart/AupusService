@@ -1,5 +1,6 @@
 // src/features/equipamentos/components/EquipamentosPage.tsx - CORRIGIDO
 import { useState, useEffect, useCallback } from 'react';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Layout } from '@/core/components/common/Layout';
@@ -37,7 +38,7 @@ const initialFilters: EquipamentosFilters = {
   classificacao: 'all',
   criticidade: 'all',
   page: 1,
-  limit: 10
+  limit: LINHAS_POR_PAGINA_PADRAO
 };
 
 /**
@@ -136,9 +137,11 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
   });
 
   // Estados locais
-  const [filters, setFilters] = useState<EquipamentosFilters>(() =>
-    filtrosDaUrl(window.location.search),
-  );
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('equipamentos');
+  const [filters, setFilters] = useState<EquipamentosFilters>(() => ({
+    ...filtrosDaUrl(window.location.search),
+    limit: linhasPorPagina,
+  }));
   const [plantaInfo, setPlantaInfo] = useState<{
     id: string;
     nome: string;
@@ -321,6 +324,13 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
 
   const handlePageChange = (page: number) => {
     setFilters(prev => ({ ...prev, page }));
+  };
+
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = (limit: number) => {
+    setLinhasPorPagina(limit);
+    setFilters(prev => ({ ...prev, limit, page: 1 }));
   };
 
   // ============================================================================
@@ -544,9 +554,10 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
     navigate('/plantas');
   };
 
+  // Tirar o filtro de planta nao e esquecer quantas linhas o usuario quer ver.
   const handleClearPlantaFilter = () => {
     navigate('/equipamentos');
-    setFilters(initialFilters);
+    setFilters({ ...initialFilters, limit: linhasPorPagina });
   };
 
   // ============================================================================
@@ -557,7 +568,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
   // Preparar dados de paginação
   const pagination = {
     page: currentPage,
-    limit: filters.limit || 10,
+    limit: filters.limit || LINHAS_POR_PAGINA_PADRAO,
     total,
     totalPages,
     hasNextPage: currentPage < totalPages,
@@ -691,6 +702,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
               pagination={pagination}
               loading={loading}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               onView={handleView}
               onEdit={isAdmin() ? handleEdit : undefined}
               onDelete={isAdmin() ? handleDelete : undefined}

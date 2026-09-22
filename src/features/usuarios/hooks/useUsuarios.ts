@@ -1,5 +1,6 @@
 // src/features/usuarios/hooks/useUsuarios.ts - COMPATÍVEL COM DTO
 import { useState, useEffect, useCallback } from 'react';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { api } from '@/config/api';
 import { 
   Usuario, 
@@ -47,7 +48,7 @@ class UsuariosApiService {
 
     const data = response.data;
     const usuariosArray = data?.data?.data || data?.data || [];
-    const paginationData = data?.data?.pagination || data?.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 };
+    const paginationData = data?.data?.pagination || data?.pagination || { page: 1, limit: filters.limit ?? LINHAS_POR_PAGINA_PADRAO, total: 0, totalPages: 0 };
 
     // Mapear usuários (sem buscar dados completos para evitar sobrecarga)
     const mappedData = {
@@ -288,7 +289,7 @@ const initialFilters: UsuariosFilters = {
   status: 'all',
   role: 'all',
   page: 1,
-  limit: 10,
+  limit: LINHAS_POR_PAGINA_PADRAO,
   includeInactive: false,
 };
 
@@ -297,10 +298,14 @@ export function useUsuarios() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<UsuariosFilters>(initialFilters);
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('usuarios');
+  const [filters, setFilters] = useState<UsuariosFilters>(() => ({
+    ...initialFilters,
+    limit: linhasPorPagina,
+  }));
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: linhasPorPagina,
     total: 0,
     totalPages: 0,
   });
@@ -340,6 +345,13 @@ export function useUsuarios() {
   const handlePageChange = useCallback((page: number) => {
     setFilters(prev => ({ ...prev, page }));
   }, []);
+
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = useCallback((limit: number) => {
+    setLinhasPorPagina(limit);
+    setFilters(prev => ({ ...prev, limit, page: 1 }));
+  }, [setLinhasPorPagina]);
 
   // ✅ FUNÇÃO PARA REFETCH
   const refetch = useCallback(() => {
@@ -551,6 +563,7 @@ export function useUsuarios() {
     // ✅ HANDLERS
     handleFilterChange,
     handlePageChange,
+    handleLimitChange,
     refetch,
 
     // ✅ CRUD OPERATIONS

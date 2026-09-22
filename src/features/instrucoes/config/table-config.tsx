@@ -63,8 +63,14 @@ export const instrucoesTableColumns: TableColumn<InstrucaoApiResponse>[] = [
     // So o nome: a tag e um identificador interno e ocupava a linha de cima
     // da celula, deixando a coluna com duas alturas para um dado que ninguem
     // le. Quem precisa dela continua achando pela busca.
+    //
+    // O nome aparece INTEIRO: quebra linha em vez de cortar. Ele e o que
+    // identifica a instrucao, e "Inspecao termografica do qua..." e
+    // "Inspecao termografica do inve..." eram indistinguiveis. O corte antigo
+    // (max-w-52, 208px) deixava metade da coluna vazia no desktop. O min-w
+    // impede que a descricao espreme o nome numa coluna estreita.
     render: (instrucao) => (
-      <div className="text-sm font-medium truncate max-w-52" title={instrucao.nome}>
+      <div className="text-sm font-medium min-w-[14rem] max-w-md break-words">
         {instrucao.nome}
       </div>
     )
@@ -72,8 +78,13 @@ export const instrucoesTableColumns: TableColumn<InstrucaoApiResponse>[] = [
   {
     key: 'descricao',
     label: 'Descrição',
+    // A descricao continua cortada — e secundaria, e o texto inteiro esta no
+    // sheet —, mas passa a usar a largura que o desktop tem.
     render: (instrucao) => (
-      <div className="text-sm text-muted-foreground truncate max-w-64" title={instrucao.descricao}>
+      <div
+        className="text-sm text-muted-foreground truncate max-w-64 xl:max-w-md"
+        title={instrucao.descricao}
+      >
         {instrucao.descricao}
       </div>
     )

@@ -1,5 +1,6 @@
 // src/features/programacao-os/components/ProgramacaoOSPage.tsx - ATUALIZADA COM CARDS
 import { useState, useEffect, useMemo } from 'react';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -64,7 +65,7 @@ const formatToDateTimeLocal = (dateValue: any): string => {
 
 const initialFilters: ProgramacaoFiltersDto = {
   page: 1,
-  limit: 10,
+  limit: LINHAS_POR_PAGINA_PADRAO,
   search: '',
   status: 'all',
   tipo: 'all',
@@ -80,10 +81,14 @@ export function ProgramacaoOSPage() {
   // Estados principais
   const [searchParams, setSearchParams] = useSearchParams();
   const [programacoes, setProgramacoes] = useState<ProgramacaoResponse[]>([]);
-  const [filters, setFilters] = useState<ProgramacaoFiltersDto>(initialFilters);
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('programacao-os');
+  const [filters, setFilters] = useState<ProgramacaoFiltersDto>(() => ({
+    ...initialFilters,
+    limit: linhasPorPagina,
+  }));
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: linhasPorPagina,
     total: 0,
     totalPages: 0
   });
@@ -127,7 +132,7 @@ export function ProgramacaoOSPage() {
       setProgramacoes(response.data || []);
       setPagination(response.pagination || {
         page: 1,
-        limit: 10,
+        limit: filters.limit ?? LINHAS_POR_PAGINA_PADRAO,
         total: 0,
         totalPages: 0
       });
@@ -143,7 +148,7 @@ export function ProgramacaoOSPage() {
       setProgramacoes([]);
       setPagination({
         page: 1,
-        limit: 10,
+        limit: filters.limit ?? LINHAS_POR_PAGINA_PADRAO,
         total: 0,
         totalPages: 0
       });
@@ -204,6 +209,13 @@ export function ProgramacaoOSPage() {
       ...filters,
       page: 1 // Reset para primeira página
     }));
+  };
+
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = (limit: number) => {
+    setLinhasPorPagina(limit);
+    setFilters((prev) => ({ ...prev, limit, page: 1 }));
   };
 
   const handlePageChange = (page: number) => {
@@ -767,6 +779,7 @@ export function ProgramacaoOSPage() {
               pagination={pagination}
               loading={loading}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               customActions={tableActions.map((action: any) => ({
                 key: action.label.toLowerCase().replace(/\s+/g, ''),
                 label: action.label,

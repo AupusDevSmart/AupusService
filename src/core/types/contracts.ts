@@ -313,6 +313,8 @@ export interface UseUsuariosContract {
   };
   handleFilterChange: (filters: any) => void;
   handlePageChange: (page: number) => void;
+  /** Opcional: liga o seletor de linhas por pagina da tabela de usuarios. */
+  handleLimitChange?: (limit: number) => void;
   refetch: () => void;
   createUsuario: (data: any) => Promise<any>;
   updateUsuario: (id: string, data: any) => Promise<any>;

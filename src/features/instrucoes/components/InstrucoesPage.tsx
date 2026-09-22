@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { formatApiError } from '@/utils/api-error';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { useUserStore } from '@/store/useUserStore';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { InstrucaoApiResponse, QueryInstrucoesApiParams, DashboardInstrucoesDto } from '@/services/instrucoes.services';
 import { instrucoesTableColumns } from '../config/table-config';
 import { useInstrucoesApi } from '../hooks/useInstrucoesApi';
@@ -20,10 +21,9 @@ import { InstrucoesModal } from './InstrucoesModal';
 const initialFilters: QueryInstrucoesApiParams = {
   search: '',
   page: 1,
-  // 50 por pagina: a lista de instrucoes e consultada para achar uma
-  // conhecida, e paginar de 10 em 10 obrigava a percorrer paginas para isso.
-  // O teto do backend e 100 (@Max no query DTO).
-  limit: 50,
+  // O tamanho real vem da preferencia do usuario (useLinhasPorPagina); este e
+  // so o valor do tipo, antes de ela ser lida.
+  limit: LINHAS_POR_PAGINA_PADRAO,
   sort_by: 'created_at',
   sort_order: 'desc'
 };
@@ -67,7 +67,11 @@ const initialDashboard: DashboardInstrucoesDto = {
 export function InstrucoesPage() {
   const { user } = useUserStore();
 
-  const [filters, setFilters] = useState<QueryInstrucoesApiParams>(initialFilters);
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('instrucoes');
+  const [filters, setFilters] = useState<QueryInstrucoesApiParams>(() => ({
+    ...initialFilters,
+    limit: linhasPorPagina
+  }));
   const [dashboardData, setDashboardData] = useState<DashboardInstrucoesDto>(initialDashboard);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
@@ -219,6 +223,13 @@ export function InstrucoesPage() {
     setFilters(prev => ({ ...prev, page }));
   };
 
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = (limit: number) => {
+    setLinhasPorPagina(limit);
+    setFilters(prev => ({ ...prev, limit, page: 1 }));
+  };
+
   return (
     <Layout>
       <Layout.Main>
@@ -249,12 +260,13 @@ export function InstrucoesPage() {
               columns={instrucoesTableColumns}
               pagination={{
                 page: currentPage,
-                limit: filters.limit || 50,
+                limit: filters.limit || LINHAS_POR_PAGINA_PADRAO,
                 total,
                 totalPages
               }}
               loading={loading}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               onView={handleView}
               onEdit={handleEdit}
               emptyMessage="Nenhuma instrução encontrada."

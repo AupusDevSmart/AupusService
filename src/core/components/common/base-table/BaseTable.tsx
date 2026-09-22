@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Skeleton } from '@/core/components/ui/skeleton';
 import { BaseEntity, TableColumn, Pagination, TableAction } from '@/core/types/base';
+import { OPCOES_LINHAS_POR_PAGINA } from './linhas-por-pagina';
 
 export type CustomAction<T> = TableAction<T>;
 
@@ -54,6 +55,16 @@ interface BaseTableProps<T extends BaseEntity> {
   pagination: Pagination;
   loading?: boolean;
   onPageChange: (page: number) => void;
+  /**
+   * Liga o seletor "Linhas por página" no rodapé. Ausente, a paginação fica
+   * exatamente como era — sem seletor e só com mais de uma página.
+   *
+   * Quem recebe é responsável por voltar para a página 1: numa página 4 de
+   * 10 linhas, trocar para 100 deixaria a tela pedindo um trecho que não existe.
+   */
+  onLimitChange?: (limit: number) => void;
+  /** Opções do seletor. Padrão: 10, 25, 50 e 100. */
+  pageSizeOptions?: readonly number[];
   onView?: (entity: T) => void;
   onEdit?: (entity: T) => void;
   onDelete?: (entity: T) => void;
@@ -75,6 +86,8 @@ export function BaseTable<T extends BaseEntity>({
   pagination,
   loading = false,
   onPageChange,
+  onLimitChange,
+  pageSizeOptions = OPCOES_LINHAS_POR_PAGINA,
   onView,
   onEdit,
   onDelete,
@@ -107,6 +120,28 @@ export function BaseTable<T extends BaseEntity>({
 
   // Total de colunas renderizadas, usado no colSpan da linha expandida e do vazio.
   const totalColumns = columns.length + (isExpandableTable ? 1 : 0) + (hasActions ? 1 : 0);
+
+  /**
+   * As opções do seletor sempre incluem o tamanho atual.
+   *
+   * Uma tela que ainda pede 15 por página mostraria o `select` apontando para
+   * um valor que não está na lista — o navegador cai na primeira opção e a
+   * caixa diz 10 enquanto a tabela mostra 15.
+   */
+  const opcoesDeLinhas = React.useMemo(
+    () => [...new Set([...pageSizeOptions, pagination.limit])].sort((a, b) => a - b),
+    [pageSizeOptions, pagination.limit],
+  );
+
+  /**
+   * Com o seletor ligado, o rodapé não pode sumir só porque tudo coube numa
+   * página: quem escolheu 100 e ficou com 60 resultados precisa do seletor
+   * para voltar a 25. Só some quando nenhuma opção mudaria o que se vê — o
+   * total não passa da menor delas.
+   */
+  const mostrarRodape =
+    pagination.totalPages > 1 ||
+    (Boolean(onLimitChange) && pagination.total > Math.min(...pageSizeOptions));
 
   // NOVA: Função para executar ação customizada
   const handleCustomAction = (actionKey: string, entity: T) => {
@@ -487,16 +522,38 @@ export function BaseTable<T extends BaseEntity>({
       </div>
 
       {/* Paginação */}
-      {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t">
-          <div className="text-sm text-muted-foreground">
-            Mostrando <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> a{' '}
-            <span className="font-medium">
-              {Math.min(pagination.page * pagination.limit, pagination.total)}
-            </span>{' '}
-            de <span className="font-medium">{pagination.total}</span> resultados
+      {mostrarRodape && (
+        // flex-wrap: no celular o seletor, o "Mostrando" e os botões não
+        // cabem numa linha só, e sem quebra os botões saíam da tela.
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {onLimitChange && (
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                Linhas por página
+                <select
+                  value={pagination.limit}
+                  onChange={(event) => onLimitChange(Number(event.target.value))}
+                  className="h-8 rounded border border-input bg-background px-2 text-sm text-foreground"
+                >
+                  {opcoesDeLinhas.map((opcao) => (
+                    <option key={opcao} value={opcao}>
+                      {opcao}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            <div className="text-sm text-muted-foreground">
+              Mostrando <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> a{' '}
+              <span className="font-medium">
+                {Math.min(pagination.page * pagination.limit, pagination.total)}
+              </span>{' '}
+              de <span className="font-medium">{pagination.total}</span> resultados
+            </div>
           </div>
-          
+
+          {pagination.totalPages > 1 && (
           <div className="flex items-center space-x-2">
             <button
               className="btn-minimal-outline h-8 w-8 p-0 flex items-center justify-center overflow-visible"
@@ -548,6 +605,7 @@ export function BaseTable<T extends BaseEntity>({
               <ChevronRight className="h-4 w-4 shrink-0" />
             </button>
           </div>
+          )}
         </div>
       )}
     </div>

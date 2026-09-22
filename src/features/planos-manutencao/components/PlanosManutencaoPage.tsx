@@ -1,5 +1,6 @@
 // src/features/planos-manutencao/components/PlanosManutencaoPage.tsx - REFATORADA
 import { useState, useEffect, useCallback } from 'react';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/core';
@@ -42,14 +43,18 @@ interface PlanosFiltersApi {
 const initialFilters: PlanosFiltersApi = {
   search: '',
   page: 1,
-  limit: 10
+  limit: LINHAS_POR_PAGINA_PADRAO
 };
 
 export function PlanosManutencaoPage() {
   const { user } = useUserStore();
 
   // Estados locais
-  const [filters, setFilters] = useState<PlanosFiltersApi>(initialFilters);
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('planos-manutencao');
+  const [filters, setFilters] = useState<PlanosFiltersApi>(() => ({
+    ...initialFilters,
+    limit: linhasPorPagina,
+  }));
 
   // Opcoes de instrucao para o cadastro rapido da linha expandida
   const [instrucoesOptions, setInstrucoesOptions] = useState<OpcaoDeInstrucao[]>([]);
@@ -276,6 +281,13 @@ export function PlanosManutencaoPage() {
     setFilters((prev) => ({ ...prev, ...cleanedFilters, page: 1 }));
   };
 
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = (limit: number) => {
+    setLinhasPorPagina(limit);
+    setFilters((prev) => ({ ...prev, limit, page: 1 }));
+  };
+
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
   };
@@ -316,12 +328,13 @@ export function PlanosManutencaoPage() {
               columns={planosTableColumns}
               pagination={{
                 page: currentPage,
-                limit: filters.limit || 10,
+                limit: filters.limit || LINHAS_POR_PAGINA_PADRAO,
                 total,
                 totalPages
               }}
               loading={loading}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               emptyMessage="Nenhum plano de manutenção encontrado."
               emptyIcon={<Layers className="h-8 w-8 text-muted-foreground/50" />}
               customActions={customActions}

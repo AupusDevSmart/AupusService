@@ -13,7 +13,12 @@ const PAGINACAO_VAZIA = { page: 1, limit: 10, total: 0, totalPages: 1 };
 
 export function useRecursos(filtros: QueryRecursosParams) {
   const [recursos, setRecursos] = useState<RecursoApiResponse[]>([]);
-  const [paginacao, setPaginacao] = useState(PAGINACAO_VAZIA);
+  // Nasce com o tamanho pedido: com o 10 fixo, o seletor de linhas por
+  // pagina mostrava 10 ate a primeira resposta chegar.
+  const [paginacao, setPaginacao] = useState(() => ({
+    ...PAGINACAO_VAZIA,
+    limit: filtros.limit ?? PAGINACAO_VAZIA.limit,
+  }));
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
 
@@ -26,7 +31,7 @@ export function useRecursos(filtros: QueryRecursosParams) {
     } catch (erro) {
       toast.error('Erro ao carregar recursos', { description: formatApiError(erro) });
       setRecursos([]);
-      setPaginacao(PAGINACAO_VAZIA);
+      setPaginacao({ ...PAGINACAO_VAZIA, limit: filtros.limit ?? PAGINACAO_VAZIA.limit });
     } finally {
       setCarregando(false);
     }

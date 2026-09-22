@@ -24,6 +24,7 @@ export function UsuariosPage() {
     filters,
     handleFilterChange,
     handlePageChange,
+    handleLimitChange,
     refetch
   } = useUsuarios();
 
@@ -107,6 +108,7 @@ export function UsuariosPage() {
               loading={loading}
               pagination={pagination}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               onView={(usuario) => handleOpenModal('view', usuario)}
               onEdit={(usuario) => handleOpenModal('edit', usuario)}
               onPlantasClick={handleGerenciarPlantas}

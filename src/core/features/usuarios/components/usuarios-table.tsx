@@ -10,6 +10,8 @@ interface UsuariosTableProps {
   loading: boolean;
   pagination: Pagination;
   onPageChange: (page: number) => void;
+  /** Liga o seletor de linhas por pagina; ausente, a tabela fica como era. */
+  onLimitChange?: (limit: number) => void;
   onView: (usuario: Usuario) => void;
   onEdit: (usuario: Usuario) => void;
   onPlantasClick: (usuario: Usuario) => void; // ✅ Mantido para compatibilidade mas não usado na tabela
@@ -22,6 +24,7 @@ export function UsuariosTable({
   loading, 
   pagination, 
   onPageChange, 
+  onLimitChange,
   onView, 
   onEdit,
   onPlantasClick: _onPlantasClick, // ✅ Recebido mas não usado - só pelo modal
@@ -35,6 +38,7 @@ export function UsuariosTable({
       pagination={pagination}
       loading={loading}
       onPageChange={onPageChange}
+      onLimitChange={onLimitChange}
       onView={onView}
       onEdit={onEdit}
       customActions={customActions}

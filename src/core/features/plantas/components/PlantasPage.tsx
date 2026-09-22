@@ -1,5 +1,6 @@
 // src/features/plantas/components/PlantasPage.tsx - VERSÃO ATUALIZADA
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Layout } from '@/core/components/common/Layout';
 import { TitleCard } from '@/core/components/common/title-card';
@@ -25,7 +26,7 @@ const initialFilters: PlantasFilters = {
   search: '',
   proprietarioId: 'all',
   page: 1,
-  limit: 15
+  limit: LINHAS_POR_PAGINA_PADRAO
 };
 
 interface PlantasPageProps {
@@ -57,7 +58,11 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
   });
   const [totalPlantas, setTotalPlantas] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<PlantasFilters>(initialFilters);
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('plantas');
+  const [filters, setFilters] = useState<PlantasFilters>(() => ({
+    ...initialFilters,
+    limit: linhasPorPagina,
+  }));
 
   // Só para resolver o nome do proprietário quando a página é aberta com
   // ?proprietarioId= vindo da tela de usuários — não existe mais combobox.
@@ -207,18 +212,17 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
     const proprietarioId = urlParams.get('proprietarioId');
 
 
+    // A URL troca o proprietario, nao o tamanho da pagina: os dois ramos
+    // partem dos filtros iniciais COM as linhas que o usuario escolheu.
+    const base = { ...initialFilters, limit: linhasPorPagina };
+
     if (proprietarioId) {
-
-      const newFilters = {
-        ...initialFilters,
-        proprietarioId: proprietarioId,
-      };
-
+      const newFilters = { ...base, proprietarioId };
       setFilters(newFilters);
       fetchPlantas(newFilters);
     } else {
-      setFilters(initialFilters);
-      fetchPlantas(initialFilters);
+      setFilters(base);
+      fetchPlantas(base);
     }
   }, [location.search]);
 
@@ -236,6 +240,13 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
   };
 
   // ✅ HANDLER: Mudança de página
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = (limit: number) => {
+    setLinhasPorPagina(limit);
+    handleFilterChange({ limit, page: 1 });
+  };
+
   const handlePageChange = (newPage: number) => {
     handleFilterChange({ page: newPage });
   };
@@ -332,9 +343,9 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
   // ✅ CALCULAR PAGINAÇÃO
   const pagination = {
     page: filters.page || 1,
-    limit: filters.limit || 10,
+    limit: filters.limit || LINHAS_POR_PAGINA_PADRAO,
     total: totalPlantas,
-    totalPages: Math.ceil(totalPlantas / (filters.limit || 10))
+    totalPages: Math.ceil(totalPlantas / (filters.limit || LINHAS_POR_PAGINA_PADRAO))
   };
 
   return (
@@ -404,6 +415,7 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
               pagination={pagination}
               loading={loading}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               onView={handleView}
               onEdit={isAdmin() ? handleEdit : undefined}
               customActions={

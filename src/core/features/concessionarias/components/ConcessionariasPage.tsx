@@ -1,5 +1,6 @@
 // src/features/concessionarias/components/ConcessionariasPage.tsx
 import { useEffect, useState } from 'react';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { Layout } from '@/core/components/common/Layout';
 import { TitleCard } from '@/core/components/common/title-card';
 import { BaseTable } from '@/core/components/common/base-table/BaseTable';
@@ -18,7 +19,7 @@ const initialFilters: ConcessionariasFilters = {
   search: '',
   estado: 'all',
   page: 1,
-  limit: 10
+  limit: LINHAS_POR_PAGINA_PADRAO
 };
 
 // ✅ HELPER: Transformar dados do formulário para API
@@ -74,7 +75,11 @@ export function ConcessionariasPage() {
   const [concessionarias, setConcessionarias] = useState<any[]>([]);
   const [totalConcessionarias, setTotalConcessionarias] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<ConcessionariasFilters>(initialFilters);
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('concessionarias');
+  const [filters, setFilters] = useState<ConcessionariasFilters>(() => ({
+    ...initialFilters,
+    limit: linhasPorPagina,
+  }));
 
   // Configuração de filtros dinâmicos com estados do IBGE
   const { filterConfig } = useConcessionariasFilters();
@@ -133,7 +138,9 @@ export function ConcessionariasPage() {
 
   // ✅ EFEITO: Carregar concessionárias quando a página carrega
   useEffect(() => {
-    fetchConcessionarias(initialFilters);
+    // O estado inicial, e nao initialFilters: e ele que carrega o numero de
+    // linhas que o usuario escolheu.
+    fetchConcessionarias(filters);
   }, []);
 
   // ✅ HANDLER: Mudança de filtros
@@ -150,6 +157,13 @@ export function ConcessionariasPage() {
   };
 
   // ✅ HANDLER: Mudança de página
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = (limit: number) => {
+    setLinhasPorPagina(limit);
+    handleFilterChange({ limit, page: 1 });
+  };
+
   const handlePageChange = (newPage: number) => {
     handleFilterChange({ page: newPage });
   };
@@ -293,9 +307,9 @@ export function ConcessionariasPage() {
   // ✅ CALCULAR PAGINAÇÃO
   const pagination = {
     page: filters.page || 1,
-    limit: filters.limit || 10,
+    limit: filters.limit || LINHAS_POR_PAGINA_PADRAO,
     total: totalConcessionarias,
-    totalPages: Math.ceil(totalConcessionarias / (filters.limit || 10))
+    totalPages: Math.ceil(totalConcessionarias / (filters.limit || LINHAS_POR_PAGINA_PADRAO))
   };
 
   return (
@@ -375,6 +389,7 @@ export function ConcessionariasPage() {
               pagination={pagination}
               loading={loading}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               onView={handleView}
               onEdit={isAdmin() ? handleEdit : undefined}
               emptyMessage={

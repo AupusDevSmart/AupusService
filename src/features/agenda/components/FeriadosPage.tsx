@@ -1,5 +1,6 @@
 // src/features/agenda/components/FeriadosPage.tsx
 import { useEffect, useState, useMemo } from 'react';
+import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/core';
@@ -33,7 +34,7 @@ const initialFilters: FeriadosFilters = {
   geral: 'all',
   recorrente: 'all',
   page: 1,
-  limit: 10
+  limit: LINHAS_POR_PAGINA_PADRAO
 };
 
 export function FeriadosPage() {
@@ -42,7 +43,11 @@ export function FeriadosPage() {
   const [feriados, setFeriados] = useState<FeriadoResponse[]>([]);
   const [totalFeriados, setTotalFeriados] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<FeriadosFilters>(initialFilters);
+  const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('agenda-feriados');
+  const [filters, setFilters] = useState<FeriadosFilters>(() => ({
+    ...initialFilters,
+    limit: linhasPorPagina,
+  }));
 
   // Hook para plantas
   const { plantas, loading: loadingPlantas, error: plantasError } = usePlantas();
@@ -109,7 +114,9 @@ export function FeriadosPage() {
 
   // Efeito inicial
   useEffect(() => {
-    fetchFeriados(initialFilters);
+    // O estado inicial, e nao initialFilters: e ele que carrega o numero de
+    // linhas que o usuario escolheu.
+    fetchFeriados(filters);
   }, []);
 
   // Handler: Mudança de filtros
@@ -125,6 +132,13 @@ export function FeriadosPage() {
   };
 
   // Handler: Mudança de página
+  // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
+  // um trecho que nao existe.
+  const handleLimitChange = (limit: number) => {
+    setLinhasPorPagina(limit);
+    handleFilterChange({ limit, page: 1 });
+  };
+
   const handlePageChange = (newPage: number) => {
     handleFilterChange({ page: newPage });
   };
@@ -240,9 +254,9 @@ export function FeriadosPage() {
   // Calcular paginação
   const pagination = {
     page: filters.page || 1,
-    limit: filters.limit || 10,
+    limit: filters.limit || LINHAS_POR_PAGINA_PADRAO,
     total: totalFeriados,
-    totalPages: Math.ceil(totalFeriados / (filters.limit || 10))
+    totalPages: Math.ceil(totalFeriados / (filters.limit || LINHAS_POR_PAGINA_PADRAO))
   };
 
   return (
@@ -311,6 +325,7 @@ export function FeriadosPage() {
               pagination={pagination}
               loading={loading}
               onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
               onView={handleView}
               onEdit={handleEdit}
               emptyMessage="Nenhum feriado encontrado"
