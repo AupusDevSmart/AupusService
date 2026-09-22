@@ -268,15 +268,50 @@ export class PlanosManutencaoApiService {
     // console.log('🔍 PLANOS API: Listando planos com parâmetros:', params);
     
     try {
-      const response = await api.get<PlanosListApiResponse>(this.baseEndpoint, {
+      // As duas formas em que a listagem pode chegar; ver a traducao abaixo.
+      const response = await api.get<
+        | PlanosListApiResponse
+        | {
+            data?: PlanoManutencaoApiResponse[];
+            total?: number;
+            page?: number;
+            limit?: number;
+            totalPages?: number;
+            pages?: number;
+            pagination?: undefined;
+          }
+      >(this.baseEndpoint, {
         params: {
           page: params?.page || 1,
           limit: params?.limit || 10,
           ...params
         }
       });
-      // console.log('✅ PLANOS API: Planos listados:', response.data.pagination);
-      return response.data;
+
+      /**
+       * O backend responde a paginacao no NIVEL DE CIMA —
+       * `{ data, total, page, limit, totalPages }` — e nao dentro de
+       * `pagination`, que e o que PlanosListApiResponse declara e o hook le.
+       *
+       * Sem esta traducao `response.pagination` era sempre undefined: total 0,
+       * zero paginas, e a tabela de planos nunca mostrou paginacao. Com mais
+       * templates que o limite, os excedentes ficavam inalcancaveis — com 10 por
+       * pagina e 13 templates, tres sumiam sem aviso.
+       *
+       * Aceita as duas formas para nao quebrar se o backend passar a aninhar.
+       */
+      const corpo = response.data;
+      if (corpo?.pagination) return corpo as PlanosListApiResponse;
+
+      return {
+        data: corpo?.data ?? [],
+        pagination: {
+          page: corpo?.page ?? params?.page ?? 1,
+          limit: corpo?.limit ?? params?.limit ?? 10,
+          total: corpo?.total ?? 0,
+          pages: corpo?.totalPages ?? corpo?.pages ?? 0
+        }
+      };
     } catch (error: any) {
       // console.error('💥 PLANOS API: Erro ao listar planos:', error);
       throw error;
