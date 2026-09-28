@@ -26,6 +26,7 @@ import {
 import { Skeleton } from '@/core/components/ui/skeleton';
 import { BaseEntity, TableColumn, Pagination, TableAction } from '@/core/types/base';
 import { OPCOES_LINHAS_POR_PAGINA } from './linhas-por-pagina';
+import { Expandir, useMontadoAteSair } from '@/components/ui/expandir';
 
 export type CustomAction<T> = TableAction<T>;
 
@@ -78,6 +79,41 @@ interface BaseTableProps<T extends BaseEntity> {
   expandedRowId?: string | number | null;
   onRowToggle?: (entity: T) => void;
   isRowExpandable?: (entity: T) => boolean;
+}
+
+/**
+ * Linha expandida da tabela. Continua montada durante a saida para a altura
+ * poder animar; `render` so e chamado enquanto montada, como antes.
+ */
+function LinhaExpandida({
+  aberto,
+  colSpan,
+  render,
+}: {
+  aberto: boolean;
+  colSpan: number;
+  render: () => React.ReactNode;
+}) {
+  const montado = useMontadoAteSair(aberto);
+  if (!montado) return null;
+  return (
+    <TableRow className="hover:bg-transparent">
+      <TableCell colSpan={colSpan} className="p-0 bg-muted/20">
+        <Expandir aberto={aberto}>{render()}</Expandir>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+/** Mesmo papel da LinhaExpandida, no cartao do celular. */
+function CartaoExpandido({ aberto, render }: { aberto: boolean; render: () => React.ReactNode }) {
+  const montado = useMontadoAteSair(aberto);
+  if (!montado) return null;
+  return (
+    <Expandir aberto={aberto}>
+      <div className="border-t bg-muted/20">{render()}</div>
+    </Expandir>
+  );
 }
 
 export function BaseTable<T extends BaseEntity>({
@@ -388,7 +424,7 @@ export function BaseTable<T extends BaseEntity>({
                     <div className="flex items-start gap-2">
                       {expandable && (
                         <ChevronDown
-                          className={`mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+                          className={`mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
                             expanded ? '' : '-rotate-90'
                           }`}
                         />
@@ -425,7 +461,7 @@ export function BaseTable<T extends BaseEntity>({
                     )}
                   </div>
 
-                  {expanded && <div className="border-t bg-muted/20">{renderExpandedRow?.(entity)}</div>}
+                  <CartaoExpandido aberto={expanded} render={() => renderExpandedRow?.(entity)} />
                 </div>
               );
             })}
@@ -479,7 +515,7 @@ export function BaseTable<T extends BaseEntity>({
                     <TableCell className="w-10 align-middle">
                       {expandable && (
                         <ChevronDown
-                          className={`h-4 w-4 text-muted-foreground transition-transform ${
+                          className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
                             expanded ? '' : '-rotate-90'
                           }`}
                         />
@@ -506,13 +542,11 @@ export function BaseTable<T extends BaseEntity>({
                     </TableCell>
                   )}
                 </TableRow>
-                {expanded && (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={totalColumns} className="p-0 bg-muted/20">
-                      {renderExpandedRow?.(entity)}
-                    </TableCell>
-                  </TableRow>
-                )}
+                <LinhaExpandida
+                  aberto={expanded}
+                  colSpan={totalColumns}
+                  render={() => renderExpandedRow?.(entity)}
+                />
                 </React.Fragment>
               );
             })

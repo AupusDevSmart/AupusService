@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { OrigemLinks } from '@/features/execucao-os/components/OrigemLinks';
 import { useAnomalias } from '@/features/anomalias/hooks/useAnomalias';
-import { AlertTriangle, FileText, Calendar, Wrench, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertTriangle, FileText, Calendar, Wrench, Loader2, ChevronDown } from 'lucide-react';
+import { Expandir, useMontadoAteSair } from '@/components/ui/expandir';
 import PlanosManutencaoViewer from './PlanosManutencaoViewer';
 import { solicitacoesServicoService } from '@/services/solicitacoes-servico.service';
 import { tarefasApi, type TarefaApiResponse } from '@/services/tarefas.services';
@@ -171,6 +172,8 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
   solicitacaoServico
 }) => {
   const [expanded, setExpanded] = useState(false);
+  // Os detalhes seguem montados durante a saida, para a altura animar.
+  const detalhesMontados = useMontadoAteSair(expanded);
   const { obterAnomalia, loading: anomaliaLoading, error: anomaliaError } = useAnomalias();
   const [anomaliaFromAPI, setAnomaliaFromAPI] = useState<any>(null);
   const [solicitacaoFromAPI, setSolicitacaoFromAPI] = useState<any>(null);
@@ -559,20 +562,22 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
             <span>Origem: {getOrigemLabel(origem)}</span>
           </div>
           {hasDetails && (
-            expanded
-              ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
-              : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+            />
           )}
         </CardTitle>
       </CardHeader>
 
-      {expanded && (
-        <CardContent className="pt-4">
-          {origem === 'ANOMALIA' && renderAnomaliaDetails()}
-          {origem === 'PLANO_MANUTENCAO' && renderPlanoDetails()}
-          {origem === 'TAREFA' && (renderPlanoDetails() || (hasTarefaDetails && renderTarefaDetails()))}
-          {origem === 'SOLICITACAO_SERVICO' && renderSolicitacaoDetails()}
-        </CardContent>
+      {detalhesMontados && (
+        <Expandir aberto={expanded}>
+          <CardContent className="pt-4">
+            {origem === 'ANOMALIA' && renderAnomaliaDetails()}
+            {origem === 'PLANO_MANUTENCAO' && renderPlanoDetails()}
+            {origem === 'TAREFA' && (renderPlanoDetails() || (hasTarefaDetails && renderTarefaDetails()))}
+            {origem === 'SOLICITACAO_SERVICO' && renderSolicitacaoDetails()}
+          </CardContent>
+        </Expandir>
       )}
     </Card>
   );

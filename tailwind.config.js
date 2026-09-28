@@ -1,4 +1,6 @@
-import * as tailwindcssAnimate from 'tailwindcss-animate';
+// Import default: com `import * as`, o Tailwind 3.4 ignora o plugin sem avisar
+// e modal, sheet, dropdown, select, popover e tooltip abrem sem animacao.
+import tailwindcssAnimate from 'tailwindcss-animate';
 
 const config = {
 	darkMode: ['class'],

@@ -5,6 +5,7 @@ import { History, ExternalLink, ChevronDown, CalendarClock } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { usePlanoDoEquipamento } from './PlanoDoEquipamentoContext';
 import { type ItemHistoricoOS, type SituacaoDaTarefa } from '@/services/historico-equipamento.services';
+import { Expandir } from '@/components/ui/expandir';
 
 interface HistoricoDoEquipamentoSectionProps {
   equipamentoId: string;
@@ -240,7 +241,7 @@ export function HistoricoDoEquipamentoSection({
                       title="Ver as tarefas deste item"
                     >
                       <ChevronDown
-                        className={`h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform ${
+                        className={`h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform duration-200 ${
                           aberto ? '' : '-rotate-90'
                         }`}
                       />
@@ -284,7 +285,7 @@ export function HistoricoDoEquipamentoSection({
                     </Button>
                   </div>
 
-                  {aberto && (
+                  <Expandir aberto={aberto}>
                     <div className="pl-6 pt-1">
                       {item.tarefas.map((tarefa) => (
                         <div key={tarefa.id} className="flex items-center gap-3 py-1">
@@ -299,7 +300,7 @@ export function HistoricoDoEquipamentoSection({
                         </div>
                       ))}
                     </div>
-                  )}
+                  </Expandir>
                 </div>
               );
             })}

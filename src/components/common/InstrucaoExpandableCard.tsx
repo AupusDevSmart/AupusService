@@ -1,7 +1,8 @@
 // src/components/common/InstrucaoExpandableCard.tsx
 import React, { useState, useCallback, useEffect } from 'react';
-import { FileText, ChevronDown, ChevronRight, X, Clock, Wrench, ListChecks, AlertCircle, SquarePen } from 'lucide-react';
+import { FileText, ChevronRight, X, Clock, Wrench, ListChecks, AlertCircle, SquarePen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Expandir } from '@/components/ui/expandir';
 import { instrucoesApi, InstrucaoApiResponse, SubInstrucaoApiResponse, RecursoInstrucaoApiResponse } from '@/services/instrucoes.services';
 
 interface InstrucaoExpandableCardProps {
@@ -106,10 +107,9 @@ export function InstrucaoExpandableCard({
           onClick={handleToggle}
           className="flex items-center gap-2 min-w-0 flex-1 text-left hover:opacity-80 transition-opacity"
         >
-          {expanded
-            ? <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            : <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          }
+          <ChevronRight
+            className={`h-4 w-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}
+          />
           <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <span className="text-sm truncate font-medium">{label}</span>
         </button>
@@ -160,7 +160,7 @@ export function InstrucaoExpandableCard({
       </div>
 
       {/* Details panel */}
-      {expanded && (
+      <Expandir aberto={expanded}>
         <div className="px-4 pb-3 space-y-3">
           {loading && (
             <p className="text-sm text-muted-foreground">Carregando detalhes...</p>
@@ -277,7 +277,7 @@ export function InstrucaoExpandableCard({
             </>
           )}
         </div>
-      )}
+      </Expandir>
     </div>
   );
 }

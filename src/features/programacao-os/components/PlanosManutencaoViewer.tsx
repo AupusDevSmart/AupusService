@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Calendar,
-  ChevronDown,
   ChevronRight,
   Settings,
   CheckCircle,
@@ -333,11 +332,9 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                     className="w-full p-4 h-auto justify-start hover:bg-muted/50"
                   >
                     <div className="flex items-center w-full">
-                      {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground mr-2" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground mr-2" />
-                      )}
+                      <ChevronRight
+                        className={`h-4 w-4 text-muted-foreground mr-2 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                      />
                       <Settings className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
                       <div className="text-left flex-1">
                         <div className="font-medium text-foreground">{plano.nome}</div>
@@ -374,11 +371,9 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                                 className="w-full p-3 h-auto justify-start hover:bg-muted/50"
                               >
                                 <div className="flex items-center w-full">
-                                  {tarefaExpanded ? (
-                                    <ChevronDown className="h-3 w-3 text-muted-foreground mr-2" />
-                                  ) : (
-                                    <ChevronRight className="h-3 w-3 text-muted-foreground mr-2" />
-                                  )}
+                                  <ChevronRight
+                                    className={`h-3 w-3 text-muted-foreground mr-2 transition-transform duration-200 ${tarefaExpanded ? 'rotate-90' : ''}`}
+                                  />
                                   {getCategoriasIcons(tarefa.instrucao?.categoria ?? '')}
                                   <div className="text-left flex-1 ml-2">
                                     <div className="font-medium text-sm text-foreground flex items-center gap-2">

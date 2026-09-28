@@ -238,7 +238,7 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
                       <ChevronDownIcon className="h-4 w-4" />
                     </button>
                     {openDropdownIndex === index && (
-                      <div className="absolute top-full left-0 mt-1 bg-popover border rounded-md shadow-md z-50 min-w-[180px]">
+                      <div className="absolute top-full left-0 mt-1 bg-popover border rounded-md shadow-md z-50 min-w-[180px] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150">
                         {item.dropdownItems?.map((dropdownItem) => (
                           <a
                             key={dropdownItem.href}
