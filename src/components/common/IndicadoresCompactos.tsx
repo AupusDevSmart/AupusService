@@ -37,8 +37,11 @@ export function IndicadoresCompactos({
   carregando?: boolean;
   className?: string;
 }) {
+  // Tres cabem lado a lado ate no celular; quatro quebram em duas linhas.
+  const colunas = itens.length === 3 ? 'grid-cols-3' : 'grid-cols-2 md:grid-cols-4';
+
   return (
-    <div className={cn('grid grid-cols-2 gap-2 md:grid-cols-4', className)}>
+    <div className={cn('grid gap-2', colunas, className)}>
       {itens.map(({ chave, rotulo, valor, icone: Icone, tom = 'neutro', onClick, dica }) => {
         const destacar = !carregando && tom !== 'neutro' && valor > 0;
         const cor = destacar ? COR_DO_TOM[tom as Exclude<TomIndicador, 'neutro'>] : undefined;
