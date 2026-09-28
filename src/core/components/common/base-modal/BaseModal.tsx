@@ -5,6 +5,10 @@ import { Save, X, AlertCircle } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { BaseEntity, ModalMode, FormField, ModalEntity } from '@/core/types/base';
 import { BaseForm } from './BaseForm';
+import { useMontadoAteSair } from '@/components/ui/expandir';
+
+/** Mesmas duracoes do Sheet do shadcn, para todos os paineis laterais baterem. */
+const DURACAO_SAIDA_MS = 300;
 
 interface BaseModalProps<T extends BaseEntity> {
   isOpen: boolean;
@@ -213,8 +217,13 @@ export function BaseModal<T extends BaseEntity>({
   if (chaveSemeadaRef.current !== chaveAbertura) {
     chaveSemeadaRef.current = chaveAbertura;
 
-    let semente: any = {};
-    if (chaveAbertura) {
+    if (chaveAbertura === null) {
+      // Fechando: o formulario fica como esta enquanto o painel desliza para
+      // fora. Zerar aqui mostrava o sheet vazio durante a saida. A proxima
+      // abertura muda a chave (null -> modo::id) e semeia de novo.
+      isInitializedRef.current = false;
+    } else {
+      let semente: any = {};
       if (entity && (isViewMode || isEditMode)) {
         semente = normalizeEntityData(entity);
       } else if (entity && isCreateMode) {
@@ -222,13 +231,13 @@ export function BaseModal<T extends BaseEntity>({
       } else if (isCreateMode) {
         semente = createInitialData();
       }
-    }
 
-    setFormData(semente);
-    setErrors({});
-    setHasUnsavedChanges(false);
-    initialDataRef.current = semente;
-    isInitializedRef.current = chaveAbertura !== null;
+      setFormData(semente);
+      setErrors({});
+      setHasUnsavedChanges(false);
+      initialDataRef.current = semente;
+      isInitializedRef.current = true;
+    }
   }
 
   // ✅ CORREÇÃO: useEffect separado para detectar mudanças
@@ -434,22 +443,33 @@ export function BaseModal<T extends BaseEntity>({
     // console.log('🎯 BaseModal: formData.origem mudou para:', formData.origem);
   }, [formData.origem]);
 
-  if (!isOpen) return null;
+  // Antes era `if (!isOpen) return null` e a troca translate-x-full ->
+  // translate-x-0: o painel ja nascia na posicao final e a transicao nunca
+  // rodava, nem na entrada nem na saida. Agora entra e sai com as animacoes do
+  // Sheet do shadcn e segue montado ate a saida terminar.
+  const montado = useMontadoAteSair(isOpen, DURACAO_SAIDA_MS);
+  if (!montado) return null;
 
   return (
     <>
-      <div 
-        className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
+      <div
+        className={cn(
+          "fixed inset-0 bg-black/50 z-40 backdrop-blur-sm",
+          isOpen
+            ? "animate-in fade-in-0 duration-500"
+            : "pointer-events-none animate-out fade-out-0 duration-300 fill-mode-forwards"
+        )}
         onClick={handleBackdropClick}
       />
-      
+
       <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-end">
         <div
           ref={modalRef}
           className={cn(
-            "bg-background shadow-2xl pointer-events-auto",
-            "transform transition-transform duration-300 ease-in-out",
-            isOpen ? "translate-x-0" : "translate-x-full",
+            "bg-background shadow-2xl",
+            isOpen
+              ? "pointer-events-auto animate-in slide-in-from-right duration-500 ease-in-out"
+              : "pointer-events-none animate-out slide-out-to-right duration-300 ease-in-out fill-mode-forwards",
             "overflow-hidden flex flex-col",
             // Mobile: fullscreen
             "w-full h-full",

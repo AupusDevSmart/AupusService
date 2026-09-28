@@ -66,8 +66,6 @@ const FornecedorModal = ({
     }
   }, [isOpen, entity, handleTypeChange]);
 
-  if (!isOpen) return null;
-
   return (
     <BaseModal
       key={modalKey} // ✅ Força re-mount quando tipo muda

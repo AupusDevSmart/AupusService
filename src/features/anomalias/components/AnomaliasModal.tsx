@@ -48,8 +48,6 @@ export function AnomaliasModal({
   onClose,
   onSubmit,
 }: AnomaliasModalProps) {
-  if (!isOpen) return null;
-
   return (
     <BaseModal
       isOpen={isOpen}
