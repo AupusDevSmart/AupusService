@@ -9,15 +9,20 @@ import { useEsqueciSenha } from '../hooks/useEsqueciSenha';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { ArrowLeft, Loader2, MailCheck } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import {
+  BOTAO_PRINCIPAL,
+  BOTAO_SECUNDARIO,
+  CAMPO,
+  CAMPO_COM_ERRO,
+  CONTEINER_FORM,
+  ERRO_CAMPO,
+  LINK_DISCRETO,
+  ROTULO,
+  SUBTITULO,
+  TITULO,
+} from '@/features/login/utils/estilo-entrada';
 
 /**
  * Formulário de "esqueci minha senha".
@@ -42,92 +47,70 @@ export function EsqueciSenhaForm() {
 
   if (enviado) {
     return (
-      <Card className="w-full shadow-lg border border-border bg-card">
-        <CardHeader className="space-y-3 pb-6 px-6 lg:px-8 pt-8 lg:pt-10 items-center text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <MailCheck className="h-6 w-6 text-foreground" />
+      <div className={CONTEINER_FORM}>
+        <div className="flex flex-col items-center space-y-3 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
+            <MailCheck className="h-6 w-6 text-service-verde" />
           </div>
-          <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-semibold text-foreground">
-            Verifique seu email
-          </CardTitle>
-          <CardDescription className="text-sm lg:text-base text-muted-foreground">
-            Se <span className="font-medium text-foreground">{getValues('email')}</span> estiver
+          <h1 className={TITULO}>Verifique seu e-mail</h1>
+          <p className={SUBTITULO}>
+            Se <span className="font-medium text-white">{getValues('email')}</span> estiver
             cadastrado, enviamos um link para redefinir sua senha. O link expira em 60 minutos.
-          </CardDescription>
-        </CardHeader>
-        <CardFooter className="px-6 lg:px-8 pb-8 lg:pb-10 pt-4">
-          <Button asChild variant="outline" className="w-full h-11 lg:h-12 text-base">
-            <Link to="/login">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar ao login
-            </Link>
-          </Button>
-        </CardFooter>
-      </Card>
+          </p>
+        </div>
+        <Button asChild variant="outline" className={BOTAO_SECUNDARIO}>
+          <Link to="/login">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar ao login
+          </Link>
+        </Button>
+      </div>
     );
   }
 
   return (
-    <Card className="w-full shadow-lg border border-border bg-card">
-      <CardHeader className="space-y-1 pb-6 px-6 lg:px-8 pt-8 lg:pt-10">
-        <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-semibold text-center text-foreground">
-          Esqueceu a senha?
-        </CardTitle>
-        <CardDescription className="text-center text-sm lg:text-base text-muted-foreground">
-          Informe seu email e enviaremos um link para redefinir sua senha
-        </CardDescription>
-      </CardHeader>
+    <div className={CONTEINER_FORM}>
+      <div className="space-y-1 text-center">
+        <h1 className={TITULO}>Esqueceu a senha?</h1>
+        <p className={SUBTITULO}>
+          Informe seu e-mail e enviaremos um link para redefinir sua senha
+        </p>
+      </div>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-5 lg:space-y-6 px-6 lg:px-8 pb-2">
-          <div className="space-y-2">
-            <Label
-              htmlFor="email"
-              className="text-sm lg:text-base font-medium text-gray-700 dark:text-gray-300"
-            >
-              Email
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="seuemail@exemplo.com"
-              autoComplete="email"
-              disabled={isLoading}
-              {...register('email')}
-              className={`h-11 lg:h-12 text-base ${
-                errors.email ? 'border-destructive focus-visible:ring-destructive' : ''
-              }`}
-            />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
-            )}
-          </div>
-        </CardContent>
-
-        <CardFooter className="flex-col space-y-4 px-6 lg:px-8 pb-8 lg:pb-10 pt-4">
-          <Button
-            type="submit"
-            className="w-full h-11 lg:h-12 text-base font-medium bg-foreground text-background hover:bg-foreground/90"
+      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
+        <div className="grid gap-2">
+          <Label htmlFor="email" className={ROTULO}>
+            E-mail
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="seuemail@exemplo.com"
+            autoComplete="email"
             disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                <span>Enviando...</span>
-              </>
-            ) : (
-              'Enviar link de redefinição'
-            )}
-          </Button>
+            {...register('email')}
+            className={cn(CAMPO, errors.email && CAMPO_COM_ERRO)}
+          />
+          {errors.email && <p className={ERRO_CAMPO}>{errors.email.message}</p>}
+        </div>
 
-          <Link
-            to="/login"
-            className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
-          >
-            Voltar ao login
-          </Link>
-        </CardFooter>
+        <Button type="submit" className={BOTAO_PRINCIPAL} disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              <span>Enviando...</span>
+            </>
+          ) : (
+            'Enviar link de redefinição'
+          )}
+        </Button>
       </form>
-    </Card>
+
+      <div className="text-center">
+        <Link to="/login" className={LINK_DISCRETO}>
+          Voltar ao login
+        </Link>
+      </div>
+    </div>
   );
 }

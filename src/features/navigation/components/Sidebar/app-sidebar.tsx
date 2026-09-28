@@ -13,7 +13,7 @@ import { FeedbackButton } from "./feedback-button";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar collapsible="icon" className="bg-primary" {...props} variant="sidebar">
+    <Sidebar collapsible="icon" {...props} variant="sidebar">
       <SidebarHeader>
         <TeamSwitcher />
       </SidebarHeader>

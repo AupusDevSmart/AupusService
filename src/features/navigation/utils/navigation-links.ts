@@ -29,6 +29,11 @@ export type NavigationLink = {
   label: string;
   hint?: string;
   links?: NavigationLink[];
+  /**
+   * Outras rotas que marcam este item como ativo no menu: telas internas com
+   * outro nome, ou paginas que sairam do menu mas seguem acessiveis por link.
+   */
+  ativoEm?: string[];
 };
 
 export const navigationLinks: Array<NavigationLink> = [
@@ -58,6 +63,9 @@ export const navigationLinks: Array<NavigationLink> = [
         icon: Factory,
         label: 'Plantas',
         hint: 'Plantas',
+        // Concessionarias saiu do menu (vive no AupusNexOn), mas a rota segue
+        // viva para link antigo.
+        ativoEm: ['/cadastros/concessionarias'],
       },
       {
         key: 'equipamentos',
@@ -160,6 +168,9 @@ export const navigationLinks: Array<NavigationLink> = [
         icon: Package,
         label: 'Recursos',
         hint: 'Recursos',
+        // Ferramentas e fornecedores nao tem item proprio no menu, mas as rotas
+        // seguem abertas: marcam o cadastro de recursos, o mais proximo delas.
+        ativoEm: ['/ferramentas', '/fornecedores'],
       },
       {
         key: 'veiculos',

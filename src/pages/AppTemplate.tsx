@@ -35,9 +35,11 @@ export function AppTemplate() {
                 scroll horizontal da propria tabela passa a funcionar. */}
           <SidebarInset className="flex flex-col min-w-0 h-full bg-secondary">
             <header className="flex items-center justify-between bg-secondary">
-              <div className="flex h-12 items-center gap-2 px-4 bg-secondary">
+              {/* `min-w-0 flex-1` no breadcrumb: encolhe (e rola) em vez de
+                  empurrar o sino das notificacoes para fora da tela. */}
+              <div className="flex h-12 min-w-0 flex-1 items-center gap-2 px-4 bg-secondary">
                 <SidebarTrigger className="w-4 h-4 mr-2" />
-                <CustomBreadcrumbs />
+                <CustomBreadcrumbs className="min-w-0 flex-1" />
               </div>
               <NotificacoesSheet />
             </header>

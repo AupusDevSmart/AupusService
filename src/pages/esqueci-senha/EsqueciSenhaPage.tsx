@@ -1,4 +1,4 @@
-import { AuthShell } from '@/features/login/components/AuthShell';
+import { LoginLayout } from '@/features/login/components/LoginLayout';
 import { EsqueciSenhaForm } from '@/features/login/components/EsqueciSenhaForm';
 
 /**
@@ -6,8 +6,8 @@ import { EsqueciSenhaForm } from '@/features/login/components/EsqueciSenhaForm';
  */
 export function EsqueciSenhaPage() {
   return (
-    <AuthShell>
+    <LoginLayout>
       <EsqueciSenhaForm />
-    </AuthShell>
+    </LoginLayout>
   );
 }

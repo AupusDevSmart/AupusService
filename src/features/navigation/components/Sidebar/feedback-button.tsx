@@ -84,10 +84,10 @@ export function FeedbackButton() {
         <SidebarMenuButton
           tooltip="Chame a Aupus!"
           onClick={() => setIsOpen(true)}
-          className="rounded-sm bg-blue-600 hover:bg-blue-300 text-card-foreground"
+          className="h-10 rounded-lg bg-service-verde font-medium text-service-azul hover:bg-service-verde/90 hover:text-service-azul active:bg-service-verde/90 active:text-service-azul group-data-[collapsible=icon]:rounded-xl"
         >
-          <MessageCircleWarning className="w-5 h-5 shrink-0 text-card" />
-          <span className="flex text-card">Chame a Aupus!</span>
+          <MessageCircleWarning className="shrink-0 !size-5 group-data-[collapsible=icon]:!size-[22px]" />
+          <span className="group-data-[collapsible=icon]:hidden">Chame a Aupus!</span>
         </SidebarMenuButton>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">

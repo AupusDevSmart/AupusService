@@ -1,4 +1,4 @@
-import { AuthShell } from '@/features/login/components/AuthShell';
+import { LoginLayout } from '@/features/login/components/LoginLayout';
 import { RedefinirSenhaForm } from '@/features/login/components/RedefinirSenhaForm';
 
 /**
@@ -6,8 +6,8 @@ import { RedefinirSenhaForm } from '@/features/login/components/RedefinirSenhaFo
  */
 export function RedefinirSenhaPage() {
   return (
-    <AuthShell>
+    <LoginLayout>
       <RedefinirSenhaForm />
-    </AuthShell>
+    </LoginLayout>
   );
 }

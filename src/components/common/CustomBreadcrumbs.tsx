@@ -41,7 +41,7 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
 
   const breadcrumbConfig: BreadcrumbConfigItem[] = [
     {
-      label: 'Aupus Energia',
+      label: 'Aupus Service',
       path: null,
     },
     // 📊 DASHBOARD
@@ -217,9 +217,21 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
             <React.Fragment key={nanoid()}>
               <BItem>
                 {index === 0 ? (
+                  // Logo trocado por tema so com CSS, sem ler o tema em JS.
+                  // Nao ha versao compacta do logo: vale a normal.
                   <div className="flex items-center gap-2">
-                    <BreadcrumbPage className="text-secondary-foreground font-semibold">
-                      {item.label}
+                    <img
+                      src="/brand/service-logo-colorido.png"
+                      alt="Aupus Service"
+                      className="hidden h-6 w-auto sm:block dark:sm:hidden"
+                    />
+                    <img
+                      src="/brand/service-logo-negativo.svg"
+                      alt="Aupus Service"
+                      className="hidden h-6 w-auto dark:sm:block"
+                    />
+                    <BreadcrumbPage className="text-secondary-foreground font-semibold sm:hidden">
+                      Aupus Service
                     </BreadcrumbPage>
                   </div>
                 ) : item.isDropdown ? (
