@@ -22,7 +22,19 @@ const config = {
 			spacing: {
         'safe-bottom': 'env(safe-area-inset-bottom)',
       },
+			fontFamily: {
+				sans: ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif']
+			},
 			colors: {
+				// Constantes da marca (globals.css). Canais RGB + <alpha-value>
+				// para que `bg-service-verde/15` funcione.
+				service: {
+					azul: 'rgb(var(--sv-azul) / <alpha-value>)',
+					verde: 'rgb(var(--sv-verde) / <alpha-value>)',
+					linha: 'rgb(var(--sv-linha) / <alpha-value>)',
+					'texto-secundario': 'rgb(var(--sv-texto-secundario) / <alpha-value>)',
+					'link-claro': 'rgb(var(--sv-link-claro) / <alpha-value>)'
+				},
 				status: {
 					'waiting-for-evaluation': {
 						DEFAULT: '#fef08a',

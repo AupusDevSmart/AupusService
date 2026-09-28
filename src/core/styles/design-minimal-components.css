@@ -15,9 +15,9 @@
   @apply disabled:cursor-not-allowed disabled:opacity-50;
 }
 
-/* Background preto no dark mode */
+/* Fundo do card no dark mode */
 .dark .input-minimal {
-  background-color: hsl(0, 0%, 0%);
+  background-color: var(--card);
 }
 
 /* Caixa de valor que não se edita, com a MESMA geometria do input: altura,
@@ -73,9 +73,9 @@
   @apply disabled:cursor-not-allowed disabled:opacity-50;
 }
 
-/* Background preto no dark mode */
+/* Fundo do card no dark mode */
 .dark .select-minimal {
-  background-color: hsl(0, 0%, 0%);
+  background-color: var(--card);
 }
 
 /* Options do select - background cinza claro no light mode */
@@ -94,9 +94,9 @@
   @apply disabled:cursor-not-allowed disabled:opacity-50;
 }
 
-/* Background preto no dark mode */
+/* Fundo do card no dark mode */
 .dark .textarea-minimal {
-  background-color: hsl(0, 0%, 0%);
+  background-color: var(--card);
 }
 
 /* ========================================
@@ -137,9 +137,9 @@
   @apply btn-minimal border border-input bg-background hover:bg-accent hover:text-accent-foreground;
 }
 
-/* Background preto no dark mode */
+/* Fundo do card no dark mode */
 .dark .btn-minimal-outline {
-  background-color: hsl(0, 0%, 0%);
+  background-color: var(--card);
 }
 
 .btn-minimal-ghost {
@@ -170,9 +170,9 @@
   @apply w-full;
 }
 
-/* Background preto no dark mode */
+/* Fundo do card no dark mode */
 .dark .table-minimal {
-  background-color: hsl(0, 0%, 0%);
+  background-color: var(--card);
 }
 
 /* Remover bordas */
@@ -186,7 +186,7 @@
 
 /* Thead preto no dark mode */
 .dark .table-minimal thead tr {
-  background-color: hsl(0, 0%, 0%);
+  background-color: var(--card);
 }
 
 .table-minimal thead th {
@@ -426,31 +426,36 @@
 }
 
 /* ========================================
-   DARK MODE - INPUTS E SELECTS PRETOS
+   DARK MODE - INPUTS E SELECTS NA COR DO CARD
    ======================================== */
-/* Garantir que todos os inputs shadcn também fiquem pretos no dark mode */
-.dark input[type="text"],
-.dark input[type="email"],
-.dark input[type="password"],
-.dark input[type="number"],
-.dark input[type="search"],
-.dark textarea,
-.dark select {
-  background-color: hsl(0, 0%, 0%) !important;
-  border-color: hsl(0, 0%, 20%) !important;
+/* Garantir que todos os inputs shadcn acompanhem o card no dark mode.
+   `.campo-marca` fica de fora: e o campo das telas de entrada, que sao sempre
+   escuras e tem de sair iguais nos dois temas. */
+.dark input[type="text"]:not(.campo-marca),
+.dark input[type="email"]:not(.campo-marca),
+.dark input[type="password"]:not(.campo-marca),
+.dark input[type="number"]:not(.campo-marca),
+.dark input[type="search"]:not(.campo-marca),
+.dark textarea:not(.campo-marca),
+.dark select:not(.campo-marca) {
+  background-color: var(--card) !important;
+  border-color: var(--input) !important;
 }
 
-/* Combobox (Button com role combobox) também preto no dark mode */
+/* Combobox (Button com role combobox) também na cor do card no dark mode */
 .dark button[role="combobox"] {
-  background-color: hsl(0, 0%, 0%) !important;
-  border-color: hsl(0, 0%, 20%) !important;
+  background-color: var(--card) !important;
+  border-color: var(--input) !important;
 }
 
-/* SelectTrigger do shadcn também preto no dark mode */
+/* SelectTrigger do shadcn também na cor do card no dark mode.
+   `button[data-state]` pega qualquer gatilho Radix (tooltip, collapsible,
+   dialog). Os botoes do menu lateral ficam de fora: com !important, esta regra
+   apagava o fundo do item ativo e o hover. */
 .dark [role="combobox"],
-.dark button[data-state] {
-  background-color: hsl(0, 0%, 0%) !important;
-  border-color: hsl(0, 0%, 20%) !important;
+.dark button[data-state]:not([data-sidebar]) {
+  background-color: var(--card) !important;
+  border-color: var(--input) !important;
 }
 
 /* ========================================
