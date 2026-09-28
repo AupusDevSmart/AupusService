@@ -4,6 +4,7 @@ import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePrefere
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
+import { IndicadoresCompactos } from '@/components/common/IndicadoresCompactos';
 import { BaseTable } from '@/core';
 import { BaseFilters } from '@/core';
 import { BaseModal } from '@/core';
@@ -710,51 +711,19 @@ export function ProgramacaoOSPage() {
             description="Gerencie e programe ordens de serviço com recursos detalhados"
           />
           
-          {/* Dashboard de Estatísticas */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
-            <div className="bg-card border rounded-sm p-4 hover:border-gray-400 dark:hover:border-gray-600 transition-colors">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2">Pendentes</p>
-                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.pendentes}</p>
-                </div>
-                <Clock className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
-              </div>
-            </div>
+          {/* Indicadores: uma linha fina, para sobrar altura para a tabela. */}
+          <IndicadoresCompactos
+            className="mb-4"
+            itens={[
+              { chave: 'pendentes', rotulo: 'Pendentes', valor: stats.pendentes, icone: Clock },
+              { chave: 'finalizadas', rotulo: 'Finalizadas', valor: stats.finalizadas, icone: CheckCircle },
+              { chave: 'aprovadas', rotulo: 'Aprovadas', valor: stats.aprovadas, icone: CheckCircle },
+              { chave: 'total', rotulo: 'Total', valor: pagination.total, icone: FileText },
+            ]}
+          />
 
-            <div className="bg-card border rounded-sm p-4 hover:border-gray-400 dark:hover:border-gray-600 transition-colors">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2">Finalizadas</p>
-                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.finalizadas}</p>
-                </div>
-                <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-500 flex-shrink-0" />
-              </div>
-            </div>
-
-            <div className="bg-card border rounded-sm p-4 hover:border-gray-400 dark:hover:border-gray-600 transition-colors">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2">Aprovadas</p>
-                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.aprovadas}</p>
-                </div>
-                <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-500 flex-shrink-0" />
-              </div>
-            </div>
-
-            <div className="bg-card border rounded-sm p-4 hover:border-gray-400 dark:hover:border-gray-600 transition-colors">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2">Total</p>
-                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{pagination.total}</p>
-                </div>
-                <FileText className="h-5 w-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
-              </div>
-            </div>
-          </div>
-          
           {/* Filtros e Ação */}
-          <div className="flex flex-col lg:flex-row gap-4 mb-6">
+          <div className="flex flex-col lg:flex-row gap-4 mb-4">
             <div className="flex-1">
               <BaseFilters 
                 filters={filters}
