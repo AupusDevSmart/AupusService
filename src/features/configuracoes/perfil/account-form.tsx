@@ -231,12 +231,12 @@ export function AccountForm() {
                       <FormLabel>Imagem de Perfil</FormLabel>
                       <FormControl>
                         <div className='flex flex-col items-center gap-4'>
-                          <div className='relative w-32 h-32 rounded-full overflow-hidden bg-muted'>
+                          <div className='relative w-32 h-32 rounded-md overflow-hidden bg-muted'>
                             {previewUrl ? (
                               <img
                                 src={previewUrl}
                                 alt="Preview"
-                                className='w-full h-full object-cover'
+                                className='w-full h-full object-contain'
                               />
                             ) : (
                               <div className='w-full h-full flex items-center justify-center'>

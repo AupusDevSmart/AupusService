@@ -70,7 +70,7 @@ export function NavUser() {
                   <AvatarImage
                     src={avatarUrl}
                     alt={user?.nome || 'Usuário'}
-                    className="object-cover"
+                    className="object-contain"
                     onError={(e) => {
                       console.error('❌ [NAV-USER] Erro ao carregar imagem:', avatarUrl);
                       (e.target as HTMLImageElement).style.display = 'none';
@@ -100,7 +100,7 @@ export function NavUser() {
                     <AvatarImage
                       src={avatarUrl}
                       alt={user?.nome || 'Usuário'}
-                      className="object-cover"
+                      className="object-contain"
                       onError={(e) => {
                         console.error('❌ [NAV-USER] Erro ao carregar imagem:', avatarUrl);
                         (e.target as HTMLImageElement).style.display = 'none';
