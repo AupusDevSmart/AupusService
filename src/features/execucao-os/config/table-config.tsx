@@ -57,7 +57,7 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
   {
     key: 'descricao',
     label: 'Descrição',
-    width: '15%',
+    width: '14%',
     render: (item) => {
       const descricao = item.descricao || item.os?.descricao;
       return descricao
@@ -76,7 +76,7 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
     key: 'instalacao',
     label: 'Instalação',
     hideOnMobile: true,
-    width: '15%',
+    width: '13%',
     render: (item) => {
       const rotulo = rotuloDaInstalacao(item.instalacoes);
       return (
@@ -155,7 +155,12 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
     label: 'Data',
     sortable: true,
     hideOnMobile: true,
-    width: '7%',
-    render: (item) => <Texto fraco>{formatarData(item.os?.dataProgramada)}</Texto>,
+    width: '10%',
+    render: (item) => (
+      <Texto fraco>
+        {formatarData(item.os?.dataProgramada)}
+        {item.os?.dataProgramada && item.os?.horaProgramada ? ` ${item.os.horaProgramada}` : ''}
+      </Texto>
+    ),
   },
 ];

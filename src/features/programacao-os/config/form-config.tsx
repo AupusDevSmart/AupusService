@@ -610,11 +610,24 @@ export const programacaoOSFormFields: FormField[] = [
 ];
 
 // Configuração dos grupos para o modal - ATUALIZADA COM WORKFLOW
+/**
+ * A ordem dos grupos e a ordem em que a pessoa decide:
+ *
+ *   1. de onde vem o servico (origem) — define local, ativo, instrucoes e prazo
+ *   2. o que sera feito (descricao, tipo, prioridade, condicao do ativo)
+ *   3. quando (planejamento, com o prazo da origem ao lado)
+ *   4. com que veiculo, recursos e custo
+ *
+ * A descricao vinha antes da origem, entao se escrevia o servico sem saber
+ * ainda a que anomalia ou solicitacao ele respondia. Numero e status so
+ * existem depois de salvo (view/edit) e ficam no topo para identificar o
+ * registro; na criacao o grupo fica vazio e some.
+ */
 export const programacaoOSFormGroups = [
   {
     key: 'identificacao',
     title: 'Identificação da OS',
-    fields: ['numeroOS', 'status', 'descricao']
+    fields: ['numeroOS', 'status']
   },
   {
     key: 'origem',
@@ -626,10 +639,11 @@ export const programacaoOSFormGroups = [
   },
   {
     key: 'classificacao',
-    title: 'Classificação',
-    // Os tres cabem numa linha so: sao escolhas curtas de uma palavra.
+    title: 'Serviço',
+    // Descricao em largura total; tipo, prioridade e condicao cabem numa linha
+    // so, sao escolhas curtas de uma palavra.
     columns: 3,
-    fields: ['tipo', 'prioridade', 'condicoes']
+    fields: ['descricao', 'tipo', 'prioridade', 'condicoes']
   },
   {
     key: 'planejamento',

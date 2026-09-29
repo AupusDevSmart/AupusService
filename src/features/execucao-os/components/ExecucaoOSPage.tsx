@@ -17,11 +17,14 @@ import { useExecucaoOSFilters } from '../hooks/useExecucaoOSFilters';
 import { execucaoOSTableColumns } from '../config/table-config';
 import { createExecucaoOSTableActions } from '../config/actions-config';
 import { ActionConfirmPanel, type PendingAction } from './ActionConfirmPanel';
+import { AcoesDaOS } from './AcoesDaOS';
+import { statusDaExecucao } from '../config/actions-config';
 
 // Tipos
 import type { ExecucaoOS, ExecucaoOSFilters } from '../types';
 import { execucaoOSTransitionsService } from '@/services/execucao-os-transitions.service';
 import { toast } from '@/hooks/use-toast';
+import { formatApiError } from '@/utils/api-error';
 
 // Dashboard Component
 import { ExecucaoOSDashboard } from './ExecucaoOSDashboard';
@@ -124,6 +127,9 @@ export function ExecucaoOSPage() {
         case 'finalizar':
           await execucaoOSTransitionsService.finalizar(entity.id, data);
           break;
+        case 'reabrir':
+          await execucaoOSTransitionsService.reabrir(entity.id, data);
+          break;
         case 'cancelar':
           await execucaoOSTransitionsService.cancelar(entity.id, {
             motivo_cancelamento: data.motivo_cancelamento || '',
@@ -139,6 +145,7 @@ export function ExecucaoOSPage() {
         executar: 'OS executada',
         auditar: 'OS auditada',
         finalizar: 'OS finalizada',
+        reabrir: 'OS reaberta',
         cancelar: 'OS cancelada',
       };
       toast({ title: actionLabels[pendingAction] || 'Acao realizada' });
@@ -147,20 +154,16 @@ export function ExecucaoOSPage() {
       setPendingAction(null);
       await fetchItems(toApiParams);
     } catch (error) {
-      console.error(`Erro ao ${pendingAction}:`, error);
+      toast({
+        title: `Erro ao ${pendingAction}`,
+        description: formatApiError(error),
+        variant: 'destructive',
+      });
     }
   };
 
   // Ações da tabela
-  const actions = createExecucaoOSTableActions({
-    onIniciar: (item) => openViewWithAction(item, 'iniciar'),
-    onPausar: (item) => openViewWithAction(item, 'pausar'),
-    onRetomar: (item) => openViewWithAction(item, 'retomar'),
-    onExecutar: (item) => openViewWithAction(item, 'executar'),
-    onAuditar: (item) => openViewWithAction(item, 'auditar'),
-    onFinalizar: (item) => openViewWithAction(item, 'finalizar'),
-    onCancelar: (item) => openViewWithAction(item, 'cancelar'),
-  });
+  const actions = createExecucaoOSTableActions(openViewWithAction);
 
   // Carregar dados ao montar e quando filtros mudarem
   useEffect(() => {
@@ -348,20 +351,32 @@ export function ExecucaoOSPage() {
             title={`${modalState.mode === 'view' ? 'Visualizar' : modalState.mode === 'edit' ? 'Editar' : 'Finalizar'} Execução`}
             formFields={formFields}
             groups={formGroups}
+            topo={
+              modalState.mode === 'view' ? (
+                <div className="rounded-md border p-4">
+                  {pendingAction ? (
+                    // Confirmação da ação escolhida (na tabela ou aqui)
+                    <ActionConfirmPanel
+                      key={pendingAction}
+                      action={pendingAction}
+                      entity={modalState.entity}
+                      onConfirm={handleConfirmAction}
+                      onVoltar={() => setPendingAction(null)}
+                    />
+                  ) : (
+                    <AcoesDaOS
+                      status={statusDaExecucao(modalState.entity)}
+                      onAcao={setPendingAction}
+                    />
+                  )}
+                </div>
+              ) : undefined
+            }
             onClose={handleCloseModal}
             onSubmit={handleSubmit}
             width="w-[1200px]"
             loading={loading}
-          >
-            {/* Painel de confirmação de ação (view-first pattern) */}
-            {pendingAction && modalState.mode === 'view' && (
-              <ActionConfirmPanel
-                action={pendingAction}
-                entity={modalState.entity}
-                onConfirm={handleConfirmAction}
-              />
-            )}
-          </BaseModal>
+          />
         )}
       </Layout.Main>
     </Layout>

@@ -7,108 +7,73 @@ import {
   CheckCircle2,
   Shield,
   RotateCcw,
+  Undo2,
   Ban,
+  type LucideIcon,
 } from 'lucide-react';
 import type { TableAction } from '@/core';
 import type { ExecucaoOS } from '../types';
+import type { PendingAction } from '../components/ActionConfirmPanel';
 
-interface CreateExecucaoOSActionsProps {
-  onIniciar: (item: ExecucaoOS) => void;
-  onPausar: (item: ExecucaoOS) => void;
-  onRetomar: (item: ExecucaoOS) => void;
-  onExecutar: (item: ExecucaoOS) => void;
-  onAuditar: (item: ExecucaoOS) => void;
-  onFinalizar: (item: ExecucaoOS) => void;
-  onCancelar: (item: ExecucaoOS) => void;
+export interface AcaoDaOS {
+  acao: PendingAction;
+  label: string;
+  descricao: string;
+  icon: LucideIcon;
+  variant: 'default' | 'destructive';
+  /** Status em que o backend aceita a acao (guardas do execucao-os.service) */
+  status: string[];
 }
 
 /**
- * Cria as ações da tabela de Execução de OS baseadas no status
+ * As transicoes da OS, na ordem do fluxo. E a unica fonte: a tabela e o painel
+ * de acoes do sheet leem daqui, e os status espelham as guardas do backend.
  *
- * Fluxo:
  *   PENDENTE -> iniciar -> EM_EXECUCAO
  *   EM_EXECUCAO <-> pausar/retomar <-> PAUSADA
  *   EM_EXECUCAO/PAUSADA -> executar -> EXECUTADA
  *   EXECUTADA -> auditar -> AUDITADA
  *   AUDITADA -> finalizar -> FINALIZADA
- *   Any (exceto FINALIZADA/CANCELADA) -> cancelar -> CANCELADA
+ *   AUDITADA -> reabrir -> EM_EXECUCAO
+ *   qualquer um (exceto FINALIZADA/CANCELADA) -> cancelar -> CANCELADA
  */
-export function createExecucaoOSTableActions({
-  onIniciar,
-  onPausar,
-  onRetomar,
-  onExecutar,
-  onAuditar,
-  onFinalizar,
-  onCancelar,
-}: CreateExecucaoOSActionsProps): TableAction<ExecucaoOS>[] {
-  const getStatus = (item: ExecucaoOS) =>
-    (item.statusExecucao || item.status || item.os?.status)?.toUpperCase();
+export const ACOES_DA_OS: AcaoDaOS[] = [
+  { acao: 'iniciar', label: 'Iniciar', descricao: 'Começar a execução', icon: Play, variant: 'default', status: ['PENDENTE'] },
+  { acao: 'pausar', label: 'Pausar', descricao: 'Interromper temporariamente', icon: Pause, variant: 'default', status: ['EM_EXECUCAO'] },
+  { acao: 'retomar', label: 'Retomar', descricao: 'Continuar a execução', icon: RotateCcw, variant: 'default', status: ['PAUSADA'] },
+  { acao: 'executar', label: 'Executar', descricao: 'Registrar o resultado da execução', icon: CheckCircle, variant: 'default', status: ['EM_EXECUCAO', 'PAUSADA'] },
+  { acao: 'auditar', label: 'Auditar', descricao: 'Avaliar a qualidade do serviço', icon: Shield, variant: 'default', status: ['EXECUTADA'] },
+  { acao: 'finalizar', label: 'Finalizar', descricao: 'Encerrar a OS definitivamente', icon: CheckCircle2, variant: 'default', status: ['AUDITADA'] },
+  { acao: 'reabrir', label: 'Reabrir', descricao: 'Voltar para execução', icon: Undo2, variant: 'default', status: ['AUDITADA'] },
+  {
+    acao: 'cancelar',
+    label: 'Cancelar',
+    descricao: 'Cancelar a OS com motivo',
+    icon: Ban,
+    variant: 'destructive',
+    status: ['PENDENTE', 'EM_EXECUCAO', 'PAUSADA', 'EXECUTADA', 'AUDITADA'],
+  },
+];
 
-  const allActions: Record<string, TableAction<ExecucaoOS>> = {
-    iniciar: {
-      key: 'iniciar',
-      label: 'Iniciar',
-      icon: Play,
-      onClick: onIniciar,
-      variant: 'default',
-      condition: (item) => getStatus(item) === 'PENDENTE',
-    },
-    pausar: {
-      key: 'pausar',
-      label: 'Pausar',
-      icon: Pause,
-      onClick: onPausar,
-      variant: 'default',
-      condition: (item) => getStatus(item) === 'EM_EXECUCAO',
-    },
-    retomar: {
-      key: 'retomar',
-      label: 'Retomar',
-      icon: RotateCcw,
-      onClick: onRetomar,
-      variant: 'default',
-      condition: (item) => getStatus(item) === 'PAUSADA',
-    },
-    executar: {
-      key: 'executar',
-      label: 'Executar',
-      icon: CheckCircle,
-      onClick: onExecutar,
-      variant: 'default',
-      condition: (item) => {
-        const s = getStatus(item);
-        return s === 'EM_EXECUCAO' || s === 'PAUSADA';
-      },
-    },
-    auditar: {
-      key: 'auditar',
-      label: 'Auditar',
-      icon: Shield,
-      onClick: onAuditar,
-      variant: 'default',
-      condition: (item) => getStatus(item) === 'EXECUTADA',
-    },
-    finalizar: {
-      key: 'finalizar',
-      label: 'Finalizar',
-      icon: CheckCircle2,
-      onClick: onFinalizar,
-      variant: 'default',
-      condition: (item) => getStatus(item) === 'AUDITADA',
-    },
-    cancelar: {
-      key: 'cancelar',
-      label: 'Cancelar',
-      icon: Ban,
-      onClick: onCancelar,
-      variant: 'destructive',
-      condition: (item) => {
-        const s = getStatus(item);
-        return s !== 'FINALIZADA' && s !== 'CANCELADA' && s !== undefined;
-      },
-    },
-  };
+export function statusDaExecucao(item: Partial<ExecucaoOS> | null | undefined): string | undefined {
+  return (item?.statusExecucao || item?.status || item?.os?.status)?.toUpperCase();
+}
 
-  return Object.values(allActions);
+export function acoesDisponiveis(status: string | undefined): AcaoDaOS[] {
+  if (!status) return [];
+  return ACOES_DA_OS.filter((a) => a.status.includes(status));
+}
+
+/** Acoes da tabela de Execução de OS, filtradas pelo status de cada linha */
+export function createExecucaoOSTableActions(
+  onAcao: (item: ExecucaoOS, acao: PendingAction) => void,
+): TableAction<ExecucaoOS>[] {
+  return ACOES_DA_OS.map((a) => ({
+    key: a.acao,
+    label: a.label,
+    icon: a.icon,
+    onClick: (item: ExecucaoOS) => onAcao(item, a.acao),
+    variant: a.variant,
+    condition: (item: ExecucaoOS) => a.status.includes(statusDaExecucao(item) ?? ''),
+  }));
 }

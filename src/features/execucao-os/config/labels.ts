@@ -24,6 +24,9 @@ export function formatarTempo(minutos?: number | null): string {
 
 export function formatarData(data?: string | Date | null): string {
   if (!data) return '-';
-  const d = new Date(data);
+  // "YYYY-MM-DD" puro e lido pelo JS como meia-noite UTC — em Brasilia, o dia
+  // anterior. Montado com os componentes, fica no dia local que ele diz ser.
+  const soData = typeof data === 'string' ? data.match(/^(\d{4})-(\d{2})-(\d{2})$/) : null;
+  const d = soData ? new Date(Number(soData[1]), Number(soData[2]) - 1, Number(soData[3])) : new Date(data);
   return Number.isNaN(d.getTime()) ? '-' : d.toLocaleDateString('pt-BR');
 }

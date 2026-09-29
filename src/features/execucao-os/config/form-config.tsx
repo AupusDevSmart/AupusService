@@ -7,7 +7,6 @@ import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManag
 import { OrcamentoCardManager } from '@/components/common/cards/OrcamentoCardManager';
 import { OrigemOSCardWrapper } from '../components/OrigemOSCardWrapper';
 import { ReservaVeiculoCard } from '../components/ReservaVeiculoCard';
-import { StatusTransitionHelper } from '../components/StatusTransitionHelper';
 import { HistoricoOSCard } from '../components/HistoricoOSCard';
 
 export const execucaoOSFormFields: FormField[] = [
@@ -63,7 +62,7 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'text',
     disabled: true,
     group: 'identificacao',
-    width: 'third'
+    width: 'half'
   },
 
   // Origem da OS - GRUPO: origem
@@ -156,19 +155,6 @@ export const execucaoOSFormFields: FormField[] = [
     ],
     group: 'controle',
     width: 'half'
-  },
-  {
-    key: 'statusHelper',
-    label: '',
-    type: 'custom',
-    component: (props: any) => {
-      const status = props.value || props.entity?.statusExecucao || 'PENDENTE';
-      return <StatusTransitionHelper currentStatus={status} />;
-    },
-    group: 'controle',
-    colSpan: 2,
-    showOnlyOnMode: ['view'],
-    startNewRow: true
   },
   {
     key: 'dataHoraInicioReal',
@@ -603,10 +589,16 @@ export const execucaoOSFormGroups = [
       value: 'create'
     }
   },
+  // A ordem segue a vida da OS: o que e e em que pe esta, de onde veio,
+  // quando e quem executa, como vai ate la, o que foi feito e gasto, e por fim
+  // o resultado e a avaliacao. O status ficava escondido no meio do sheet, e a
+  // reserva de veiculo aparecia antes de se saber quem ia executar.
   {
     key: 'identificacao',
     title: 'Identificação da OS',
-    fields: ['numeroOS', 'descricaoOS', 'localAtivo', 'tipoOS', 'prioridadeOS'] // ✅ ADICIONADO: mapping explícito
+    // Numero e status lado a lado; tipo e prioridade na linha de baixo; a
+    // descricao em largura total.
+    fields: ['numeroOS', 'statusExecucao', 'tipoOS', 'prioridadeOS', 'descricaoOS']
   },
   {
     key: 'origem',
@@ -614,19 +606,19 @@ export const execucaoOSFormGroups = [
     fields: ['origemCard']
   },
   {
-    key: 'reserva',
-    title: 'Reserva de Veículo',
-    fields: ['reservaCard', 'kmInicialReserva', 'kmFinalReserva', 'observacoesFinalizacaoReserva']
-  },
-  {
     key: 'controle',
-    title: 'Controle de Execução',
-    fields: ['statusExecucao', 'statusHelper', 'dataHoraInicioReal', 'dataHoraFimReal', 'tempoTotalExecucao'] // ✅ ADICIONADO: mapping explícito
+    title: 'Execução',
+    fields: ['dataHoraInicioReal', 'dataHoraFimReal', 'tempoTotalExecucao']
   },
   {
     key: 'equipe',
     title: 'Equipe de Execução',
     fields: ['responsavelExecucao', 'funcaoResponsavel', 'tecnicos'] // ✅ ADICIONADO: mapping explícito
+  },
+  {
+    key: 'reserva',
+    title: 'Reserva de Veículo',
+    fields: ['reservaCard', 'kmInicialReserva', 'kmFinalReserva', 'observacoesFinalizacaoReserva']
   },
   {
     key: 'atividades',

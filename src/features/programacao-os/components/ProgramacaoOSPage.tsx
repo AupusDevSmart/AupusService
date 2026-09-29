@@ -38,8 +38,11 @@ const formatToDateTimeLocal = (dateValue: any): string => {
         return dateValue;
       }
 
-      // Se está no formato ISO com segundos, remover os segundos
-      if (dateValue.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+      // Sem fuso (horario local com segundos): so cortar os segundos.
+      // Com fuso ("Z" ou "+03:00"), que e o que a API devolve, cortar a string
+      // pegava a hora UTC e a exibia como local — 3h a mais, e cada edicao
+      // salva deslocava de novo.
+      if (dateValue.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$/)) {
         return dateValue.substring(0, 16); // YYYY-MM-DDTHH:mm
       }
 

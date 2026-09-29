@@ -24,9 +24,13 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     if (!isoString) return { data: '', hora: '' };
 
     const date = new Date(isoString);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    // Data e hora no MESMO fuso (local). A data saia de toISOString (UTC) e a
+    // hora de toTimeString (local): OS programada para 22h aparecia no dia
+    // seguinte, com a hora certa.
     return {
-      data: date.toISOString().split('T')[0],
-      hora: date.toTimeString().split(' ')[0].substring(0, 5) // HH:mm
+      data: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+      hora: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
     };
   };
 

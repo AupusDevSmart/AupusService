@@ -21,6 +21,12 @@ interface BaseModalProps<T extends BaseEntity> {
   onSubmit: (data: any) => Promise<void>;
   width?: string;
   children?: React.ReactNode;
+  /**
+   * Conteudo antes do formulario, logo abaixo do cabecalho. Para o que a
+   * pessoa veio fazer ao abrir o sheet (ex.: as acoes da OS) — em `children`
+   * ficava depois de todos os grupos, onde ninguem rola ate achar.
+   */
+  topo?: React.ReactNode;
   groups?: { key: string; title: string; fields?: string[] }[];
   
   loading?: boolean;
@@ -55,6 +61,7 @@ export function BaseModal<T extends BaseEntity>({
   onSubmit,
   width = "w-[500px]",
   children,
+  topo,
   groups,
   loading = false,
   loadingText = "Salvando...",
@@ -508,6 +515,8 @@ export function BaseModal<T extends BaseEntity>({
           <div className="flex-1 overflow-y-auto">
             <div className="p-4 md:p-6">
               <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+                {topo}
+
                 <BaseForm
                   fields={formFields}
                   data={formData}

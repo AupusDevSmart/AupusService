@@ -10,9 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Play, Pause, RotateCcw, Wrench, ClipboardCheck, CheckCircle, Ban, Loader2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, Wrench, ClipboardCheck, CheckCircle, Undo2, Ban, Loader2 } from 'lucide-react';
 
-export type PendingAction = 'iniciar' | 'pausar' | 'retomar' | 'executar' | 'auditar' | 'finalizar' | 'cancelar';
+export type PendingAction = 'iniciar' | 'pausar' | 'retomar' | 'executar' | 'auditar' | 'finalizar' | 'reabrir' | 'cancelar';
 
 interface ActionField {
   key: string;
@@ -227,6 +227,21 @@ const actionConfig: Record<PendingAction, ActionMeta> = {
       },
     ],
   },
+  reabrir: {
+    confirmLabel: 'Confirmar Reabertura',
+    icon: Undo2,
+    variant: 'default',
+    fields: [
+      {
+        key: 'observacoes',
+        label: 'Motivo da reabertura',
+        type: 'textarea',
+        placeholder: 'O que precisa ser refeito (opcional)',
+        rows: 3,
+        colSpan: 2,
+      },
+    ],
+  },
   cancelar: {
     confirmLabel: 'Confirmar Cancelamento',
     icon: Ban,
@@ -261,9 +276,11 @@ interface ActionConfirmPanelProps {
   action: PendingAction;
   entity?: any;
   onConfirm: (data: Record<string, any>) => Promise<void>;
+  /** Desiste desta acao e volta para a lista de acoes */
+  onVoltar?: () => void;
 }
 
-export function ActionConfirmPanel({ action, entity, onConfirm }: ActionConfirmPanelProps) {
+export function ActionConfirmPanel({ action, entity, onConfirm, onVoltar }: ActionConfirmPanelProps) {
   const config = actionConfig[action];
   const Icon = config.icon;
 
@@ -305,6 +322,11 @@ export function ActionConfirmPanel({ action, entity, onConfirm }: ActionConfirmP
         if (v !== undefined && v !== null && String(v).trim() !== '') {
           if (field.type === 'number') {
             payload[field.key] = Number(v);
+          } else if (field.type === 'datetime-local') {
+            // O input devolve hora local sem fuso ("2026-09-29T09:00"). Enviado
+            // assim, o backend fazia new Date() no fuso do SERVIDOR. Convertido
+            // aqui, no navegador, vira o instante que a pessoa quis dizer.
+            payload[field.key] = new Date(String(v)).toISOString();
           } else {
             payload[field.key] = String(v).trim();
           }
@@ -381,7 +403,7 @@ export function ActionConfirmPanel({ action, entity, onConfirm }: ActionConfirmP
   };
 
   return (
-    <div className="border-t mt-6 pt-4 space-y-4">
+    <div className="space-y-4">
       <h3 className="text-sm font-medium">Confirmar acao</h3>
 
       <div className="grid grid-cols-2 gap-3">
@@ -413,6 +435,12 @@ export function ActionConfirmPanel({ action, entity, onConfirm }: ActionConfirmP
         )}
         {config.confirmLabel}
       </Button>
+
+      {onVoltar && (
+        <Button type="button" variant="ghost" size="sm" onClick={onVoltar} disabled={submitting} className="w-full">
+          Escolher outra ação
+        </Button>
+      )}
     </div>
   );
 }

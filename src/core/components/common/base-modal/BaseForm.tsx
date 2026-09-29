@@ -501,14 +501,19 @@ export function BaseForm({
                 ? (() => {
                     try {
                       const dateStr = String(value);
-                      const parsedDate = parse(dateStr, "yyyy-MM-dd'T'HH:mm", new Date());
-                      return isValid(parsedDate) ? parsedDate : undefined;
+                      const local = parse(dateStr, "yyyy-MM-dd'T'HH:mm", new Date());
+                      if (isValid(local)) return local;
+                      // Valor cru da API (ISO em UTC, com "Z"): new Date converte
+                      // para o horario local. Sem isso o campo aparecia vazio.
+                      const iso = new Date(dateStr);
+                      return isValid(iso) ? iso : undefined;
                     } catch {
                       return undefined;
                     }
                   })()
                 : undefined
             }
+            disabled={fieldDisabled}
             setDate={(date) =>
               handleFieldChange(field.key, date ? format(date, "yyyy-MM-dd'T'HH:mm") : "")
             }
@@ -573,11 +578,9 @@ export function BaseForm({
 
   return (
     <div className="space-y-6">
-      {Object.entries(groupedFields).map(([groupName, groupFields], groupIndex) => {
-        if (groupFields.length === 0) {
-          // console.log(`⚠️ Grupo '${groupName}' está vazio`);
-          return null;
-        }
+      {/* Grupo sem campo visivel sai antes de contar o indice: senao o
+          primeiro grupo visivel ganhava a linha de separacao no topo. */}
+      {Object.entries(groupedFields).filter(([, groupFields]) => groupFields.length > 0).map(([groupName, groupFields], groupIndex) => {
 
         const currentGroup = groups?.find(g => g.key === groupName);
         // ✅ Grid é o padrão - só desativa se explicitamente definir layout: 'single' ou fullWidth: true
