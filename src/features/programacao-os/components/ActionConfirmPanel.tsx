@@ -37,9 +37,11 @@ const actionConfig: Record<PendingAction, {
 interface ActionConfirmPanelProps {
   action: PendingAction;
   onConfirm: (input?: string) => Promise<void>;
+  /** Consequencia da acao que nao esta visivel na tela (ex.: a OS que sai junto) */
+  aviso?: string;
 }
 
-export function ActionConfirmPanel({ action, onConfirm }: ActionConfirmPanelProps) {
+export function ActionConfirmPanel({ action, onConfirm, aviso }: ActionConfirmPanelProps) {
   const [inputValue, setInputValue] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -60,6 +62,8 @@ export function ActionConfirmPanel({ action, onConfirm }: ActionConfirmPanelProp
   return (
     <div className="border-t mt-6 pt-4 space-y-3">
       <h3 className="text-sm font-medium">Confirmar acao</h3>
+
+      {aviso && <p className="text-sm text-muted-foreground">{aviso}</p>}
 
       <div>
         <label className="text-sm text-muted-foreground mb-1.5 block">

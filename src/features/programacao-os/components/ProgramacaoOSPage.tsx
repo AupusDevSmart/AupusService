@@ -21,6 +21,10 @@ import type { ProgramacaoResponse, ProgramacaoDetalhesResponse, ProgramacaoFilte
 import { useUserStore } from '@/store/useUserStore';
 import { toast } from '@/hooks/use-toast';
 
+// useProgramacaoOS ja relanca o erro com a mensagem da API
+const mensagemDoErro = (error: unknown) =>
+  error instanceof Error ? error.message : 'Tente novamente.';
+
 // Função utilitária para converter datas para o formato datetime-local
 const formatToDateTimeLocal = (dateValue: any): string => {
   if (!dateValue) return '';
@@ -354,8 +358,9 @@ export function ProgramacaoOSPage() {
       await carregarDados();
       closeModal();
     } catch (error) {
-      //console.error('❌ Erro ao salvar:', error);
-      alert('Erro ao salvar programação. Verifique os dados e tente novamente.');
+      // O backend recusa, por exemplo, a anomalia que ja tem programacao em
+      // aberto — a mensagem dele diz o que fazer, o texto generico nao.
+      toast({ title: 'Erro ao salvar programação', description: mensagemDoErro(error), variant: 'destructive' });
     }
   };
 
@@ -448,7 +453,9 @@ export function ProgramacaoOSPage() {
       setPendingAction(null);
       await carregarDados();
     } catch (error) {
-      console.error(`Erro ao ${pendingAction}:`, error);
+      // Cancelar a programacao cuja OS ja comecou e recusado com o motivo; sem
+      // o toast a tela so ficava parada.
+      toast({ title: `Erro ao ${pendingAction}`, description: mensagemDoErro(error), variant: 'destructive' });
     }
   };
 
@@ -465,8 +472,7 @@ export function ProgramacaoOSPage() {
       await deletarProgramacao(programacao.id);
       await carregarDados();
     } catch (error) {
-      // console.error('Erro ao deletar:', error);
-      alert('Erro ao deletar programação. Tente novamente.');
+      toast({ title: 'Erro ao excluir programação', description: mensagemDoErro(error), variant: 'destructive' });
     }
   };
 
@@ -782,6 +788,11 @@ export function ProgramacaoOSPage() {
             <ActionConfirmPanel
               action={pendingAction}
               onConfirm={handleConfirmAction}
+              aviso={
+                pendingAction === 'cancelar' && modalState.entity?.status === 'APROVADA'
+                  ? 'A OS gerada por esta programação também será cancelada, e a origem volta a ficar disponível para uma nova programação.'
+                  : undefined
+              }
             />
           )}
         </BaseModal>
