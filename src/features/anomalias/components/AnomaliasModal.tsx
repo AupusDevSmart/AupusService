@@ -2,6 +2,7 @@
 import { BaseModal } from '@/core';
 import { AlertTriangle } from 'lucide-react';
 import type { FormField, ModalMode } from '@/types/base';
+import { AtalhoParaProgramacao } from '@/features/programacao-os/components/AtalhoParaProgramacao';
 
 /**
  * Sheet de anomalia, extraido da AnomaliasPage.
@@ -38,6 +39,12 @@ interface AnomaliasModalProps {
   onClose: () => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSubmit?: (data: any) => Promise<void> | void;
+  /**
+   * "Programar" / "Ver programação" no topo. Só na tela de anomalias: aberto de
+   * dentro da OS (anomalia de origem), o atalho levaria de volta para onde a
+   * pessoa já está.
+   */
+  mostrarAtalhoProgramacao?: boolean;
 }
 
 export function AnomaliasModal({
@@ -47,7 +54,9 @@ export function AnomaliasModal({
   formFields,
   onClose,
   onSubmit,
+  mostrarAtalhoProgramacao = false,
 }: AnomaliasModalProps) {
+  const anomalia = entity as { id?: string; status?: string } | null;
   return (
     <BaseModal
       isOpen={isOpen}
@@ -60,6 +69,11 @@ export function AnomaliasModal({
       onSubmit={onSubmit as never}
       width="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[800px]"
       groups={grupos}
+      topo={
+        mostrarAtalhoProgramacao && mode !== 'create' ? (
+          <AtalhoParaProgramacao tipo="ANOMALIA" id={anomalia?.id} status={anomalia?.status} />
+        ) : undefined
+      }
     />
   );
 }

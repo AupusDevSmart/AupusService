@@ -25,8 +25,11 @@ interface BaseModalProps<T extends BaseEntity> {
    * Conteudo antes do formulario, logo abaixo do cabecalho. Para o que a
    * pessoa veio fazer ao abrir o sheet (ex.: as acoes da OS) — em `children`
    * ficava depois de todos os grupos, onde ninguem rola ate achar.
+   *
+   * Pode ser uma funcao: recebe `alteracoesPendentes` (editar com mudanca nao
+   * salva), para quem precisa bloquear acao que descartaria o que foi digitado.
    */
-  topo?: React.ReactNode;
+  topo?: React.ReactNode | ((contexto: { alteracoesPendentes: boolean }) => React.ReactNode);
   groups?: { key: string; title: string; fields?: string[] }[];
   
   loading?: boolean;
@@ -515,7 +518,9 @@ export function BaseModal<T extends BaseEntity>({
           <div className="flex-1 overflow-y-auto">
             <div className="p-4 md:p-6">
               <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-                {topo}
+                {typeof topo === 'function'
+                  ? topo({ alteracoesPendentes: hasUnsavedChanges && !isViewMode })
+                  : topo}
 
                 <BaseForm
                   fields={formFields}

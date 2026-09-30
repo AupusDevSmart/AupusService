@@ -337,6 +337,9 @@ export interface ProgramacaoFiltersDto {
   data_inicio?: string;
   data_fim?: string;
   criado_por_id?: string;
+  /** Programações desta origem — é assim que o atalho acha a que está aberta */
+  anomalia_id?: string;
+  solicitacao_servico_id?: string;
 }
 
 // ============================================================================

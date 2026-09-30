@@ -34,6 +34,11 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
   title = "Materiais"
 }) => {
   const [materiais, setMateriais] = useState<MaterialItem[]>(value);
+  // Na execução só se registra o consumo: o backend (PATCH :id/materiais)
+  // grava quantidade consumida de itens que já existem. Adicionar, remover ou
+  // mudar o planejado aqui não teria para onde ir.
+  const somenteRegistro = mode === 'execucao';
+  const planejadoTravado = disabled || somenteRegistro;
 
   useEffect(() => {
     setMateriais(value);
@@ -91,7 +96,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
           { label: 'Custo', largura: '5.5rem', alinhamento: 'right' as const },
         ]
       : []),
-    ...(!disabled ? [{ label: '', largura: '2rem' }] : []),
+    ...(!planejadoTravado ? [{ label: '', largura: '2rem' }] : []),
   ];
 
   if (disabled && materiais.length === 0) {
@@ -114,7 +119,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
             <span className="text-xs text-muted-foreground">({materiais.length})</span>
           )}
         </div>
-        {!disabled && (
+        {!planejadoTravado && (
           <Button
             type="button"
             variant="ghost"
@@ -137,7 +142,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
                 value={material.descricao}
                 onChange={(e) => atualizarMaterial(index, 'descricao', e.target.value)}
                 placeholder="Descrição do material..."
-                disabled={disabled}
+                disabled={planejadoTravado}
                 className={campoCard}
               />
               <Input
@@ -147,14 +152,14 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
                 value={material.quantidade_planejada}
                 onChange={(e) => atualizarMaterial(index, 'quantidade_planejada', parseFloat(e.target.value) || 0)}
                 placeholder="Qtd"
-                disabled={disabled}
+                disabled={planejadoTravado}
                 className={`${campoCard} text-center`}
               />
               <Input
                 value={material.unidade}
                 onChange={(e) => atualizarMaterial(index, 'unidade', e.target.value)}
                 placeholder="UN"
-                disabled={disabled}
+                disabled={planejadoTravado}
                 className={`${campoCard} text-center`}
               />
               {mode === 'execucao' && (
@@ -178,7 +183,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
                     value={material.custo_unitario || ''}
                     onChange={(e) => atualizarMaterial(index, 'custo_unitario', parseFloat(e.target.value) || 0)}
                     placeholder="R$/un"
-                    disabled={disabled}
+                    disabled={planejadoTravado}
                     className={`${campoCard} text-center`}
                   />
                   <span className="text-sm text-muted-foreground text-right truncate">
@@ -186,7 +191,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
                   </span>
                 </>
               )}
-              {!disabled && (
+              {!planejadoTravado && (
                 <Button
                   type="button"
                   variant="ghost"

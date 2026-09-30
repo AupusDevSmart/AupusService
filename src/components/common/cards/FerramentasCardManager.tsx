@@ -39,6 +39,11 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
   title = "Ferramentas"
 }) => {
   const [ferramentas, setFerramentas] = useState<FerramentaItem[]>(value);
+  // Na execução só se registra o uso: o backend (PATCH :id/ferramentas) grava
+  // "utilizada" e condição de itens que já existem. Adicionar, remover ou mudar
+  // o planejado aqui não teria para onde ir.
+  const somenteRegistro = mode === 'execucao';
+  const planejadoTravado = disabled || somenteRegistro;
 
   useEffect(() => {
     setFerramentas(value);
@@ -85,7 +90,7 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
     ...(mode === 'execucao'
       ? [{ label: 'Utilizada', largura: '4.5rem', alinhamento: 'center' as const }]
       : []),
-    ...(!disabled ? [{ label: '', largura: '2rem' }] : []),
+    ...(!planejadoTravado ? [{ label: '', largura: '2rem' }] : []),
   ];
 
   return (
@@ -99,7 +104,7 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
             <span className="text-xs text-muted-foreground">({ferramentas.length})</span>
           )}
         </div>
-        {!disabled && (
+        {!planejadoTravado && (
           <Button
             type="button"
             variant="ghost"
@@ -122,7 +127,7 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
                 value={ferramenta.descricao}
                 onChange={(e) => atualizarFerramenta(index, 'descricao', e.target.value)}
                 placeholder="Descrição da ferramenta..."
-                disabled={disabled}
+                disabled={planejadoTravado}
                 className={campoCard}
               />
               {/* Decimal e min 0: a ferramenta pode vir da instrucao, onde
@@ -136,14 +141,14 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
                   atualizarFerramenta(index, 'quantidade', parseFloat(e.target.value) || 0)
                 }
                 placeholder="Qtd"
-                disabled={disabled}
+                disabled={planejadoTravado}
                 className={`${campoCard} text-center`}
               />
               <Input
                 value={ferramenta.unidade || ''}
                 onChange={(e) => atualizarFerramenta(index, 'unidade', e.target.value)}
                 placeholder="un"
-                disabled={disabled}
+                disabled={planejadoTravado}
                 className={`${campoCard} text-center`}
               />
               {mode === 'execucao' && (
@@ -158,7 +163,7 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
                   />
                 </div>
               )}
-              {!disabled && (
+              {!planejadoTravado && (
                 <Button
                   type="button"
                   variant="ghost"

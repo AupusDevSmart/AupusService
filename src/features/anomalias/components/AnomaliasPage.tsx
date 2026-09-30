@@ -1,5 +1,8 @@
 // src/features/anomalias/components/AnomaliasPage.tsx - REFATORADA
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useUserStore } from '@/store/useUserStore';
+import { linkDeProgramacao } from '@/features/programacao-os/utils/link-de-programacao';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -77,12 +80,17 @@ export function AnomaliasPage() {
     onSuccess: reloadData,
   });
 
+  const navigate = useNavigate();
+  const temPermissao = useUserStore((st) => st.hasPermission);
+
   // Ações customizadas (além das padrões View/Edit)
   const customActions = useMemo(() => {
     const tableActions = createAnomaliasTableActions({
       onView: anomaliasActions.handleView,
       onEdit: anomaliasActions.handleEdit,
       onDelete: anomaliasActions.handleDelete,
+      onProgramacao: (anomalia) => navigate(linkDeProgramacao('ANOMALIA', String(anomalia.id))),
+      temPermissao,
     });
 
     // Filtrar apenas as ações extras (não View, Edit)
@@ -99,7 +107,7 @@ export function AnomaliasPage() {
           variant: action.variant,
         };
       });
-  }, [anomaliasActions]);
+  }, [anomaliasActions, navigate, temPermissao]);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -363,6 +371,7 @@ export function AnomaliasPage() {
           formFields={formFields}
           onClose={closeModal}
           onSubmit={handleSubmit}
+          mostrarAtalhoProgramacao
         />
       </Layout.Main>
     </Layout>

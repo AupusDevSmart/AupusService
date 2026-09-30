@@ -1,6 +1,6 @@
 // src/features/programacao-os/components/OrigemOSSelector.tsx
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ExternalLink, FilePenLine, Settings } from 'lucide-react';
+import { AlertTriangle, ExternalLink, FilePenLine, Info, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AssistentePassos, type PassoDoAssistente } from '@/components/common/AssistentePassos';
 import { DetalheDaOrigemSheet, type OrigemAberta } from './DetalheDaOrigemSheet';
@@ -59,6 +59,7 @@ export function OrigemOSSelector({
   const tarefasSelecionadas = value.tarefasSelecionadas || [];
 
   const {
+    resolverOrigem,
     anomaliasDisponiveis,
     planosDisponiveis,
     solicitacoesDisponiveis,
@@ -110,6 +111,50 @@ export function OrigemOSSelector({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planoId, tipo]);
 
+  // ==================== PRÉ-SELEÇÃO DO ATALHO ====================
+
+  // Atalho "Programar" de anomalia, solicitação ou plano do equipamento. A
+  // escolha passa pelas mesmas funções do clique: são elas que preenchem planta,
+  // unidade, local e ativo — uma pré-seleção por fora deixaria tudo isso vazio.
+  const [abrindoOrigem, setAbrindoOrigem] = useState(false);
+  const [avisoOrigem, setAvisoOrigem] = useState<string | null>(null);
+  const preSelecao = value.preSelecao;
+
+  useEffect(() => {
+    if (!preSelecao) return;
+    let vivo = true;
+    const alvo = preSelecao.id.trim();
+    const base: OrigemOSValue = { ...value, tipo: preSelecao.tipo, preSelecao: undefined };
+
+    setAbrindoOrigem(true);
+    setAvisoOrigem(null);
+    resolverOrigem(preSelecao.tipo, alvo)
+      .then((resultado) => {
+        if (!vivo) return;
+        if ('motivo' in resultado) {
+          setAvisoOrigem(resultado.motivo);
+          onChange(base);
+          setEscolhendo(true);
+          setPasso(1);
+          return;
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- o item e do tipo pedido
+        const item = resultado.item as any;
+        if (preSelecao.tipo === 'ANOMALIA') escolherAnomalia(alvo, item, base);
+        else if (preSelecao.tipo === 'SOLICITACAO_SERVICO') escolherSolicitacao(alvo, item, base);
+        else escolherPlano(alvo, item, base);
+      })
+      .finally(() => {
+        if (vivo) setAbrindoOrigem(false);
+      });
+
+    return () => {
+      vivo = false;
+    };
+    // Só quando o atalho pede outra origem; o resto do valor muda a cada escolha.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preSelecao?.tipo, preSelecao?.id]);
+
   // ==================== HANDLERS ====================
 
   const trocarTipo = (novo: TipoOrigem) => {
@@ -126,11 +171,13 @@ export function OrigemOSSelector({
     setPasso(1);
   };
 
-  const escolherAnomalia = (id: string) => {
-    const anomalia = anomaliasDisponiveis.find((a) => String(a.id).trim() === id);
+  // `item` e `base`: a pre-selecao do atalho escolhe antes de a lista do
+  // estado atualizar, e a partir de um valor sem o campo `preSelecao`.
+  const escolherAnomalia = (id: string, item?: (typeof anomaliasDisponiveis)[number], base: OrigemOSValue = value) => {
+    const anomalia = item ?? anomaliasDisponiveis.find((a) => String(a.id).trim() === id);
 
     onChange({
-      ...value,
+      ...base,
       anomaliaId: id || undefined,
       // A planta e a unidade vêm da anomalia: perguntá-las de novo seria pedir
       // que a pessoa repita o que o registro já sabe.
@@ -144,11 +191,11 @@ export function OrigemOSSelector({
     if (id) setEscolhendo(false);
   };
 
-  const escolherSolicitacao = (id: string) => {
-    const solicitacao = solicitacoesDisponiveis.find((s) => String(s.id).trim() === id);
+  const escolherSolicitacao = (id: string, item?: (typeof solicitacoesDisponiveis)[number], base: OrigemOSValue = value) => {
+    const solicitacao = item ?? solicitacoesDisponiveis.find((s) => String(s.id).trim() === id);
 
     onChange({
-      ...value,
+      ...base,
       solicitacaoServicoId: id || undefined,
       plantaId: solicitacao?.plantaId || '',
       unidadeId: solicitacao?.unidadeId || '',
@@ -159,15 +206,15 @@ export function OrigemOSSelector({
     if (id) setEscolhendo(false);
   };
 
-  const escolherPlano = (id: string) => {
-    const plano = planosDisponiveis.find((p) => String(p.id).trim() === id);
+  const escolherPlano = (id: string, item?: (typeof planosDisponiveis)[number], base: OrigemOSValue = value) => {
+    const plano = item ?? planosDisponiveis.find((p) => String(p.id).trim() === id);
 
     onChange({
-      ...value,
+      ...base,
       planoId: id || undefined,
       tarefasSelecionadas: [],
       // O plano e de um equipamento so, e a OS herda a localizacao dele.
-      plantaId: plano?.plantaId || value.plantaId || '',
+      plantaId: plano?.plantaId || base.plantaId || '',
     });
 
     if (plano && onLocalAtivoChange) {
@@ -465,7 +512,7 @@ export function OrigemOSSelector({
     );
   }
 
-  return (
+  const assistente = (
     <AssistentePassos
       passos={passos}
       atual={passo}
@@ -474,5 +521,21 @@ export function OrigemOSSelector({
       rotuloFinal="Concluir"
       onFinalizar={() => setEscolhendo(false)}
     />
+  );
+
+  if (abrindoOrigem) {
+    return <p className="py-2 text-sm text-muted-foreground">Abrindo a origem selecionada…</p>;
+  }
+
+  if (!avisoOrigem) return assistente;
+
+  return (
+    <div className="space-y-3">
+      <p className="flex items-start gap-2 rounded-md border px-3 py-2 text-sm text-muted-foreground">
+        <Info className="mt-0.5 h-4 w-4 shrink-0" />
+        <span>{avisoOrigem} Escolha a origem abaixo.</span>
+      </p>
+      {assistente}
+    </div>
   );
 }

@@ -1,11 +1,19 @@
 // src/features/execucao-os/components/AcoesDaOS.tsx
 import { Button } from '@/components/ui/button';
-import { acoesDisponiveis } from '../config/actions-config';
+import { acoesDisponiveis, type TemPermissao } from '../config/actions-config';
 import type { PendingAction } from './ActionConfirmPanel';
 
 interface AcoesDaOSProps {
   status: string | undefined;
   onAcao: (acao: PendingAction) => void;
+  /** Esconde a acao cuja permissao o usuario nao tem (o backend daria 403) */
+  temPermissao?: TemPermissao;
+  /**
+   * No editar, com mudanca nao salva: as acoes ficam desabilitadas. A transicao
+   * fecha o sheet e descartaria o que foi digitado (decisao D4 da
+   * SPEC-ATALHOS-E-ACOES-DA-OS).
+   */
+  alteracoesPendentes?: boolean;
 }
 
 /**
@@ -18,8 +26,8 @@ interface AcoesDaOSProps {
  *
  * Clicar abre o mesmo painel de confirmacao das acoes da tabela.
  */
-export function AcoesDaOS({ status, onAcao }: AcoesDaOSProps) {
-  const acoes = acoesDisponiveis(status);
+export function AcoesDaOS({ status, onAcao, temPermissao, alteracoesPendentes = false }: AcoesDaOSProps) {
+  const acoes = acoesDisponiveis(status, temPermissao);
 
   return (
     <div className="space-y-3">
@@ -30,6 +38,12 @@ export function AcoesDaOS({ status, onAcao }: AcoesDaOSProps) {
           OS encerrada: nenhuma ação disponível.
         </p>
       ) : (
+        <>
+        {alteracoesPendentes && (
+          <p className="text-sm text-muted-foreground">
+            Salve as alterações antes de mudar o status.
+          </p>
+        )}
         <div className="flex flex-wrap gap-2">
           {acoes.map(({ acao, label, descricao, icon: Icon, variant }) => (
             <Button
@@ -39,6 +53,7 @@ export function AcoesDaOS({ status, onAcao }: AcoesDaOSProps) {
               variant={variant === 'destructive' ? 'outline' : 'default'}
               className={variant === 'destructive' ? 'text-destructive hover:text-destructive' : undefined}
               title={descricao}
+              disabled={alteracoesPendentes}
               onClick={() => onAcao(acao)}
             >
               <Icon className="h-4 w-4 mr-1.5" />
@@ -46,6 +61,7 @@ export function AcoesDaOS({ status, onAcao }: AcoesDaOSProps) {
             </Button>
           ))}
         </div>
+        </>
       )}
     </div>
   );

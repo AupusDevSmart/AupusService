@@ -859,6 +859,22 @@ export class ExecucaoOSApiService {
     }
   }
 
+  /** Consumo de materiais que já existem na OS (PATCH :id/materiais) */
+  async registrarMateriais(
+    id: string,
+    materiais: { id: string; quantidade_consumida: number; observacoes?: string }[],
+  ): Promise<void> {
+    await api.patch(`${this.baseEndpoint}/${id}/materiais`, { materiais });
+  }
+
+  /** Uso das ferramentas que já existem na OS (PATCH :id/ferramentas) */
+  async registrarFerramentas(
+    id: string,
+    ferramentas: { id: string; utilizada: boolean; condicao_antes?: string; condicao_depois?: string; observacoes?: string }[],
+  ): Promise<void> {
+    await api.patch(`${this.baseEndpoint}/${id}/ferramentas`, { ferramentas });
+  }
+
   async getHistoricoCompleto(id: string): Promise<any> {
     // console.log('📜 EXECUCAO-OS API: Obtendo histórico completo da execução:', id);
 

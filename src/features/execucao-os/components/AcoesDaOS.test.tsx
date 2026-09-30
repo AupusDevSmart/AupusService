@@ -39,6 +39,26 @@ describe('AcoesDaOS', () => {
 
     expect(onAcao).toHaveBeenCalledWith('reabrir');
   });
+
+  it('esconde a acao sem a permissao que o backend exige para ela', () => {
+    render(
+      <AcoesDaOS
+        status="AUDITADA"
+        temPermissao={(perm) => perm !== 'execucao_os.aprovar'}
+        onAcao={() => {}}
+      />,
+    );
+
+    // Finalizar exige execucao_os.aprovar; Reabrir e Cancelar seguem
+    expect(botoes()).toEqual(['Reabrir', 'Cancelar']);
+  });
+
+  it('com alteracao nao salva no editar, desabilita as acoes e avisa', () => {
+    render(<AcoesDaOS status="EM_EXECUCAO" alteracoesPendentes onAcao={() => {}} />);
+
+    for (const botao of screen.getAllByRole('button')) expect(botao).toBeDisabled();
+    expect(screen.getByText(/salve as alterações antes/i)).toBeInTheDocument();
+  });
 });
 
 describe('formatarData', () => {

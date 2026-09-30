@@ -25,6 +25,9 @@ import type { ExecucaoOS, ExecucaoOSFilters } from '../types';
 import { execucaoOSTransitionsService } from '@/services/execucao-os-transitions.service';
 import { toast } from '@/hooks/use-toast';
 import { formatApiError } from '@/utils/api-error';
+import { execucaoOSApi } from '@/services/execucao-os.service';
+import { registrosAlterados } from '../utils/registro-da-execucao';
+import { useUserStore } from '@/store/useUserStore';
 
 // Dashboard Component
 import { ExecucaoOSDashboard } from './ExecucaoOSDashboard';
@@ -47,6 +50,7 @@ export function ExecucaoOSPage() {
     limit: linhasPorPagina,
   }));
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const temPermissao = useUserStore((s) => s.hasPermission);
 
   // Hook de API
   const {
@@ -82,17 +86,26 @@ export function ExecucaoOSPage() {
     }
   };
 
-  const handleView = (execucao: ExecucaoOS) => {
-    openModal('view', execucao);
+  // A linha da tabela pode vir sem materiais/ferramentas: o sheet abre com a OS
+  // completa, senão o editar mostraria cartões vazios e salvaria em cima disso.
+  const completa = async (execucao: ExecucaoOS): Promise<ExecucaoOS> => {
+    try {
+      return (await fetchOne(execucao.id)) || execucao;
+    } catch {
+      return execucao;
+    }
   };
 
-  const handleEdit = (execucao: ExecucaoOS) => {
+  const handleView = async (execucao: ExecucaoOS) => {
+    setPendingAction(null);
+    openModal('view', await completa(execucao));
+  };
+
+  const handleEdit = async (execucao: ExecucaoOS) => {
+    setPendingAction(null);
     const status = (execucao.statusExecucao || execucao.status)?.toUpperCase();
-    if (status === 'FINALIZADA' || status === 'CANCELADA') {
-      openModal('view', execucao);
-      return;
-    }
-    openModal('edit', execucao);
+    const detalhe = await completa(execucao);
+    openModal(status === 'FINALIZADA' || status === 'CANCELADA' ? 'view' : 'edit', detalhe);
   };
 
   // Confirm action handler - recebe objeto com todos os campos do painel
@@ -163,7 +176,7 @@ export function ExecucaoOSPage() {
   };
 
   // Ações da tabela
-  const actions = createExecucaoOSTableActions(openViewWithAction);
+  const actions = createExecucaoOSTableActions(openViewWithAction, temPermissao);
 
   // Carregar dados ao montar e quando filtros mudarem
   useEffect(() => {
@@ -220,15 +233,39 @@ export function ExecucaoOSPage() {
     setFilters(prev => ({ ...prev, page }));
   };
 
-  const handleSubmit = async (_data: any) => {
-    if (!modalState.entity) return;
+  // O editar grava o que a OS em andamento registra — consumo de material e
+  // uso de ferramenta — e só o que mudou. Antes este submit descartava os dados
+  // e fechava, e quem editava perdia tudo sem aviso (D1 da
+  // SPEC-ATALHOS-E-ACOES-DA-OS). O resto do formulário é só leitura no editar.
+  const handleSubmit = async (data: Partial<ExecucaoOS> & Record<string, unknown>) => {
+    const entity = modalState.entity;
+    if (!entity) return;
+
+    const registros = registrosAlterados(
+      {
+        materiais: (entity.materiaisConsumidos ?? []) as never[],
+        ferramentas: (entity.ferramentasUtilizadas ?? []) as never[],
+      },
+      {
+        materiais: (data.materiaisConsumidos ?? []) as never[],
+        ferramentas: (data.ferramentasUtilizadas ?? []) as never[],
+      },
+    );
 
     try {
-      await fetchItems(toApiParams);
+      if (registros.materiais.length > 0) {
+        await execucaoOSApi.registrarMateriais(entity.id, registros.materiais);
+      }
+      if (registros.ferramentas.length > 0) {
+        await execucaoOSApi.registrarFerramentas(entity.id, registros.ferramentas);
+      }
+      const total = registros.materiais.length + registros.ferramentas.length;
+      toast({ title: total > 0 ? 'Execução salva' : 'Nada a salvar' });
       closeModal();
+      await fetchItems(toApiParams);
     } catch (error) {
-      console.error('Erro ao salvar execução:', error);
-      alert('Erro ao salvar. Tente novamente.');
+      toast({ title: 'Erro ao salvar a execução', description: formatApiError(error), variant: 'destructive' });
+      throw error; // mantém o sheet aberto com o que foi digitado
     }
   };
 
@@ -352,25 +389,29 @@ export function ExecucaoOSPage() {
             formFields={formFields}
             groups={formGroups}
             topo={
-              modalState.mode === 'view' ? (
-                <div className="rounded-md border p-4">
-                  {pendingAction ? (
-                    // Confirmação da ação escolhida (na tabela ou aqui)
-                    <ActionConfirmPanel
-                      key={pendingAction}
-                      action={pendingAction}
-                      entity={modalState.entity}
-                      onConfirm={handleConfirmAction}
-                      onVoltar={() => setPendingAction(null)}
-                    />
-                  ) : (
-                    <AcoesDaOS
-                      status={statusDaExecucao(modalState.entity)}
-                      onAcao={setPendingAction}
-                    />
-                  )}
-                </div>
-              ) : undefined
+              modalState.mode === 'view' || modalState.mode === 'edit'
+                ? ({ alteracoesPendentes }) => (
+                    <div className="rounded-md border p-4">
+                      {pendingAction ? (
+                        // Confirmação da ação escolhida (na tabela ou aqui)
+                        <ActionConfirmPanel
+                          key={pendingAction}
+                          action={pendingAction}
+                          entity={modalState.entity}
+                          onConfirm={handleConfirmAction}
+                          onVoltar={() => setPendingAction(null)}
+                        />
+                      ) : (
+                        <AcoesDaOS
+                          status={statusDaExecucao(modalState.entity)}
+                          temPermissao={temPermissao}
+                          alteracoesPendentes={alteracoesPendentes}
+                          onAcao={setPendingAction}
+                        />
+                      )}
+                    </div>
+                  )
+                : undefined
             }
             onClose={handleCloseModal}
             onSubmit={handleSubmit}

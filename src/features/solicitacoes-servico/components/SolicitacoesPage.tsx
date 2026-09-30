@@ -38,6 +38,10 @@ import { useSolicitacoesApi } from '../hooks/useSolicitacoesApi';
 import { useSolicitacoesFilters } from '../hooks/useSolicitacoesFilters';
 import { useSolicitacoesActions } from '../hooks/useSolicitacoesActions';
 import { ActionConfirmPanel } from './ActionConfirmPanel';
+import { AtalhoParaProgramacao } from '@/features/programacao-os/components/AtalhoParaProgramacao';
+import { linkDeProgramacao } from '@/features/programacao-os/utils/link-de-programacao';
+import { useNavigate } from 'react-router-dom';
+import { useUserStore } from '@/store/useUserStore';
 import { SolicitacoesDashboard } from './SolicitacoesDashboard';
 import { SolicitacoesStats } from '@/services/solicitacoes-servico.service';
 
@@ -92,11 +96,16 @@ export function SolicitacoesPage() {
     onSuccess: reloadData,
   });
 
+  const navigate = useNavigate();
+  const temPermissao = useUserStore((st) => st.hasPermission);
+
   const customActions = useMemo(() => {
     const tableActions = createSolicitacoesTableActions({
       onView: solicitacoesActions.handleView,
       onEdit: solicitacoesActions.handleEdit,
       onDelete: solicitacoesActions.handleDelete,
+      onProgramacao: (solicitacao) => navigate(linkDeProgramacao('SOLICITACAO_SERVICO', String(solicitacao.id))),
+      temPermissao,
     });
 
     return tableActions
@@ -112,7 +121,7 @@ export function SolicitacoesPage() {
           variant: action.variant,
         };
       });
-  }, [solicitacoesActions]);
+  }, [solicitacoesActions, navigate, temPermissao]);
 
 
   useEffect(() => {
@@ -386,6 +395,15 @@ export function SolicitacoesPage() {
                 closeOnEscape={!instrucaoAberta}
                 closeOnBackdropClick={!instrucaoAberta}
                 width="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[800px]"
+                topo={
+                  modalState.mode !== 'create' ? (
+                    <AtalhoParaProgramacao
+                      tipo="SOLICITACAO_SERVICO"
+                      id={(modalState.entity as { id?: string } | null)?.id}
+                      status={(modalState.entity as { status?: string } | null)?.status}
+                    />
+                  ) : undefined
+                }
               >
                 {/* Painel de confirmação de ação - aparece no final do form em modo view */}
                 {solicitacoesActions.pendingAction && modalState.mode === 'view' && (

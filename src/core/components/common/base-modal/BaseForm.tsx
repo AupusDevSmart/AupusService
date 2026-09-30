@@ -517,7 +517,7 @@ export function BaseForm({
             setDate={(date) =>
               handleFieldChange(field.key, date ? format(date, "yyyy-MM-dd'T'HH:mm") : "")
             }
-            placeholder={field.placeholder || "Selecione data e hora"}
+            placeholder={field.placeholder || "dd/mm/aaaa"}
             className={cn(error && "[&>button]:border-destructive")}
           />
         );

@@ -83,7 +83,7 @@ export type Permissao =
   | 'programacao_os.view' | 'programacao_os.manage'
   | 'programacao_os.aprovar' | 'programacao_os.cancelar'
   | 'execucao_os.view' | 'execucao_os.manage'
-  | 'execucao_os.aprovar' | 'execucao_os.cancelar'
+  | 'execucao_os.aprovar' | 'execucao_os.cancelar' | 'execucao_os.executar'
   | 'manutencao.manage'
   | 'recursos.manage'
   | 'agenda.manage'

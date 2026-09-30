@@ -94,6 +94,7 @@ export const execucaoOSFormFields: FormField[] = [
   // Dados de Execução da Reserva - GRUPO: reserva
   {
     key: 'kmInicialReserva',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'KM Inicial (Saída)',
     type: 'number',
     placeholder: 'KM do veículo ao sair',
@@ -109,6 +110,7 @@ export const execucaoOSFormFields: FormField[] = [
   },
   {
     key: 'kmFinalReserva',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'KM Final (Retorno)',
     type: 'number',
     placeholder: 'KM do veículo ao retornar',
@@ -124,6 +126,7 @@ export const execucaoOSFormFields: FormField[] = [
   },
   {
     key: 'observacoesFinalizacaoReserva',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Observações sobre o Uso do Veículo',
     type: 'textarea',
     placeholder: 'Condições do veículo, problemas encontrados, etc.',
@@ -158,6 +161,7 @@ export const execucaoOSFormFields: FormField[] = [
   },
   {
     key: 'dataHoraInicioReal',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Data e Hora Início Real',
     type: 'datetime-local',
     group: 'controle',
@@ -171,6 +175,7 @@ export const execucaoOSFormFields: FormField[] = [
   },
   {
     key: 'dataHoraFimReal',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Data e Hora Fim Real',
     type: 'datetime-local',
     group: 'controle',
@@ -198,6 +203,7 @@ export const execucaoOSFormFields: FormField[] = [
   // Equipe e Responsável - GRUPO: equipe
   {
     key: 'responsavelExecucao',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Responsável pela Execução',
     type: 'text',
     required: true,
@@ -211,6 +217,7 @@ export const execucaoOSFormFields: FormField[] = [
   },
   {
     key: 'funcaoResponsavel',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Função do Responsável',
     type: 'text',
     placeholder: 'Ex: Técnico Mecânico',
@@ -225,6 +232,7 @@ export const execucaoOSFormFields: FormField[] = [
   // Técnicos da Execução - GRUPO: equipe
   {
     key: 'tecnicos',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: '', // Remover label duplicada - o card já tem título interno
     type: 'custom',
     component: TecnicosCardManager,
@@ -406,6 +414,7 @@ export const execucaoOSFormFields: FormField[] = [
   // Resultados e Qualidade - GRUPO: resultados
   {
     key: 'resultadoServico',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Resultado do Serviço',
     type: 'textarea',
     colSpan: 2,
@@ -419,6 +428,7 @@ export const execucaoOSFormFields: FormField[] = [
   },
   {
     key: 'problemasEncontrados',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Problemas Encontrados',
     type: 'textarea',
     colSpan: 2,
@@ -431,6 +441,7 @@ export const execucaoOSFormFields: FormField[] = [
   },
   {
     key: 'recomendacoes',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Recomendações',
     type: 'textarea',
     colSpan: 2,
@@ -443,6 +454,7 @@ export const execucaoOSFormFields: FormField[] = [
   },
   {
     key: 'proximaManutencao',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Próxima Manutenção',
     type: 'datetime-local',
     group: 'resultados',
@@ -455,6 +467,7 @@ export const execucaoOSFormFields: FormField[] = [
   // Avaliação de Qualidade - GRUPO: qualidade
   {
     key: 'avaliacaoQualidade',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Avaliação da Qualidade (1-5)',
     type: 'number',
     min: 1,
@@ -472,6 +485,7 @@ export const execucaoOSFormFields: FormField[] = [
   },
   {
     key: 'observacoesQualidade',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Observações da Qualidade',
     type: 'textarea',
     placeholder: 'Comentários sobre a qualidade do serviço',
@@ -486,6 +500,7 @@ export const execucaoOSFormFields: FormField[] = [
   // Observações e Paradas - GRUPO: observacoes
   {
     key: 'observacoesExecucao',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Observações da Execução',
     type: 'textarea',
     colSpan: 2,
@@ -499,6 +514,7 @@ export const execucaoOSFormFields: FormField[] = [
   },
   {
     key: 'motivoCancelamento',
+    disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Motivo do Cancelamento',
     type: 'textarea',
     colSpan: 2,

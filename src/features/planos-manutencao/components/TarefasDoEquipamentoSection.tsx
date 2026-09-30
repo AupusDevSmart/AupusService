@@ -1,7 +1,10 @@
 // src/features/planos-manutencao/components/TarefasDoEquipamentoSection.tsx
 import { useState } from 'react';
-import { ClipboardList, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { CalendarPlus, ClipboardList, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useUserStore } from '@/store/useUserStore';
+import { linkDeProgramacao } from '@/features/programacao-os/utils/link-de-programacao';
 import { TarefasExpandedRow } from './TarefasExpandedRow';
 import { usePlanoDoEquipamento } from './PlanoDoEquipamentoContext';
 import type { TarefaApiResponse } from '@/services/tarefas.services';
@@ -58,6 +61,13 @@ export function TarefasDoEquipamentoSection({
   // contador: contador dispara no mount da lista e o formulário abriria sozinho.
   const [abrirCadastroPara, setAbrirCadastroPara] = useState<string | null>(null);
 
+  const navigate = useNavigate();
+  const podeProgramar = useUserStore((s) => s.hasPermission('programacao_os.manage'));
+  // Atalho para a programação com este plano escolhido: ela abre direto na
+  // escolha das tarefas. Só em leitura — sair daqui no editar descartaria o que
+  // foi digitado no equipamento (mesma regra da D4 da SPEC-ATALHOS-E-ACOES-DA-OS).
+  const mostrarProgramar = Boolean(planoAtual) && !criando && somenteLeitura && podeProgramar;
+
   if (!ehUC) return null;
 
   return (
@@ -77,6 +87,20 @@ export function TarefasDoEquipamentoSection({
         {/* O botão vive aqui, e não dentro da lista, para ficar na mesma linha
             do título. A lista continua dona do formulário — o clique só diz
             para qual plano ele deve abrir. */}
+        {mostrarProgramar && planoAtual && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 ml-auto"
+            onClick={() => navigate(linkDeProgramacao('PLANO_MANUTENCAO', planoAtual.id))}
+            title="Programar tarefas deste plano"
+          >
+            <CalendarPlus className="h-4 w-4 mr-1.5" />
+            Programar
+          </Button>
+        )}
+
         {planoAtual && !somenteLeitura && (
           <Button
             type="button"

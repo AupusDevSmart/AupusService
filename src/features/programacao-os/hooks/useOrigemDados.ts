@@ -54,6 +54,54 @@ interface SolicitacaoDisponivel {
   dataSolicitacao: string;
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- resposta da API sem tipo neste hook */
+function paraAnomaliaDisponivel(anomalia: any): AnomaliaDisponivel {
+  return {
+    id: String(anomalia.id),
+    descricao: anomalia.descricao,
+    local: anomalia.local,
+    ativo: anomalia.ativo,
+    prioridade: anomalia.prioridade,
+    status: anomalia.status,
+    data: anomalia.created_at || anomalia.data || new Date().toISOString(),
+    equipamentoId: anomalia.equipamento_id?.toString() || anomalia.equipamentoId?.toString(),
+    plantaId: anomalia.planta_id?.toString() || anomalia.plantaId?.toString(),
+    unidadeId: anomalia.unidade_id?.toString() || anomalia.unidadeId?.toString(),
+    plantaNome: anomalia.planta?.nome || anomalia.equipamento?.planta?.nome,
+    unidadeNome: anomalia.unidade?.nome || anomalia.equipamento?.unidade?.nome,
+    condicao: anomalia.condicao,
+    origem: anomalia.origem,
+  };
+}
+
+function paraSolicitacaoDisponivel(solicitacao: any): SolicitacaoDisponivel {
+  return {
+    id: solicitacao.id,
+    numero: solicitacao.numero,
+    titulo: solicitacao.titulo,
+    descricao: solicitacao.descricao,
+    tipo: solicitacao.tipo,
+    prioridade: solicitacao.prioridade,
+    status: solicitacao.status,
+    local: solicitacao.local || '',
+    plantaId: solicitacao.planta_id,
+    unidadeId: solicitacao.unidade_id,
+    plantaNome: solicitacao.planta?.nome,
+    unidadeNome: solicitacao.unidade?.nome,
+    equipamentoId: solicitacao.equipamento_id,
+    solicitanteNome: solicitacao.solicitante_nome,
+    dataSolicitacao: solicitacao.data_solicitacao || solicitacao.created_at || '',
+  };
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+export type TipoDeOrigemResolvivel = 'ANOMALIA' | 'SOLICITACAO_SERVICO' | 'PLANO_MANUTENCAO';
+
+/** A origem pedida pelo atalho, ou o motivo de não poder usá-la */
+export type OrigemResolvida =
+  | { item: AnomaliaDisponivel | SolicitacaoDisponivel | PlanoDisponivel }
+  | { motivo: string };
+
 export const useOrigemDados = () => {
   const [loading, setLoading] = useState(false);
   const [anomaliasDisponiveis, setAnomaliasDisponiveis] = useState<AnomaliaDisponivel[]>([]);
@@ -61,7 +109,7 @@ export const useOrigemDados = () => {
   const [solicitacoesDisponiveis, setSolicitacoesDisponiveis] = useState<SolicitacaoDisponivel[]>([]);
 
   // Carregar anomalias disponíveis (apenas registradas)
-  const carregarAnomalias = useCallback(async () => {
+  const carregarAnomalias = useCallback(async (): Promise<AnomaliaDisponivel[]> => {
     setLoading(true);
     try {
       const filtros = {
@@ -80,34 +128,21 @@ export const useOrigemDados = () => {
 
       const anomaliasFiltradas = response.data
         .filter(anomalia => anomalia.status === 'REGISTRADA')
-        .map(anomalia => ({
-          id: String(anomalia.id),
-          descricao: anomalia.descricao,
-          local: anomalia.local,
-          ativo: anomalia.ativo,
-          prioridade: anomalia.prioridade,
-          status: anomalia.status,
-          data: anomalia.created_at || anomalia.data || new Date().toISOString(),
-          equipamentoId: anomalia.equipamento_id?.toString() || anomalia.equipamentoId?.toString(),
-          plantaId: anomalia.planta_id?.toString() || anomalia.plantaId?.toString(),
-          unidadeId: anomalia.unidade_id?.toString() || anomalia.unidadeId?.toString(),
-          plantaNome: anomalia.planta?.nome || anomalia.equipamento?.planta?.nome,
-          unidadeNome: anomalia.unidade?.nome || anomalia.equipamento?.unidade?.nome,
-          condicao: anomalia.condicao,
-          origem: anomalia.origem
-        }));
+        .map(paraAnomaliaDisponivel);
 
       setAnomaliasDisponiveis(anomaliasFiltradas);
+      return anomaliasFiltradas;
 
     } catch (error) {
       setAnomaliasDisponiveis([]);
+      return [];
     } finally {
       setLoading(false);
     }
   }, []);
 
   // Carregar planos de manutenção ativos
-  const carregarPlanos = useCallback(async (plantaId?: string, unidadeId?: string) => {
+  const carregarPlanos = useCallback(async (plantaId?: string, unidadeId?: string): Promise<PlanoDisponivel[]> => {
     console.log('🔍 [useOrigemDados] INÍCIO - Carregando planos de manutenção...', {
       plantaId,
       unidadeId,
@@ -216,6 +251,7 @@ export const useOrigemDados = () => {
       });
 
       setPlanosDisponiveis(planosFormatados);
+      return planosFormatados;
 
     } catch (error: any) {
       console.error('❌ [useOrigemDados] ERRO ao carregar planos:', {
@@ -226,6 +262,7 @@ export const useOrigemDados = () => {
         plantaId
       });
       setPlanosDisponiveis([]);
+      return [];
     } finally {
       console.log('🏁 [useOrigemDados] FIM - Finalizando carregamento, setLoading(false)');
       setLoading(false);
@@ -233,7 +270,7 @@ export const useOrigemDados = () => {
   }, []);
 
   // Carregar solicitações de serviço disponíveis (apenas registradas)
-  const carregarSolicitacoes = useCallback(async () => {
+  const carregarSolicitacoes = useCallback(async (): Promise<SolicitacaoDisponivel[]> => {
     setLoading(true);
     try {
       const { solicitacoesServicoService } = await import('@/services/solicitacoes-servico.service');
@@ -244,28 +281,14 @@ export const useOrigemDados = () => {
         status: 'REGISTRADA'
       });
 
-      const solicitacoesFormatadas = response.data.map(solicitacao => ({
-        id: solicitacao.id,
-        numero: solicitacao.numero,
-        titulo: solicitacao.titulo,
-        descricao: solicitacao.descricao,
-        tipo: solicitacao.tipo,
-        prioridade: solicitacao.prioridade,
-        status: solicitacao.status,
-        local: solicitacao.local,
-        plantaId: solicitacao.planta_id,
-        unidadeId: solicitacao.unidade_id,
-        plantaNome: solicitacao.planta?.nome,
-        unidadeNome: solicitacao.unidade?.nome,
-        equipamentoId: solicitacao.equipamento_id,
-        solicitanteNome: solicitacao.solicitante_nome,
-        dataSolicitacao: solicitacao.data_solicitacao || solicitacao.created_at || ''
-      }));
+      const solicitacoesFormatadas = response.data.map(paraSolicitacaoDisponivel);
 
-      setSolicitacoesDisponiveis(solicitacoesFormatadas as unknown as SolicitacaoDisponivel[]);
+      setSolicitacoesDisponiveis(solicitacoesFormatadas);
+      return solicitacoesFormatadas;
 
     } catch (error) {
       setSolicitacoesDisponiveis([]);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -434,8 +457,55 @@ export const useOrigemDados = () => {
     }
   }, []);
 
+  /**
+   * A origem que o atalho pediu (`?origem=&id=`), pronta para ser escolhida.
+   *
+   * Procura na lista de disponíveis; se não estiver lá (limite de 100, lista
+   * ainda carregando), busca pelo id e inclui na lista — desde que ainda possa
+   * ser programada. Senão devolve o motivo, que o seletor mostra em vez de
+   * abrir vazio sem dizer por quê.
+   */
+  const resolverOrigem = useCallback(
+    async (tipo: TipoDeOrigemResolvivel, id: string): Promise<OrigemResolvida> => {
+      const alvo = id.trim();
+
+      if (tipo === 'ANOMALIA') {
+        const achada = (await carregarAnomalias()).find((a) => String(a.id).trim() === alvo);
+        if (achada) return { item: achada };
+        const anomalia = await anomaliasService.findOne(alvo).catch(() => null);
+        if (!anomalia) return { motivo: 'A anomalia não foi encontrada ou está fora do seu escopo.' };
+        if (anomalia.status !== 'REGISTRADA') {
+          return { motivo: `A anomalia está ${String(anomalia.status).toLowerCase()} e não pode ser programada agora.` };
+        }
+        const formatada = paraAnomaliaDisponivel(anomalia);
+        setAnomaliasDisponiveis((atual) => [...atual, formatada]);
+        return { item: formatada };
+      }
+
+      if (tipo === 'SOLICITACAO_SERVICO') {
+        const achada = (await carregarSolicitacoes()).find((s) => String(s.id).trim() === alvo);
+        if (achada) return { item: achada };
+        const { solicitacoesServicoService } = await import('@/services/solicitacoes-servico.service');
+        const solicitacao = await solicitacoesServicoService.findOne(alvo).catch(() => null);
+        if (!solicitacao) return { motivo: 'A solicitação não foi encontrada ou está fora do seu escopo.' };
+        if (solicitacao.status !== 'REGISTRADA') {
+          return { motivo: `A solicitação está ${String(solicitacao.status).toLowerCase()} e não pode ser programada agora.` };
+        }
+        const formatada = paraSolicitacaoDisponivel(solicitacao);
+        setSolicitacoesDisponiveis((atual) => [...atual, formatada]);
+        return { item: formatada };
+      }
+
+      const achado = (await carregarPlanos()).find((pl) => String(pl.id).trim() === alvo);
+      if (achado) return { item: achado };
+      return { motivo: 'O plano não está entre os planos vinculados a equipamentos que você pode programar.' };
+    },
+    [carregarAnomalias, carregarSolicitacoes, carregarPlanos],
+  );
+
   return {
     loading,
+    resolverOrigem,
     anomaliasDisponiveis,
     planosDisponiveis,
     solicitacoesDisponiveis,

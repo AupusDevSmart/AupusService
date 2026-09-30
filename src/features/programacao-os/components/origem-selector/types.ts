@@ -18,6 +18,12 @@ export interface OrigemOSValue {
   unidadeId?: string;
   planosSelecionados?: string[];
   tarefasPorPlano?: any;
+  /**
+   * Origem pedida pelo atalho "Programar" de outra tela (`?origem=&id=`). O
+   * seletor resolve, escolhe pela mesma função do clique e remove este campo —
+   * ele nunca chega ao payload.
+   */
+  preSelecao?: { tipo: TipoOrigem; id: string };
 }
 
 /**

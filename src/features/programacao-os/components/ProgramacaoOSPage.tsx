@@ -1,7 +1,7 @@
 // src/features/programacao-os/components/ProgramacaoOSPage.tsx - ATUALIZADA COM CARDS
 import { useState, useEffect, useMemo } from 'react';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { IndicadoresCompactos } from '@/components/common/IndicadoresCompactos';
@@ -16,8 +16,12 @@ import { programacaoOSFormFields, programacaoOSFormGroups } from '../config/form
 import { createProgramacaoOSTableActions } from '../config/actions-config';
 import { useProgramacaoOS } from '../hooks/useProgramacaoOS';
 import { ActionConfirmPanel, type PendingAction } from './ActionConfirmPanel';
+import { AcoesDaProgramacao } from './AcoesDaProgramacao';
+import type { AcaoProgramacao } from '../config/actions-config';
 import { processarMateriaisComCustos, processarTecnicosComCustos } from '@/utils/recursos.utils';
 import type { ProgramacaoResponse, ProgramacaoDetalhesResponse, ProgramacaoFiltersDto, CreateProgramacaoDto } from '@/services/programacao-os.service';
+import { programacaoOSApi } from '@/services/programacao-os.service';
+import { atalhoDaUrl } from '../utils/link-de-programacao';
 import { useUserStore } from '@/store/useUserStore';
 import { toast } from '@/hooks/use-toast';
 
@@ -82,7 +86,7 @@ const initialFilters: ProgramacaoFiltersDto = {
 };
 
 export function ProgramacaoOSPage() {
-  const location = useLocation();
+  const temPermissao = useUserStore((s) => s.hasPermission);
   const navigate = useNavigate();
   useUserStore(); // Hook para obter usuário logado
 
@@ -195,20 +199,44 @@ export function ProgramacaoOSPage() {
     })();
   }, [searchParams]);
 
-  // Receber dados pré-selecionados via navigate state
+  // Atalho "Programar" de outra tela: ?origem=ANOMALIA|SOLICITACAO_SERVICO|PLANO_MANUTENCAO&id=
+  //
+  // Se a origem já tem programação em aberto, abre essa — só existe uma por
+  // origem desde 2026-09-29, então "ver" tem destino certo. Senão abre a
+  // criação com a origem pré-selecionada; o seletor escolhe pela mesma função
+  // do clique. O atalho só navega: nada da origem é copiado para o formulário.
+  // (Substitui o caminho por location.state, que nenhuma tela chegou a usar.)
   useEffect(() => {
-    const state = location.state as any;
-    if (state?.preselectedData) {
-      // console.log('📋 Dados pré-selecionados recebidos:', state.preselectedData);
-      
-      setTimeout(() => {
-        openModal('create', null, state.preselectedData);
-      }, 100);
-      
-      // Limpar state
-      navigate(location.pathname, { replace: true });
-    }
-  }, [location.state, navigate, openModal]);
+    const atalho = atalhoDaUrl(searchParams);
+    if (!atalho) return;
+
+    (async () => {
+      try {
+        if (atalho.tipo !== 'PLANO_MANUTENCAO') {
+          const filtro = atalho.tipo === 'ANOMALIA'
+            ? { anomalia_id: atalho.id }
+            : { solicitacao_servico_id: atalho.id };
+          const resposta = await programacaoOSApi.listar({ ...filtro, page: 1, limit: 20 });
+          const aberta = resposta.data.find((p) => p.status === 'PENDENTE' || p.status === 'APROVADA');
+          if (aberta) {
+            setPendingAction(null);
+            openModal('view', await buscarProgramacao(aberta.id));
+            return;
+          }
+        }
+        setPendingAction(null);
+        openModal('create', null, {
+          origem: { tipo: atalho.tipo, preSelecao: atalho, tarefasSelecionadas: [] },
+        });
+      } catch (error) {
+        toast({ title: 'Não foi possível abrir a programação', description: mensagemDoErro(error), variant: 'destructive' });
+      } finally {
+        // Limpa o parametro para o sheet nao reabrir sozinho ao fechar.
+        setSearchParams({}, { replace: true });
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // Handlers para filtros
   const handleFilterChange = (filters: Partial<ProgramacaoFiltersDto>) => {
@@ -411,14 +439,6 @@ export function ProgramacaoOSPage() {
     }
   };
 
-  const handleAprovar = (programacao: ProgramacaoResponse) => {
-    openViewWithAction(programacao, 'aprovar');
-  };
-
-  const handleCancelar = (programacao: ProgramacaoResponse) => {
-    openViewWithAction(programacao, 'cancelar');
-  };
-
   // Confirmar ação pendente
   const handleConfirmAction = async (observacoes?: string) => {
     if (!pendingAction || !modalState.entity) return;
@@ -462,21 +482,49 @@ export function ProgramacaoOSPage() {
     }
   };
 
-  const handleDeletar = async (programacao: ProgramacaoResponse) => {
+  /** Devolve true se excluiu — o sheet usa para fechar */
+  const handleDeletar = async (programacao: ProgramacaoResponse): Promise<boolean> => {
     if (programacao.status !== 'PENDENTE') {
       alert('Apenas programacoes pendentes podem ser deletadas');
-      return;
+      return false;
     }
 
     const confirmacao = confirm(`Deseja deletar a programação "${programacao.descricao}"?`);
-    if (!confirmacao) return;
+    if (!confirmacao) return false;
 
     try {
       await deletarProgramacao(programacao.id);
       await carregarDados();
+      toast({ title: 'Programação excluída' });
+      return true;
     } catch (error) {
       toast({ title: 'Erro ao excluir programação', description: mensagemDoErro(error), variant: 'destructive' });
+      return false;
     }
+  };
+
+  const abrirOS = (programacao: ProgramacaoResponse) => {
+    const osId = (programacao as { ordem_servico?: { id?: string } }).ordem_servico?.id?.trim();
+    if (osId) navigate(`/execucao-os?execucaoId=${osId}`);
+  };
+
+  /** Ação escolhida na linha da tabela: abre o sheet quando precisa de confirmação */
+  const acaoDaTabela = (programacao: ProgramacaoResponse, acao: AcaoProgramacao) => {
+    if (acao === 'aprovar' || acao === 'cancelar') openViewWithAction(programacao, acao);
+    else if (acao === 'editar') handleEdit(programacao);
+    else if (acao === 'excluir') handleDeletar(programacao);
+    else if (acao === 'abrir_os') abrirOS(programacao);
+  };
+
+  /** Ação escolhida no topo do sheet: confirma ali mesmo, no modo em que está */
+  const acaoDoSheet = async (acao: AcaoProgramacao) => {
+    const entity = modalState.entity;
+    if (!entity) return;
+    if (acao === 'aprovar' || acao === 'cancelar') setPendingAction(acao);
+    else if (acao === 'editar') handleEdit(entity);
+    else if (acao === 'excluir') {
+      if (await handleDeletar(entity)) closeModal();
+    } else if (acao === 'abrir_os') abrirOS(entity);
   };
 
   const _handleExportar = async () => {
@@ -499,13 +547,7 @@ export function ProgramacaoOSPage() {
   void _handleExportar;
 
   // Criar ações da tabela
-  const tableActions = createProgramacaoOSTableActions({
-    onView: handleView,
-    onEdit: handleEdit,
-    onAprovar: handleAprovar,
-    onCancelar: handleCancelar,
-    onDelete: handleDeletar,
-  });
+  const tableActions = createProgramacaoOSTableActions(handleView, acaoDaTabela, temPermissao);
 
   const getModalTitle = useMemo(() => {
     const titles = {
@@ -781,24 +823,41 @@ export function ProgramacaoOSPage() {
           icon={<Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
           formFields={programacaoOSFormFields}
           groups={programacaoOSFormGroups}
-          onClose={closeModal}
+          onClose={() => { setPendingAction(null); closeModal(); }}
           onSubmit={handleSubmit}
           width="w-[1200px]"
           loading={loading}
-        >
-          {/* Painel de confirmação de ação (view-first pattern) */}
-          {pendingAction && modalState.mode === 'view' && (
-            <ActionConfirmPanel
-              action={pendingAction}
-              onConfirm={handleConfirmAction}
-              aviso={
-                pendingAction === 'cancelar' && modalState.entity?.status === 'APROVADA'
-                  ? 'A OS gerada por esta programação também será cancelada, e a origem volta a ficar disponível para uma nova programação.'
-                  : undefined
-              }
-            />
-          )}
-        </BaseModal>
+          topo={
+            modalState.mode === 'create' || !modalState.entity
+              ? undefined
+              : ({ alteracoesPendentes }) => (
+                  <div className="rounded-md border p-4">
+                    {pendingAction ? (
+                      // Confirmação da ação escolhida (na tabela ou aqui)
+                      <ActionConfirmPanel
+                        key={pendingAction}
+                        action={pendingAction}
+                        onConfirm={handleConfirmAction}
+                        onVoltar={() => setPendingAction(null)}
+                        aviso={
+                          pendingAction === 'cancelar' && modalState.entity?.status === 'APROVADA'
+                            ? 'A OS gerada por esta programação também será cancelada, e a origem volta a ficar disponível para uma nova programação.'
+                            : undefined
+                        }
+                      />
+                    ) : (
+                      <AcoesDaProgramacao
+                        programacao={modalState.entity!}
+                        modo={modalState.mode === 'edit' ? 'edit' : 'view'}
+                        temPermissao={temPermissao}
+                        alteracoesPendentes={alteracoesPendentes}
+                        onAcao={acaoDoSheet}
+                      />
+                    )}
+                  </div>
+                )
+          }
+        />
       </Layout.Main>
     </Layout>
   );

@@ -39,9 +39,11 @@ interface ActionConfirmPanelProps {
   onConfirm: (input?: string) => Promise<void>;
   /** Consequencia da acao que nao esta visivel na tela (ex.: a OS que sai junto) */
   aviso?: string;
+  /** Desiste desta acao e volta para a lista de acoes */
+  onVoltar?: () => void;
 }
 
-export function ActionConfirmPanel({ action, onConfirm, aviso }: ActionConfirmPanelProps) {
+export function ActionConfirmPanel({ action, onConfirm, aviso, onVoltar }: ActionConfirmPanelProps) {
   const [inputValue, setInputValue] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -60,7 +62,7 @@ export function ActionConfirmPanel({ action, onConfirm, aviso }: ActionConfirmPa
   };
 
   return (
-    <div className="border-t mt-6 pt-4 space-y-3">
+    <div className="space-y-3">
       <h3 className="text-sm font-medium">Confirmar acao</h3>
 
       {aviso && <p className="text-sm text-muted-foreground">{aviso}</p>}
@@ -93,6 +95,12 @@ export function ActionConfirmPanel({ action, onConfirm, aviso }: ActionConfirmPa
         )}
         {config.confirmLabel}
       </Button>
+
+      {onVoltar && (
+        <Button type="button" variant="ghost" size="sm" onClick={onVoltar} disabled={submitting} className="w-full">
+          Escolher outra ação
+        </Button>
+      )}
     </div>
   );
 }

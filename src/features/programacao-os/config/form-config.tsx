@@ -181,11 +181,13 @@ export const programacaoOSFormFields: FormField[] = [
     label: 'Prioridade',
     type: 'select',
     required: true,
+    // Os valores de PrioridadeOS no backend. "Urgente" estava aqui e nao existe
+    // la (400 ao salvar), e "Critica" faltava.
     options: [
       { value: 'BAIXA', label: 'Baixa' },
       { value: 'MEDIA', label: 'Média' },
       { value: 'ALTA', label: 'Alta' },
-      { value: 'URGENTE', label: 'Urgente' }
+      { value: 'CRITICA', label: 'Crítica' }
     ],
     group: 'classificacao',
     width: 'third', // 33.33% em desktop (3 campos na linha)
