@@ -184,6 +184,9 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     tecnicosPresentes: apiData.tecnicos || [],
     historico: apiData.historico || [],
     checklist_atividades: apiData.checklist_atividades || [],
+    // A API manda o checklist em `checklist` (com tarefa_os_id). Ler só
+    // `checklist_atividades` deixava a tela sempre sem checklist.
+    checklist: apiData.checklist || apiData.checklist_atividades || [],
     checklistAtividades: checklistAtividades,
     anexos: apiData.anexos || [],
     registros_tempo: apiData.registros_tempo || [],

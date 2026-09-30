@@ -7,6 +7,8 @@ export interface TarefaDoHistorico {
   status: string;
   data_conclusao: string | null;
   concluida_por: string | null;
+  /** Motivo registrado quando a tarefa não foi feita (ela continua devendo) */
+  motivo_nao_feita?: string | null;
 }
 
 export interface ItemHistoricoOS {

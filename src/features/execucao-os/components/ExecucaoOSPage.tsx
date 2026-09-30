@@ -1,5 +1,5 @@
 // src/features/execucao-os/components/ExecucaoOSPage.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
@@ -18,6 +18,13 @@ import { execucaoOSTableColumns } from '../config/table-config';
 import { createExecucaoOSTableActions } from '../config/actions-config';
 import { ActionConfirmPanel, type PendingAction } from './ActionConfirmPanel';
 import { AcoesDaOS } from './AcoesDaOS';
+import { OQueFoiFeito } from './OQueFoiFeito';
+import {
+  geraisObrigatoriosPendentes,
+  montarProgresso,
+  tarefasPendentes,
+  type ProgressoDaExecucao,
+} from '../utils/progresso-da-execucao';
 import { statusDaExecucao } from '../config/actions-config';
 
 // Tipos
@@ -52,6 +59,10 @@ export function ExecucaoOSPage() {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const temPermissao = useUserStore((s) => s.hasPermission);
 
+  // Tarefas e checklist da OS aberta, vivos: a seção "O que foi feito" grava
+  // item a item, e o painel de Executar precisa saber o que ainda está pendente.
+  const [progresso, setProgresso] = useState<ProgressoDaExecucao>({ tarefas: [], gerais: [] });
+
   // Hook de API
   const {
     items,
@@ -69,6 +80,11 @@ export function ExecucaoOSPage() {
 
   // Modal genérico
   const { modalState, openModal, closeModal } = useGenericModal<ExecucaoOS>();
+
+  useEffect(() => {
+    const os = modalState.entity as (ExecucaoOS & { checklist?: never[]; tarefas_os?: never[] }) | null;
+    setProgresso(montarProgresso(os?.tarefas_os ?? [], os?.checklist ?? []));
+  }, [modalState.entity]);
 
   // ============================
   // View-first action handlers
@@ -183,18 +199,20 @@ export function ExecucaoOSPage() {
     fetchItems(toApiParams);
   }, [filters]);
 
-  // Abrir modal automaticamente quando vier com execucaoId na URL
+  // Abrir modal automaticamente quando vier com execucaoId na URL.
+  // A ref guarda o id já aberto: o fetchOne alterna `loading` (dependência do
+  // efeito) antes de o parâmetro sair da URL, e isso refazia o GET a cada ~2s,
+  // recriando o progresso e desfazendo o que a pessoa acabara de marcar.
+  const abertoPelaUrl = useRef<string | null>(null);
   useEffect(() => {
     const execucaoIdParam = searchParams.get('execucaoId');
 
-    if (execucaoIdParam) {
+    if (execucaoIdParam && abertoPelaUrl.current !== execucaoIdParam) {
       const abrirModalAutomatico = async () => {
         try {
-          let execucaoEncontrada = items.find(exec => exec.id === execucaoIdParam);
-
-          if (!execucaoEncontrada) {
-            execucaoEncontrada = await fetchOne(execucaoIdParam);
-          }
+          // Sempre a OS completa: a linha da tabela nao traz checklist, e a
+          // secao "O que foi feito" abria sem os itens.
+          const execucaoEncontrada = await fetchOne(execucaoIdParam);
 
           if (execucaoEncontrada) {
             openModal('view', execucaoEncontrada);
@@ -208,6 +226,7 @@ export function ExecucaoOSPage() {
       };
 
       if (items.length > 0 || loading === false) {
+        abertoPelaUrl.current = execucaoIdParam;
         abrirModalAutomatico();
       }
     }
@@ -390,27 +409,50 @@ export function ExecucaoOSPage() {
             groups={formGroups}
             topo={
               modalState.mode === 'view' || modalState.mode === 'edit'
-                ? ({ alteracoesPendentes }) => (
-                    <div className="rounded-md border p-4">
-                      {pendingAction ? (
-                        // Confirmação da ação escolhida (na tabela ou aqui)
-                        <ActionConfirmPanel
-                          key={pendingAction}
-                          action={pendingAction}
-                          entity={modalState.entity}
-                          onConfirm={handleConfirmAction}
-                          onVoltar={() => setPendingAction(null)}
-                        />
-                      ) : (
-                        <AcoesDaOS
-                          status={statusDaExecucao(modalState.entity)}
-                          temPermissao={temPermissao}
-                          alteracoesPendentes={alteracoesPendentes}
-                          onAcao={setPendingAction}
-                        />
-                      )}
-                    </div>
-                  )
+                ? ({ alteracoesPendentes }) => {
+                    const status = statusDaExecucao(modalState.entity);
+                    const emExecucao = status === 'EM_EXECUCAO' || status === 'PAUSADA';
+                    const executada = status === 'EXECUTADA' || status === 'AUDITADA' || status === 'FINALIZADA';
+                    const temProgresso = progresso.tarefas.length > 0 || progresso.gerais.length > 0;
+                    return (
+                      <div className="space-y-4">
+                        <div className="rounded-md border p-4">
+                          {pendingAction ? (
+                            // Confirmação da ação escolhida (na tabela ou aqui)
+                            <ActionConfirmPanel
+                              key={pendingAction}
+                              action={pendingAction}
+                              entity={modalState.entity}
+                              onConfirm={handleConfirmAction}
+                              onVoltar={() => setPendingAction(null)}
+                              tarefasPendentes={tarefasPendentes(progresso).map((t) => ({ id: t.id, nome: t.nome }))}
+                              itensObrigatoriosPendentes={geraisObrigatoriosPendentes(progresso)}
+                            />
+                          ) : (
+                            <AcoesDaOS
+                              status={status}
+                              temPermissao={temPermissao}
+                              alteracoesPendentes={alteracoesPendentes}
+                              onAcao={setPendingAction}
+                            />
+                          )}
+                        </div>
+
+                        {/* O que foi feito: marca-se durante a execução; depois,
+                            é o registro que o auditor e o relatório leem. */}
+                        {(emExecucao || executada) && temProgresso && (
+                          <div className="rounded-md border p-4">
+                            <OQueFoiFeito
+                              osId={modalState.entity!.id}
+                              progresso={progresso}
+                              editavel={emExecucao && temPermissao('execucao_os.view')}
+                              onChange={setProgresso}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
                 : undefined
             }
             onClose={handleCloseModal}

@@ -859,6 +859,21 @@ export class ExecucaoOSApiService {
     }
   }
 
+  /** Marca/desmarca itens do checklist (grava na hora; OS em execução ou pausada) */
+  async atualizarChecklist(id: string, atividades: { id: string; concluida: boolean }[]): Promise<void> {
+    await api.patch(`${this.baseEndpoint}/${id}/checklist`, { atividades });
+  }
+
+  /** Tarefa feita. `tarefaOsId` é o id do vínculo (tarefas_os.id) */
+  async concluirTarefa(id: string, tarefaOsId: string): Promise<void> {
+    await api.patch(`${this.baseEndpoint}/${id}/tarefas/${tarefaOsId.trim()}/concluir`, {});
+  }
+
+  /** Desfaz "feita"/"não feita" enquanto a OS está em execução */
+  async reabrirTarefa(id: string, tarefaOsId: string): Promise<void> {
+    await api.patch(`${this.baseEndpoint}/${id}/tarefas/${tarefaOsId.trim()}/reabrir`, {});
+  }
+
   /** Consumo de materiais que já existem na OS (PATCH :id/materiais) */
   async registrarMateriais(
     id: string,

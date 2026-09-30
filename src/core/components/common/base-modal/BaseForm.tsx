@@ -294,6 +294,10 @@ export function BaseForm({
     if ((field as any).computeDisabled) {
       fieldDisabled = fieldDisabled || (field as any).computeDisabled(entity, data);
     }
+    // Placeholder em campo de leitura aparecia como se fosse conteúdo ("Descreva
+    // problemas…" numa OS finalizada). Na criação ele ainda orienta
+    // ("Gerado automaticamente"), então só some fora dela.
+    const semPlaceholder = fieldDisabled && mode !== 'create';
 
     const fieldProps: FormFieldProps = {
       value,
@@ -337,7 +341,7 @@ export function BaseForm({
             value={value as string}
             onChange={(e) => handleFieldChange(field.key, e.target.value)}
             disabled={fieldDisabled}
-            placeholder={field.placeholder}
+            placeholder={semPlaceholder ? undefined : field.placeholder}
             className={cn('input-minimal', error ? 'border-red-500' : '')}
           />
         );
@@ -349,7 +353,7 @@ export function BaseForm({
             value={value as string}
             onChange={(e) => handleFieldChange(field.key, e.target.value)}
             disabled={fieldDisabled}
-            placeholder={field.placeholder}
+            placeholder={semPlaceholder ? undefined : field.placeholder}
             className={cn('input-minimal', error ? 'border-red-500' : '')}
             min={field.min}
             max={field.max}
@@ -363,7 +367,7 @@ export function BaseForm({
             value={value as string}
             onChange={(e) => handleFieldChange(field.key, e.target.value)}
             disabled={fieldDisabled}
-            placeholder={field.placeholder}
+            placeholder={semPlaceholder ? undefined : field.placeholder}
             className={cn('input-minimal', error ? 'border-red-500' : '')}
           />
         );
@@ -374,7 +378,7 @@ export function BaseForm({
             value={value as string}
             onChange={(e) => handleFieldChange(field.key, e.target.value)}
             disabled={fieldDisabled}
-            placeholder={field.placeholder}
+            placeholder={semPlaceholder ? undefined : field.placeholder}
             className={error ? 'border-red-500' : ''}
             rows={3}
           />
@@ -402,7 +406,7 @@ export function BaseForm({
             disabled={fieldDisabled}
           >
             <SelectTrigger className={cn('select-minimal', error ? 'border-red-500' : '')}>
-              <SelectValue placeholder={field.placeholder || `Selecione ${field.label}`} />
+              <SelectValue placeholder={semPlaceholder ? '' : field.placeholder || `Selecione ${field.label}`} />
             </SelectTrigger>
             <SelectContent>
               {selectOptions.map((option: any) => (
@@ -432,7 +436,7 @@ export function BaseForm({
             onValueChange={(newValue) => {
               handleFieldChange(field.key, newValue || undefined);
             }}
-            placeholder={field.placeholder || `Selecione ${field.label}`}
+            placeholder={semPlaceholder ? '' : field.placeholder || `Selecione ${field.label}`}
             searchPlaceholder={(field as any).searchPlaceholder || `Buscar ${field.label?.toLowerCase()}...`}
             emptyText={(field as any).emptyText || "Nenhum resultado encontrado"}
             disabled={fieldDisabled}
@@ -489,7 +493,7 @@ export function BaseForm({
               error && "border-destructive focus:ring-destructive"
             )}
             required={field.required}
-            placeholder={field.placeholder}
+            placeholder={semPlaceholder ? undefined : field.placeholder}
           />
         );
 
@@ -517,7 +521,7 @@ export function BaseForm({
             setDate={(date) =>
               handleFieldChange(field.key, date ? format(date, "yyyy-MM-dd'T'HH:mm") : "")
             }
-            placeholder={field.placeholder || "dd/mm/aaaa"}
+            placeholder={semPlaceholder ? "" : field.placeholder || "dd/mm/aaaa"}
             className={cn(error && "[&>button]:border-destructive")}
           />
         );
@@ -623,7 +627,8 @@ export function BaseForm({
                     {field.type !== 'checkbox' && field.label && (
                       <Label htmlFor={field.key} className="text-sm font-medium">
                         {field.label}
-                        {field.required && <span className="text-destructive ml-1">*</span>}
+                        {/* Na visualização não há o que preencher: o asterisco só poluía */}
+                        {field.required && mode !== 'view' && <span className="text-destructive ml-1">*</span>}
                       </Label>
                     )}
                     

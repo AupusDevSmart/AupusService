@@ -288,15 +288,24 @@ export function HistoricoDoEquipamentoSection({
                   <Expandir aberto={aberto}>
                     <div className="pl-6 pt-1">
                       {item.tarefas.map((tarefa) => (
-                        <div key={tarefa.id} className="flex items-center gap-3 py-1">
-                          <span className="min-w-0 flex-1 text-xs text-foreground/80 truncate">
-                            {tarefa.nome}
-                          </span>
-                          <span className="w-28 flex-shrink-0 text-xs text-muted-foreground">
-                            {tarefa.data_conclusao
-                              ? `concluída ${formatarData(tarefa.data_conclusao)}`
-                              : rotuloStatus(tarefa.status)}
-                          </span>
+                        <div key={tarefa.id} className="py-1">
+                          <div className="flex items-center gap-3">
+                            <span className="min-w-0 flex-1 text-xs text-foreground/80 truncate">
+                              {tarefa.nome}
+                            </span>
+                            <span className="w-28 flex-shrink-0 text-xs text-muted-foreground">
+                              {tarefa.data_conclusao
+                                ? `concluída ${formatarData(tarefa.data_conclusao)}`
+                                : tarefa.status === 'CANCELADA'
+                                  ? 'não feita'
+                                  : rotuloStatus(tarefa.status)}
+                            </span>
+                          </div>
+                          {/* Tarefa não feita: o motivo que a equipe registrou ao
+                              executar. Ela continua devendo e volta na agenda. */}
+                          {tarefa.status === 'CANCELADA' && tarefa.motivo_nao_feita && (
+                            <p className="text-xs text-muted-foreground">Motivo: {tarefa.motivo_nao_feita}</p>
+                          )}
                         </div>
                       ))}
                     </div>

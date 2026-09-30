@@ -16,7 +16,9 @@ import type { HistoricoOS } from '../types';
 
 const acaoLabels: Record<string, string> = {
   CRIACAO: 'Criada',
+  CRIACAO_AUTO: 'OS gerada',
   INICIO: 'Iniciada',
+  INICIO_EXECUCAO: 'Iniciada',
   PAUSA: 'Pausada',
   RETOMADA: 'Retomada',
   EXECUCAO: 'Executada',
@@ -24,7 +26,44 @@ const acaoLabels: Record<string, string> = {
   FINALIZACAO: 'Finalizada',
   CANCELAMENTO: 'Cancelada',
   REABERTURA: 'Reaberta',
+  PROGRAMACAO: 'Programada',
+  CONCLUSAO_TAREFA: 'Tarefa feita',
+  CANCELAMENTO_TAREFA: 'Tarefa não feita',
+  TAREFA_NAO_FEITA: 'Tarefa não feita',
+  REABERTURA_TAREFA: 'Tarefa reaberta',
+  ATUALIZACAO_CHECKLIST: 'Checklist atualizado',
+  CONSUMO_MATERIAIS: 'Materiais registrados',
+  USO_FERRAMENTAS: 'Ferramentas registradas',
 };
+
+// O histórico da programação chega junto, com o prefixo "[PROGRAMAÇÃO] "
+const acaoDaProgramacaoLabels: Record<string, string> = {
+  CRIACAO: 'Programação criada',
+  APROVACAO: 'Programação aprovada',
+  ANALISE: 'Programação em análise',
+  ATUALIZACAO: 'Programação atualizada',
+  CANCELAMENTO: 'Programação cancelada',
+  FINALIZACAO: 'Programação finalizada',
+  EXCLUSAO: 'Programação excluída',
+  ADICAO_TAREFAS: 'Tarefas adicionadas',
+  ATUALIZACAO_TAREFAS: 'Tarefas atualizadas',
+  REMOCAO_TAREFA: 'Tarefa removida',
+};
+
+const legivel = (codigo: string) => {
+  const texto = codigo.replace(/_/g, ' ').toLowerCase();
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+};
+
+/** Rótulo da ação para a pessoa: nunca o código cru ("TAREFA_NAO_FEITA"). */
+export function rotuloDaAcao(acao: string): string {
+  const daProgramacao = acao.match(/^\[PROGRAMA[^\]]*\]\s*(.+)$/);
+  if (daProgramacao) {
+    const codigo = daProgramacao[1].trim();
+    return acaoDaProgramacaoLabels[codigo] || `Programação: ${legivel(codigo).toLowerCase()}`;
+  }
+  return acaoLabels[acao] || legivel(acao);
+}
 
 const statusLabels: Record<string, string> = {
   PENDENTE: 'Pendente',
@@ -80,7 +119,7 @@ export function HistoricoOSCard({ historico = [] }: HistoricoOSCardProps) {
           <div key={entrada.id} className="px-3 py-2 space-y-0.5">
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-sm font-medium text-foreground">
-                {acaoLabels[entrada.acao] || entrada.acao}
+                {rotuloDaAcao(entrada.acao)}
               </span>
               {quando && (
                 <span className="text-xs text-muted-foreground flex-shrink-0">{quando}</span>

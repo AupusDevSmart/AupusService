@@ -1,261 +1,126 @@
 // src/features/execucao-os/components/ActionConfirmPanel.tsx
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Play, Pause, RotateCcw, Wrench, ClipboardCheck, CheckCircle, Undo2, Ban, Loader2 } from 'lucide-react';
+import { AvaliacaoEstrelas } from './AvaliacaoEstrelas';
 
 export type PendingAction = 'iniciar' | 'pausar' | 'retomar' | 'executar' | 'auditar' | 'finalizar' | 'reabrir' | 'cancelar';
 
 interface ActionField {
   key: string;
   label: string;
-  type: 'textarea' | 'text' | 'datetime-local' | 'number' | 'select';
+  type: 'textarea' | 'text' | 'datetime-local' | 'number' | 'estrelas';
   placeholder?: string;
   required?: boolean;
   rows?: number;
-  options?: { value: string; label: string }[];
   min?: number;
-  max?: number;
   step?: number;
   defaultNow?: boolean;
-  colSpan?: 1 | 2; // 1 = meia largura, 2 = largura total (default: 2 para textarea, 1 para outros)
+  /** Vai para o bloco "Mais detalhes", recolhido */
+  detalhe?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- entidade da OS transformada
   condition?: (entity: any) => boolean;
 }
 
 interface ActionMeta {
   confirmLabel: string;
-  icon: any;
+  icon: typeof Play;
   variant: 'default' | 'destructive';
-  className?: string;
   fields: ActionField[];
 }
 
+/**
+ * O que cada transição pede (docs/SPEC-EXECUCAO-DA-OS.md).
+ *
+ * Executar pedia 11 campos, vários redundantes com o checklist. Ficaram o
+ * resultado, os problemas, o motivo de cada tarefa não feita e o KM (só com
+ * veículo); recomendações e incidente de segurança vão recolhidos. Saíram
+ * atividades, procedimentos, EPIs, custos adicionais e próxima manutenção (D3).
+ */
 const actionConfig: Record<PendingAction, ActionMeta> = {
   iniciar: {
-    confirmLabel: 'Confirmar Inicio',
+    confirmLabel: 'Confirmar início',
     icon: Play,
     variant: 'default',
-    className: 'bg-green-600 hover:bg-green-700',
     fields: [
-      {
-        key: 'data_hora_inicio_real',
-        label: 'Data/Hora de Inicio',
-        type: 'datetime-local',
-        defaultNow: true,
-        colSpan: 1,
-      },
-      {
-        key: 'observacoes',
-        label: 'Observacoes do inicio',
-        type: 'textarea',
-        placeholder: 'Observacoes do inicio (opcional)',
-        rows: 2,
-        colSpan: 2,
-      },
+      { key: 'data_hora_inicio_real', label: 'Data e hora de início', type: 'datetime-local', defaultNow: true },
+      { key: 'observacoes', label: 'Observações do início', type: 'textarea', placeholder: 'Opcional', rows: 2 },
     ],
   },
   pausar: {
-    confirmLabel: 'Confirmar Pausa',
+    confirmLabel: 'Confirmar pausa',
     icon: Pause,
     variant: 'default',
-    className: 'bg-yellow-600 hover:bg-yellow-700',
     fields: [
-      {
-        key: 'motivo_pausa',
-        label: 'Motivo da pausa',
-        type: 'textarea',
-        placeholder: 'Descreva o motivo da pausa',
-        required: true,
-        rows: 2,
-        colSpan: 2,
-      },
+      { key: 'motivo_pausa', label: 'Motivo da pausa', type: 'textarea', required: true, rows: 2 },
     ],
   },
   retomar: {
-    confirmLabel: 'Confirmar Retomada',
+    confirmLabel: 'Confirmar retomada',
     icon: RotateCcw,
     variant: 'default',
-    className: 'bg-green-600 hover:bg-green-700',
     fields: [
-      {
-        key: 'observacoes_retomada',
-        label: 'Observacoes',
-        type: 'textarea',
-        placeholder: 'Observacoes da retomada (opcional)',
-        rows: 2,
-        colSpan: 2,
-      },
+      { key: 'observacoes_retomada', label: 'Observações', type: 'textarea', placeholder: 'Opcional', rows: 2 },
     ],
   },
   executar: {
-    confirmLabel: 'Confirmar Execucao',
+    confirmLabel: 'Confirmar Execução',
     icon: Wrench,
     variant: 'default',
-    className: 'bg-blue-600 hover:bg-blue-700',
     fields: [
       {
         key: 'resultado_servico',
-        label: 'Resultado do servico',
+        label: 'Resultado do serviço',
         type: 'textarea',
-        placeholder: 'Descreva o resultado do servico executado',
+        placeholder: 'O que foi feito e em que estado o equipamento ficou',
         required: true,
         rows: 3,
-        colSpan: 2,
       },
-      {
-        key: 'atividades_realizadas',
-        label: 'Atividades realizadas',
-        type: 'textarea',
-        placeholder: 'Descreva as atividades realizadas (opcional)',
-        rows: 2,
-        colSpan: 2,
-      },
-      {
-        key: 'problemas_encontrados',
-        label: 'Problemas encontrados',
-        type: 'textarea',
-        placeholder: 'Descreva problemas encontrados (opcional)',
-        rows: 2,
-        colSpan: 2,
-      },
-      {
-        key: 'recomendacoes',
-        label: 'Recomendacoes',
-        type: 'textarea',
-        placeholder: 'Recomendacoes para proximas manutencoes (opcional)',
-        rows: 2,
-        colSpan: 2,
-      },
-      {
-        key: 'procedimentos_seguidos',
-        label: 'Procedimentos seguidos',
-        type: 'textarea',
-        placeholder: 'Procedimentos e normas seguidos (opcional)',
-        rows: 2,
-        colSpan: 2,
-      },
-      {
-        key: 'equipamentos_seguranca',
-        label: 'EPIs utilizados',
-        type: 'text',
-        placeholder: 'EPIs e equipamentos de seguranca (opcional)',
-        colSpan: 1,
-      },
-      {
-        key: 'incidentes_seguranca',
-        label: 'Incidentes de seguranca',
-        type: 'text',
-        placeholder: 'Registrar incidentes (opcional)',
-        colSpan: 1,
-      },
+      { key: 'problemas_encontrados', label: 'Problemas encontrados', type: 'textarea', placeholder: 'Opcional', rows: 2 },
       {
         key: 'km_final',
-        label: 'KM Final do veiculo',
+        label: 'KM final do veículo',
         type: 'number',
         placeholder: 'KM no retorno',
-        colSpan: 1,
         condition: (entity) => !!(entity?.reserva_veiculo || entity?.reserva_id),
       },
-      {
-        key: 'custos_adicionais',
-        label: 'Custos adicionais (R$)',
-        type: 'number',
-        placeholder: '0.00',
-        min: 0,
-        step: 0.01,
-        colSpan: 1,
-      },
-      {
-        key: 'proxima_manutencao',
-        label: 'Proxima manutencao',
-        type: 'datetime-local',
-        colSpan: 1,
-      },
+      { key: 'recomendacoes', label: 'Recomendações', type: 'textarea', placeholder: 'Para as próximas manutenções', rows: 2, detalhe: true },
+      { key: 'incidentes_seguranca', label: 'Incidente de segurança', type: 'text', placeholder: 'Se houve, descreva', detalhe: true },
     ],
   },
   auditar: {
     confirmLabel: 'Confirmar Auditoria',
     icon: ClipboardCheck,
     variant: 'default',
-    className: 'bg-blue-600 hover:bg-blue-700',
     fields: [
-      {
-        key: 'avaliacao_qualidade',
-        label: 'Avaliacao da qualidade',
-        type: 'select',
-        required: true,
-        colSpan: 1,
-        options: [
-          { value: '1', label: '1 - Insatisfatorio' },
-          { value: '2', label: '2 - Abaixo do esperado' },
-          { value: '3', label: '3 - Satisfatorio' },
-          { value: '4', label: '4 - Bom' },
-          { value: '5', label: '5 - Excelente' },
-        ],
-      },
-      {
-        key: 'observacoes_qualidade',
-        label: 'Observacoes da auditoria',
-        type: 'textarea',
-        placeholder: 'Observacoes sobre a qualidade do servico (opcional)',
-        rows: 3,
-        colSpan: 2,
-      },
+      { key: 'avaliacao_qualidade', label: 'Qualidade do serviço', type: 'estrelas', required: true },
+      { key: 'observacoes_qualidade', label: 'Observações da auditoria', type: 'textarea', placeholder: 'Opcional', rows: 3 },
     ],
   },
   finalizar: {
-    confirmLabel: 'Confirmar Finalizacao',
+    confirmLabel: 'Confirmar finalização',
     icon: CheckCircle,
     variant: 'default',
-    className: 'bg-green-600 hover:bg-green-700',
     fields: [
-      {
-        key: 'observacoes',
-        label: 'Observacoes da finalizacao',
-        type: 'textarea',
-        placeholder: 'Observacoes da finalizacao (opcional)',
-        rows: 3,
-        colSpan: 2,
-      },
+      { key: 'observacoes', label: 'Observações da finalização', type: 'textarea', placeholder: 'Opcional', rows: 3 },
     ],
   },
   reabrir: {
-    confirmLabel: 'Confirmar Reabertura',
+    confirmLabel: 'Confirmar reabertura',
     icon: Undo2,
     variant: 'default',
     fields: [
-      {
-        key: 'observacoes',
-        label: 'Motivo da reabertura',
-        type: 'textarea',
-        placeholder: 'O que precisa ser refeito (opcional)',
-        rows: 3,
-        colSpan: 2,
-      },
+      { key: 'observacoes', label: 'Motivo da reabertura', type: 'textarea', placeholder: 'O que precisa ser refeito (opcional)', rows: 3 },
     ],
   },
   cancelar: {
-    confirmLabel: 'Confirmar Cancelamento',
+    confirmLabel: 'Confirmar cancelamento',
     icon: Ban,
     variant: 'destructive',
     fields: [
-      {
-        key: 'motivo_cancelamento',
-        label: 'Motivo do cancelamento',
-        type: 'textarea',
-        placeholder: 'Descreva o motivo do cancelamento',
-        required: true,
-        rows: 3,
-        colSpan: 2,
-      },
+      { key: 'motivo_cancelamento', label: 'Motivo do cancelamento', type: 'textarea', required: true, rows: 3 },
     ],
   },
 };
@@ -266,71 +131,84 @@ function nowDatetimeLocal(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// Resolve o colSpan default: textarea = 2, outros = 1
-function resolveColSpan(field: ActionField): 1 | 2 {
-  if (field.colSpan) return field.colSpan;
-  return field.type === 'textarea' ? 2 : 1;
-}
+const preenchido = (v: unknown) => v !== undefined && v !== null && String(v).trim() !== '';
 
 interface ActionConfirmPanelProps {
   action: PendingAction;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- entidade da OS transformada
   entity?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload vai direto para a rota da transição
   onConfirm: (data: Record<string, any>) => Promise<void>;
-  /** Desiste desta acao e volta para a lista de acoes */
+  /** Desiste desta ação e volta para a lista de ações */
   onVoltar?: () => void;
+  /**
+   * Executar: tarefas ainda pendentes. Cada uma precisa de motivo — fica "não
+   * feita" e volta para a agenda (D2). Não bloqueia a execução.
+   */
+  tarefasPendentes?: { id: string; nome: string }[];
+  /**
+   * Executar: itens gerais obrigatórios (segurança e encerramento) ainda
+   * desmarcados. Bloqueiam: marca-se na seção "O que foi feito", logo abaixo.
+   */
+  itensObrigatoriosPendentes?: string[];
 }
 
-export function ActionConfirmPanel({ action, entity, onConfirm, onVoltar }: ActionConfirmPanelProps) {
+export function ActionConfirmPanel({
+  action,
+  entity,
+  onConfirm,
+  onVoltar,
+  tarefasPendentes = [],
+  itensObrigatoriosPendentes = [],
+}: ActionConfirmPanelProps) {
   const config = actionConfig[action];
   const Icon = config.icon;
+  const idBase = useId();
+  const pendentes = action === 'executar' ? tarefasPendentes : [];
+  const itensFaltando = action === 'executar' ? itensObrigatoriosPendentes : [];
 
-  const visibleFields = config.fields.filter(
-    (f) => !f.condition || f.condition(entity)
-  );
+  const visiveis = config.fields.filter((f) => !f.condition || f.condition(entity));
+  const principais = visiveis.filter((f) => !f.detalhe);
+  const detalhes = visiveis.filter((f) => f.detalhe);
 
-  const [values, setValues] = useState<Record<string, any>>(() => {
-    const initial: Record<string, any> = {};
-    for (const field of visibleFields) {
-      if (field.defaultNow && field.type === 'datetime-local') {
-        initial[field.key] = nowDatetimeLocal();
-      } else {
-        initial[field.key] = '';
-      }
+  const [values, setValues] = useState<Record<string, unknown>>(() => {
+    const inicial: Record<string, unknown> = {};
+    for (const field of visiveis) {
+      inicial[field.key] = field.defaultNow && field.type === 'datetime-local' ? nowDatetimeLocal() : '';
     }
-    return initial;
+    return inicial;
   });
+  const [motivos, setMotivos] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  const setValue = (key: string, value: any) => {
-    setValues((prev) => ({ ...prev, [key]: value }));
-  };
+  const setValue = (key: string, value: unknown) => setValues((prev) => ({ ...prev, [key]: value }));
 
-  const canConfirm = visibleFields
-    .filter((f) => f.required)
-    .every((f) => {
-      const v = values[f.key];
-      return v !== undefined && v !== null && String(v).trim() !== '';
-    });
+  const canConfirm =
+    visiveis.filter((f) => f.required).every((f) => preenchido(values[f.key])) &&
+    pendentes.every((t) => preenchido(motivos[t.id])) &&
+    itensFaltando.length === 0;
 
   const handleConfirm = async () => {
     if (!canConfirm || submitting) return;
     setSubmitting(true);
     try {
-      const payload: Record<string, any> = {};
-      for (const field of visibleFields) {
+      const payload: Record<string, unknown> = {};
+      for (const field of visiveis) {
         const v = values[field.key];
-        if (v !== undefined && v !== null && String(v).trim() !== '') {
-          if (field.type === 'number') {
-            payload[field.key] = Number(v);
-          } else if (field.type === 'datetime-local') {
-            // O input devolve hora local sem fuso ("2026-09-29T09:00"). Enviado
-            // assim, o backend fazia new Date() no fuso do SERVIDOR. Convertido
-            // aqui, no navegador, vira o instante que a pessoa quis dizer.
-            payload[field.key] = new Date(String(v)).toISOString();
-          } else {
-            payload[field.key] = String(v).trim();
-          }
+        if (!preenchido(v)) continue;
+        if (field.type === 'number' || field.type === 'estrelas') {
+          payload[field.key] = Number(v);
+        } else if (field.type === 'datetime-local') {
+          // O input devolve hora local sem fuso ("2026-09-29T09:00"). Enviado
+          // assim, o backend fazia new Date() no fuso do SERVIDOR. Convertido
+          // aqui, no navegador, vira o instante que a pessoa quis dizer.
+          payload[field.key] = new Date(String(v)).toISOString();
+        } else {
+          payload[field.key] = String(v).trim();
         }
+      }
+      if (pendentes.length > 0) {
+        payload.tarefas_nao_feitas = pendentes.map((t) => ({ id: t.id, motivo: motivos[t.id].trim() }));
       }
       await onConfirm(payload);
     } finally {
@@ -338,101 +216,134 @@ export function ActionConfirmPanel({ action, entity, onConfirm, onVoltar }: Acti
     }
   };
 
-  const renderField = (field: ActionField) => {
-    const value = values[field.key] ?? '';
+  const idDe = (key: string) => `${idBase}-${key}`;
+
+  const campo = (field: ActionField) => {
+    const value = (values[field.key] as string | number | undefined) ?? '';
+    const rotulo = (
+      <label htmlFor={idDe(field.key)} className="mb-1.5 block text-sm text-muted-foreground">
+        {field.label}
+        {field.required && <span className="ml-1 text-destructive">*</span>}
+      </label>
+    );
 
     switch (field.type) {
+      case 'estrelas':
+        return (
+          <div key={field.key}>
+            <span className="mb-1.5 block text-sm text-muted-foreground">
+              {field.label}
+              {field.required && <span className="ml-1 text-destructive">*</span>}
+            </span>
+            <AvaliacaoEstrelas valor={Number(value) || null} onChange={(n) => setValue(field.key, n)} />
+          </div>
+        );
       case 'textarea':
         return (
-          <Textarea
-            value={value}
-            onChange={(e) => setValue(field.key, e.target.value)}
-            placeholder={field.placeholder}
-            rows={field.rows || 3}
-            className="resize-none"
-          />
-        );
-      case 'text':
-        return (
-          <Input
-            type="text"
-            value={value}
-            onChange={(e) => setValue(field.key, e.target.value)}
-            placeholder={field.placeholder}
-          />
-        );
-      case 'datetime-local':
-        return (
-          <Input
-            type="datetime-local"
-            value={value}
-            onChange={(e) => setValue(field.key, e.target.value)}
-          />
-        );
-      case 'number':
-        return (
-          <Input
-            type="number"
-            className="text-center"
-            value={value}
-            onChange={(e) => setValue(field.key, e.target.value)}
-            placeholder={field.placeholder}
-            min={field.min}
-            max={field.max}
-            step={field.step}
-          />
-        );
-      case 'select':
-        return (
-          <Select value={value} onValueChange={(v) => setValue(field.key, v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione..." />
-            </SelectTrigger>
-            <SelectContent>
-              {field.options?.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div key={field.key}>
+            {rotulo}
+            <Textarea
+              id={idDe(field.key)}
+              value={String(value)}
+              onChange={(e) => setValue(field.key, e.target.value)}
+              placeholder={field.placeholder}
+              rows={field.rows || 3}
+              className="resize-none"
+            />
+          </div>
         );
       default:
-        return null;
+        return (
+          <div key={field.key}>
+            {rotulo}
+            <Input
+              id={idDe(field.key)}
+              type={field.type}
+              value={String(value)}
+              onChange={(e) => setValue(field.key, e.target.value)}
+              placeholder={field.placeholder}
+              min={field.min}
+              step={field.step}
+            />
+          </div>
+        );
     }
   };
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-medium">Confirmar acao</h3>
+      <h3 className="text-sm font-medium">Confirmar ação</h3>
 
-      <div className="grid grid-cols-2 gap-3">
-        {visibleFields.map((field) => {
-          const span = resolveColSpan(field);
-          return (
-            <div key={field.key} className={span === 2 ? 'col-span-2' : 'col-span-1'}>
-              <label className="text-sm text-muted-foreground mb-1.5 block">
-                {field.label}
-                {field.required && <span className="text-destructive ml-1">*</span>}
+      <div className="space-y-3">{principais.map(campo)}</div>
+
+      {pendentes.length > 0 && (
+        <div className="space-y-3 rounded-md border p-3">
+          <div>
+            <p className="text-sm font-medium">
+              {pendentes.length === 1 ? 'Uma tarefa não foi marcada como feita' : `${pendentes.length} tarefas não foram marcadas como feitas`}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Diga o motivo de cada uma. Elas ficam registradas como não feitas e voltam para a agenda, atrasadas.
+            </p>
+          </div>
+          {pendentes.map((t) => (
+            <div key={t.id}>
+              <label htmlFor={idDe(`motivo-${t.id}`)} className="mb-1.5 block text-sm text-muted-foreground">
+                {`Por que "${t.nome}" não foi feita?`}
+                <span className="ml-1 text-destructive">*</span>
               </label>
-              {renderField(field)}
+              <Input
+                id={idDe(`motivo-${t.id}`)}
+                value={motivos[t.id] ?? ''}
+                onChange={(e) => setMotivos((prev) => ({ ...prev, [t.id]: e.target.value }))}
+                placeholder="Ex.: faltou material, acesso bloqueado, chuva"
+              />
             </div>
-          );
-        })}
-      </div>
+          ))}
+          {pendentes.length > 1 && preenchido(motivos[pendentes[0].id]) && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                setMotivos((prev) => {
+                  const primeiro = prev[pendentes[0].id];
+                  return Object.fromEntries(pendentes.map((t) => [t.id, preenchido(prev[t.id]) ? prev[t.id] : primeiro]));
+                })
+              }
+            >
+              Usar o mesmo motivo nas outras
+            </Button>
+          )}
+        </div>
+      )}
+
+      {itensFaltando.length > 0 && (
+        <div className="rounded-md border p-3" role="status">
+          <p className="text-sm font-medium">Antes de confirmar, marque em "Segurança e encerramento":</p>
+          <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
+            {itensFaltando.map((texto) => (
+              <li key={texto}>{texto}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {detalhes.length > 0 && (
+        <details className="rounded-md border px-3 py-2">
+          <summary className="cursor-pointer text-sm text-muted-foreground">Mais detalhes</summary>
+          <div className="mt-3 space-y-3">{detalhes.map(campo)}</div>
+        </details>
+      )}
 
       <Button
         type="button"
         variant={config.variant}
         onClick={handleConfirm}
         disabled={!canConfirm || submitting}
-        className={`w-full ${config.className || ''}`}
+        className="w-full"
       >
-        {submitting ? (
-          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-        ) : (
-          <Icon className="h-4 w-4 mr-1.5" />
-        )}
+        {submitting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Icon className="h-4 w-4 mr-1.5" />}
         {config.confirmLabel}
       </Button>
 
