@@ -346,7 +346,8 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'custom',
     component: ReservaViaturaField,
     componentProps: (formData: any) => ({
-      dataProgramada: formData?.data_hora_programada || formData?.data_previsao_inicio
+      dataProgramada: formData?.data_hora_programada || formData?.data_previsao_inicio,
+      reservaId: formData?.reserva_id || formData?.reserva_veiculo?.id
     }),
     showOnlyWhen: {
       field: 'necessita_veiculo',

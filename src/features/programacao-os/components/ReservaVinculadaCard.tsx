@@ -1,6 +1,7 @@
 // src/features/programacao-os/components/ReservaVinculadaCard.tsx
 import React from 'react';
 import { Car, Calendar, User, FileText, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { formatarDiaDaReserva } from '@/features/reservas/utils/dia-da-reserva';
 
 interface ReservaVinculada {
   id: string;
@@ -73,6 +74,14 @@ export const ReservaVinculadaCard: React.FC<ReservaVinculadaCardProps> = ({
           icon: <XCircle className="w-5 h-5" />,
           label: 'Cancelada'
         };
+      case 'vencida':
+        return {
+          color: 'text-gray-600 dark:text-gray-400',
+          bg: 'bg-gray-50 dark:bg-gray-800',
+          border: 'border-gray-200 dark:border-gray-700',
+          icon: <AlertCircle className="w-5 h-5" />,
+          label: 'Vencida'
+        };
       default:
         return {
           color: 'text-gray-600 dark:text-gray-400',
@@ -141,11 +150,11 @@ export const ReservaVinculadaCard: React.FC<ReservaVinculadaCardProps> = ({
           </div>
           <div className="pl-6 space-y-1">
             <p className="text-sm text-gray-900 dark:text-gray-100">
-              {new Date(reserva.data_inicio).toLocaleDateString('pt-BR')} às {reserva.hora_inicio}
+              {formatarDiaDaReserva(reserva.data_inicio)} às {reserva.hora_inicio}
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-400">até</p>
             <p className="text-sm text-gray-900 dark:text-gray-100">
-              {new Date(reserva.data_fim).toLocaleDateString('pt-BR')} às {reserva.hora_fim}
+              {formatarDiaDaReserva(reserva.data_fim)} às {reserva.hora_fim}
             </p>
           </div>
         </div>

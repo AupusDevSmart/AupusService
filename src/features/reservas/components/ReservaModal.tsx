@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { VeiculoSelector } from './VeiculoSelector';
 import { Car, X } from 'lucide-react';
-import { ReservaVeiculo, ReservaFormData, Veiculo } from '../types';
+import { ReservaVeiculo, ReservaFormData } from '../types';
 import {
   formatDateForInput,
   formatDateForAPI,
@@ -18,8 +18,6 @@ interface ReservaModalProps {
   entity?: ReservaVeiculo | null;
   onClose: () => void;
   onSubmit: (data: any) => Promise<void>;
-  veiculos: Veiculo[];
-  reservas: ReservaVeiculo[];
   reservaId?: string;
   loading?: boolean;
 }
@@ -30,8 +28,6 @@ export function ReservaModal({
   entity,
   onClose,
   onSubmit,
-  veiculos,
-  reservas,
   reservaId,
   loading = false
 }: ReservaModalProps) {
@@ -340,8 +336,6 @@ export function ReservaModal({
             </div>
 
             <VeiculoSelector
-              veiculos={veiculos}
-              reservas={reservas}
               filtrosDisponibilidade={filtrosDisponibilidade}
               veiculoSelecionado={veiculoSelecionado}
               onVeiculoChange={(veiculoId) => {

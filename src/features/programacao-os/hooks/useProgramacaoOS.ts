@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react';
 import { programacaoOSApi, type ProgramacaoResponse, type ProgramacaoDetalhesResponse, type CreateProgramacaoDto } from '@/services/programacao-os.service';
 import { api } from '@/config/api';
+import { formatApiError } from '@/utils/api-error';
 
 interface IniciarExecucaoData {
   equipePresente: string[];
@@ -15,8 +16,9 @@ export const useProgramacaoOS = () => {
 
   // Função para lidar com erros
   const handleError = useCallback((error: any, defaultMessage: string): never => {
-    // console.error(error);
-    const errorMessage = error?.response?.data?.message || error?.message || defaultMessage;
+    // A API manda a mensagem em `error.message` ({ success: false, error: {...} });
+    // ler só `data.message` caía no "Request failed with status code 409"
+    const errorMessage = (error ? formatApiError(error) : '') || defaultMessage;
     setError(errorMessage);
     throw new Error(errorMessage);
   }, []);

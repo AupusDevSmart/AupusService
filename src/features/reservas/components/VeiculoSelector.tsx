@@ -1,96 +1,82 @@
 // src/features/reservas/components/VeiculoSelector.tsx
 import { useMemo, useState, useEffect } from 'react';
-import { Car, Users, Fuel, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Car, Users, Fuel, AlertTriangle, CheckCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Veiculo, ReservaVeiculo, FiltrosDisponibilidade } from '../types';
+import { VeiculosService, type ViaturaComDisponibilidade } from '@/services/veiculos.services';
+import { formatApiError } from '@/utils/api-error';
+import { FiltrosDisponibilidade } from '../types';
+import { formatarDiaDaReserva } from '../utils/dia-da-reserva';
 
 interface VeiculoSelectorProps {
-  veiculos: Veiculo[];
-  reservas: ReservaVeiculo[];
   filtrosDisponibilidade: FiltrosDisponibilidade;
   veiculoSelecionado?: string;
   onVeiculoChange: (veiculoId: string) => void;
   disabled?: boolean;
 }
 
+interface ViaturaNaLista {
+  id: string;
+  nome: string;
+  marca: string;
+  modelo: string;
+  placa: string;
+  capacidadePassageiros: number;
+  tipoCombustivel: string;
+  disponivel: boolean;
+  motivo: string | null;
+}
+
+const paraLista = (v: ViaturaComDisponibilidade): ViaturaNaLista => ({
+  id: v.id.trim(),
+  nome: v.nome,
+  marca: v.marca,
+  modelo: v.modelo,
+  placa: v.placa,
+  capacidadePassageiros: v.capacidade_passageiros,
+  tipoCombustivel: v.tipo_combustivel,
+  disponivel: v.disponivel,
+  motivo: v.motivo,
+});
+
+/**
+ * Escolha da viatura com a ocupação real na janela.
+ *
+ * A ocupação vem do servidor (`/veiculos/disponibilidade`), pela mesma regra
+ * que recusa a gravação. Antes era calculada aqui, com 10 reservas e datas
+ * inválidas, e nenhuma viatura aparecia ocupada.
+ */
 export function VeiculoSelector({
-  veiculos,
-  reservas,
   filtrosDisponibilidade,
   veiculoSelecionado,
   onVeiculoChange,
   disabled = false
 }: VeiculoSelectorProps) {
   const [mostrarLista, setMostrarLista] = useState(!veiculoSelecionado);
+  const [viaturas, setViaturas] = useState<ViaturaNaLista[]>([]);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   // Quando o modal abre com um veículo já selecionado (edit/view), colapsar
   useEffect(() => {
     setMostrarLista(!veiculoSelecionado);
   }, []);
 
-  // Verifica disponibilidade de cada veículo
-  const veiculosComDisponibilidade = useMemo(() => {
-    const resultado = veiculos.map(veiculo => {
-      const veiculoId = veiculo.id;
+  const { dataInicio, dataFim, horaInicio, horaFim, excluirReservaId } = filtrosDisponibilidade;
+  useEffect(() => {
+    if (!dataInicio || !dataFim) return;
+    let ativo = true;
+    setCarregando(true);
+    setErro(null);
+    VeiculosService.getDisponibilidade({ dataInicio, dataFim, horaInicio, horaFim, excluirReservaId })
+      .then((lista) => ativo && setViaturas(lista.map(paraLista)))
+      .catch((e) => ativo && setErro(formatApiError(e)))
+      .finally(() => ativo && setCarregando(false));
+    return () => {
+      ativo = false;
+    };
+  }, [dataInicio, dataFim, horaInicio, horaFim, excluirReservaId]);
 
-      // Veículos inativos ou em manutenção não estão disponíveis
-      if (veiculo.status === 'inativo' || veiculo.status === 'manutencao') {
-        return {
-          ...veiculo,
-          disponivel: false,
-          motivo: veiculo.status === 'inativo' ? 'Veículo inativo' : 'Em manutenção'
-        };
-      }
-
-      // Se não há filtros de data, considera disponível
-      if (!filtrosDisponibilidade.dataInicio || !filtrosDisponibilidade.dataFim) {
-        return {
-          ...veiculo,
-          disponivel: true,
-          motivo: null
-        };
-      }
-
-      // Verifica conflitos com reservas existentes
-      const conflitos = reservas.filter(reserva => {
-        // Ignora reservas canceladas/finalizadas
-        if (reserva.status === 'cancelada' || reserva.status === 'finalizada') {
-          return false;
-        }
-
-        // Ignora a própria reserva se estivermos editando
-        if (filtrosDisponibilidade.excluirReservaId &&
-            reserva.id.toString() === filtrosDisponibilidade.excluirReservaId) {
-          return false;
-        }
-
-        // Verifica se é o mesmo veículo - COMPARAR COMO STRING
-        const reservaVeiculoId = reserva.veiculoId.toString();
-        if (reservaVeiculoId !== veiculoId.toString()) {
-          return false;
-        }
-
-        // Verifica sobreposição de datas
-        const inicioNovo = new Date(`${filtrosDisponibilidade.dataInicio}T${filtrosDisponibilidade.horaInicio || '00:00'}`);
-        const fimNovo = new Date(`${filtrosDisponibilidade.dataFim}T${filtrosDisponibilidade.horaFim || '23:59'}`);
-        const inicioExistente = new Date(`${reserva.dataInicio}T${reserva.horaInicio}`);
-        const fimExistente = new Date(`${reserva.dataFim}T${reserva.horaFim}`);
-
-        return (inicioNovo < fimExistente && fimNovo > inicioExistente);
-      });
-
-      const temConflito = conflitos.length > 0;
-
-      return {
-        ...veiculo,
-        disponivel: !temConflito,
-        motivo: temConflito ? `Reservado até ${conflitos[0].dataFim} ${conflitos[0].horaFim}` : null,
-        conflitos
-      };
-    });
-
-    return resultado;
-  }, [veiculos, reservas, filtrosDisponibilidade]);
+  const veiculosComDisponibilidade = viaturas;
 
   // Ordena veículos: disponíveis primeiro
   const veiculosOrdenados = useMemo(() => {
@@ -107,11 +93,11 @@ export function VeiculoSelector({
   // Encontrar o veículo selecionado
   const veiculoAtual = useMemo(() => {
     if (!veiculoSelecionado) return null;
-    return veiculos.find(v => v.id.toString() === veiculoSelecionado.toString()) || null;
-  }, [veiculos, veiculoSelecionado]);
+    return viaturas.find(v => v.id === veiculoSelecionado.trim()) || null;
+  }, [viaturas, veiculoSelecionado]);
 
   // Handler para seleção de veículo
-  const handleVeiculoClick = (veiculo: any) => {
+  const handleVeiculoClick = (veiculo: ViaturaNaLista) => {
     if (!veiculo.disponivel || disabled) {
       return;
     }
@@ -121,11 +107,7 @@ export function VeiculoSelector({
   };
 
   // Função para verificar se o veículo está selecionado
-  const isVeiculoSelecionado = (veiculo: any): boolean => {
-    const veiculoId = veiculo.id.toString();
-    const selecionado = veiculoSelecionado?.toString();
-    return veiculoId === selecionado;
-  };
+  const isVeiculoSelecionado = (veiculo: ViaturaNaLista): boolean => veiculo.id === veiculoSelecionado?.trim();
 
   if (!filtrosDisponibilidade.dataInicio || !filtrosDisponibilidade.dataFim) {
     return (
@@ -152,6 +134,11 @@ export function VeiculoSelector({
                 .join(' · ')}
             </p>
             <FichaDoVeiculo veiculo={veiculoAtual} />
+            {/* Trocou o horário e a viatura escolhida ficou ocupada: avisa
+                aqui, antes do Salvar recusar */}
+            {!veiculoAtual.disponivel && veiculoAtual.motivo && (
+              <p className="mt-1 text-xs text-destructive">Ocupada neste horário: {veiculoAtual.motivo}</p>
+            )}
           </div>
         </div>
 
@@ -165,13 +152,28 @@ export function VeiculoSelector({
     );
   }
 
+  if (erro) {
+    return <p className="text-sm text-destructive">Não foi possível ver as viaturas livres: {erro}</p>;
+  }
+
+  if (carregando && viaturas.length === 0) {
+    return (
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Verificando viaturas livres…
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-2">
       {/* Quantos livres, quantos ocupados. O verde e o vermelho são os únicos
           acentos: o resto sai dos tokens, para a seção não destoar do sheet. */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <span className="text-muted-foreground">
-          {filtrosDisponibilidade.dataInicio} a {filtrosDisponibilidade.dataFim}
+          {formatarDiaDaReserva(filtrosDisponibilidade.dataInicio)}
+          {filtrosDisponibilidade.dataFim !== filtrosDisponibilidade.dataInicio && (
+            <> a {formatarDiaDaReserva(filtrosDisponibilidade.dataFim)}</>
+          )}
           {filtrosDisponibilidade.horaInicio && filtrosDisponibilidade.horaFim && (
             <> · {filtrosDisponibilidade.horaInicio} às {filtrosDisponibilidade.horaFim}</>
           )}

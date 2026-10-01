@@ -1,5 +1,6 @@
 // src/features/programacao-os/components/ProgramacaoOSPage.tsx - ATUALIZADA COM CARDS
 import { useState, useEffect, useMemo } from 'react';
+import { formatApiError } from '@/utils/api-error';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
@@ -26,8 +27,9 @@ import { useUserStore } from '@/store/useUserStore';
 import { toast } from '@/hooks/use-toast';
 
 // useProgramacaoOS ja relanca o erro com a mensagem da API
-const mensagemDoErro = (error: unknown) =>
-  error instanceof Error ? error.message : 'Tente novamente.';
+// A mensagem da API ("A viatura NKD-1880 já está reservada de…") e não o
+// "Request failed with status code 409" do axios
+const mensagemDoErro = (error: unknown) => formatApiError(error) || 'Tente novamente.';
 
 // Função utilitária para converter datas para o formato datetime-local
 const formatToDateTimeLocal = (dateValue: any): string => {
@@ -637,6 +639,8 @@ export function ProgramacaoOSPage() {
       assentos_necessarios: entity.assentos_necessarios ?? null,
       carga_necessaria: entity.carga_necessaria ?? null,
       observacoes_veiculo: entity.observacoes_veiculo ?? '',
+      // Só leitura: o seletor de viatura não conta a própria reserva como conflito
+      reserva_id: entity.reserva_id ?? entity.reserva_veiculo?.id ?? null,
       // ✅ CORREÇÃO: Mapear reserva_veiculo dependendo do modo
       reserva_veiculo: modalState.mode === 'edit' && entity.reserva_veiculo ? {
         // Para EDIT: converter para formato do ReservaViaturaField

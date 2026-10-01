@@ -280,6 +280,8 @@ export interface ProgramacaoResponse {
   itens_orcamento?: ItemOrcamentoProgramacaoResponse[];
   historico?: HistoricoProgramacaoResponse[];
   ordem_servico?: any;
+  /** Reserva de viatura da programação (a API manda; antes não estava no tipo) */
+  reserva_id?: string | null;
   reserva_veiculo?: {
     id: string;
     veiculo_id: string;

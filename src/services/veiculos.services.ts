@@ -6,6 +6,24 @@ import { PaginatedResponse, BaseFilters } from '@/types/base';
 // TYPES & INTERFACES
 // ============================================================================
 
+/** Uma viatura e se ela está livre na janela pedida (resposta de /veiculos/disponibilidade) */
+export interface ViaturaComDisponibilidade {
+  id: string;
+  nome: string;
+  placa: string;
+  marca: string;
+  modelo: string;
+  tipo: string;
+  tipo_combustivel: string;
+  status: string;
+  capacidade_passageiros: number;
+  capacidade_carga: number;
+  quilometragem: number;
+  disponivel: boolean;
+  /** Por que está ocupada: quem reservou e quando */
+  motivo: string | null;
+}
+
 export type StatusVeiculo = 'disponivel' | 'em_uso' | 'manutencao' | 'inativo';
 export type TipoCombustivel = 'gasolina' | 'etanol' | 'diesel' | 'gnv' | 'eletrico' | 'hibrido' | 'flex';
 export type TipoVeiculo = 'carro' | 'van' | 'caminhonete' | 'caminhao' | 'onibus' | 'moto';
@@ -244,8 +262,26 @@ export class VeiculosService {
     }
   }
 
+  /**
+   * GET /veiculos/disponibilidade — cada viatura com livre/ocupada na janela,
+   * pela regra do servidor (docs/SPEC-RESERVAS-DE-VIATURA.md).
+   */
+  static async getDisponibilidade(filtros: {
+    dataInicio: string;
+    dataFim: string;
+    horaInicio?: string;
+    horaFim?: string;
+    excluirReservaId?: string;
+  }): Promise<ViaturaComDisponibilidade[]> {
+    const params = Object.fromEntries(
+      Object.entries(filtros).filter(([, v]) => typeof v === 'string' && v.trim() !== '').map(([k, v]) => [k, v!.trim()]),
+    );
+    const response = await api.get<ViaturaComDisponibilidade[]>(`${this.BASE_URL}/disponibilidade`, { params });
+    return response.data;
+  }
+
   // GET /veiculos/:id - Get vehicle by ID
-  static async getVeiculoById(id: number): Promise<VeiculoResponse> {
+  static async getVeiculoById(id: number | string): Promise<VeiculoResponse> {
     try {
       // console.log('📡 [VEÍCULOS SERVICE] Buscando veículo por ID:', id);
 

@@ -1,13 +1,12 @@
 // src/features/programacao-os/components/ReservaViaturaField.tsx
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Car, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AssistentePassos, type PassoDoAssistente } from '@/components/common/AssistentePassos';
 import { VeiculoSelector } from '@/features/reservas/components/VeiculoSelector';
-import { useVeiculos } from '@/features/veiculos/hooks/useVeiculos';
-import { useReservas } from '@/features/reservas/hooks/useReservas';
+import { VeiculosService } from '@/services/veiculos.services';
 
 interface ValorDaReserva {
   veiculo_id?: string;
@@ -24,6 +23,15 @@ interface ReservaViaturaFieldProps {
   disabled?: boolean;
   /** Data de programação da OS, usada como padrão do período. */
   dataProgramada?: string;
+  /** Reserva atual da programação (edição): não conta como conflito com ela mesma */
+  reservaId?: string;
+}
+
+interface ResumoDaViatura {
+  id: string;
+  nome?: string;
+  modelo?: string;
+  placa?: string;
 }
 
 const PADRAO: ValorDaReserva = {
@@ -49,19 +57,26 @@ export function ReservaViaturaField({
   onChange,
   disabled = false,
   dataProgramada,
+  reservaId,
 }: ReservaViaturaFieldProps) {
   const [dados, setDados] = useState<ValorDaReserva>({ ...PADRAO, ...value });
   const [passo, setPasso] = useState(0);
   const [trocando, setTrocando] = useState(false);
 
-  const { veiculos, loading: carregandoVeiculos, fetchVeiculos } = useVeiculos({ autoFetch: false });
-  const { reservas, loading: carregandoReservas, fetchReservas } = useReservas({ autoFetch: false });
-
+  // A viatura escolhida vem pelo id. Antes era procurada numa lista de 10
+  // viaturas, e a que ficasse de fora nunca aparecia no resumo.
+  const [viatura, setViatura] = useState<ResumoDaViatura | null>(null);
+  const veiculoId = String(dados.veiculo_id ?? '').trim();
   useEffect(() => {
-    fetchVeiculos();
-    fetchReservas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!veiculoId || viatura?.id === veiculoId) return;
+    let ativo = true;
+    VeiculosService.getVeiculoById(veiculoId)
+      .then((v) => ativo && setViatura({ id: veiculoId, nome: v.nome, modelo: v.modelo, placa: v.placa }))
+      .catch(() => ativo && setViatura({ id: veiculoId }));
+    return () => {
+      ativo = false;
+    };
+  }, [veiculoId, viatura?.id]);
 
   // Absorve mudança vinda de fora sem entrar em laço.
   //
@@ -101,13 +116,7 @@ export function ReservaViaturaField({
       dados.reserva_hora_fim,
   );
 
-  // `VeiculoResponse.id` e number e o formulario guarda texto — comparar sem
-  // normalizar os dois lados nunca casa. E a mesma deriva de contrato do
-  // cadastro de veiculos, ainda por resolver na origem.
-  const veiculoEscolhido = useMemo(
-    () => (veiculos || []).find((v) => String(v.id).trim() === String(dados.veiculo_id ?? '').trim()),
-    [veiculos, dados.veiculo_id],
-  );
+  const veiculoEscolhido = viatura && viatura.id === veiculoId ? viatura : null;
 
   // ==================== RESUMO ====================
 
@@ -184,22 +193,15 @@ export function ReservaViaturaField({
       rotulo: 'Veículo',
       titulo: 'Qual veículo?',
       concluido: Boolean(dados.veiculo_id),
-      conteudo:
-        carregandoVeiculos || carregandoReservas ? (
-          <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Carregando veículos...
-          </div>
-        ) : (
+      conteudo: (
           <div className="space-y-4">
             <VeiculoSelector
-              veiculos={veiculos || []}
-              reservas={reservas || []}
               filtrosDisponibilidade={{
                 dataInicio: dados.reserva_data_inicio || '',
                 dataFim: dados.reserva_data_fim || '',
                 horaInicio: dados.reserva_hora_inicio || '',
                 horaFim: dados.reserva_hora_fim || '',
+                excluirReservaId: reservaId?.trim() || undefined,
               }}
               veiculoSelecionado={dados.veiculo_id}
               onVeiculoChange={(id: string) => atualizar({ veiculo_id: id })}

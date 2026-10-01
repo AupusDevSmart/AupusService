@@ -65,3 +65,22 @@ describe('ActionConfirmPanel — auditar', () => {
     expect(onConfirm.mock.calls[0][0]).toMatchObject({ avaliacao_qualidade: 4 });
   });
 });
+
+describe('ActionConfirmPanel — km da viatura', () => {
+  it('iniciar com reserva ativa pede o km inicial (opcional) e manda no payload', async () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(<ActionConfirmPanel action="iniciar" entity={{ reserva_veiculo: { status: 'ativa' } }} onConfirm={onConfirm} />);
+
+    fireEvent.change(screen.getByLabelText('KM inicial do veículo'), { target: { value: '1200' } });
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar início/i }));
+
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    expect(onConfirm.mock.calls[0][0]).toMatchObject({ km_inicial: 1200 });
+  });
+
+  it('reserva já finalizada não pede km no executar', () => {
+    render(<ActionConfirmPanel action="executar" entity={{ reserva_veiculo: { status: 'finalizada' } }} onConfirm={vi.fn()} />);
+
+    expect(screen.queryByLabelText(/KM final/)).toBeNull();
+  });
+});

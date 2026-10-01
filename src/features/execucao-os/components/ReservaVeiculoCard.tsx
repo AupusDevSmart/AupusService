@@ -2,6 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Car } from 'lucide-react';
+import { formatarDiaDaReserva } from '@/features/reservas/utils/dia-da-reserva';
 
 interface ReservaVeiculoCardProps {
   value?: {
@@ -44,14 +45,8 @@ export const ReservaVeiculoCard: React.FC<ReservaVeiculoCardProps> = (props) => 
     return null;
   }
 
-  const formatDate = (date: string): string => {
-    if (!date) return '';
-    try {
-      return new Date(date).toLocaleDateString('pt-BR');
-    } catch {
-      return date;
-    }
-  };
+  // Dia gravado como meia-noite UTC: toLocaleDateString mostrava o dia anterior
+  const formatDate = (date: string): string => formatarDiaDaReserva(date) || date || '';
 
   return (
     <Card className="border border-gray-200 dark:border-gray-700 shadow-sm">

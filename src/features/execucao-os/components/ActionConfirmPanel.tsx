@@ -39,6 +39,14 @@ interface ActionMeta {
  * veículo); recomendações e incidente de segurança vão recolhidos. Saíram
  * atividades, procedimentos, EPIs, custos adicionais e próxima manutenção (D3).
  */
+/**
+ * Reserva de viatura ainda ativa: é ela que recebe o km (saída no Iniciar,
+ * retorno no Executar). Reserva já finalizada ou cancelada não pede km — antes
+ * o campo aparecia e o valor era descartado em silêncio.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- entidade da OS transformada
+const temReservaAtiva = (entity: any) => entity?.reserva_veiculo?.status === 'ativa';
+
 const actionConfig: Record<PendingAction, ActionMeta> = {
   iniciar: {
     confirmLabel: 'Confirmar início',
@@ -46,6 +54,14 @@ const actionConfig: Record<PendingAction, ActionMeta> = {
     variant: 'default',
     fields: [
       { key: 'data_hora_inicio_real', label: 'Data e hora de início', type: 'datetime-local', defaultNow: true },
+      {
+        key: 'km_inicial',
+        label: 'KM inicial do veículo',
+        type: 'number',
+        placeholder: 'Opcional',
+        min: 0,
+        condition: temReservaAtiva,
+      },
       { key: 'observacoes', label: 'Observações do início', type: 'textarea', placeholder: 'Opcional', rows: 2 },
     ],
   },
@@ -84,7 +100,8 @@ const actionConfig: Record<PendingAction, ActionMeta> = {
         label: 'KM final do veículo',
         type: 'number',
         placeholder: 'KM no retorno',
-        condition: (entity) => !!(entity?.reserva_veiculo || entity?.reserva_id),
+        min: 0,
+        condition: temReservaAtiva,
       },
       { key: 'recomendacoes', label: 'Recomendações', type: 'textarea', placeholder: 'Para as próximas manutenções', rows: 2, detalhe: true },
       { key: 'incidentes_seguranca', label: 'Incidente de segurança', type: 'text', placeholder: 'Se houve, descreva', detalhe: true },

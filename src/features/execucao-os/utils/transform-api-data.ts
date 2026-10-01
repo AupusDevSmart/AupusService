@@ -199,11 +199,17 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     anomalia: apiData.anomalia,
     plano_manutencao: apiData.plano_manutencao,
     reserva_veiculo: apiData.reserva_veiculo,
+    // km registrados no Iniciar/Executar (os campos de leitura do sheet liam
+    // estas chaves, que nunca eram preenchidas)
+    kmInicialReserva: apiData.reserva_veiculo?.km_inicial ?? undefined,
+    kmFinalReserva: apiData.reserva_veiculo?.km_final ?? undefined,
 
     // ✅ Dados transformados para o ReservaVeiculoCard
     reservaCard: apiData.reserva_veiculo ? {
       veiculo: apiData.reserva_veiculo.veiculo?.placa || apiData.reserva_veiculo.veiculo?.modelo || '',
       kmInicial: apiData.reserva_veiculo.km_inicial,
+      kmFinal: apiData.reserva_veiculo.km_final,
+      status: apiData.reserva_veiculo.status,
       dataInicioReserva: apiData.reserva_veiculo.data_inicio,
       horaInicioReserva: apiData.reserva_veiculo.hora_inicio,
       dataFimReserva: apiData.reserva_veiculo.data_fim,
@@ -248,8 +254,8 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
       tempoEstimado: apiData.tempo_estimado,
       viatura: apiData.reserva_veiculo ? {
         veiculoId: apiData.reserva_veiculo.veiculo_id,
-        modelo: apiData.reserva_veiculo.modelo || '',
-        placa: apiData.reserva_veiculo.placa || '',
+        modelo: apiData.reserva_veiculo.veiculo?.modelo || '',
+        placa: apiData.reserva_veiculo.veiculo?.placa || '',
       } : undefined,
     } as any,
   };

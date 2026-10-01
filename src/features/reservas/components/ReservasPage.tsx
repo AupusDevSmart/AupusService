@@ -406,8 +406,6 @@ export function ReservasPage() {
           entity={getModalEntity() as any}
           onClose={closeModal}
           onSubmit={handleSubmit}
-          veiculos={veiculos}
-          reservas={reservas}
           reservaId={modalState.entity?.id}
           loading={isSubmitting}
         />
