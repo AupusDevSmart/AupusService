@@ -146,11 +146,6 @@ interface ActionConfirmPanelProps {
    * feita" e volta para a agenda (D2). Não bloqueia a execução.
    */
   tarefasPendentes?: { id: string; nome: string }[];
-  /**
-   * Executar: itens gerais obrigatórios (segurança e encerramento) ainda
-   * desmarcados. Bloqueiam: marca-se na seção "O que foi feito", logo abaixo.
-   */
-  itensObrigatoriosPendentes?: string[];
 }
 
 export function ActionConfirmPanel({
@@ -159,13 +154,11 @@ export function ActionConfirmPanel({
   onConfirm,
   onVoltar,
   tarefasPendentes = [],
-  itensObrigatoriosPendentes = [],
 }: ActionConfirmPanelProps) {
   const config = actionConfig[action];
   const Icon = config.icon;
   const idBase = useId();
   const pendentes = action === 'executar' ? tarefasPendentes : [];
-  const itensFaltando = action === 'executar' ? itensObrigatoriosPendentes : [];
 
   const visiveis = config.fields.filter((f) => !f.condition || f.condition(entity));
   const principais = visiveis.filter((f) => !f.detalhe);
@@ -185,8 +178,7 @@ export function ActionConfirmPanel({
 
   const canConfirm =
     visiveis.filter((f) => f.required).every((f) => preenchido(values[f.key])) &&
-    pendentes.every((t) => preenchido(motivos[t.id])) &&
-    itensFaltando.length === 0;
+    pendentes.every((t) => preenchido(motivos[t.id]));
 
   const handleConfirm = async () => {
     if (!canConfirm || submitting) return;
@@ -315,17 +307,6 @@ export function ActionConfirmPanel({
               Usar o mesmo motivo nas outras
             </Button>
           )}
-        </div>
-      )}
-
-      {itensFaltando.length > 0 && (
-        <div className="rounded-md border p-3" role="status">
-          <p className="text-sm font-medium">Antes de confirmar, marque em "Segurança e encerramento":</p>
-          <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
-            {itensFaltando.map((texto) => (
-              <li key={texto}>{texto}</li>
-            ))}
-          </ul>
         </div>
       )}
 

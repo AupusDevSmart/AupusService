@@ -20,7 +20,6 @@ import { ActionConfirmPanel, type PendingAction } from './ActionConfirmPanel';
 import { AcoesDaOS } from './AcoesDaOS';
 import { OQueFoiFeito } from './OQueFoiFeito';
 import {
-  geraisObrigatoriosPendentes,
   montarProgresso,
   tarefasPendentes,
   type ProgressoDaExecucao,
@@ -61,7 +60,7 @@ export function ExecucaoOSPage() {
 
   // Tarefas e checklist da OS aberta, vivos: a seção "O que foi feito" grava
   // item a item, e o painel de Executar precisa saber o que ainda está pendente.
-  const [progresso, setProgresso] = useState<ProgressoDaExecucao>({ tarefas: [], gerais: [] });
+  const [progresso, setProgresso] = useState<ProgressoDaExecucao>({ tarefas: [] });
 
   // Hook de API
   const {
@@ -413,7 +412,7 @@ export function ExecucaoOSPage() {
                     const status = statusDaExecucao(modalState.entity);
                     const emExecucao = status === 'EM_EXECUCAO' || status === 'PAUSADA';
                     const executada = status === 'EXECUTADA' || status === 'AUDITADA' || status === 'FINALIZADA';
-                    const temProgresso = progresso.tarefas.length > 0 || progresso.gerais.length > 0;
+                    const temProgresso = progresso.tarefas.length > 0;
                     return (
                       <div className="space-y-4">
                         <div className="rounded-md border p-4">
@@ -426,7 +425,6 @@ export function ExecucaoOSPage() {
                               onConfirm={handleConfirmAction}
                               onVoltar={() => setPendingAction(null)}
                               tarefasPendentes={tarefasPendentes(progresso).map((t) => ({ id: t.id, nome: t.nome }))}
-                              itensObrigatoriosPendentes={geraisObrigatoriosPendentes(progresso)}
                             />
                           ) : (
                             <AcoesDaOS

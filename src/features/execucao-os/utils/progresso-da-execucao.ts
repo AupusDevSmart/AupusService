@@ -3,8 +3,9 @@
  * feito" (docs/SPEC-EXECUCAO-DA-OS.md).
  *
  * A API manda `tarefas_os` (o vínculo da tarefa na OS, com o nome congelado) e
- * `checklist` (os itens, com `tarefa_os_id` desde 2026-09-30; itens gerais de
- * segurança vêm sem tarefa). Antes a tela lia `checklist_atividades` e
+ * `checklist` (os itens, com `tarefa_os_id` desde 2026-09-30). Item sem
+ * tarefa é o genérico de segurança das OS antigas: a seção saiu em 2026-10-01
+ * e eles são ignorados. Antes a tela lia `checklist_atividades` e
  * `item.descricao` — campos que a API não manda —, e o checklist chegava vazio.
  */
 
@@ -31,8 +32,6 @@ export interface TarefaDaExecucao {
 
 export interface ProgressoDaExecucao {
   tarefas: TarefaDaExecucao[];
-  /** Itens gerais (segurança, encerramento), sem tarefa */
-  gerais: ItemDoChecklist[];
 }
 
 interface TarefaOsDaApi {
@@ -94,18 +93,7 @@ export function montarProgresso(tarefasOs: TarefaOsDaApi[] = [], checklist: Item
       };
     });
 
-  const idsDasTarefas = new Set(tarefas.map((t) => t.id));
-  const gerais: ItemDoChecklist[] = ordenado
-    .filter((c) => !c.tarefa_os_id || !idsDasTarefas.has(c.tarefa_os_id.trim()))
-    .map((c) => ({
-      id: c.id,
-      texto: c.atividade ?? '',
-      obrigatoria: Boolean(c.obrigatoria),
-      concluida: Boolean(c.concluida),
-      tarefaOsId: null,
-    }));
-
-  return { tarefas, gerais };
+  return { tarefas };
 }
 
 export function aplicarItem(p: ProgressoDaExecucao, itemId: string, concluida: boolean): ProgressoDaExecucao {
@@ -115,7 +103,6 @@ export function aplicarItem(p: ProgressoDaExecucao, itemId: string, concluida: b
       const itens = t.itens.map(marcar);
       return { ...t, itens, obrigatoriosPendentes: contarPendentes(itens) };
     }),
-    gerais: p.gerais.map(marcar),
   };
 }
 
@@ -137,10 +124,3 @@ export function tarefasPendentes(p: ProgressoDaExecucao): TarefaDaExecucao[] {
   return p.tarefas.filter((t) => t.status === 'PENDENTE');
 }
 
-/**
- * Itens gerais (segurança e encerramento) obrigatórios ainda desmarcados.
- * Executar exige todos marcados — a marca "obrigatório" não pode ser só rótulo.
- */
-export function geraisObrigatoriosPendentes(p: ProgressoDaExecucao): string[] {
-  return p.gerais.filter((i) => i.obrigatoria && !i.concluida).map((i) => i.texto);
-}

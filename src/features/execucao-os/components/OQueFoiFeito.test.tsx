@@ -74,6 +74,13 @@ describe('OQueFoiFeito', () => {
     expect(screen.getByText('Chuva forte')).toBeInTheDocument();
   });
 
+  it('não mostra a seção genérica de segurança (itens sem tarefa das OS antigas)', () => {
+    render(<ComEstado />);
+
+    expect(screen.queryByText('Segurança e encerramento')).toBeNull();
+    expect(screen.queryByText('Verificar equipamentos de segurança')).toBeNull();
+  });
+
   it('em leitura não tem caixas nem botões', () => {
     render(<ComEstado editavel={false} />);
 

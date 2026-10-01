@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   aplicarItem,
   aplicarStatusDaTarefa,
-  geraisObrigatoriosPendentes,
   montarProgresso,
   tarefasPendentes,
 } from './progresso-da-execucao';
@@ -32,10 +31,11 @@ describe('montarProgresso', () => {
     expect(p.tarefas[1].itens).toEqual([]);
   });
 
-  it('item sem tarefa vai para os gerais', () => {
+  it('item sem tarefa (genérico de segurança das OS antigas) é ignorado', () => {
     const p = montarProgresso(tarefasOs, checklist);
 
-    expect(p.gerais.map((i) => i.id)).toEqual(['C9']);
+    expect(p.tarefas.flatMap((t) => t.itens).map((i) => i.id)).not.toContain('C9');
+    expect(Object.keys(p)).toEqual(['tarefas']);
   });
 
   it('conta os obrigatórios pendentes de cada tarefa', () => {
@@ -78,16 +78,3 @@ describe('aplicarItem / aplicarStatusDaTarefa / tarefasPendentes', () => {
   });
 });
 
-describe('geraisObrigatoriosPendentes', () => {
-  it('lista os itens gerais obrigatórios ainda desmarcados (os das tarefas não entram)', () => {
-    expect(geraisObrigatoriosPendentes(montarProgresso(tarefasOs, checklist))).toEqual([
-      'Verificar equipamentos de segurança',
-    ]);
-  });
-
-  it('some quando o item é marcado', () => {
-    const p = aplicarItem(montarProgresso(tarefasOs, checklist), 'C9', true);
-
-    expect(geraisObrigatoriosPendentes(p)).toEqual([]);
-  });
-});

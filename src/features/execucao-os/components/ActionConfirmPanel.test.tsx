@@ -49,22 +49,6 @@ describe('ActionConfirmPanel — executar', () => {
       tarefas_nao_feitas: [{ id: 'V1', motivo: 'Faltou graxa' }],
     });
   });
-
-  it('com item geral obrigatório desmarcado, diz qual é e não confirma', () => {
-    render(
-      <ActionConfirmPanel
-        action="executar"
-        entity={{}}
-        itensObrigatoriosPendentes={['Verificar equipamentos de segurança']}
-        onConfirm={vi.fn()}
-      />,
-    );
-
-    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'Feito' } });
-
-    expect(screen.getByText('Verificar equipamentos de segurança')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Confirmar Execu/i })).toBeDisabled();
-  });
 });
 
 describe('ActionConfirmPanel — auditar', () => {

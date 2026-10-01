@@ -171,13 +171,6 @@ export function OQueFoiFeito({ osId, progresso, editavel, onChange }: OQueFoiFei
         );
       })}
 
-      {progresso.gerais.length > 0 && (
-        <div className="rounded-md border p-3">
-          <p className="mb-1 text-sm font-medium">Segurança e encerramento</p>
-          {progresso.gerais.map((item) => linhaDeItem(item, false))}
-        </div>
-      )}
-
       {editavel && progresso.tarefas.some((t) => t.status === 'PENDENTE') && (
         <p className="text-xs text-muted-foreground">
           Tarefa que não der para fazer: o motivo é pedido ao executar a OS, e ela volta para a agenda.
