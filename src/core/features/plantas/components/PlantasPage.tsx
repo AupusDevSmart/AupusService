@@ -21,6 +21,8 @@ import { plantasTableColumns } from '../config/table-config';
 import { useProprietarios } from '../config/filter-config';
 import { useUserStore, usePlantasFeature, useHttpClient } from '@/core/context/hooks';
 import { unwrapApiResponse } from '@/core/lib/utils';
+import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
+import { exportarPlantas, lerPlantas } from '../utils/planilha';
 
 const initialFilters: PlantasFilters = {
   search: '',
@@ -369,7 +371,21 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
             </div>
 
             {/* Botões */}
-            <div className="flex flex-row gap-2 w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+              <PlanilhaDoCadastro
+                cadastro="plantas"
+                titulo="Plantas"
+                exportar={() =>
+                  exportarPlantas({
+                    search: filters.search || undefined,
+                    proprietarioId: filters.proprietarioId !== 'all' ? filters.proprietarioId : undefined,
+                  })
+                }
+                ler={lerPlantas}
+                aoImportar={handleRefresh}
+                podeImportar={isAdmin()}
+                aviso="Planta e unidade compartilhadas com o NexOn: o que você confirmar aqui é replicado lá. Unidade nunca é apagada pela planilha."
+              />
               <button
                 onClick={handleRefresh}
                 disabled={loading}
