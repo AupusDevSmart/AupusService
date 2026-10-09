@@ -14,6 +14,8 @@ import { concessionariasTableColumns } from '../config/table-config';
 import { useConcessionariasFilters } from '../hooks/useConcessionariasFilters';
 import { concessionariasFormFields } from '../config/form-config';
 import { useUserStore, useConcessionariasFeature } from '@/core/context/hooks';
+import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
+import { exportarConcessionarias, lerConcessionarias } from '../utils/planilha';
 
 const initialFilters: ConcessionariasFilters = {
   search: '',
@@ -344,7 +346,20 @@ export function ConcessionariasPage() {
               </div>
 
               {/* Botões de Ação */}
-              <div className="flex flex-row gap-2 w-full sm:w-auto sm:ml-auto">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:ml-auto">
+                <PlanilhaDoCadastro
+                  cadastro="concessionarias"
+                  titulo="Concessionárias"
+                  exportar={() =>
+                    exportarConcessionarias({
+                      search: filters.search || undefined,
+                      estado: filters.estado !== 'all' ? filters.estado : undefined,
+                    })
+                  }
+                  ler={lerConcessionarias}
+                  aoImportar={handleRefresh}
+                  podeImportar={isAdmin()}
+                />
                 <button
                   onClick={handleRefresh}
                   disabled={loading}
