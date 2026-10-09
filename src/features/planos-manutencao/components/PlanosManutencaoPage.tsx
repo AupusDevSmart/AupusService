@@ -33,6 +33,8 @@ const instrucoesApi = new InstrucoesApiService();
 import { type TarefaApiResponse } from '@/services/tarefas.services';
 import { toast } from '@/hooks/use-toast';
 import { formatApiError } from '@/utils/api-error';
+import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
+import { exportarPlanos, lerPlanos } from '../utils/planilha';
 
 interface PlanosFiltersApi {
   search?: string;
@@ -314,11 +316,20 @@ export function PlanosManutencaoPage() {
             <div className="flex-1">
               <BaseFilters filters={filters} config={filterConfig} onFilterChange={handleFilterChange} />
             </div>
-            <button onClick={() => openModal('create')} className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap">
-              <Plus className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Novo Plano</span>
-              <span className="sm:hidden">Novo</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+              <PlanilhaDoCadastro
+                cadastro="planos-manutencao"
+                titulo="Planos de Manutenção"
+                exportar={() => exportarPlanos({ search: filters.search || undefined })}
+                ler={lerPlanos}
+                aoImportar={() => void reloadAll()}
+              />
+              <button onClick={() => openModal('create')} className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap">
+                <Plus className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Novo Plano</span>
+                <span className="sm:hidden">Novo</span>
+              </button>
+            </div>
           </div>
 
           {/* Tabela */}
