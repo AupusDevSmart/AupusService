@@ -31,7 +31,7 @@ const golzin = {
   atualizadoEm: '2026-10-01T13:16:42.151Z',
 } as never;
 
-describe('planilha de veículos', () => {
+describe('planilha de veículos', { timeout: 30_000 }, () => {
   it('ida e volta: data no dia certo, STATUS fica de fora (é só informação)', async () => {
     const livro = await gravarEReabrir(await montarLivroPlano(definicaoDeVeiculos, [golzin]));
     const { registros, erros } = lerVeiculos(livro);

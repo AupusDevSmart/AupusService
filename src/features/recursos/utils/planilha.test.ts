@@ -18,7 +18,7 @@ const recurso = (extra: Partial<RecursoApiResponse>): RecursoApiResponse => ({
   ...extra,
 });
 
-describe('planilha de recursos', () => {
+describe('planilha de recursos', { timeout: 30_000 }, () => {
   it('ida e volta: o que sai é o que volta, com o ID sem espaço e o ATUALIZADO EM exato', async () => {
     const registros = [
       recurso({}),

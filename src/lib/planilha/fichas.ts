@@ -18,6 +18,7 @@ import {
   somenteLeitura,
 } from '@/lib/planilha/estilo';
 import { chave, texto } from '@/lib/planilha/leitura';
+import { abaDeReferencias, type Referencia } from '@/lib/planilha/referencias';
 import {
   ABAS_RESERVADAS,
   type LeituraDaPlanilha,
@@ -44,14 +45,6 @@ export type SecaoDaFicha<T, L> = {
   explicacao: string;
   /** Só informação: sai em cinza e a importação a ignora inteira. */
   somenteLeitura?: boolean;
-};
-
-export type Referencia = {
-  /** Como os campos apontam para ela (`Campo.lista = referencia(refs, 'plantas')`). */
-  chave: string;
-  titulo: string;
-  colunas: string[];
-  linhas: Array<Array<string | number | null>>;
 };
 
 /** Itens lidos de uma seção; ausente quando a seção não está na aba. */
@@ -86,34 +79,10 @@ export type PlanilhaDeFichas<T> = {
 
 const ABA_RESUMO = 'RESUMO';
 const ABA_MODELO = 'MODELO';
-const ABA_REFERENCIAS = 'REFERÊNCIAS';
 const ROTULO_ID = 'ID';
 const ROTULO_ATUALIZADO = 'ATUALIZADO EM';
 const FOLGA_NA_FICHA = 3;
 const FOLGA_NO_MODELO = 10;
-
-/** A fórmula da lista suspensa com os nomes de uma referência. */
-export function referencia(referencias: Referencia[], qual: string): string | undefined {
-  let coluna = 1;
-  for (const ref of referencias) {
-    if (ref.chave === qual) {
-      const letra = letraDaColuna(coluna);
-      return `'${ABA_REFERENCIAS}'!$${letra}$3:$${letra}$${Math.max(ref.linhas.length + 2, 3)}`;
-    }
-    coluna += ref.colunas.length + 1;
-  }
-  return undefined;
-}
-
-function letraDaColuna(n: number): string {
-  let letra = '';
-  while (n > 0) {
-    const resto = (n - 1) % 26;
-    letra = String.fromCharCode(65 + resto) + letra;
-    n = Math.floor((n - 1) / 26);
-  }
-  return letra;
-}
 
 function campoId<T>(def: PlanilhaDeFichas<T>): Campo<T> {
   return {
@@ -250,35 +219,6 @@ function escreverFicha<T>(
   }
 
   bordaFina(ws, ultimaColuna);
-}
-
-async function abaDeReferencias(livro: Workbook, referencias: Referencia[]) {
-  const ws = livro.addWorksheet(ABA_REFERENCIAS);
-  let coluna = 1;
-
-  for (const ref of referencias) {
-    const titulo = ws.getRow(1).getCell(coluna);
-    titulo.value = ref.titulo;
-    titulo.font = { bold: true };
-    preencher(titulo, AZUL_CLARO);
-
-    ref.colunas.forEach((nome, c) => {
-      const celula = ws.getRow(2).getCell(coluna + c);
-      celula.value = nome;
-      celula.font = { bold: true, color: { argb: BRANCO } };
-      preencher(celula, AZUL);
-      ws.getColumn(coluna + c).width = c === 0 ? 46 : 18;
-    });
-
-    ref.linhas.forEach((valores, r) => {
-      valores.forEach((v, c) => (ws.getRow(r + 3).getCell(coluna + c).value = v));
-    });
-
-    coluna += ref.colunas.length + 1;
-  }
-
-  ws.views = [{ state: 'frozen', ySplit: 2 }];
-  await somenteLeitura(ws);
 }
 
 // ---- Leitura ---------------------------------------------------------------

@@ -17,6 +17,7 @@ import {
   somenteLeitura,
 } from '@/lib/planilha/estilo';
 import { chave, texto } from '@/lib/planilha/leitura';
+import { abaDeReferencias, type Referencia } from '@/lib/planilha/referencias';
 import type { LeituraDaPlanilha, ProblemaDaPlanilha, RegistroDaPlanilha } from '@/lib/planilha/tipos';
 
 /**
@@ -46,6 +47,8 @@ export type PlanilhaPlana<T> = {
   comoTirarDeUso: string;
   /** Acerto do payload lido (ex.: agrupar as tarifas). */
   montar?: (dados: Record<string, unknown>) => Record<string, unknown>;
+  /** Nomes válidos de outros cadastros, na aba REFERÊNCIAS (depois das fichas). */
+  referencias?: Referencia[];
   regrasDoCadastro?: string[];
 };
 
@@ -88,6 +91,7 @@ export async function montarLivroPlano<T>(def: PlanilhaPlana<T>, registros: T[])
     cadastro: def.cadastro,
     formato: 'plana',
     comoTirarDeUso: def.comoTirarDeUso,
+    temReferencias: !!def.referencias?.length,
     tabelas: [{ onde: ABA, campos: colunas as Campo<never>[] }],
     regrasDoCadastro: def.regrasDoCadastro,
   });
@@ -123,6 +127,8 @@ export async function montarLivroPlano<T>(def: PlanilhaPlana<T>, registros: T[])
 
   registros.forEach((registro, i) => fichaSomenteLeitura(livro, def, colunas, registro, i, registros.length));
   for (const ficha of livro.worksheets.slice(2)) await somenteLeitura(ficha);
+
+  if (def.referencias?.length) await abaDeReferencias(livro, def.referencias);
 
   return livro;
 }

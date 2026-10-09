@@ -24,6 +24,24 @@ import {
   feriadosFormGroups,
   transformFeriadoFormData
 } from '../config/form-config';
+import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
+import { exportarFeriados, lerFeriados } from '../utils/planilha-feriados';
+import type { TipoFeriado } from '@/services/agenda.services';
+
+/** O filtro da tela em parâmetros da API — a listagem e a exportação usam o mesmo. */
+function filtrosDaBusca(filtros: FeriadosFilters): Omit<QueryFeriadosParams, 'page' | 'limit'> {
+  return {
+    search: filtros.search || undefined,
+    tipo: filtros.tipo !== 'all' ? (filtros.tipo as TipoFeriado) : undefined,
+    plantaId: filtros.plantaId !== 'all' ? filtros.plantaId : undefined,
+    ano: filtros.ano !== 'all' ? parseInt(filtros.ano) : undefined,
+    mes: filtros.mes !== 'all' ? parseInt(filtros.mes) : undefined,
+    geral: filtros.geral !== 'all' ? filtros.geral === 'true' : undefined,
+    recorrente: filtros.recorrente !== 'all' ? filtros.recorrente === 'true' : undefined,
+    orderBy: 'data',
+    orderDirection: 'desc',
+  };
+}
 
 const initialFilters: FeriadosFilters = {
   search: '',
@@ -82,15 +100,7 @@ export function FeriadosPage() {
       const params: QueryFeriadosParams = {
         page: currentFilters.page,
         limit: currentFilters.limit,
-        search: currentFilters.search || undefined,
-        tipo: currentFilters.tipo !== 'all' ? currentFilters.tipo as any : undefined,
-        plantaId: currentFilters.plantaId !== 'all' ? currentFilters.plantaId : undefined,
-        ano: currentFilters.ano !== 'all' ? parseInt(currentFilters.ano) : undefined,
-        mes: currentFilters.mes !== 'all' ? parseInt(currentFilters.mes) : undefined,
-        geral: currentFilters.geral !== 'all' ? currentFilters.geral === 'true' : undefined,
-        recorrente: currentFilters.recorrente !== 'all' ? currentFilters.recorrente === 'true' : undefined,
-        orderBy: 'data',
-        orderDirection: 'desc'
+        ...filtrosDaBusca(currentFilters),
       };
 
       const response = await agendaService.getFeriados(params);
@@ -280,6 +290,13 @@ export function FeriadosPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+              <PlanilhaDoCadastro
+                cadastro="feriados"
+                titulo="Feriados"
+                exportar={() => exportarFeriados(filtrosDaBusca(filters))}
+                ler={lerFeriados}
+                aoImportar={handleRefresh}
+              />
               <button
                 onClick={handleRefresh}
                 disabled={loading}
