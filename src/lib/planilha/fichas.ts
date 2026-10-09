@@ -1,6 +1,6 @@
 import type { Workbook, Worksheet } from 'exceljs';
 
-import { daPlanilha, definir, ehCalculado, escreverCelula, type Campo } from '@/lib/planilha/campos';
+import { definir, ehCalculado, escreverCelula, lerCampo, type Campo } from '@/lib/planilha/campos';
 import { abaComoPreencher, conferirCadastro } from '@/lib/planilha/como-preencher';
 import {
   AZUL,
@@ -380,7 +380,7 @@ function lerFicha<T>(
       const campo = camposPorRotulo.get(rotulo);
       if (campo && !ehCalculado(campo)) {
         linhasDosCampos[campo.caminho!.split('.')[0]] = r;
-        const lido = daPlanilha(campo, linha.getCell(2));
+        const lido = lerCampo(campo, linha.getCell(2));
         if (lido.erro) erros.push({ aba, linha: r, campo: campo.caminho, mensagem: lido.erro });
         else if (!(lido.valor === null && campo.vazioEhPadrao)) definir(cabecalhoLido, campo.caminho!, lido.valor);
       }
@@ -396,7 +396,7 @@ function lerFicha<T>(
 
     const item: Record<string, unknown> = { _linha: r };
     for (const { campo, coluna } of secaoAtual.colunas) {
-      const lido = daPlanilha(campo, linha.getCell(coluna));
+      const lido = lerCampo(campo, linha.getCell(coluna));
       if (lido.erro) {
         erros.push({ aba, linha: r, campo: campo.caminho, mensagem: lido.erro });
         continue;

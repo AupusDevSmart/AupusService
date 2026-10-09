@@ -1,6 +1,6 @@
 import type { Workbook } from 'exceljs';
 
-import { daPlanilha, definir, ehCalculado, escreverCelula, type Campo } from '@/lib/planilha/campos';
+import { definir, ehCalculado, escreverCelula, lerCampo, type Campo } from '@/lib/planilha/campos';
 import { abaComoPreencher, conferirCadastro } from '@/lib/planilha/como-preencher';
 import {
   AZUL,
@@ -213,7 +213,7 @@ export function lerPlana<T>(def: PlanilhaPlana<T>, livro: Workbook): LeituraDaPl
     let comErro = false;
 
     for (const { campo, coluna } of editaveis) {
-      const lido = daPlanilha(campo, linha.getCell(coluna));
+      const lido = lerCampo(campo, linha.getCell(coluna));
       if (lido.erro) {
         erros.push({ aba: ABA, linha: r, campo: campo.caminho, mensagem: lido.erro });
         comErro = true;

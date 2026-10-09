@@ -4,8 +4,8 @@ export type PaginaDaListagem<T> = {
   pagination?: { totalPages?: number; total?: number } | null;
 };
 
-/** O máximo que as listagens aceitam por página (`@Max(1000)` em plantas e concessionárias). */
-const POR_PAGINA = 500;
+/** O que todas as listagens aceitam por página (veículos, feriados, instruções e planos têm `@Max(100)`). */
+const POR_PAGINA = 100;
 
 /**
  * Todas as páginas de uma listagem, com o filtro da tela — a exportação leva

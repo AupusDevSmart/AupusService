@@ -178,6 +178,19 @@ export function daPlanilha<T>(campo: Campo<T>, celula: Cell): LeituraDoCampo {
   }
 }
 
+/**
+ * A leitura que os formatos usam: a do tipo e, em cima dela, o obrigatório da
+ * COMO PREENCHER ("Sim"). Obrigatório só no registro novo diz outra coisa e
+ * fica com o servidor, que sabe se o registro é novo.
+ */
+export function lerCampo<T>(campo: Campo<T>, celula: Cell): LeituraDoCampo {
+  const lido = daPlanilha(campo, celula);
+  if (!lido.erro && lido.valor === null && campo.obrigatorio === 'Sim') {
+    return { valor: null, erro: `${campo.titulo}: obrigatório.` };
+  }
+  return lido;
+}
+
 /** Grava `valor` em `alvo` seguindo o caminho com pontos (`endereco.cep`). */
 export function definir(alvo: Record<string, unknown>, caminho: string, valor: unknown) {
   const partes = caminho.split('.');

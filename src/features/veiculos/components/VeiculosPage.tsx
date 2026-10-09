@@ -15,6 +15,9 @@ import { veiculosFormFields } from '../config/form-config';
 import { veiculosTableColumns } from '../config/table-config';
 import { toast } from '@/hooks/use-toast';
 import { CreateVeiculoRequest, VeiculosFilters } from '../types';
+import type { StatusVeiculo, TipoCombustivel, TipoVeiculo } from '@/services/veiculos.services';
+import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
+import { exportarVeiculos, lerVeiculos } from '../utils/planilha';
 
 const initialFilters: VeiculosFilters = {
   search: '',
@@ -26,6 +29,20 @@ const initialFilters: VeiculosFilters = {
   page: 1,
   limit: LINHAS_POR_PAGINA_PADRAO
 };
+
+/** O filtro da tela em parâmetros da API — a listagem e a exportação usam o mesmo. */
+function filtrosDaBusca(filtros: VeiculosFilters) {
+  return {
+    search: filtros.search || undefined,
+    status: filtros.status !== 'all' ? (filtros.status as StatusVeiculo) : undefined,
+    tipo: filtros.tipo !== 'all' ? (filtros.tipo as TipoVeiculo) : undefined,
+    tipoCombustivel: filtros.tipoCombustivel !== 'all' ? (filtros.tipoCombustivel as TipoCombustivel) : undefined,
+    marca: filtros.marca || undefined,
+    disponivel: filtros.disponivel !== 'all' ? filtros.disponivel === 'true' : undefined,
+    orderBy: 'nome' as const,
+    orderDirection: 'asc' as const,
+  };
+}
 
 export function VeiculosPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,20 +70,11 @@ export function VeiculosPage() {
     try {
       clearError();
 
-      const params = {
+      await fetchVeiculos({
         page: currentFilters.page,
         limit: currentFilters.limit,
-        search: currentFilters.search || undefined,
-        status: currentFilters.status !== 'all' ? currentFilters.status as any : undefined,
-        tipo: currentFilters.tipo !== 'all' ? currentFilters.tipo as any : undefined,
-        tipoCombustivel: currentFilters.tipoCombustivel !== 'all' ? currentFilters.tipoCombustivel as any : undefined,
-        marca: currentFilters.marca || undefined,
-        disponivel: currentFilters.disponivel !== 'all' ? currentFilters.disponivel === 'true' : undefined,
-        orderBy: 'nome' as const,
-        orderDirection: 'asc' as const
-      };
-
-      await fetchVeiculos(params);
+        ...filtrosDaBusca(currentFilters),
+      });
     } catch (error) {
       console.error('Erro ao buscar veículos:', error);
     }
@@ -300,6 +308,13 @@ export function VeiculosPage() {
             </div>
 
             <div className="flex gap-2 flex-col sm:flex-row shrink-0">
+              <PlanilhaDoCadastro
+                cadastro="veiculos"
+                titulo="Veículos"
+                exportar={() => exportarVeiculos(filtrosDaBusca(filters))}
+                ler={lerVeiculos}
+                aoImportar={handleRefresh}
+              />
               <button
                 onClick={handleRefresh}
                 disabled={loading}
