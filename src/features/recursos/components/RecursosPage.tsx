@@ -20,6 +20,8 @@ import { recursosTableColumns } from '../config/table-config';
 import { recursosFilterConfig } from '../config/filter-config';
 import { useRecursos } from '../hooks/useRecursos';
 import { RecursoModal } from './RecursoModal';
+import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
+import { exportarRecursos, lerRecursos } from '../utils/planilha';
 
 const FILTROS_INICIAIS: QueryRecursosParams = { search: '', page: 1, limit: LINHAS_POR_PAGINA_PADRAO };
 
@@ -48,7 +50,7 @@ export function RecursosPage() {
     };
   }, [filtrosBrutos]);
 
-  const { recursos, paginacao, carregando, salvando, salvar, remover } = useRecursos(filtros);
+  const { recursos, paginacao, carregando, salvando, salvar, remover, recarregar } = useRecursos(filtros);
 
   const [modal, setModal] = useState<{
     aberto: boolean;
@@ -91,16 +93,26 @@ export function RecursosPage() {
               />
             </div>
 
-            {isAdmin() && (
-              <button
-                onClick={() => setModal({ aberto: true, modo: 'create', recurso: null })}
-                className="btn-minimal-primary w-full lg:w-auto whitespace-nowrap"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Novo Recurso</span>
-                <span className="sm:hidden">Novo</span>
-              </button>
-            )}
+            <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+              <PlanilhaDoCadastro
+                cadastro="recursos"
+                titulo="Recursos"
+                exportar={() => exportarRecursos({ categoria: filtros.categoria, search: filtros.search })}
+                ler={lerRecursos}
+                aoImportar={recarregar}
+                podeImportar={isAdmin()}
+              />
+              {isAdmin() && (
+                <button
+                  onClick={() => setModal({ aberto: true, modo: 'create', recurso: null })}
+                  className="btn-minimal-primary w-full lg:w-auto whitespace-nowrap"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Novo Recurso</span>
+                  <span className="sm:hidden">Novo</span>
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="sm:flex-1 sm:min-h-0">
