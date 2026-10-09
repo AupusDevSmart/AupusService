@@ -29,6 +29,25 @@ import { useEquipamentos, useEquipamentoFilters, useUserStore } from '@/core/con
 // Modais separados
 import { EquipamentoUCModal, type ContextoSlot } from './modals/EquipamentoUCModal';
 import { ComponenteUARModal } from './modals/ComponenteUARModal';
+import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
+import { exportarEquipamentos, lerEquipamentos } from '../utils/planilha';
+
+/**
+ * O filtro da tela em parâmetros da exportação, com a mesma hierarquia da
+ * listagem (`useEquipamentos`): unidade > planta > proprietário.
+ */
+function filtrosDaExportacao(filtros: EquipamentosFilters) {
+  const valor = (v?: string) => (v && v !== 'all' ? v.trim() : undefined);
+  const unidade = valor(filtros.unidadeId);
+  const planta = unidade ? undefined : valor(filtros.plantaId);
+  return {
+    search: filtros.search || undefined,
+    criticidade: valor(filtros.criticidade) as '1' | '2' | '3' | '4' | '5' | undefined,
+    unidade_id: unidade,
+    planta_id: planta,
+    proprietario_id: unidade || planta ? undefined : valor(filtros.proprietarioId),
+  };
+}
 
 const initialFilters: EquipamentosFilters = {
   search: '',
@@ -682,16 +701,27 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
               </div>
 
               {/* Botões de Ação */}
-              {isAdmin() && (
-                <button
-                  onClick={() => openUCModal('create')}
-                  className="btn-minimal-primary w-full lg:w-auto whitespace-nowrap"
-                  disabled={loading}
-                >
-                  <Wrench className="mr-2 h-4 w-4" />
-                  <span>Novo Equipamento</span>
-                </button>
-              )}
+              <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                <PlanilhaDoCadastro
+                  cadastro="equipamentos"
+                  titulo="Equipamentos"
+                  exportar={() => exportarEquipamentos(filtrosDaExportacao(filters))}
+                  ler={lerEquipamentos}
+                  aoImportar={() => void loadEquipamentos(filters)}
+                  podeImportar={isAdmin()}
+                  aviso="Cada aba é uma UC com os seus componentes. Equipamento compartilhado com o NexOn: o que você confirmar aqui é replicado lá. Trocar o PLANO refaz a cópia do plano, como vincular na tela."
+                />
+                {isAdmin() && (
+                  <button
+                    onClick={() => openUCModal('create')}
+                    className="btn-minimal-primary w-full lg:w-auto whitespace-nowrap"
+                    disabled={loading}
+                  >
+                    <Wrench className="mr-2 h-4 w-4" />
+                    <span>Novo Equipamento</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

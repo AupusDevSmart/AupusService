@@ -25,3 +25,23 @@ export async function todasAsPaginas<T>(
     if (acabou || pagina.data.length === 0) return todos;
   }
 }
+
+/**
+ * `fn` para cada item, no máximo `limite` ao mesmo tempo, na ordem dos itens.
+ * Para o detalhe de cada registro (centenas de UCs): um por vez demora; todos
+ * de uma vez afogam a API.
+ */
+export async function emParalelo<T, R>(itens: T[], limite: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const resultados: R[] = new Array(itens.length);
+  let proximo = 0;
+
+  const trabalhador = async () => {
+    while (proximo < itens.length) {
+      const i = proximo++;
+      resultados[i] = await fn(itens[i]);
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(limite, itens.length) }, trabalhador));
+  return resultados;
+}
