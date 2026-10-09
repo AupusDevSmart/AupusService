@@ -17,6 +17,8 @@ import { useInstrucoesFilters } from '../hooks/useInstrucoesFilters';
 import { InstrucoesBreadcrumb } from './InstrucoesBreadcrumb';
 import { InstrucoesDashboard } from './InstrucoesDashboard';
 import { InstrucoesModal } from './InstrucoesModal';
+import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
+import { exportarInstrucoes, lerInstrucoes } from '../utils/planilha';
 
 const initialFilters: QueryInstrucoesApiParams = {
   search: '',
@@ -247,11 +249,26 @@ export function InstrucoesPage() {
             <div className="flex-1">
               <BaseFilters filters={filters} config={filterConfig} onFilterChange={handleFilterChange} />
             </div>
-            <button onClick={() => openModal('create')} className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap">
-              <Plus className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Nova Instrução</span>
-              <span className="sm:hidden">Nova</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+              <PlanilhaDoCadastro
+                cadastro="instrucoes"
+                titulo="Instruções"
+                exportar={() => {
+                  const { page: _pagina, limit: _linhas, ...filtrosDaBusca } = filters;
+                  return exportarInstrucoes(filtrosDaBusca);
+                }}
+                ler={lerInstrucoes}
+                aoImportar={() => {
+                  void loadData();
+                  void loadDashboard();
+                }}
+              />
+              <button onClick={() => openModal('create')} className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap">
+                <Plus className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Nova Instrução</span>
+                <span className="sm:hidden">Nova</span>
+              </button>
+            </div>
           </div>
 
           <div className="sm:flex-1 sm:min-h-0">

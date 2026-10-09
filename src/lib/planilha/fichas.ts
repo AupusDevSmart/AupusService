@@ -47,6 +47,15 @@ export type SecaoDaFicha<T, L> = {
   somenteLeitura?: boolean;
 };
 
+/**
+ * As seções de uma ficha têm itens de tipos diferentes entre si (passos,
+ * recursos…), e a lista de seções não tem como dizer isso no tipo. Cada seção
+ * é declarada com o tipo do seu item e entra na lista por aqui.
+ */
+export function secao<T, L>(s: SecaoDaFicha<T, L>): SecaoDaFicha<T, never> {
+  return s as unknown as SecaoDaFicha<T, never>;
+}
+
 /** Itens lidos de uma seção; ausente quando a seção não está na aba. */
 export type SecoesLidas = Record<string, Array<Record<string, unknown>> | undefined>;
 
