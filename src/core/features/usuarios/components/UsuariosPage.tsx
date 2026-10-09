@@ -12,10 +12,14 @@ import { UsuarioModal } from './usuario-modal';
 import { useUsuarios } from '@/core/context/hooks';
 import { useAcoesDeCompartilhamento } from '@/core/features/sincronizacao';
 import { Usuario, ModalState } from '../types';
+import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
+import { useUserStore } from '@/store/useUserStore';
+import { exportarUsuarios, lerUsuarios } from '../utils/planilha';
 
 export function UsuariosPage() {
   const navigate = useNavigate();
-  
+  const { hasPermission } = useUserStore();
+
   const {
     usuarios,
     loading,
@@ -92,13 +96,36 @@ export function UsuariosPage() {
                 onFilterChange={handleFilterChange}
               />
             </div>
-            <button
-              onClick={() => handleOpenModal('create')}
-              className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              <span>Novo Usuário</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+              <PlanilhaDoCadastro
+                cadastro="usuarios"
+                titulo="Usuários"
+                exportar={() =>
+                  exportarUsuarios({
+                    search: filters.search || undefined,
+                    status: filters.status && filters.status !== 'all' ? filters.status : undefined,
+                    role: filters.role && filters.role !== 'all' ? filters.role : undefined,
+                  })
+                }
+                ler={lerUsuarios}
+                aoImportar={refetch}
+                podeImportar={hasPermission(
+                  'usuarios.manage',
+                  'usuarios.create_operador',
+                  'usuarios.create_proprietario',
+                  'usuarios.create_analista',
+                  'usuarios.create_admin',
+                )}
+                aviso="Usuário compartilhado com o NexOn: o que você confirmar aqui é replicado lá. Senha e permissões diretas não passam pela planilha."
+              />
+              <button
+                onClick={() => handleOpenModal('create')}
+                className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                <span>Novo Usuário</span>
+              </button>
+            </div>
           </div>
 
           {/* Tabela */}
