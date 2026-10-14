@@ -36,7 +36,9 @@ const limpeza = {
 const sem = <T extends Record<string, unknown>>(itens: T[]) =>
   itens.map(({ _linha, ...resto }) => ({ linha: _linha, ...resto }));
 
-describe('planilha de instruções', { timeout: 30_000 }, () => {
+// 120 s: o primeiro teste carrega o exceljs; sozinho leva ~3 s, mas na suíte inteira
+// (12 workers carregando ao mesmo tempo) passava dos 30 s e falhava sem defeito nenhum.
+describe('planilha de instruções', { timeout: 120_000 }, () => {
   it('ida e volta: passos na ordem, minutos voltam exatos, recurso pelo nome com o ID ao lado', async () => {
     const livro = await gravarEReabrir(await montarLivroDeFichas(definicaoDeInstrucoes, [limpeza]));
     const { registros, erros } = lerInstrucoes(livro);

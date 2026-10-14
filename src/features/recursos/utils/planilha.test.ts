@@ -18,7 +18,9 @@ const recurso = (extra: Partial<RecursoApiResponse>): RecursoApiResponse => ({
   ...extra,
 });
 
-describe('planilha de recursos', { timeout: 30_000 }, () => {
+// 120 s: o primeiro teste carrega o exceljs; sozinho leva ~3 s, mas na suíte inteira
+// (12 workers carregando ao mesmo tempo) passava dos 30 s e falhava sem defeito nenhum.
+describe('planilha de recursos', { timeout: 120_000 }, () => {
   it('ida e volta: o que sai é o que volta, com o ID sem espaço e o ATUALIZADO EM exato', async () => {
     const registros = [
       recurso({}),

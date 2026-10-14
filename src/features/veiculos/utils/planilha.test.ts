@@ -31,7 +31,9 @@ const golzin = {
   atualizadoEm: '2026-10-01T13:16:42.151Z',
 } as never;
 
-describe('planilha de veículos', { timeout: 30_000 }, () => {
+// 120 s: o primeiro teste carrega o exceljs; sozinho leva ~3 s, mas na suíte inteira
+// (12 workers carregando ao mesmo tempo) passava dos 30 s e falhava sem defeito nenhum.
+describe('planilha de veículos', { timeout: 120_000 }, () => {
   it('ida e volta: data no dia certo, STATUS fica de fora (é só informação)', async () => {
     const livro = await gravarEReabrir(await montarLivroPlano(definicaoDeVeiculos, [golzin]));
     const { registros, erros } = lerVeiculos(livro);

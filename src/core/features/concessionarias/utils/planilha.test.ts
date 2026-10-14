@@ -24,7 +24,9 @@ const equatorial = {
   updated_at: '2026-10-02T00:00:00.000Z',
 } as never;
 
-describe('planilha de concessionárias', { timeout: 30_000 }, () => {
+// 120 s: o primeiro teste carrega o exceljs; sozinho leva ~3 s, mas na suíte inteira
+// (12 workers carregando ao mesmo tempo) passava dos 30 s e falhava sem defeito nenhum.
+describe('planilha de concessionárias', { timeout: 120_000 }, () => {
   it('ida e volta: tarifas voltam aninhadas por subgrupo; horários ficam de fora', async () => {
     const livro = await gravarEReabrir(await montarLivroPlano(definicaoDeConcessionarias, [equatorial]));
     const { registros, erros } = lerConcessionarias(livro);

@@ -23,7 +23,9 @@ const usuario = (extra: Record<string, unknown> = {}) =>
     ...extra,
   }) as never;
 
-describe('planilha de usuários', { timeout: 30_000 }, () => {
+// 120 s: o primeiro teste carrega o exceljs; sozinho leva ~3 s, mas na suíte inteira
+// (12 workers carregando ao mesmo tempo) passava dos 30 s e falhava sem defeito nenhum.
+describe('planilha de usuários', { timeout: 120_000 }, () => {
   it('ida e volta: TIPO volta como o nome do papel; plantas operadas ficam de fora', async () => {
     const livro = await gravarEReabrir(await montarLivroPlano(definicaoDeUsuarios, [usuario()]));
     const { registros, erros } = lerUsuarios(livro);

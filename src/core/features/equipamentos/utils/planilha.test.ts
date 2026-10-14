@@ -36,7 +36,9 @@ const inversor = {
   modeloPorId: new Map([['m2', 'String fotovoltaica']]),
 } as never;
 
-describe('planilha de equipamentos', { timeout: 30_000 }, () => {
+// 120 s: o primeiro teste carrega o exceljs; sozinho leva ~3 s, mas na suíte inteira
+// (12 workers carregando ao mesmo tempo) passava dos 30 s e falhava sem defeito nenhum.
+describe('planilha de equipamentos', { timeout: 120_000 }, () => {
   it('ida e volta: criticidade em código (a antiga segue como está), tarefas do plano ficam de fora', async () => {
     const livro = await gravarEReabrir(await montarLivroDeFichas(definicaoDeEquipamentos, [inversor]));
     const { registros, erros } = lerEquipamentos(livro);
