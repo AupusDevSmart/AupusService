@@ -30,7 +30,8 @@ const FILTROS_INICIAIS: QueryRecursosParams = { search: '', page: 1, limit: LINH
  * médio que alimenta o orçamento.
  */
 export function RecursosPage() {
-  const { isAdmin } = useUserStore();
+  const hasPermission = useUserStore((s) => s.hasPermission);
+  const podeGerenciar = hasPermission('recursos.manage');
 
   const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('recursos');
   const [filtrosBrutos, setFiltrosBrutos] = useState<Record<string, any>>(() => ({
@@ -100,9 +101,9 @@ export function RecursosPage() {
                 exportar={() => exportarRecursos({ categoria: filtros.categoria, search: filtros.search })}
                 ler={lerRecursos}
                 aoImportar={recarregar}
-                podeImportar={isAdmin()}
+                podeImportar={podeGerenciar}
               />
-              {isAdmin() && (
+              {podeGerenciar && (
                 <button
                   onClick={() => setModal({ aberto: true, modo: 'create', recurso: null })}
                   className="btn-minimal-primary w-full lg:w-auto whitespace-nowrap"
@@ -124,11 +125,11 @@ export function RecursosPage() {
               onPageChange={mudarPagina}
               onLimitChange={mudarLinhas}
               onEdit={
-                isAdmin()
+                podeGerenciar
                   ? (recurso) => setModal({ aberto: true, modo: 'edit', recurso })
                   : undefined
               }
-              onDelete={isAdmin() ? (recurso) => setARemover(recurso) : undefined}
+              onDelete={podeGerenciar ? (recurso) => setARemover(recurso) : undefined}
               emptyMessage="Nenhum recurso cadastrado."
               emptyIcon={<Package className="h-8 w-8 text-muted-foreground/50" />}
             />

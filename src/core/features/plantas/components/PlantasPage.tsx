@@ -43,7 +43,10 @@ interface PlantasPageProps {
 export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {}) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAdmin } = useUserStore();
+  const { hasPermission } = useUserStore();
+  const podeGerenciar = hasPermission('plantas.manage');
+  const podeGerenciarInstalacoes = hasPermission('unidades.manage');
+  const podeCompartilhar = hasPermission('sincronizacao.gerenciar');
   const httpClient = useHttpClient();
   const plantasFeature = usePlantasFeature();
 
@@ -56,7 +59,7 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
   const compartilhamento = useAcoesDeCompartilhamento({
     recurso: 'plantas',
     registros: plantas,
-    habilitado: isAdmin(),
+    habilitado: podeCompartilhar,
   });
   const [totalPlantas, setTotalPlantas] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -128,7 +131,7 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
   const compartilhamentoInstalacoes = useAcoesDeCompartilhamento({
     recurso: 'unidades',
     registros: (instalacoes ?? []) as any[],
-    habilitado: isAdmin(),
+    habilitado: podeCompartilhar,
   });
 
   const handleRowToggle = useCallback((planta: any) => {
@@ -383,7 +386,7 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
                 }
                 ler={lerPlantas}
                 aoImportar={handleRefresh}
-                podeImportar={isAdmin()}
+                podeImportar={podeGerenciar}
                 aviso="Planta e unidade compartilhadas com o NexOn: o que você confirmar aqui é replicado lá. Unidade nunca é apagada pela planilha."
               />
               <button
@@ -395,7 +398,7 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
                 <span className="hidden lg:inline">Atualizar</span>
               </button>
 
-              {isAdmin() && (
+              {podeGerenciar && (
                 <button
                   onClick={() => openModal('create')}
                   className="btn-minimal-primary flex-1 lg:flex-none whitespace-nowrap"
@@ -433,9 +436,9 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
               onPageChange={handlePageChange}
               onLimitChange={handleLimitChange}
               onView={handleView}
-              onEdit={isAdmin() ? handleEdit : undefined}
-              customActions={
-                isAdmin()
+              onEdit={podeGerenciar ? handleEdit : undefined}
+              customActions={[
+                ...(podeGerenciarInstalacoes
                   ? [
                       {
                         key: 'nova_instalacao',
@@ -443,17 +446,17 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
                         icon: <Plus className="h-4 w-4" />,
                         handler: handleNovaInstalacao,
                       },
-                      ...compartilhamento.acoes,
                     ]
-                  : []
-              }
+                  : []),
+                ...compartilhamento.acoes,
+              ]}
               expandedRowId={plantaExpandidaId}
               onRowToggle={handleRowToggle}
               renderExpandedRow={(planta: any) => (
                 <InstalacoesExpandedRow
                   unidades={(instalacoes ?? []) as Unidade[]}
                   carregando={carregandoInstalacoes}
-                  somenteLeitura={!isAdmin()}
+                  somenteLeitura={!podeGerenciarInstalacoes}
                   onVisualizar={(unidade) => abrirInstalacao('view', unidade)}
                   onEditar={(unidade) => abrirInstalacao('edit', unidade)}
                   plantaId={planta?.id?.trim()}

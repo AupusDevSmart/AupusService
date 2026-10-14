@@ -113,7 +113,10 @@ interface EquipamentosPageProps {
 export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC, renderHistoricoUC, mostrarSupervisorio }: EquipamentosPageProps = {}) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAdmin } = useUserStore();
+  const { hasPermission } = useUserStore();
+  const podeGerenciar = hasPermission('equipamentos.manage');
+  const podeCompartilhar = hasPermission('sincronizacao.gerenciar');
+  const podeVerProprietarios = hasPermission('usuarios.view');
 
   // Hook da API
   const {
@@ -152,7 +155,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
   const compartilhamento = useAcoesDeCompartilhamento({
     recurso: 'equipamentos',
     registros: equipamentos,
-    habilitado: isAdmin(),
+    habilitado: podeCompartilhar,
   });
 
   // Estados locais
@@ -694,7 +697,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
                     loadingPlantas,
                     unidades,
                     loadingUnidades,
-                    isAdmin() // Mostrar filtro de proprietário apenas para admins
+                    podeVerProprietarios // o filtro de proprietário lista usuários
                   )}
                   onFilterChange={handleFilterChange}
                 />
@@ -708,10 +711,10 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
                   exportar={() => exportarEquipamentos(filtrosDaExportacao(filters))}
                   ler={lerEquipamentos}
                   aoImportar={() => void loadEquipamentos(filters)}
-                  podeImportar={isAdmin()}
+                  podeImportar={podeGerenciar}
                   aviso="Cada aba é uma UC com os seus componentes. Equipamento compartilhado com o NexOn: o que você confirmar aqui é replicado lá. Trocar o PLANO refaz a cópia do plano, como vincular na tela."
                 />
-                {isAdmin() && (
+                {podeGerenciar && (
                   <button
                     onClick={() => openUCModal('create')}
                     className="btn-minimal-primary w-full lg:w-auto whitespace-nowrap"
@@ -734,11 +737,12 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
               onPageChange={handlePageChange}
               onLimitChange={handleLimitChange}
               onView={handleView}
-              onEdit={isAdmin() ? handleEdit : undefined}
-              onDelete={isAdmin() ? handleDelete : undefined}
+              onEdit={podeGerenciar ? handleEdit : undefined}
+              onDelete={podeGerenciar ? handleDelete : undefined}
               customActions={
-                isAdmin()
-                  ? [
+                [
+                  ...(podeGerenciar
+                    ? [
                       {
                         key: 'duplicar',
                         label: 'Duplicar',
@@ -750,9 +754,10 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
                           equipamento.classificacao === 'UC' ||
                           Boolean(equipamento.equipamentoPaiId || equipamento.equipamentoPai),
                       },
-                      ...compartilhamento.acoes,
                     ]
-                  : []
+                    : []),
+                  ...compartilhamento.acoes,
+                ]
               }
               emptyMessage={
                 plantaInfo
@@ -783,7 +788,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
           }}
           onClose={closeUCModal}
           onSubmit={handleSubmitUC}
-          onDelete={handleDelete}
+          onDelete={podeGerenciar ? handleDelete : undefined}
           onSaveUARs={handleSalvarUARs}
           renderSecaoExtra={renderSecaoExtraUC}
           renderCampoDadosBasicos={renderCampoDadosBasicosUC}

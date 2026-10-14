@@ -108,6 +108,8 @@ export interface Usuario extends BaseEntity {
 
 // ✅ FORM DATA PARA CRIAÇÃO/EDIÇÃO
 export interface UsuarioFormData {
+  /** A lista de permissões extras foi mexida na tela (só então ela vai ao servidor). */
+  permissoesAlteradas?: boolean;
   id?: string | number;
   nome: string;
   email: string;
@@ -350,46 +352,8 @@ export const mapUsuarioToFormData = (usuario: Usuario): UsuarioFormData => {
   return formData;
 };
 
-export const mapFormDataToCreateDto = (formData: UsuarioFormData) => {
-  // roleNames is always a string from the select
-  // Sem tipo escolhido, o backend recusa (ou, para proprietário, cria operador).
-  const roleName = typeof formData.roleNames === 'string' ? formData.roleNames : formData.roleNames?.[0];
-
-  // Build a clean object without undefined fields
-  const dto: any = {
-    nome: formData.nome,
-    email: formData.email,
-    status: formData.status || UsuarioStatus.ATIVO,
-  };
-  if (roleName) dto.roleNames = [roleName]; // Backend expects array
-
-  // Add optional fields only if they have a value
-  if (formData.telefone) dto.telefone = formData.telefone;
-  if (formData.instagram) dto.instagram = formData.instagram;
-  if (formData.cpfCnpj) dto.cpfCnpj = formData.cpfCnpj;
-
-  // Backend expects names (strings), not IDs
-  if (formData.cidade) dto.cidade = formData.cidade;
-  if (formData.estado) dto.estado = formData.estado;
-
-  if (formData.cep) dto.cep = formData.cep;
-  if (formData.endereco) dto.endereco = formData.endereco;
-
-  if (formData.concessionariaAtualId) dto.concessionariaAtualId = formData.concessionariaAtualId;
-  if (formData.organizacaoAtualId) dto.organizacaoAtualId = formData.organizacaoAtualId;
-  if (formData.managerId) dto.managerId = formData.managerId;
-
-  // Permissoes selecionadas no form. Sempre enviadas (mesmo vazio nao envia
-  // para evitar wipe acidental — backend ignora arrays vazios em update).
-  const permissions = extractPermissionNames(
-    (formData.permissions as any) || (formData.permissao as any) || []
-  );
-  if (permissions.length > 0) {
-    dto.permissions = permissions;
-  }
-
-  return dto;
-};
+// O formulário vira corpo de requisição em features/usuarios/types (mapFormDataToCreateDto),
+// o mapeador que o app usa. A cópia que existia aqui não era chamada.
 
 // ✅ FUNÇÕES DE UTILIDADE - CORRIGIDAS
 export const getUserDisplayName = (usuario: Usuario): string => {

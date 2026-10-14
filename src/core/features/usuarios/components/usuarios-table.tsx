@@ -13,7 +13,8 @@ interface UsuariosTableProps {
   /** Liga o seletor de linhas por pagina; ausente, a tabela fica como era. */
   onLimitChange?: (limit: number) => void;
   onView: (usuario: Usuario) => void;
-  onEdit: (usuario: Usuario) => void;
+  /** Ausente: sem o botão de editar (quem não gerencia usuários). */
+  onEdit?: (usuario: Usuario) => void;
   onPlantasClick: (usuario: Usuario) => void; // ✅ Mantido para compatibilidade mas não usado na tabela
   /** Acoes extras de linha (ex.: compartilhar com o outro produto). */
   customActions?: any[];

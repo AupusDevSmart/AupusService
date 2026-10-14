@@ -69,7 +69,8 @@ const transformAPIToFormData = (concessionaria: any): any => {
 };
 
 export function ConcessionariasPage() {
-  const { isAdmin } = useUserStore();
+  const { hasPermission } = useUserStore();
+  const podeGerenciar = hasPermission('concessionarias.manage');
   const concessionariasFeature = useConcessionariasFeature();
 
   // Estados locais
@@ -358,7 +359,7 @@ export function ConcessionariasPage() {
                   }
                   ler={lerConcessionarias}
                   aoImportar={handleRefresh}
-                  podeImportar={isAdmin()}
+                  podeImportar={podeGerenciar}
                 />
                 <button
                   onClick={handleRefresh}
@@ -369,7 +370,7 @@ export function ConcessionariasPage() {
                   <span className="hidden sm:inline">Atualizar</span>
                 </button>
 
-                {isAdmin() && (
+                {podeGerenciar && (
                   <button
                     onClick={() => openModal('create')}
                     disabled={isSubmitting}
@@ -406,7 +407,7 @@ export function ConcessionariasPage() {
               onPageChange={handlePageChange}
               onLimitChange={handleLimitChange}
               onView={handleView}
-              onEdit={isAdmin() ? handleEdit : undefined}
+              onEdit={podeGerenciar ? handleEdit : undefined}
               emptyMessage={
                 filters.search
                   ? `Nenhuma concessionária encontrada para "${filters.search}".`

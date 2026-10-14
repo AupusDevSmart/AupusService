@@ -800,16 +800,15 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
             setUarsLista([]);
             // Falhar calado aqui produz o pior sintoma possivel: a secao diz
             // "Componentes UAR (0)" e o equipamento parece nao ter nenhum,
-            // quando na verdade a consulta nem completou. O 403 e o caso
-            // comum -- a rota exige equipamentos.manage, que o operador nao
-            // tem -- e sem aviso ninguem descobre isso pela tela.
+            // quando na verdade a consulta nem completou. O 403 vem do escopo:
+            // equipamento de planta fora do acesso de quem abriu.
             const status = err?.response?.status;
             avisar(
               status === 403
                 ? 'Sem permissão para ver os componentes deste equipamento'
                 : 'Não foi possível carregar os componentes',
               status === 403
-                ? 'A lista exige a permissão equipamentos.manage.'
+                ? 'Este equipamento é de uma planta fora do seu acesso.'
                 : undefined,
             );
           } finally {

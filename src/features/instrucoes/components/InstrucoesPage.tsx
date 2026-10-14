@@ -1,4 +1,5 @@
 // src/features/instrucoes/components/InstrucoesPage.tsx
+import { usePermission } from '@/components/common/Can';
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -67,6 +68,8 @@ const initialDashboard: DashboardInstrucoesDto = {
 };
 
 export function InstrucoesPage() {
+  // Ler: todos; escrever (nova, importar, editar, excluir): quem gerencia manutenção.
+  const podeGerenciar = usePermission('manutencao.manage');
   const { user } = useUserStore();
 
   const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('instrucoes');
@@ -262,12 +265,15 @@ export function InstrucoesPage() {
                   void loadData();
                   void loadDashboard();
                 }}
+                podeImportar={podeGerenciar}
               />
-              <button onClick={() => openModal('create')} className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap">
-                <Plus className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Nova Instrução</span>
-                <span className="sm:hidden">Nova</span>
-              </button>
+              {podeGerenciar && (
+                <button onClick={() => openModal('create')} className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap">
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Nova Instrução</span>
+                  <span className="sm:hidden">Nova</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -285,7 +291,7 @@ export function InstrucoesPage() {
               onPageChange={handlePageChange}
               onLimitChange={handleLimitChange}
               onView={handleView}
-              onEdit={handleEdit}
+              onEdit={podeGerenciar ? handleEdit : undefined}
               emptyMessage="Nenhuma instrução encontrada."
               emptyIcon={<FileText className="h-8 w-8 text-muted-foreground/50" />}
             />
@@ -301,7 +307,7 @@ export function InstrucoesPage() {
           onClose={closeModal}
           onSubmit={handleSubmit}
           onFilesChange={setPendingFiles}
-          onExcluir={handleExcluir}
+          onExcluir={podeGerenciar ? handleExcluir : undefined}
         />
       </Layout.Main>
     </Layout>
