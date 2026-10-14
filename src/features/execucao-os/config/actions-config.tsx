@@ -45,9 +45,9 @@ const liberaTudo: TemPermissao = () => true;
  *   qualquer um (exceto FINALIZADA/CANCELADA) -> cancelar -> CANCELADA
  */
 export const ACOES_DA_OS: AcaoDaOS[] = [
-  { acao: 'iniciar', label: 'Iniciar', descricao: 'Começar a execução', icon: Play, variant: 'default', status: ['PENDENTE'], permissoes: ['execucao_os.view'] },
-  { acao: 'pausar', label: 'Pausar', descricao: 'Interromper temporariamente', icon: Pause, variant: 'default', status: ['EM_EXECUCAO'], permissoes: ['execucao_os.view'] },
-  { acao: 'retomar', label: 'Retomar', descricao: 'Continuar a execução', icon: RotateCcw, variant: 'default', status: ['PAUSADA'], permissoes: ['execucao_os.view'] },
+  { acao: 'iniciar', label: 'Iniciar', descricao: 'Começar a execução', icon: Play, variant: 'default', status: ['PENDENTE'], permissoes: ['execucao_os.manage', 'execucao_os.executar'] },
+  { acao: 'pausar', label: 'Pausar', descricao: 'Interromper temporariamente', icon: Pause, variant: 'default', status: ['EM_EXECUCAO'], permissoes: ['execucao_os.manage', 'execucao_os.executar'] },
+  { acao: 'retomar', label: 'Retomar', descricao: 'Continuar a execução', icon: RotateCcw, variant: 'default', status: ['PAUSADA'], permissoes: ['execucao_os.manage', 'execucao_os.executar'] },
   { acao: 'executar', label: 'Executar', descricao: 'Registrar o resultado da execução', icon: CheckCircle, variant: 'default', status: ['EM_EXECUCAO', 'PAUSADA'], permissoes: ['execucao_os.manage', 'execucao_os.executar'] },
   { acao: 'auditar', label: 'Auditar', descricao: 'Avaliar a qualidade do serviço', icon: Shield, variant: 'default', status: ['EXECUTADA'], permissoes: ['execucao_os.manage'] },
   { acao: 'finalizar', label: 'Finalizar', descricao: 'Encerrar a OS definitivamente', icon: CheckCircle2, variant: 'default', status: ['AUDITADA'], permissoes: ['execucao_os.aprovar'] },

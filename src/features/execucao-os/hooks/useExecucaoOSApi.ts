@@ -1,6 +1,7 @@
 // src/features/execucao-os/hooks/useExecucaoOSApi.ts
 import { useState, useCallback } from 'react';
 import { execucaoOSApi } from '@/services/execucao-os.service';
+import type { TipoAnexoOS } from '@/features/execucao-os/types';
 import { execucaoOSTransitionsService } from '@/services/execucao-os-transitions.service';
 import type {
   ExecucaoOSApiResponse,
@@ -280,7 +281,7 @@ export function useExecucaoOSApi() {
   const uploadAnexo = useCallback(async (
     id: string,
     file: File,
-    tipo: 'RELATORIO' | 'FOTO_ANTES' | 'FOTO_DEPOIS' | 'DOCUMENTO' | 'OUTROS',
+    tipo: TipoAnexoOS,
     descricao?: string
   ) => {
     try {

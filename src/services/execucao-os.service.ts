@@ -9,7 +9,9 @@ export type StatusExecucaoOS = 'PENDENTE' | 'EM_EXECUCAO' | 'PAUSADA' | 'EXECUTA
 export type TipoOrdemServico = 'PREVENTIVA' | 'PREDITIVA' | 'CORRETIVA' | 'INSPECAO' | 'VISITA_TECNICA';
 export type PrioridadeExecucao = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA';
 export type StatusTarefaExecucao = 'PENDENTE' | 'EM_EXECUCAO' | 'PAUSADA' | 'FINALIZADA' | 'NAO_EXECUTADA';
-export type TipoAnexoExecucao = 'RELATORIO' | 'FOTO_ANTES' | 'FOTO_DEPOIS' | 'DOCUMENTO' | 'OUTROS';
+// Os tipos de anexo são os do backend (enum TipoAnexoOS); o contrato mora em features/execucao-os/types.
+export type { TipoAnexoOS as TipoAnexoExecucao, AnexoOS as AnexoExecucaoApiResponse } from '@/features/execucao-os/types';
+import type { AnexoOS, TipoAnexoOS } from '@/features/execucao-os/types';
 
 // ============================================================================
 // TIPOS DA API PARA EXECUCAO OS
@@ -235,21 +237,6 @@ export interface PausaExecucaoApiResponse {
   usuario_retomou?: UsuarioResumoDto;
 }
 
-export interface AnexoExecucaoApiResponse {
-  id: string;
-  execucao_os_id: string;
-  nome: string;
-  tipo: TipoAnexoExecucao;
-  url: string;
-  tamanho?: number;
-  content_type?: string;
-  descricao?: string;
-  uploaded_by?: string;
-  created_at: Date;
-
-  usuario_upload?: UsuarioResumoDto;
-}
-
 export interface ExecucaoOSApiResponse {
   id: string;
   ordem_servico_id: string;
@@ -289,7 +276,7 @@ export interface ExecucaoOSApiResponse {
   equipe_execucao?: EquipeExecucaoApiResponse[];
   tarefas?: TarefaExecucaoApiResponse[];
   pausas?: PausaExecucaoApiResponse[];
-  anexos?: AnexoExecucaoApiResponse[];
+  anexos?: AnexoOS[];
 
   // Contadores e estatísticas
   total_tarefas?: number;
@@ -701,80 +688,36 @@ export class ExecucaoOSApiService {
   // OPERAÇÕES DE ANEXOS
   // ============================================================================
 
-  async getAnexos(id: string): Promise<AnexoExecucaoApiResponse[]> {
-    // console.log('📎 EXECUCAO-OS API: Listando anexos da execução:', id);
-
-    try {
-      const response = await api.get<AnexoExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/anexos`);
-      // console.log('✅ EXECUCAO-OS API: Anexos listados:', response.data.length);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao listar anexos:', error);
-      throw error;
-    }
+  async getAnexos(id: string): Promise<AnexoOS[]> {
+    const response = await api.get<AnexoOS[]>(`${this.baseEndpoint}/${id.trim()}/anexos`);
+    return response.data;
   }
 
-  async uploadAnexo(
-    id: string,
-    file: File,
-    tipo: TipoAnexoExecucao,
-    descricao?: string,
-    usuarioId?: string
-  ): Promise<AnexoExecucaoApiResponse> {
-    // console.log('📤 EXECUCAO-OS API: Fazendo upload de anexo para execução:', id);
+  /**
+   * POST /execucao-os/:id/anexos — o tipo vai na query (é o contrato do
+   * controller); quem enviou o backend tira do token.
+   */
+  async uploadAnexo(id: string, file: File, tipo: TipoAnexoOS, descricao?: string): Promise<AnexoOS> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (descricao) formData.append('descricao', descricao);
 
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('tipo', tipo);
-      if (descricao) formData.append('descricao', descricao);
-      if (usuarioId) formData.append('usuario_id', usuarioId);
-
-      const response = await api.post<AnexoExecucaoApiResponse>(
-        `${this.baseEndpoint}/${id}/anexos/upload`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-      // console.log('✅ EXECUCAO-OS API: Anexo enviado:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao enviar anexo:', error);
-      throw error;
-    }
+    const response = await api.post<AnexoOS>(`${this.baseEndpoint}/${id.trim()}/anexos`, formData, {
+      params: { tipo },
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
   }
 
   async downloadAnexo(id: string, anexoId: string): Promise<Blob> {
-    // console.log('📥 EXECUCAO-OS API: Fazendo download de anexo:', anexoId);
-
-    try {
-      const response = await api.get(
-        `${this.baseEndpoint}/${id}/anexos/${anexoId}/download`,
-        {
-          responseType: 'blob',
-        }
-      );
-      // console.log('✅ EXECUCAO-OS API: Download concluído');
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao fazer download:', error);
-      throw error;
-    }
+    const response = await api.get(`${this.baseEndpoint}/${id.trim()}/anexos/${anexoId.trim()}/download`, {
+      responseType: 'blob',
+    });
+    return response.data;
   }
 
   async deleteAnexo(id: string, anexoId: string): Promise<void> {
-    // console.log('🗑️ EXECUCAO-OS API: Excluindo anexo:', anexoId);
-
-    try {
-      await api.delete(`${this.baseEndpoint}/${id}/anexos/${anexoId}`);
-      // console.log('✅ EXECUCAO-OS API: Anexo excluído com sucesso');
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao excluir anexo:', error);
-      throw error;
-    }
+    await api.delete(`${this.baseEndpoint}/${id.trim()}/anexos/${anexoId.trim()}`);
   }
 
   // ============================================================================

@@ -19,6 +19,7 @@ import { createExecucaoOSTableActions } from '../config/actions-config';
 import { ActionConfirmPanel, type PendingAction } from './ActionConfirmPanel';
 import { AcoesDaOS } from './AcoesDaOS';
 import { OQueFoiFeito } from './OQueFoiFeito';
+import { AnexosDaOS } from './AnexosDaOS';
 import {
   montarProgresso,
   tarefasPendentes,
@@ -443,11 +444,20 @@ export function ExecucaoOSPage() {
                             <OQueFoiFeito
                               osId={modalState.entity!.id}
                               progresso={progresso}
-                              editavel={emExecucao && temPermissao('execucao_os.view')}
+                              editavel={emExecucao && temPermissao('execucao_os.manage', 'execucao_os.executar')}
                               onChange={setProgresso}
                             />
                           </div>
                         )}
+
+                        {/* A prova do que foi feito: fotos e documentos, com quem enviou e quando. */}
+                        <div className="rounded-md border p-4">
+                          <AnexosDaOS
+                            osId={modalState.entity!.id}
+                            status={status}
+                            podeEditar={temPermissao('execucao_os.manage', 'execucao_os.executar')}
+                          />
+                        </div>
                       </div>
                     );
                   }
