@@ -174,7 +174,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'cadastros/concessionarias',
         element: (
-          <FeatureWrapper feature="equipamentos.manage">
+          <FeatureWrapper feature="concessionarias.manage">
             <ConcessionariasPage />
           </FeatureWrapper>
         ),
@@ -214,7 +214,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'solicitacoes-servico',
         element: (
-          <FeatureWrapper feature="manutencao.manage">
+          <FeatureWrapper feature="solicitacoes.view">
             <SolicitacoesServicoPage />
           </FeatureWrapper>
         ),
@@ -222,7 +222,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'instrucoes',
         element: (
-          <FeatureWrapper feature="manutencao.manage">
+          <FeatureWrapper feature="manutencao.view">
             <InstrucoesPage />
           </FeatureWrapper>
         ),
@@ -262,7 +262,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'planos-manutencao',
         element: (
-          <FeatureWrapper feature="manutencao.manage">
+          <FeatureWrapper feature="manutencao.view">
             <PlanosManutencaoPage />
           </FeatureWrapper>
         ),

@@ -93,7 +93,7 @@ export const navigationLinks: Array<NavigationLink> = [
     links: [
       {
         key: 'instrucoes',
-        featureKey: 'manutencao.manage',
+        featureKey: 'manutencao.view',
         path: '/instrucoes',
         icon: FileText,
         label: 'Instruções',
@@ -103,7 +103,7 @@ export const navigationLinks: Array<NavigationLink> = [
       // da linha expandida de cada plano em /planos-manutencao.
       {
         key: 'planos-manutencao',
-        featureKey: 'manutencao.manage',
+        featureKey: 'manutencao.view',
         path: '/planos-manutencao',
         icon: Layers,
         label: 'Planos de Manutenção',
@@ -119,7 +119,7 @@ export const navigationLinks: Array<NavigationLink> = [
       },
       {
         key: 'solicitacoes-servico',
-        featureKey: 'manutencao.manage',
+        featureKey: 'solicitacoes.view',
         path: '/solicitacoes-servico',
         icon: FilePenLine,
         label: 'Solicitações de Serviço',

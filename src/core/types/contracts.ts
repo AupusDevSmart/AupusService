@@ -20,6 +20,8 @@ export interface UserStoreContract {
   getUserRole: () => string;
   isSuperAdmin: () => boolean;
   isAdmin: () => boolean;
+  /** Qualquer uma das permissões basta (como o @Permissions do backend). */
+  hasPermission: (...permissoes: string[]) => boolean;
 }
 
 export interface ConcessionariaBasic {
