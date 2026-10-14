@@ -1,6 +1,6 @@
 // src/features/programacao-os/config/form-config.tsx - CORRIGIDA COM MAPEAMENTO DE GRUPOS
 import { useState } from 'react';
-import type { FormField } from '@/types/base';
+import type { FormField, FormFieldProps } from '@/types/base';
 import { OrigemOSSelector } from '../components/OrigemOSSelector';
 import { InstrucoesDaOrigem } from '../components/InstrucoesDaOrigem';
 import { RecursosDaOrigem } from '../components/RecursosDaOrigem';
@@ -8,7 +8,8 @@ import { PrazoDaOrigem } from '../components/PrazoDaOrigem';
 import { OrigemOSCard } from '../components/OrigemOSCard';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
-import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManager';
+import { TecnicosDaPlanta } from '../components/TecnicosDaPlanta';
+import { ResponsavelDaOS } from '../components/ResponsavelDaOS';
 import { OrcamentoCardManager } from '@/components/common/cards/OrcamentoCardManager';
 import { ReservaViaturaField } from '../components/ReservaViaturaField';
 import { ReservaVinculadaCard } from '../components/ReservaVinculadaCard';
@@ -421,20 +422,38 @@ export const programacaoOSFormFields: FormField[] = [
     }
   },
 
-  // Recursos - Técnicos - GRUPO: recursos
+  // Responsável e equipe - GRUPO: equipe (SN-31: pessoas são usuários)
+  // `render`, e não `component`: só o render recebe o formData (de onde sai a
+  // planta) e o onMultipleChange (id e nome do responsável juntos)
+  {
+    key: 'responsavel_id',
+    label: 'Responsável',
+    type: 'custom',
+    render: ResponsavelDaOS,
+    group: 'equipe',
+    colSpan: 2,
+    computeDisabled: (entity: any) => {
+      return entity?.status && entity.status !== 'PENDENTE';
+    }
+  },
   {
     key: 'tecnicos',
     label: 'Técnicos Necessários',
     type: 'custom',
-    component: TecnicosCardManager,
-    componentProps: {
-      mode: 'planejamento',
-      showCustos: true,
-      showStatus: true,
-      title: 'Equipe Planejada'
-    },
+    render: ({ value, onChange, formData, disabled }: FormFieldProps) => (
+      <TecnicosDaPlanta
+        value={value ?? []}
+        onChange={onChange}
+        formData={formData}
+        disabled={disabled}
+        mode="planejamento"
+        showCustos
+        showStatus
+        title="Equipe Planejada"
+      />
+    ),
     defaultValue: [],
-    group: 'recursos',
+    group: 'equipe',
     colSpan: 2, // Ocupar largura total no sheet
     computeDisabled: (entity: any) => {
       return entity?.status && entity.status !== 'PENDENTE';
@@ -665,6 +684,13 @@ export const programacaoOSFormGroups = [
   },
   */
   {
+    key: 'equipe',
+    title: 'Responsável e equipe',
+    // Quem responde pela OS e quem vai a campo, escolhidos entre os usuários
+    // da equipe da planta ou do planejamento (SN-31)
+    fields: ['responsavel_id', 'tecnicos']
+  },
+  {
     key: 'veiculo',
     title: 'Requisitos de Veículo',
     fields: ['necessita_veiculo', 'reserva_veiculo', 'reserva_vinculada']
@@ -672,7 +698,7 @@ export const programacaoOSFormGroups = [
   {
     key: 'recursos',
     title: 'Recursos Necessários',
-    fields: ['materiais', 'ferramentas', 'tecnicos']
+    fields: ['materiais', 'ferramentas']
   },
   {
     key: 'orcamento',

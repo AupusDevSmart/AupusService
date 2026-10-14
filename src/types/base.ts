@@ -92,6 +92,8 @@ export interface FormFieldProps {
   value: any;
   onChange: (value: any) => void;
   onMultipleChange?: (updates: Record<string, any>) => void;
+  /** O formulário inteiro: o BaseForm passa para `render` (não para `component`) */
+  formData?: Record<string, any>;
   disabled?: boolean;
   hasError?: boolean;
   error?: string;

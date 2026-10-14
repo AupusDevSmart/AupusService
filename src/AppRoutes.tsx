@@ -20,7 +20,6 @@ import { AppTemplate } from './pages/AppTemplate';
 import { AnomaliaPage } from './pages/anomalias';
 import SolicitacoesServicoPage from './pages/solicitacoes-servico';
 import { DashboardPage } from './pages/dashboard';
-import PlantaOperadoresPage from './pages/plantas-operadores';
 import { Settings } from './pages/settings';
 import { LoginPage } from './pages/login/LoginPage';
 import { EsqueciSenhaPage } from './pages/esqueci-senha/EsqueciSenhaPage';
@@ -127,14 +126,6 @@ export const appRoutes = createBrowserRouter([
         element: (
           <FeatureWrapper feature="plantas.view">
             <PlantasPage />
-          </FeatureWrapper>
-        ),
-      },
-      {
-        path: 'cadastros/plantas/:plantaId/operadores',
-        element: (
-          <FeatureWrapper feature="plantas.manage_operadores">
-            <PlantaOperadoresPage />
           </FeatureWrapper>
         ),
       },

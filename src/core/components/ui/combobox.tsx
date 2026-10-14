@@ -20,6 +20,19 @@ import {
 export interface ComboboxOption {
   value: string
   label: string
+  /** Titulo do bloco na lista. Opcoes sem grupo ficam num bloco sem titulo. */
+  grupo?: string
+}
+
+/** Agrupa mantendo a ordem em que cada grupo aparece pela primeira vez. */
+function emGrupos(options: ComboboxOption[]): [string | undefined, ComboboxOption[]][] {
+  const grupos = new Map<string | undefined, ComboboxOption[]>()
+  for (const option of options) {
+    const lista = grupos.get(option.grupo) ?? []
+    lista.push(option)
+    grupos.set(option.grupo, lista)
+  }
+  return [...grupos.entries()]
 }
 
 interface ComboboxProps {
@@ -94,8 +107,9 @@ export function Combobox({
           />
           <CommandList className="max-h-[300px]">
             <CommandEmpty>{emptyText}</CommandEmpty>
-            <CommandGroup>
-              {filteredOptions.map((option) => (
+            {emGrupos(filteredOptions).map(([grupo, opcoes]) => (
+            <CommandGroup key={grupo ?? ''} heading={grupo}>
+              {opcoes.map((option) => (
                 <CommandItem
                   key={option.value}
                   value={option.value}
@@ -115,6 +129,7 @@ export function Combobox({
                 </CommandItem>
               ))}
             </CommandGroup>
+            ))}
           </CommandList>
         </Command>
       </PopoverContent>

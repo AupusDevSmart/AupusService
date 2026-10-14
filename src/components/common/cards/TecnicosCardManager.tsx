@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Users, Trash2 } from 'lucide-react';
+import { Combobox, type ComboboxOption } from '@/core/components/ui/combobox';
 import { CardLista, CardLinha, campoCard, selectCard, type ColunaCard } from './card-lista';
 
 export interface TecnicoItem {
@@ -28,6 +29,11 @@ interface TecnicosCardManagerProps {
   showStatus?: boolean;
   showHorasReais?: boolean;
   title?: string;
+  /**
+   * Com isto, o técnico é escolhido entre usuários (SN-31) em vez de digitado:
+   * a opção grava `tecnico_id` e o nome. Sem isto, o campo segue texto livre.
+   */
+  opcoesDoTecnico?: (tecnico: TecnicoItem) => ComboboxOption[];
 }
 
 const especialidadesComuns = [
@@ -51,7 +57,8 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
   showCustos = false,
   showStatus = false,
   showHorasReais = false,
-  title = "Técnicos"
+  title = "Técnicos",
+  opcoesDoTecnico,
 }) => {
   const [tecnicos, setTecnicos] = useState<TecnicoItem[]>(value);
 
@@ -81,7 +88,7 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
     updateTecnicos(tecnicos.filter((_, i) => i !== index));
   };
 
-  const atualizarTecnico = (index: number, campo: keyof TecnicoItem, valor: any) => {
+  const atualizarTecnico = <K extends keyof TecnicoItem>(index: number, campo: K, valor: TecnicoItem[K]) => {
     const novosTecnicos = [...tecnicos];
     novosTecnicos[index] = { ...novosTecnicos[index], [campo]: valor };
 
@@ -95,6 +102,16 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
       }
     }
 
+    updateTecnicos(novosTecnicos);
+  };
+
+  const escolherPessoa = (index: number, id: string, opcoes: ComboboxOption[]) => {
+    const novosTecnicos = [...tecnicos];
+    novosTecnicos[index] = {
+      ...novosTecnicos[index],
+      tecnico_id: id || undefined,
+      nome: id ? opcoes.find((o) => o.value === id)?.label ?? '' : '',
+    };
     updateTecnicos(novosTecnicos);
   };
 
@@ -169,13 +186,25 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
         <CardLista colunas={colunas} larguraMinima="46rem">
           {tecnicos.map((tecnico, index) => (
             <CardLinha key={tecnico.id || index} colunas={colunas}>
-              <Input
-                value={tecnico.nome}
-                onChange={(e) => atualizarTecnico(index, 'nome', e.target.value)}
-                placeholder="Nome..."
-                disabled={disabled}
-                className={campoCard}
-              />
+              {opcoesDoTecnico ? (
+                <Combobox
+                  options={opcoesDoTecnico(tecnico)}
+                  value={tecnico.tecnico_id?.trim() ?? ''}
+                  onValueChange={(id) => escolherPessoa(index, id, opcoesDoTecnico(tecnico))}
+                  placeholder={tecnico.nome?.trim() && !tecnico.tecnico_id?.trim() ? `${tecnico.nome.trim()} (sem usuário)` : 'A definir'}
+                  searchPlaceholder="Buscar pessoa..."
+                  emptyText="Ninguém com esse nome."
+                  className={campoCard}
+                />
+              ) : (
+                <Input
+                  value={tecnico.nome}
+                  onChange={(e) => atualizarTecnico(index, 'nome', e.target.value)}
+                  placeholder="Nome..."
+                  disabled={disabled}
+                  className={campoCard}
+                />
+              )}
               <select
                 value={tecnico.especialidade}
                 onChange={(e) => atualizarTecnico(index, 'especialidade', e.target.value)}

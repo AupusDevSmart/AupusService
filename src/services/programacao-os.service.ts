@@ -323,6 +323,21 @@ export interface ListarProgramacoesResponse {
   stats: ProgramacaoStatsResponse;
 }
 
+/** Quem pode ser responsável ou técnico (SN-31): GET /programacao-os/pessoas */
+export interface PessoaQuePodeAtuar {
+  id: string;
+  nome: string;
+  email: string | null;
+  papel: string;
+}
+
+export interface PessoasDaPlanta {
+  /** Técnicos de campo vinculados à planta */
+  equipe: PessoaQuePodeAtuar[];
+  /** Planejador, gerente e administrador: atuam em qualquer planta */
+  apoio: PessoaQuePodeAtuar[];
+}
+
 // ============================================================================
 // PARÂMETROS DE QUERY
 // ============================================================================
@@ -519,6 +534,14 @@ export class ProgramacaoOSApiService {
       // // console.error('💥 PROGRAMACAO-OS API: Erro ao atualizar tarefas:', error);
       throw error;
     }
+  }
+
+  /** Opções de responsável e técnico: a equipe da planta e o apoio. */
+  async pessoas(plantaId?: string | null): Promise<PessoasDaPlanta> {
+    const response = await api.get<PessoasDaPlanta>(`${this.baseEndpoint}/pessoas`, {
+      params: plantaId?.trim() ? { planta_id: plantaId.trim() } : undefined,
+    });
+    return response.data;
   }
 
   async removerTarefa(id: string, tarefaId: string): Promise<{ message: string }> {
