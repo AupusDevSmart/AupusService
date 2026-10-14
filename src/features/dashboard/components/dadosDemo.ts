@@ -29,7 +29,8 @@ import type { DashboardManutencaoApi } from '@/services/dashboard-manutencao.ser
  * números são fictícios. Isso não é enfeite: o painel está publicado, e um
  * número inventado sem aviso é pior do que um gráfico vazio.
  */
-export const PAINEL_USA_DADOS_DE_EXEMPLO = true;
+// Desligado em 14/out/2026 (roadmap do PCM, SN-25): o painel abre com dados reais.
+export const PAINEL_USA_DADOS_DE_EXEMPLO = false;
 
 const MESES_CURTOS = [
   'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
