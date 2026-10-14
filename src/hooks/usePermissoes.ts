@@ -48,9 +48,10 @@ export function usePermissoes(): UsePermissoesReturn {
       
       const permissoesData = response.data.map((permission: any) => ({
         value: permission.name,
-        label: permission.name,
-        categoria: permission.category || 'Sem Categoria', // Backend deve fornecer categoria
-        description: `Permissão: ${permission.name}`,
+        // Nome e descrição da matriz de permissões (o backend manda)
+        label: permission.display_name || permission.name,
+        categoria: permission.category || 'Sem Categoria',
+        description: permission.description || permission.name,
         isActive: true,
         id: permission.id,
         guard_name: permission.guard_name,
@@ -150,9 +151,9 @@ export function usePermissoesGrouped() {
         if (Array.isArray(permissions)) {
           groupedData[categoria] = permissions.map((permission: any) => ({
             value: permission.name,
-            label: permission.name,
-            categoria: categoria, // Usar categoria do backend
-            description: `Permissão: ${permission.name}`,
+            label: permission.display_name || permission.name,
+            categoria: categoria,
+            description: permission.description || permission.name,
             isActive: true,
             // Campos extras do backend se necessários
             id: permission.id,
