@@ -11,8 +11,9 @@ export const profileService = {
    * @param data - The profile data to update
    * @returns Updated user data
    */
-  async updateProfile(userId: string, data: UpdateUsuarioDto): Promise<UsuarioDTO> {
-    const response = await api.patch<any>(`/usuarios/${userId}`, data);
+  async updateProfile(_userId: string, data: UpdateUsuarioDto): Promise<UsuarioDTO> {
+    // /usuarios/me: o próprio usuário, sem passar pela permissão de gerenciar usuários.
+    const response = await api.patch<any>('/usuarios/me', data);
     return response.data;
   },
 

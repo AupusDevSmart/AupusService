@@ -352,15 +352,16 @@ export const mapUsuarioToFormData = (usuario: Usuario): UsuarioFormData => {
 
 export const mapFormDataToCreateDto = (formData: UsuarioFormData) => {
   // roleNames is always a string from the select
-  const roleName = typeof formData.roleNames === 'string' ? formData.roleNames : formData.roleNames?.[0] || 'vendedor';
+  // Sem tipo escolhido, o backend recusa (ou, para proprietário, cria operador).
+  const roleName = typeof formData.roleNames === 'string' ? formData.roleNames : formData.roleNames?.[0];
 
   // Build a clean object without undefined fields
   const dto: any = {
     nome: formData.nome,
     email: formData.email,
     status: formData.status || UsuarioStatus.ATIVO,
-    roleNames: [roleName], // Backend expects array
   };
+  if (roleName) dto.roleNames = [roleName]; // Backend expects array
 
   // Add optional fields only if they have a value
   if (formData.telefone) dto.telefone = formData.telefone;

@@ -320,7 +320,6 @@ export interface UseUsuariosContract {
   updateUsuario: (id: string, data: any) => Promise<any>;
   deleteUsuario: (id: string) => Promise<void>;
   findUsuario: (id: string) => Promise<any>;
-  findUsuarioWithDebug?: (id: string) => Promise<any>;
   changeUserPassword: (id: string, data: { senhaAtual: string; novaSenha: string }) => Promise<{ message: string }>;
   resetUserPassword: (id: string, data: { novaSenha: string; confirmarSenha: string }) => Promise<{ message: string; senhaTemporaria: string }>;
   getUserPermissions: (id: string) => Promise<any>;

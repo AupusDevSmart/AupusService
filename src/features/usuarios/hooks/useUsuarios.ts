@@ -247,37 +247,6 @@ class UsuariosApiService {
     await userPermissionsService.syncUserPermissions(id, permissionIds);
   }
 
-  // ✅ MÉTODO AUXILIAR PARA BUSCAR DADOS COMPLETOS COM DEBUG
-  async findOneWithDebug(id: string): Promise<{usuario: Usuario, debug: any}> {
-    try {
-      console.log(`🔍 [DEBUG] Buscando dados completos + debug para usuário ${id}`);
-      
-      const [usuarioResponse, debugResponse] = await Promise.allSettled([
-        api.get(`/usuarios/${id}`),
-        api.get(`/usuarios/debug-permissions/${id}`)
-      ]);
-
-      let usuario: Usuario;
-      if (usuarioResponse.status === 'fulfilled') {
-        usuario = this.mapApiResponseToUsuario(usuarioResponse.value.data);
-      } else {
-        throw usuarioResponse.reason;
-      }
-
-      let debug: any = {};
-      if (debugResponse.status === 'fulfilled') {
-        debug = debugResponse.value.data;
-      } else {
-        console.warn('Debug endpoint não disponível:', debugResponse.reason.message);
-        debug = { error: debugResponse.reason.message };
-      }
-
-      return { usuario, debug };
-    } catch (error) {
-      console.error(`❌ [DEBUG] Erro ao buscar dados com debug:`, error);
-      throw error;
-    }
-  }
 }
 
 // ✅ INSTÂNCIA DO SERVICE
@@ -453,18 +422,6 @@ export function useUsuarios() {
     }
   }, []);
 
-  // ✅ FUNÇÃO PARA BUSCAR USUÁRIO COM DEBUG (DESENVOLVIMENTO)
-  const findUsuarioWithDebug = useCallback(async (id: string) => {
-    try {
-      setError(null);
-      return await usuariosService.findOneWithDebug(id);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar usuário com debug';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    }
-  }, []);
-
   // ✅ FUNÇÃO PARA CONVERTER USUÁRIO PARA FORM DATA
   const usuarioToFormData = useCallback((usuario: Usuario): UsuarioFormData => {
     return mapUsuarioToFormData(usuario);
@@ -571,7 +528,6 @@ export function useUsuarios() {
     updateUsuario,
     deleteUsuario,
     findUsuario,
-    findUsuarioWithDebug,
     changeUserPassword,
     resetUserPassword,
 
