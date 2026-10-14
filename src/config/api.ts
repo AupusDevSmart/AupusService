@@ -17,13 +17,13 @@ let isRefreshing = false;
  */
 let failedQueue: Array<{
   resolve: (token: string | null) => void;
-  reject: (error: any) => void;
+  reject: (error: unknown) => void;
 }> = [];
 
 /**
  * Processa a fila de requisições após refresh bem-sucedido ou falha
  */
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
@@ -92,6 +92,16 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+
+    // Senha provisória ainda não trocada (SN-34): o backend recusa tudo menos a
+    // troca. Leva para a tela de troca em vez de mostrar erro solto.
+    const corpo = error.response?.data;
+    const codigo = corpo?.code ?? corpo?.error?.code ?? corpo?.message?.code;
+    if (error.response?.status === 403 && codigo === 'TROCAR_SENHA') {
+      useUserStore.getState().updateUser({ deve_trocar_senha: true });
+      if (window.location.pathname !== '/trocar-senha') window.location.assign('/trocar-senha');
+      return Promise.reject(error);
+    }
 
     // Se erro 401 e não é tentativa de login ou refresh
     if (

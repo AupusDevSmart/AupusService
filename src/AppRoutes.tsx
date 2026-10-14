@@ -25,6 +25,7 @@ import { Settings } from './pages/settings';
 import { LoginPage } from './pages/login/LoginPage';
 import { EsqueciSenhaPage } from './pages/esqueci-senha/EsqueciSenhaPage';
 import { RedefinirSenhaPage } from './pages/redefinir-senha/RedefinirSenhaPage';
+import { TrocarSenhaPage } from './pages/trocar-senha/TrocarSenhaPage';
 import { useUserStore } from './store/useUserStore';
 
 // Paginas do nucleo (src/core, antes o pacote @aupus/shared-pages)
@@ -47,6 +48,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to={`/login?redirectTo=${currentPath}`} replace />;
   }
 
+  // Senha provisória: antes de qualquer tela, a troca (o backend recusa o resto)
+  if (user.deve_trocar_senha && window.location.pathname !== '/trocar-senha') {
+    return <Navigate to="/trocar-senha" replace />;
+  }
+
   return <>{children}</>;
 }
 
@@ -65,6 +71,16 @@ export const appRoutes = createBrowserRouter([
   {
     path: '/redefinir-senha',
     element: <RedefinirSenhaPage />,
+  },
+
+  // Troca obrigatória da senha provisória: logado, fora do layout do sistema
+  {
+    path: '/trocar-senha',
+    element: (
+      <ProtectedRoute>
+        <TrocarSenhaPage />
+      </ProtectedRoute>
+    ),
   },
 
   // ✅ Rotas protegidas

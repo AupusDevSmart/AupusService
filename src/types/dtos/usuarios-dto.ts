@@ -21,6 +21,8 @@ export interface UsuarioDTO {
   role_details?: { id: number; name: string; guard_name: string } | null;
   all_permissions: Permissao[];
   plantas_vinculadas?: string[];
+  /** Entrou com senha provisória: só usa o sistema depois de trocá-la (SN-34). */
+  deve_trocar_senha?: boolean;
 
   roles?: Role[];
 

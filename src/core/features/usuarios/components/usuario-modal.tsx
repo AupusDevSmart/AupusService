@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/core/components/ui/alert-dialog';
+import { formatApiError } from '@/utils/api-error';
 
 interface UsuarioModalProps {
   isOpen: boolean;
@@ -41,12 +42,12 @@ function isOperador(usuario: Usuario | null): boolean {
   if (!usuario) return false;
   if (usuario.role_details?.name === 'operador') return true;
   if (Array.isArray(usuario.roles)) {
-    return usuario.roles.some((r: any) => {
-      if (typeof r === 'string') return r === 'operador';
-      return r?.name === 'operador';
-    });
+    // O tipo diz string[], mas o backend manda {id, name, guard_name}
+    return (usuario.roles as unknown[]).some((r) =>
+      typeof r === 'string' ? r === 'operador' : (r as { name?: string })?.name === 'operador',
+    );
   }
-  return (usuario as any).role === 'operador';
+  return (usuario as Usuario & { role?: string }).role === 'operador';
 }
 
 export function UsuarioModal({
@@ -68,7 +69,6 @@ export function UsuarioModal({
     usuarioToFormData,
     usuarioToFormDataAsync,
     findUsuario,
-    error,
     clearError
   } = useUsuarios();
 
@@ -78,9 +78,8 @@ export function UsuarioModal({
 
   // ✅ Estado para armazenar dados do usuário com IDs do IBGE
   const [entityWithIds, setEntityWithIds] = useState<UsuarioFormData | Usuario | null>(null);
-  const [loadingIds, setLoadingIds] = useState(false);
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: UsuarioFormData) => {
     // Limpar erros anteriores
     clearError();
 
@@ -88,15 +87,19 @@ export function UsuarioModal({
       let resultado;
 
       if (isCreateMode) {
-        resultado = await createUsuario(data as UsuarioFormData);
+        resultado = await createUsuario(data);
 
         // ✅ Toast de sucesso
+        // A senha provisória é própria deste usuário e vai por e-mail; aparece
+        // aqui uma vez, para quem cadastrou passar adiante se o e-mail falhar.
         toast.success('Usuário criado com sucesso!', {
-          description: `${resultado.nome} foi criado. Senha padrão: ${resultado.senhaTemporaria || 'Aupus123!'}`,
-          duration: 5000,
+          description: resultado.senhaTemporaria
+            ? `${resultado.nome} foi criado. Senha provisória: ${resultado.senhaTemporaria} (também enviada por e-mail).`
+            : `${resultado.nome} foi criado. A senha provisória foi enviada por e-mail.`,
+          duration: 15000,
         });
       } else if (isEditMode && usuario) {
-        resultado = await updateUsuario(usuario.id, data as Partial<UsuarioFormData>);
+        resultado = await updateUsuario(usuario.id, data);
 
         // ✅ Toast de sucesso
         toast.success('Usuário atualizado!', {
@@ -108,17 +111,9 @@ export function UsuarioModal({
       // Fechar modal e recarregar dados
       onSuccess();
 
-    } catch (error: any) {
-
-      // Pegar a mensagem de erro da resposta da API se disponível
-      const errorMessage = error?.response?.data?.error?.message ||
-                          error?.response?.data?.message ||
-                          error?.message ||
-                          'Erro desconhecido ao salvar usuário';
-
-      // ✅ Toast de erro
+    } catch (error) {
       toast.error('Erro ao salvar usuário', {
-        description: errorMessage,
+        description: formatApiError(error),
         duration: 6000,
       });
     }
@@ -141,16 +136,9 @@ export function UsuarioModal({
       setShowDeleteDialog(false);
       onSuccess();
       onClose();
-    } catch (error: any) {
-      // Pegar a mensagem de erro da resposta da API se disponível
-      const errorMessage = error?.response?.data?.error?.message ||
-                          error?.response?.data?.message ||
-                          error?.message ||
-                          'Erro ao deletar usuário';
-
-      // ✅ Toast de erro
+    } catch (error) {
       toast.error('Erro ao deletar usuário', {
-        description: errorMessage,
+        description: formatApiError(error),
         duration: 6000,
       });
 
@@ -212,7 +200,6 @@ export function UsuarioModal({
   useEffect(() => {
     const loadUserDataWithIds = async () => {
       if (usuario && (isViewMode || isEditMode)) {
-        setLoadingIds(true);
         try {
           // Refetch para garantir all_permissions populado (lista vem com [] otimizado)
           let usuarioCompleto: Usuario = usuario;
@@ -224,10 +211,8 @@ export function UsuarioModal({
           }
           const formData = await usuarioToFormDataAsync(usuarioCompleto);
           setEntityWithIds(formData);
-        } catch (error) {
+        } catch {
           setEntityWithIds(usuarioToFormData(usuario));
-        } finally {
-          setLoadingIds(false);
         }
       } else {
         setEntityWithIds(usuario);
@@ -241,7 +226,9 @@ export function UsuarioModal({
     <BaseModal
       isOpen={isOpen}
       mode={mode}
-      entity={entityWithIds as any}
+      // O BaseModal tipa a entidade como a linha da tabela; aqui vai o formData
+      // (com os ids do IBGE) no editar/ver, ou null no criar
+      entity={entityWithIds as Usuario}
       title={getModalTitle()}
       icon={getModalIcon()}
       formFields={usuariosFormFields}
@@ -285,10 +272,10 @@ export function UsuarioModal({
           <div className="p-3 md:p-4">
             <div className="text-xs md:text-sm text-muted-foreground space-y-1">
               <p>
-                O usuário será criado com a senha padrão: <code className="font-mono">Aupus123!</code>
+                Uma senha provisória, só deste usuário, é gerada e enviada para o e-mail cadastrado.
               </p>
               <p>
-                No primeiro acesso, o usuário será obrigatoriamente solicitado a alterar sua senha.
+                No primeiro acesso, ele troca essa senha por uma que só ele saiba antes de usar o sistema.
               </p>
             </div>
           </div>
