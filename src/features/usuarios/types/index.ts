@@ -1,6 +1,6 @@
 // src/features/usuarios/types/index.ts - CORRIGIDO PARA BACKEND HÍBRIDO
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
-import { type Permission } from '@/types/permissions';
+import type { Permissao as PermissaoDoSistema } from '@/types/dtos/usuarios-dto';
 
 // ============================================================================
 // ENUMS E TYPES DO SISTEMA
@@ -20,7 +20,8 @@ export enum UsuarioRole {
 }
 
 // ✅ TIPO DE PERMISSÃO - IMPORTADO DO ARQUIVO CENTRALIZADO
-export type Permissao = Permission;
+/** Um nome só para as permissões no front: o de types/dtos/usuarios-dto. */
+export type Permissao = PermissaoDoSistema;
 
 export interface Role {
   id: string;
@@ -107,6 +108,8 @@ export interface Usuario extends BaseEntity {
 
 // ✅ FORM DATA PARA CRIAÇÃO/EDIÇÃO
 export interface UsuarioFormData {
+  /** A lista de permissões extras foi mexida na tela (só então ela vai ao servidor). */
+  permissoesAlteradas?: boolean;
   id?: string | number;
   nome: string;
   email: string;
@@ -368,73 +371,41 @@ export const mapUsuarioToFormData = (usuario: Usuario): UsuarioFormData => {
   return formData;
 };
 
-export const mapFormDataToCreateDto = async (formData: UsuarioFormData) => {
-  console.log('🔍 [mapFormDataToCreateDto] FormData recebido:', formData);
-  console.log('🔍 [mapFormDataToCreateDto] formData.nome:', formData.nome);
-  console.log('🔍 [mapFormDataToCreateDto] formData.email:', formData.email);
+/**
+ * O formulário de usuário para o corpo do POST/PATCH /usuarios.
+ *
+ * - Sem tipo escolhido, não manda tipo: o backend recusa (ou, para o
+ *   proprietário, cria técnico). Antes ia "vendedor", que não existe.
+ * - Permissões extras (diretas), pelo nome, só quando a pessoa mexeu na lista;
+ *   aí vai a lista inteira, mesmo vazia (é como se tiram todas). Sem mexer, não
+ *   vai: o sheet pode abrir antes de as diretas carregarem, e a lista vazia
+ *   apagaria todas. As do tipo o backend nunca grava como direta.
+ */
+export const mapFormDataToCreateDto = (formData: UsuarioFormData) => {
+  const roleName = typeof formData.roleNames === 'string' ? formData.roleNames : formData.roleNames?.[0];
 
-  // ✅ SIMPLIFICADO: roleNames é sempre uma string do select
-  const roleName = typeof formData.roleNames === 'string' ? formData.roleNames : formData.roleNames?.[0] || 'vendedor';
-
-  // Criar objeto limpo sem campos undefined
-  const dto: any = {
+  const dto: Record<string, unknown> = {
     nome: formData.nome,
     email: formData.email,
     status: formData.status || UsuarioStatus.ATIVO,
-    roleNames: [roleName], // Backend espera array
   };
+  if (roleName) dto.roleNames = [roleName];
 
-  console.log('🔍 [mapFormDataToCreateDto] DTO criado (antes de adicionar campos opcionais):', dto);
-
-  // Adicionar campos opcionais apenas se tiverem valor
   if (formData.telefone) dto.telefone = formData.telefone;
   if (formData.instagram) dto.instagram = formData.instagram;
   if (formData.cpfCnpj) dto.cpfCnpj = formData.cpfCnpj;
-
-  // ✅ CORREÇÃO: Backend espera NOMES (strings), não IDs
-  // Enviar apenas cidade e estado como strings
+  // O backend espera os nomes de cidade e estado, não os ids do IBGE
   if (formData.cidade) dto.cidade = formData.cidade;
   if (formData.estado) dto.estado = formData.estado;
-
   if (formData.cep) dto.cep = formData.cep;
   if (formData.endereco) dto.endereco = formData.endereco;
-
   if (formData.concessionariaAtualId) dto.concessionariaAtualId = formData.concessionariaAtualId;
   if (formData.organizacaoAtualId) dto.organizacaoAtualId = formData.organizacaoAtualId;
   if (formData.managerId) dto.managerId = formData.managerId;
 
-  // ✅ CORREÇÃO CRÍTICA: Converter permissões (nomes) para IDs numéricos
-  const permissions = formData.permissions || formData.permissao || [];
-  if (permissions.length > 0) {
-    try {
-      // Importar API para buscar permissões
-      const { api } = await import('@/config/api');
-      const permissoesResponse = await api.get('/usuarios/available/permissions');
-      const todasPermissoes = permissoesResponse.data?.data || permissoesResponse.data || [];
-
-      // Mapear nomes para IDs
-      const permissionIds = permissions
-        .map((permName: string) => {
-          const perm = todasPermissoes.find((p: any) => p.name === permName);
-          return perm ? Number(perm.id) : null;
-        })
-        .filter((id): id is number => id !== null);
-
-      if (permissionIds.length > 0) {
-        dto.permissionIds = permissionIds;
-        console.log('✅ [mapFormDataToCreateDto] Permissões convertidas:', {
-          nomes: permissions,
-          ids: permissionIds
-        });
-      }
-    } catch (error) {
-      console.error('❌ [mapFormDataToCreateDto] Erro ao converter permissões:', error);
-      // Fallback: enviar como nomes (backend pode não aceitar)
-      dto.permissions = permissions;
-    }
+  if (formData.permissoesAlteradas) {
+    dto.permissions = [...new Set(((formData.permissions as unknown[]) ?? []).map((p) => (typeof p === 'string' ? p : (p as { name?: string })?.name)).filter(Boolean))];
   }
-
-  console.log('📤 [mapFormDataToCreateDto] DTO final:', dto);
 
   return dto;
 };
