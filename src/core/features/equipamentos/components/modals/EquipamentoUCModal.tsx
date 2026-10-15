@@ -60,6 +60,7 @@ import { ItensDoLoteField } from '../ItensDoLoteField';
 import type { EquipamentoDoLote, UseModelosContract } from '@/core/types/contracts';
 import { PontosSection, type PontoFormItem } from '../PontosSection';
 import { useEquipamentos, useLocationCascade, useCategorias, useModelos, useHttpClient } from '@/core/context/hooks';
+import { rodarAcoesPosCriacao } from '@/core/features/equipamentos/utils/acoes-pos-criacao';
 
 // Local type definitions (previously from @/services/tipos-equipamentos.services)
 interface CampoTecnicoSchema {
@@ -1166,13 +1167,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       }
     }
 
-    for (const [chave, acao] of acoesPosCriacaoRef.current) {
-      try {
-        await acao(primeiro);
-      } catch {
-        pendencias.push(chave);
-      }
-    }
+    pendencias.push(...(await rodarAcoesPosCriacao(acoesPosCriacaoRef.current, primeiro)));
 
     // Numa duplicacao em lote os documentos vem do equipamento de origem, e
     // nao do primeiro criado — que pode nem ter anexo nenhum.
@@ -1383,13 +1378,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
           }
         }
 
-        for (const [chave, acao] of acoesPosCriacaoRef.current) {
-          try {
-            await acao(novoId);
-          } catch {
-            pendencias.push(chave);
-          }
-        }
+        pendencias.push(...(await rodarAcoesPosCriacao(acoesPosCriacaoRef.current, novoId)));
 
         // Duplicar leva junto os documentos: manual e datasheet sao os mesmos
         // entre equipamentos iguais, e refaze-los a mao seria o trabalho que a

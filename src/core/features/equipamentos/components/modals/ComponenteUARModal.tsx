@@ -34,6 +34,8 @@ import { ItensDoLoteField } from '../ItensDoLoteField';
 import { AnexosEquipamentoField } from '../AnexosEquipamentoField';
 import type { EquipamentoDoLote, UseModelosContract } from '@/core/types/contracts';
 import { mensagemDoBackend } from '@/core/features/equipamentos/utils/mensagem-do-backend';
+import { payloadDoComponente, type DadosDoComponenteUAR, type FormularioDoUAR } from '@/core/features/equipamentos/utils/payload-do-componente';
+import { rodarAcoesPosCriacao } from '@/core/features/equipamentos/utils/acoes-pos-criacao';
 
 type AbaUAR = 'dados' | 'itens' | 'anexos';
 
@@ -58,67 +60,10 @@ interface TipoEquipamento {
   propriedades_schema?: { campos: CampoTecnicoSchema[] };
 }
 
-/** O que o sheet devolve por `onSubmit`: o componente no formato da API (snake_case). */
-export type DadosDoComponenteUAR = {
-  /** Obrigatorio: o sheet nao submete sem ele. */
-  nome: string;
-  tag?: string;
-  classificacao: 'UAR';
-  equipamento_pai_id?: string;
-  unidade_id?: string;
-  fabricante?: string;
-  fabricante_custom?: string;
-  modelo?: string;
-  numero_serie?: string;
-  criticidade?: Equipamento['criticidade'];
-  /** O CODIGO do tipo (compatibilidade); o id vai em `tipo_equipamento_id`. */
-  tipo_equipamento?: string;
-  tipo_equipamento_id?: string;
-  data_instalacao?: string;
-  localizacao_especifica?: string;
-  fornecedor?: string;
-  valor_imobilizado?: number;
-  valor_depreciacao?: number;
-  valor_contabil?: number;
-  observacoes?: string;
-  planta_id?: string;
-  proprietario_id?: string;
-  dados_tecnicos: { campo: string; valor: string; tipo: string; unidade?: string }[];
-};
+export type { DadosDoComponenteUAR };
 
 /** O bloco comum do lote: o que varia por exemplar vai nos itens. */
 type DadosComunsDoLoteUAR = Omit<DadosDoComponenteUAR, 'nome' | 'tag' | 'numero_serie' | 'localizacao_especifica'>;
-
-/**
- * O formulario do sheet: o componente em camelCase, como os inputs guardam,
- * mais os campos tecnicos — cada um pela propria chave (`formData[campo]`).
- */
-type FormularioDoUAR = {
-  id?: string;
-  nome?: string;
-  tag?: string;
-  classificacao?: 'UC' | 'UAR';
-  criticidade?: Equipamento['criticidade'];
-  numeroSerie?: string;
-  localizacaoEspecifica?: string;
-  /** O CODIGO do tipo escolhido. */
-  tipoComponente?: string;
-  tipoEquipamentoId?: string;
-  fabricante?: string;
-  fabricanteCustom?: string;
-  modelo?: string;
-  dataInstalacao?: string;
-  equipamentoPaiId?: string;
-  plantaId?: string;
-  unidadeId?: string;
-  proprietarioId?: string;
-  fornecedor?: string;
-  valorImobilizado?: number | string;
-  valorDepreciacao?: number | string;
-  valorContabil?: number | string;
-  observacoes?: string;
-  fotoUrl?: string | null;
-} & { [campoTecnico: string]: unknown };
 
 interface ComponenteUARModalProps {
   isOpen: boolean;
@@ -749,13 +694,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
       }
     }
 
-    for (const [chave, acao] of acoesPosCriacaoRef.current) {
-      try {
-        await acao(primeiro);
-      } catch {
-        pendencias.push(chave);
-      }
-    }
+    pendencias.push(...(await rodarAcoesPosCriacao(acoesPosCriacaoRef.current, primeiro)));
 
     // Numa duplicacao os documentos vem do componente de origem, e nao do
     // primeiro criado — que pode nem ter anexo nenhum.
@@ -836,38 +775,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
         .map((dt) => ({ campo: dt.campo, valor: String(dt.valor), tipo: dt.tipo || 'string', unidade: dt.unidade }));
       const dadosTecnicos = [...daCategoria, ...foraDaCategoria];
 
-      // Formatar data de instalação para ISO-8601 DateTime se fornecida
-      const dataInstalacaoFormatted = formData.dataInstalacao
-        ? new Date(formData.dataInstalacao + 'T00:00:00.000Z').toISOString()
-        : undefined;
-
-      const submitData: DadosDoComponenteUAR = {
-        // Dados básicos
-        nome: formData.nome ?? '', // validateForm ja exigiu o nome
-        tag: formData.tag || undefined,
-        classificacao: 'UAR',
-        equipamento_pai_id: formData.equipamentoPaiId,
-        unidade_id: formData.unidadeId, // Herdado do equipamento pai
-        fabricante: formData.fabricante,
-        fabricante_custom: formData.fabricanteCustom || undefined, // ✅ NOVO: Fabricante customizado se divergir do modelo
-        modelo: formData.modelo,
-        numero_serie: formData.numeroSerie,
-        criticidade: formData.criticidade,
-        tipo_equipamento: formData.tipoComponente,  // Código (compatibilidade)
-        tipo_equipamento_id: tipoEqpId,  // ID do tipo (correto)
-        data_instalacao: dataInstalacaoFormatted,
-        localizacao_especifica: formData.localizacaoEspecifica,
-        fornecedor: formData.fornecedor,
-        valor_imobilizado: formData.valorImobilizado ? parseFloat(String(formData.valorImobilizado)) : undefined,
-        valor_depreciacao: formData.valorDepreciacao ? parseFloat(String(formData.valorDepreciacao)) : undefined,
-        valor_contabil: formData.valorContabil ? parseFloat(String(formData.valorContabil)) : undefined,
-        observacoes: formData.observacoes,
-        // Herdar do equipamento pai
-        planta_id: formData.plantaId,
-        proprietario_id: formData.proprietarioId,
-        // Dados técnicos
-        dados_tecnicos: dadosTecnicos
-      };
+      const submitData = payloadDoComponente(formData, tipoEqpId, dadosTecnicos);
 
 
       // O lote nao passa por onSubmit: ele cria os N de uma vez, por endpoint
@@ -894,17 +802,16 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
             avisar('Componente criado, mas a foto nao pode ser enviada.');
           }
         }
-        for (const acao of acoesPosCriacaoRef.current.values()) {
-          try {
-            await acao(idCriado);
-          } catch {
-            /* o componente existe; o acessorio pode ser refeito na edicao */
-          }
+        // O componente existe; o que falhou pode ser refeito na edicao, mas
+        // a pessoa precisa saber (antes era um catch vazio)
+        const faltou = await rodarAcoesPosCriacao(acoesPosCriacaoRef.current, idCriado);
+        if (faltou.length > 0) {
+          avisar(`Componente criado, mas nao foi possivel salvar: ${faltou.join(', ')}.`, 'Abra o componente e complete o que faltou.');
         }
       }
     } catch (err) {
-      console.error('❌ [MODAL UAR] Erro ao salvar:', err);
-      avisar('Erro ao salvar componente UAR. Tente novamente.');
+      // A mensagem do backend diz o que recusou; sem ela, um 400 virava "tente de novo"
+      avisar('Erro ao salvar componente UAR.', mensagemDoBackend(err) ?? (err instanceof Error ? err.message : undefined));
     } finally {
       setIsSubmitting(false);
     }

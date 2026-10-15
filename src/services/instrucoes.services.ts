@@ -286,11 +286,13 @@ export class InstrucoesApiService {
   // sao lixo no payload e o ValidationPipe (forbidNonWhitelisted) rejeita com 400.
   private sanitizeSubInstrucoes(subs?: CreateSubInstrucaoApiData[]): CreateSubInstrucaoApiData[] | undefined {
     if (!subs) return subs;
-    return subs.map(sub => ({
+    // A ordem e a posicao na lista: arrastar reordena o array, e o `ordem`
+    // antigo de cada passo desfaria a ordem nova ao salvar (SN-12).
+    return subs.map((sub, indice) => ({
       descricao: sub.descricao,
       obrigatoria: sub.obrigatoria,
       tempo_estimado: sub.tempo_estimado,
-      ordem: sub.ordem,
+      ordem: indice + 1,
     }));
   }
 

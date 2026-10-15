@@ -10,16 +10,7 @@ import { useAcoesDeCompartilhamento } from '@/core/features/sincronizacao';
 import { BaseFilters } from '@/core/components/common/base-filters/BaseFilters';
 import { Button } from '@/core/components/ui/button';
 import { Alert, AlertDescription } from '@/core/components/ui/alert';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/core/components/ui/alert-dialog';
+import { ExcluirEquipamentoDialog } from '@/core/features/equipamentos/components/ExcluirEquipamentoDialog';
 import { Wrench, ArrowLeft, AlertCircle, Copy } from 'lucide-react';
 import { Equipamento, EquipamentosFilters } from '../types';
 import { getEquipamentosTableColumns } from '../config/table-config';
@@ -807,37 +798,12 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
           duplicarDe={modalUAR.mode === 'create' ? duplicarDe : null}
         />
 
-        {/* AlertDialog para confirmação de exclusão */}
-        <AlertDialog open={deleteDialog.isOpen} onOpenChange={(open) => !open && setDeleteDialog({ isOpen: false, equipamento: null })}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tem certeza que deseja remover o equipamento <strong>{deleteDialog.equipamento?.nome}</strong>?
-                {deleteDialog.equipamento?.classificacao === 'UC' && (deleteDialog.equipamento?.totalComponentes ?? 0) > 0 && (
-                  <>
-                    <br /><br />
-                    <span className="text-amber-600 dark:text-amber-400 font-medium">
-                      Este equipamento possui {deleteDialog.equipamento.totalComponentes} componente(s) UAR vinculado(s).
-                      Eles também serão removidos.
-                    </span>
-                  </>
-                )}
-                <br /><br />
-                Esta ação não pode ser desfeita.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteConfirm}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Remover
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {/* Confirmação de exclusão */}
+        <ExcluirEquipamentoDialog
+          equipamento={deleteDialog.isOpen ? deleteDialog.equipamento : null}
+          onCancelar={() => setDeleteDialog({ isOpen: false, equipamento: null })}
+          onConfirmar={handleDeleteConfirm}
+        />
 
         {/* UM dialogo por pagina. Com 250+ equipamentos, um por linha seriam
             250 AlertDialogs no DOM para no maximo um aparecer. */}
