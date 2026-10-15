@@ -68,3 +68,22 @@ export function formatApiError(err: unknown): string {
   if (typeof err === 'string') return err;
   return 'Erro desconhecido';
 }
+
+/**
+ * A mensagem que o backend mandou no erro, quando mandou. `undefined` quando
+ * não veio nenhuma (rede, status sem corpo): quem chama mostra o próprio texto
+ * ("Nao foi possivel remover"), que diz mais do que um status HTTP.
+ *
+ * Lê os mesmos dois formatos do `formatApiError`: o do Nest (`data.message`) e
+ * o do HttpExceptionFilter deste backend (`data.error.message`), por onde passa
+ * todo erro da API. As cópias que liam só o primeiro devolviam sempre
+ * undefined, e a tela nunca mostrava o motivo (achado no SN-12).
+ */
+export function mensagemDoBackend(err: unknown): string | undefined {
+  const data = (err as AxiosErrorLike | null | undefined)?.response?.data;
+  return (
+    textoDaMensagem(data?.message) ??
+    textoDaMensagem((data?.error as { message?: unknown } | undefined)?.message) ??
+    undefined
+  );
+}

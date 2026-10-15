@@ -1,8 +1,8 @@
 // src/services/concessionarias.services.ts
 
-import { isAxiosError } from 'axios';
 import { api } from '@/config/api';
 import type { Pagination } from '@/core/types/base';
+import { mensagemDoBackend } from '@/utils/api-error';
 
 // ✅ INTERFACES
 
@@ -102,10 +102,6 @@ interface ListaDeConcessionariasDaRota {
 /** A paginacao da lista: a da rota (`pages`) mais o `totalPages` que o contrato le. */
 export type PaginacaoDasConcessionarias = Pagination & { pages: number };
 
-/** A mensagem que o backend mandou no corpo do erro, se mandou. */
-function mensagemDoBackend(error: unknown): string | undefined {
-  return isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined;
-}
 
 // ✅ SERVICE CLASS
 

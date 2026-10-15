@@ -386,11 +386,11 @@ export interface UseEquipamentosReturn {
   
   // Gerenciamento em lote de componentes
   fetchComponentesParaGerenciar: (ucId: string) => Promise<{
-    /** Nulo quando a consulta falhou. */
+    /** Nulo quando a API nao o trouxe. Erro na consulta rejeita (nao vira vazio). */
     equipamentoUC: ComponentesGerenciamentoData['equipamentoUC'] | null;
     componentes: Equipamento[];
   }>;
-  salvarComponentesUARLote: (ucId: string, componentes: EquipamentoParaApi[]) => Promise<{
+  salvarComponentesUARLote: (ucId: string, componentes: (EquipamentoParaApi & { id?: string })[]) => Promise<{
     message: string;
     componentes: Equipamento[];
   }>;
@@ -787,22 +787,24 @@ export function useEquipamentos(): UseEquipamentosReturn {
       };
 
     } catch (err) {
+      // Sobe para quem chamou, que avisa (inclusive o 403 do escopo). Devolver
+      // lista vazia mostrava "Componentes UAR (0)" sem aviso (revisao do SN-12)
       handleError(err, 'fetchComponentesParaGerenciar');
-      return {
-        equipamentoUC: null,
-        componentes: []
-      };
+      throw err;
     } finally {
       setLoading(false);
     }
   }, [handleError]);
 
-  const salvarComponentesUARLote = useCallback(async (ucId: string, componentes: EquipamentoParaApi[]) => {
+  const salvarComponentesUARLote = useCallback(async (ucId: string, componentes: (EquipamentoParaApi & { id?: string })[]) => {
     try {
       setLoading(true);
       setError(null);
 
-      const componentesApi = componentes.map(comp => transformFrontendToApi(comp));
+      // O id diz ao backend quem ja existe (o novo vai com o temp_). O transform
+      // remontava o objeto sem ele, e o lote apagava cada componente e criava
+      // uma copia com id novo (revisao do SN-12)
+      const componentesApi = componentes.map(comp => ({ ...transformFrontendToApi(comp), id: comp.id?.trim() }));
 
       const response = await equipamentosApi.salvarComponentesUARLote(ucId, componentesApi);
 

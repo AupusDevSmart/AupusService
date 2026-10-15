@@ -33,9 +33,9 @@ import { FotoEquipamentoField } from '../FotoEquipamentoField';
 import { ItensDoLoteField } from '../ItensDoLoteField';
 import { AnexosEquipamentoField } from '../AnexosEquipamentoField';
 import type { EquipamentoDoLote, UseModelosContract } from '@/core/types/contracts';
-import { mensagemDoBackend } from '@/core/features/equipamentos/utils/mensagem-do-backend';
+import { mensagemDoBackend } from '@/utils/api-error';
 import { payloadDoComponente, type DadosDoComponenteUAR, type FormularioDoUAR } from '@/core/features/equipamentos/utils/payload-do-componente';
-import { rodarAcoesPosCriacao } from '@/core/features/equipamentos/utils/acoes-pos-criacao';
+import { rodarAcoesPosCriacao, useAcoesPosCriacao } from '@/core/features/equipamentos/utils/acoes-pos-criacao';
 
 type AbaUAR = 'dados' | 'itens' | 'anexos';
 
@@ -121,14 +121,8 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   const [fotoPendente, setFotoPendente] = useState<File | null>(null);
   const [previewFoto, setPreviewFoto] = useState<string | null>(null);
 
-  /** O que os campos pediram para acontecer assim que o componente nascer. */
-  const acoesPosCriacaoRef = React.useRef<Map<string, (id: string) => Promise<void>>>(new Map());
-  const registrarAcaoPosCriacao = React.useCallback(
-    (chave: string, acao: (id: string) => Promise<void>) => {
-      acoesPosCriacaoRef.current.set(chave, acao);
-    },
-    [],
-  );
+  /** O que os campos pediram para acontecer assim que o componente nascer (vazio a cada abertura). */
+  const { acoes: acoesPosCriacaoRef, registrar: registrarAcaoPosCriacao } = useAcoesPosCriacao(isOpen);
 
   const [formData, setFormData] = useState<FormularioDoUAR>({});
   const [error, setError] = useState<string | null>(null);

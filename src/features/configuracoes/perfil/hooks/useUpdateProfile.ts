@@ -1,15 +1,11 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { isAxiosError } from 'axios';
 import { profileService } from '@/services/profile.service';
 import { useUserStore } from '@/store/useUserStore';
 import { UpdateUsuarioDto, ChangePasswordDto } from '@/types/dtos/usuarios-dto';
 import { AuthService } from '@/services/auth.service';
+import { mensagemDoBackend } from '@/utils/api-error';
 
-/** A mensagem que o backend mandou no corpo do erro, se mandou. */
-function mensagemDoBackend(error: unknown): string | undefined {
-  return isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined;
-}
 
 /**
  * Hook for managing user profile updates

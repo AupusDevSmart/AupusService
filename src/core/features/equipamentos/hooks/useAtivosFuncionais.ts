@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useHttpClient } from '@/core/context/hooks';
-import { mensagemDoBackend } from '@/core/features/equipamentos/utils/mensagem-do-backend';
+import { mensagemDoBackend } from '@/utils/api-error';
 
 export interface EquipamentoDaPosicao {
   id: string;

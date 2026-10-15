@@ -4,7 +4,7 @@ import { Button } from '@/core/components/ui/button';
 import { Combobox } from '@/core/components/ui/combobox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/core/components/ui/popover';
 import { useAtivosFuncionais, type AtivoFuncional } from '../hooks/useAtivosFuncionais';
-import { mensagemDoBackend } from '@/core/features/equipamentos/utils/mensagem-do-backend';
+import { mensagemDoBackend } from '@/utils/api-error';
 
 interface Props {
   unidadeId?: string | null;

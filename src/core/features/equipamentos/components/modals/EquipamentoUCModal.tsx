@@ -1,5 +1,5 @@
 // src/features/equipamentos/components/modals/EquipamentoUCModal.tsx - LAYOUT LIMPO
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { isAxiosError } from 'axios';
 import {
   Select,
@@ -18,7 +18,7 @@ import { Badge } from '@/core/components/ui/badge';
 import { Button } from '@/core/components/ui/button';
 import { Alert, AlertDescription } from '@/core/components/ui/alert';
 import { toast } from 'sonner';
-import { formatApiError } from '@/utils/api-error';
+import { formatApiError, mensagemDoBackend } from '@/utils/api-error';
 import { Separator } from '@/core/components/ui/separator';
 import { normalizarTipoEquipamento } from '@/core/features/equipamentos/utils/tipo-equipamento';
 import { PosicaoSelector } from '@/core/features/equipamentos/components/PosicaoSelector';
@@ -36,7 +36,6 @@ import {
 } from "@/core/components/ui/popover";
 import { Equipamento, idDoEquipamentoCriado, type PontoEquipamento } from '../../types';
 import type { DadosDoFormulario } from '@/core/types/base';
-import { mensagemDoBackend } from '@/core/features/equipamentos/utils/mensagem-do-backend';
 
 type AbaSheet = 'dados' | 'itens' | 'tarefas' | 'posicao' | 'historico' | 'anexos';
 
@@ -60,7 +59,7 @@ import { ItensDoLoteField } from '../ItensDoLoteField';
 import type { EquipamentoDoLote, UseModelosContract } from '@/core/types/contracts';
 import { PontosSection, type PontoFormItem } from '../PontosSection';
 import { useEquipamentos, useLocationCascade, useCategorias, useModelos, useHttpClient } from '@/core/context/hooks';
-import { rodarAcoesPosCriacao } from '@/core/features/equipamentos/utils/acoes-pos-criacao';
+import { rodarAcoesPosCriacao, useAcoesPosCriacao } from '@/core/features/equipamentos/utils/acoes-pos-criacao';
 
 // Local type definitions (previously from @/services/tipos-equipamentos.services)
 interface CampoTecnicoSchema {
@@ -325,32 +324,13 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
 
   /**
    * O que os slots pediram para acontecer assim que o equipamento nascer.
-   * Ref e nao estado: e lido uma vez no submit e nao deve provocar render.
+   * Recomeça a cada abertura e a cada troca do modo lote: é assim que o plano
+   * escolhido com quantidade 1 deixa de estar registrado quando o campo some no
+   * lote, e que os anexos de um cadastro não sobem no seguinte.
    */
-  const acoesPosCriacaoRef = useRef<Map<string, (equipamentoId: string) => Promise<void>>>(new Map());
+  const { acoes: acoesPosCriacaoRef, registrar: registrarAcaoPosCriacao } = useAcoesPosCriacao(isOpen, modoLote);
   /** A posicao com que o sheet abriu: o salvar compara para saber se instala, transfere ou remove. */
   const posicaoOriginalRef = useRef('');
-
-  /**
-   * A identidade muda junto com o modo, de propósito: quem continua montado se
-   * registra de novo, e quem saiu de cena não. É assim que o plano escolhido
-   * com quantidade 1 deixa de estar registrado quando o campo some no lote.
-   */
-  const registrarAcaoPosCriacao = useCallback(
-    (chave: string, acao: (equipamentoId: string) => Promise<void>) => {
-      acoesPosCriacaoRef.current.set(chave, acao);
-    },
-    [modoLote],
-  );
-
-  // Limpa durante o render, e não num efeito: os efeitos dos filhos rodam antes
-  // do efeito do pai, então limpar depois apagaria o registro que eles acabaram
-  // de refazer.
-  const modoLoteAnteriorRef = useRef(modoLote);
-  if (modoLoteAnteriorRef.current !== modoLote) {
-    modoLoteAnteriorRef.current = modoLote;
-    acoesPosCriacaoRef.current.clear();
-  }
 
   // Sempre abrir em Dados técnicos: é onde estão os campos obrigatórios, e
   // abrir noutra aba esconderia o que o usuário veio editar.
@@ -2595,7 +2575,17 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     try {
       await onSaveUARs(entity.id, uarsLista);
     } catch (err) {
-      console.error('Erro ao salvar UARs:', err);
+      // Antes so ia para o console: o botao parecia nao fazer nada
+      avisar('Erro ao salvar os componentes', formatApiError(err));
+      return;
+    }
+    // Recarrega do servidor: o componente novo ficava com o id provisorio na
+    // lista, e salvar de novo o criava outra vez (revisao do SN-12)
+    toast.success('Componentes salvos');
+    try {
+      setUarsLista((await fetchComponentesParaGerenciar(entity.id)).componentes || []);
+    } catch (err) {
+      avisar('Componentes salvos, mas não foi possível recarregar a lista', formatApiError(err));
     }
   };
 
@@ -3007,8 +2997,12 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         aoCriarEmLote={async () => {
           setModalUARDetalhes({ isOpen: false, mode: 'view', entity: null });
           if (entity?.id) {
-            const result = await fetchComponentesParaGerenciar(entity.id);
-            setUarsLista(result.componentes || []);
+            try {
+              const result = await fetchComponentesParaGerenciar(entity.id);
+              setUarsLista(result.componentes || []);
+            } catch (err) {
+              avisar('Componentes criados, mas não foi possível recarregar a lista', formatApiError(err));
+            }
           }
         }}
       />

@@ -150,7 +150,7 @@ export function InstrucoesPage() {
 
       if (modalState.mode === 'create') {
         if (!user?.id) {
-          alert('Erro: Usuario nao autenticado. Faca login para criar instrucoes.');
+          toast.error('Faça login para criar instruções.');
           return;
         }
 
@@ -163,14 +163,22 @@ export function InstrucoesPage() {
         instrucaoId = novaInstrucao.id;
 
         if (pendingFiles.length > 0) {
+          // A instrução existe; o anexo que falhou pode ser enviado na edição,
+          // mas a pessoa precisa saber (antes só ia para o console)
+          const naoEnviados: string[] = [];
           for (const file of pendingFiles) {
             try {
               await uploadAnexo(instrucaoId, file, `Anexo: ${file.name}`);
             } catch (uploadError) {
-              console.error(`Erro no upload de ${file.name}:`, uploadError);
+              naoEnviados.push(`${file.name} (${formatApiError(uploadError)})`);
             }
           }
           setPendingFiles([]);
+          if (naoEnviados.length > 0) {
+            toast.warning(`Instrução criada, mas não foi possível enviar: ${naoEnviados.join(', ')}`, {
+              description: 'Abra a instrução e envie de novo.',
+            });
+          }
         }
       } else if (modalState.mode === 'edit' && modalState.entity) {
         await updateInstrucao(modalState.entity.id, cleanData);
@@ -178,7 +186,9 @@ export function InstrucoesPage() {
 
       await handleSuccess();
     } catch (error) {
-      console.error('Erro ao salvar instrucao:', error);
+      // O sheet continua aberto com o que foi digitado; antes o erro só ia
+      // para o console e o salvar parecia não fazer nada
+      toast.error('Não foi possível salvar a instrução', { description: formatApiError(error) });
     }
   };
 
@@ -194,25 +204,20 @@ export function InstrucoesPage() {
     }
   };
 
-  const handleView = async (instrucao: InstrucaoApiResponse) => {
+  // Abre só com a instrução completa. A linha da lista traz só as contagens:
+  // aberta com ela, a edição mostrava zero passos e recursos, e salvar apagava
+  // os de verdade (revisão do SN-12). Como no EditarInstrucaoSheet.
+  const abrirCompleta = async (modo: 'view' | 'edit', instrucao: InstrucaoApiResponse) => {
     try {
-      const completa = await getInstrucao(instrucao.id);
-      openModal('view', completa);
+      openModal(modo, await getInstrucao(instrucao.id));
     } catch (error) {
-      console.error('Erro ao carregar dados completos da instrucao:', error);
-      openModal('view', instrucao);
+      toast.error('Não foi possível abrir a instrução', { description: formatApiError(error) });
     }
   };
 
-  const handleEdit = async (instrucao: InstrucaoApiResponse) => {
-    try {
-      const completa = await getInstrucao(instrucao.id);
-      openModal('edit', completa);
-    } catch (error) {
-      console.error('Erro ao carregar dados completos da instrucao:', error);
-      openModal('edit', instrucao);
-    }
-  };
+  const handleView = (instrucao: InstrucaoApiResponse) => abrirCompleta('view', instrucao);
+
+  const handleEdit = (instrucao: InstrucaoApiResponse) => abrirCompleta('edit', instrucao);
 
   const handleFilterChange = async (newFilters: Partial<QueryInstrucoesApiParams>) => {
     const cleanedFilters = { ...newFilters };

@@ -1,8 +1,8 @@
 // src/services/plantas.services.ts
 
-import { isAxiosError } from 'axios';
 import { api } from '@/config/api';
 import type { PaginatedResponse } from '@/types/base';
+import { mensagemDoBackend } from '@/utils/api-error';
 
 // ✅ INTERFACES
 
@@ -73,10 +73,6 @@ interface ProprietarioDaRota {
   tipo?: ProprietarioBasico['tipo'];
 }
 
-/** A mensagem que o backend mandou no corpo do erro, se mandou. */
-function mensagemDoBackend(error: unknown): string | undefined {
-  return isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined;
-}
 
 // ✅ SERVICE CLASS
 

@@ -413,29 +413,25 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
     setDuplicarDe(null);
   };
 
+  // O erro de salvar sobe para o sheet, que mostra o motivo do backend e fica
+  // aberto. Antes era engolido aqui: o sheet seguia como se tivesse salvo
+  // (gravava a posicao e fechava, perdendo o que foi digitado) — revisao do SN-12.
   const handleSubmitUC = async (data: DadosDoFormulario) => {
-    try {
+    let criado: Equipamento | null = null;
 
-      let criado: Equipamento | null = null;
-
-      if (modalUC.mode === 'create') {
-        criado = await createEquipamento(data);
-      } else if (modalUC.mode === 'edit' && modalUC.entity) {
-        await updateEquipamento(modalUC.entity.id, data);
-      }
-
-      // Recarregar dados após salvar
-      await loadEquipamentos(filters);
-
-      // Quem fecha o sheet é o próprio sheet: depois de criar, ele ainda tem
-      // trabalho a fazer com o id novo (subir a foto, os anexos e vincular o
-      // plano). Fechar aqui o desmontaria no meio disso.
-      return criado;
-
-    } catch (error) {
-      console.error('❌ [EQUIPAMENTOS PAGE] Erro ao salvar equipamento UC:', error);
-      alert(`Erro ao salvar equipamento: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    if (modalUC.mode === 'create') {
+      criado = await createEquipamento(data);
+    } else if (modalUC.mode === 'edit' && modalUC.entity) {
+      await updateEquipamento(modalUC.entity.id, data);
     }
+
+    // Recarregar dados após salvar
+    await loadEquipamentos(filters);
+
+    // Quem fecha o sheet é o próprio sheet: depois de criar, ele ainda tem
+    // trabalho a fazer com o id novo (subir a foto, os anexos e vincular o
+    // plano). Fechar aqui o desmontaria no meio disso.
+    return criado;
   };
 
   // ============================================================================
@@ -452,24 +448,22 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
     setDuplicarDe(null);
   };
 
+  // Como no UC: o erro sobe para o sheet. Aqui ele so era logado, e o sheet
+  // ficava aberto sem aviso nenhum.
   const handleSubmitUAR = async (data: DadosDoComponenteUAR) => {
-    try {
-      let criado: Equipamento | null = null;
+    let criado: Equipamento | null = null;
 
-      if (modalUAR.mode === 'create') {
-        criado = await createEquipamento(data);
-      } else if (modalUAR.mode === 'edit' && modalUAR.entity) {
-        await updateEquipamento(modalUAR.entity.id, data);
-      }
-
-      closeUARModal();
-      await loadEquipamentos(filters);
-
-      // Devolvido para o sheet subir a foto que ficou pendente ate existir id.
-      return criado;
-    } catch (error) {
-      console.error('Erro ao salvar componente UAR:', error);
+    if (modalUAR.mode === 'create') {
+      criado = await createEquipamento(data);
+    } else if (modalUAR.mode === 'edit' && modalUAR.entity) {
+      await updateEquipamento(modalUAR.entity.id, data);
     }
+
+    closeUARModal();
+    await loadEquipamentos(filters);
+
+    // Devolvido para o sheet subir a foto que ficou pendente ate existir id.
+    return criado;
   };
 
   /** O lote nao passa pelo onSubmit: cria os N por endpoint proprio. */
@@ -482,7 +476,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
   // HANDLER PARA SALVAR UARs (usado pelo EquipamentoUCModal)
   // ============================================================================
   const handleSalvarUARs = async (ucId: string, uars: Equipamento[]) => {
-    const result = await salvarComponentesUARLote(ucId, uars);
+    await salvarComponentesUARLote(ucId, uars);
     await loadEquipamentos(filters);
   };
 
