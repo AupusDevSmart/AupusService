@@ -5,6 +5,7 @@ import { EstadoSelectField } from '../components/EstadoSelectField';
 import { AnexosConcessionariaField } from '../components/AnexosConcessionariaField';
 import type { AnexoItem } from '../types';
 import { HoraField } from '../components/HoraField';
+import { horarioObrigatorio } from '@/core/features/concessionarias/utils/formulario';
 
 export const concessionariasFormFields: FormField[] = [
   {
@@ -52,6 +53,7 @@ export const concessionariasFormFields: FormField[] = [
     label: 'Ponta — Início',
     type: 'custom',
     component: HoraField,
+    validation: horarioObrigatorio,
     group: 'horarios',
     defaultValue: 18,
   },
@@ -60,6 +62,7 @@ export const concessionariasFormFields: FormField[] = [
     label: 'Ponta — Fim',
     type: 'custom',
     component: HoraField,
+    validation: horarioObrigatorio,
     group: 'horarios',
     defaultValue: 21,
   },
@@ -68,6 +71,7 @@ export const concessionariasFormFields: FormField[] = [
     label: 'Reservado — Início',
     type: 'custom',
     component: HoraField,
+    validation: horarioObrigatorio,
     group: 'horarios',
     defaultValue: 21.5,
   },
@@ -76,6 +80,7 @@ export const concessionariasFormFields: FormField[] = [
     label: 'Reservado — Fim (dia seguinte)',
     type: 'custom',
     component: HoraField,
+    validation: horarioObrigatorio,
     group: 'horarios',
     defaultValue: 6,
   },

@@ -43,6 +43,14 @@ export interface AnexoConcessionaria {
   created_at: string;
 }
 
+/** Horarios dos postos tarifarios, em hora decimal (17.5 = 17:30). */
+export interface HorariosDaConcessionaria {
+  hora_inicio_ponta?: number;
+  hora_fim_ponta?: number;
+  hora_inicio_reservado?: number;
+  hora_fim_reservado?: number;
+}
+
 export interface ConcessionariaResponse {
   id: string;
   nome: string;
@@ -53,6 +61,11 @@ export interface ConcessionariaResponse {
   a4_verde: TarifasA4Verde;
   a3a_verde: TarifasA3aVerde;
   b: TarifasB;
+  /** Decimal do banco: chega como texto ("17.5" = 17:30) */
+  hora_inicio_ponta?: number | string | null;
+  hora_fim_ponta?: number | string | null;
+  hora_inicio_reservado?: number | string | null;
+  hora_fim_reservado?: number | string | null;
   anexos: AnexoConcessionaria[];
   created_at: string;
   updated_at: string;
@@ -67,7 +80,7 @@ export interface FindAllConcessionariasParams {
   orderDirection?: 'asc' | 'desc';
 }
 
-export interface CreateConcessionariaDto {
+export interface CreateConcessionariaDto extends HorariosDaConcessionaria {
   nome: string;
   estado: string;
   numero_reh?: string;

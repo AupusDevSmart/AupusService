@@ -10,8 +10,9 @@ import { Plus, Zap, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/core/hooks/useGenericModal';
 import { toast } from '@/core/hooks/use-toast';
 import { isAxiosError } from 'axios';
-import { ehAnexoTemporario, type AnexoItem, type ConcessionariasFilters, type TarifasDoFormulario } from '../types';
-import type { ConcessionariaResponse, CreateConcessionariaDto } from '@/services/concessionarias.services';
+import { ehAnexoTemporario, type ConcessionariasFilters } from '../types';
+import type { ConcessionariaResponse } from '@/services/concessionarias.services';
+import { doFormulario, paraApi, type ConcessionariaDoFormulario } from '@/core/features/concessionarias/utils/formulario';
 import { concessionariasTableColumns } from '../config/table-config';
 import { useConcessionariasFilters } from '../hooks/useConcessionariasFilters';
 import { concessionariasFormFields } from '../config/form-config';
@@ -24,63 +25,6 @@ const initialFilters: ConcessionariasFilters = {
   estado: 'all',
   page: 1,
   limit: LINHAS_POR_PAGINA_PADRAO
-};
-
-/** O formulario de concessionaria: as tarifas ficam agrupadas em `tarifas`. */
-interface ConcessionariaDoFormulario {
-  id?: string;
-  nome?: string;
-  estado?: string;
-  numero_reh?: string;
-  /** Obrigatorias no formulario (o BaseModal cobra antes do submit). */
-  data_inicio: string;
-  data_validade: string;
-  tarifas?: TarifasDoFormulario;
-  anexos?: AnexoItem[];
-}
-
-// ✅ HELPER: Transformar dados do formulário para API
-const transformFormDataToAPI = (data: ConcessionariaDoFormulario): CreateConcessionariaDto => {
-  const transformedData: CreateConcessionariaDto = {
-    nome: (data.nome || '').trim(),
-    estado: (data.estado || '').toUpperCase(),
-    numero_reh: (data.numero_reh || '').trim() || undefined,
-    data_inicio: data.data_inicio,
-    data_validade: data.data_validade,
-  };
-
-  // Adicionar tarifas se existirem
-  if (data.tarifas) {
-    if (data.tarifas.a4_verde) {
-      transformedData.a4_verde = data.tarifas.a4_verde;
-    }
-    if (data.tarifas.a3a_verde) {
-      transformedData.a3a_verde = data.tarifas.a3a_verde;
-    }
-    if (data.tarifas.b) {
-      transformedData.b = data.tarifas.b;
-    }
-  }
-
-  return transformedData;
-};
-
-// ✅ HELPER: Transformar dados da API para o formulário
-const transformAPIToFormData = (concessionaria: ConcessionariaResponse): ConcessionariaDoFormulario & { id: string } => {
-  return {
-    id: concessionaria.id,
-    nome: concessionaria.nome,
-    estado: concessionaria.estado || '',
-    numero_reh: concessionaria.numero_reh || '',
-    data_inicio: concessionaria.data_inicio.split('T')[0],
-    data_validade: concessionaria.data_validade.split('T')[0],
-    tarifas: {
-      a4_verde: concessionaria.a4_verde,
-      a3a_verde: concessionaria.a3a_verde,
-      b: concessionaria.b
-    },
-    anexos: concessionaria.anexos || []
-  };
 };
 
 export function ConcessionariasPage() {
@@ -246,7 +190,7 @@ export function ConcessionariasPage() {
     setIsSubmitting(true);
 
     try {
-      const transformedData = transformFormDataToAPI(data);
+      const transformedData = paraApi(data);
 
       if (modalState.mode === 'create') {
         // 1. Criar a concessionária
@@ -341,7 +285,7 @@ export function ConcessionariasPage() {
     }
 
     // Transformar dados da API para formato do formulário
-    return modalState.entity ? transformAPIToFormData(modalState.entity) : null;
+    return modalState.entity ? doFormulario(modalState.entity) : null;
   };
 
   // ✅ CALCULAR PAGINAÇÃO
