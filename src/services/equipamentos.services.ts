@@ -54,7 +54,7 @@ export interface CreateEquipamentoApiData {
   }[];
 }
 
-export interface UpdateEquipamentoApiData extends Partial<CreateEquipamentoApiData> {}
+export type UpdateEquipamentoApiData = Partial<CreateEquipamentoApiData>;
 
 export interface EquipamentoApiResponse {
   id: string;
@@ -320,16 +320,9 @@ export class EquipamentosApiService {
   // console.log('🚀 API SERVICE: create iniciado');
   // console.log('🚀 API SERVICE: Dados para enviar:', JSON.stringify(data, null, 2));
 
-  try {
-    const response = await api.post<EquipamentoApiResponse>(this.baseEndpoint, data);
-    // console.log('✅ API SERVICE: Resposta recebida:', response.data);
-    return response.data;
-  } catch (error) {
-    // console.log('💥 API SERVICE: Erro capturado:', error);
-    // console.log('💥 API SERVICE: Mensagem específica da API:', error.response?.data?.message);
-    // console.log('💥 API SERVICE: Data completo:', JSON.stringify(error.response?.data, null, 2));
-    throw error;
-  }
+  const response = await api.post<EquipamentoApiResponse>(this.baseEndpoint, data);
+  // console.log('✅ API SERVICE: Resposta recebida:', response.data);
+  return response.data;
 }
 
   /**

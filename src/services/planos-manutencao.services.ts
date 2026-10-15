@@ -20,7 +20,7 @@ export interface CreatePlanoManutencaoApiData {
   criado_por?: string;              // Opcional - ID do usuário criador
 }
 
-export interface UpdatePlanoManutencaoApiData extends Partial<CreatePlanoManutencaoApiData> {}
+export type UpdatePlanoManutencaoApiData = Partial<CreatePlanoManutencaoApiData>;
 
 export interface VincularPlanoApiData {
   equipamento_id: string;
@@ -254,109 +254,83 @@ export class PlanosManutencaoApiService {
   async create(data: CreatePlanoManutencaoApiData): Promise<PlanoManutencaoApiResponse> {
     // console.log('🚀 PLANOS API: Criando plano de manutenção:', data);
     
-    try {
-      const response = await api.post<PlanoManutencaoApiResponse>(this.baseEndpoint, data);
-      // console.log('✅ PLANOS API: Plano criado com sucesso:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 PLANOS API: Erro ao criar plano:', error);
-      // console.error('💥 PLANOS API: Detalhes do erro:', error.response?.data);
-      throw error;
-    }
+    const response = await api.post<PlanoManutencaoApiResponse>(this.baseEndpoint, data);
+    // console.log('✅ PLANOS API: Plano criado com sucesso:', response.data);
+    return response.data;
   }
 
   async findAll(params?: QueryPlanosApiParams): Promise<PlanosListApiResponse> {
     // console.log('🔍 PLANOS API: Listando planos com parâmetros:', params);
     
-    try {
-      // As duas formas em que a listagem pode chegar; ver a traducao abaixo.
-      const response = await api.get<
-        | PlanosListApiResponse
-        | {
-            data?: PlanoManutencaoApiResponse[];
-            total?: number;
-            page?: number;
-            limit?: number;
-            totalPages?: number;
-            pages?: number;
-            pagination?: undefined;
-          }
-      >(this.baseEndpoint, {
-        params: {
-          page: params?.page || 1,
-          limit: params?.limit || 10,
-          ...params
+    // As duas formas em que a listagem pode chegar; ver a traducao abaixo.
+    const response = await api.get<
+      | PlanosListApiResponse
+      | {
+          data?: PlanoManutencaoApiResponse[];
+          total?: number;
+          page?: number;
+          limit?: number;
+          totalPages?: number;
+          pages?: number;
+          pagination?: undefined;
         }
-      });
+    >(this.baseEndpoint, {
+      params: {
+        page: params?.page || 1,
+        limit: params?.limit || 10,
+        ...params
+      }
+    });
 
-      /**
-       * O backend responde a paginacao no NIVEL DE CIMA —
-       * `{ data, total, page, limit, totalPages }` — e nao dentro de
-       * `pagination`, que e o que PlanosListApiResponse declara e o hook le.
-       *
-       * Sem esta traducao `response.pagination` era sempre undefined: total 0,
-       * zero paginas, e a tabela de planos nunca mostrou paginacao. Com mais
-       * templates que o limite, os excedentes ficavam inalcancaveis — com 10 por
-       * pagina e 13 templates, tres sumiam sem aviso.
-       *
-       * Aceita as duas formas para nao quebrar se o backend passar a aninhar.
-       */
-      const corpo = response.data;
-      if (corpo?.pagination) return corpo as PlanosListApiResponse;
+    /**
+     * O backend responde a paginacao no NIVEL DE CIMA —
+     * `{ data, total, page, limit, totalPages }` — e nao dentro de
+     * `pagination`, que e o que PlanosListApiResponse declara e o hook le.
+     *
+     * Sem esta traducao `response.pagination` era sempre undefined: total 0,
+     * zero paginas, e a tabela de planos nunca mostrou paginacao. Com mais
+     * templates que o limite, os excedentes ficavam inalcancaveis — com 10 por
+     * pagina e 13 templates, tres sumiam sem aviso.
+     *
+     * Aceita as duas formas para nao quebrar se o backend passar a aninhar.
+     */
+    const corpo = response.data;
+    if (corpo?.pagination) return corpo as PlanosListApiResponse;
 
-      return {
-        data: corpo?.data ?? [],
-        pagination: {
-          page: corpo?.page ?? params?.page ?? 1,
-          limit: corpo?.limit ?? params?.limit ?? 10,
-          total: corpo?.total ?? 0,
-          pages: corpo?.totalPages ?? corpo?.pages ?? 0
-        }
-      };
-    } catch (error) {
-      // console.error('💥 PLANOS API: Erro ao listar planos:', error);
-      throw error;
-    }
+    return {
+      data: corpo?.data ?? [],
+      pagination: {
+        page: corpo?.page ?? params?.page ?? 1,
+        limit: corpo?.limit ?? params?.limit ?? 10,
+        total: corpo?.total ?? 0,
+        pages: corpo?.totalPages ?? corpo?.pages ?? 0
+      }
+    };
   }
 
   async findOne(id: string, incluirTarefas?: boolean): Promise<PlanoManutencaoApiResponse> {
     // console.log('🔍 PLANOS API: Buscando plano por ID:', id);
     
-    try {
-      const response = await api.get<PlanoManutencaoApiResponse>(`${this.baseEndpoint}/${id}`, {
-        params: { incluirTarefas }
-      });
-      // console.log('✅ PLANOS API: Plano encontrado:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 PLANOS API: Erro ao buscar plano:', error);
-      throw error;
-    }
+    const response = await api.get<PlanoManutencaoApiResponse>(`${this.baseEndpoint}/${id}`, {
+      params: { incluirTarefas }
+    });
+    // console.log('✅ PLANOS API: Plano encontrado:', response.data);
+    return response.data;
   }
 
   async update(id: string, data: UpdatePlanoManutencaoApiData): Promise<PlanoManutencaoApiResponse> {
     // console.log('🔄 PLANOS API: Atualizando plano:', id, data);
     
-    try {
-      const response = await api.put<PlanoManutencaoApiResponse>(`${this.baseEndpoint}/${id}`, data);
-      // console.log('✅ PLANOS API: Plano atualizado:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 PLANOS API: Erro ao atualizar plano:', error);
-      throw error;
-    }
+    const response = await api.put<PlanoManutencaoApiResponse>(`${this.baseEndpoint}/${id}`, data);
+    // console.log('✅ PLANOS API: Plano atualizado:', response.data);
+    return response.data;
   }
 
   async remove(id: string): Promise<void> {
     // console.log('🗑️ PLANOS API: Excluindo plano:', id);
     
-    try {
-      await api.delete(`${this.baseEndpoint}/${id}`);
-      // console.log('✅ PLANOS API: Plano excluído com sucesso');
-    } catch (error) {
-      // console.error('💥 PLANOS API: Erro ao excluir plano:', error);
-      throw error;
-    }
+    await api.delete(`${this.baseEndpoint}/${id}`);
+    // console.log('✅ PLANOS API: Plano excluído com sucesso');
   }
 
   // ============================================================================
@@ -366,29 +340,19 @@ export class PlanosManutencaoApiService {
   async getDashboard(): Promise<DashboardPlanosDto> {
     // console.log('📊 PLANOS API: Obtendo dashboard');
     
-    try {
-      const response = await api.get<DashboardPlanosDto>(`${this.baseEndpoint}/dashboard`);
-      // console.log('✅ PLANOS API: Dashboard obtido:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 PLANOS API: Erro ao obter dashboard:', error);
-      throw error;
-    }
+    const response = await api.get<DashboardPlanosDto>(`${this.baseEndpoint}/dashboard`);
+    // console.log('✅ PLANOS API: Dashboard obtido:', response.data);
+    return response.data;
   }
 
   async findByEquipamento(equipamentoId: string): Promise<PlanoManutencaoApiResponse> {
     // console.log('🔍 PLANOS API: Buscando plano por equipamento:', equipamentoId);
 
-    try {
-      const response = await api.get<PlanoManutencaoApiResponse>(
-        `${this.baseEndpoint}/por-equipamento/${equipamentoId}`
-      );
-      // console.log('✅ PLANOS API: Plano do equipamento encontrado:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 PLANOS API: Erro ao buscar plano do equipamento:', error);
-      throw error;
-    }
+    const response = await api.get<PlanoManutencaoApiResponse>(
+      `${this.baseEndpoint}/por-equipamento/${equipamentoId}`
+    );
+    // console.log('✅ PLANOS API: Plano do equipamento encontrado:', response.data);
+    return response.data;
   }
 
   async findByPlanta(plantaId: string, params?: QueryPlanosPorPlantaParams): Promise<PlanosListApiResponse> {
@@ -449,46 +413,31 @@ export class PlanosManutencaoApiService {
       limit: params?.limit || 10
     };
 
-    try {
-      const response = await api.get<PlanosListApiResponse>(
-        `${this.baseEndpoint}/por-unidade/${unidadeId}`,
-        { params: finalParams }
-      );
-      // console.log('✅ PLANOS API: Planos da unidade encontrados:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 PLANOS API: Erro ao buscar planos da unidade:', error);
-      throw error;
-    }
+    const response = await api.get<PlanosListApiResponse>(
+      `${this.baseEndpoint}/por-unidade/${unidadeId}`,
+      { params: finalParams }
+    );
+    // console.log('✅ PLANOS API: Planos da unidade encontrados:', response.data);
+    return response.data;
   }
 
   async getResumo(id: string): Promise<PlanoResumoDto> {
     // console.log('📋 PLANOS API: Obtendo resumo do plano:', id);
     
-    try {
-      const response = await api.get<PlanoResumoDto>(`${this.baseEndpoint}/${id}/resumo`);
-      // console.log('✅ PLANOS API: Resumo obtido:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 PLANOS API: Erro ao obter resumo:', error);
-      throw error;
-    }
+    const response = await api.get<PlanoResumoDto>(`${this.baseEndpoint}/${id}/resumo`);
+    // console.log('✅ PLANOS API: Resumo obtido:', response.data);
+    return response.data;
   }
 
   async duplicar(id: string, data: DuplicarPlanoApiData): Promise<PlanoManutencaoApiResponse> {
     // console.log('📋 PLANOS API: Duplicando plano:', id, data);
 
-    try {
-      const response = await api.post<PlanoManutencaoApiResponse>(
-        `${this.baseEndpoint}/${id}/duplicar`,
-        data
-      );
-      // console.log('✅ PLANOS API: Plano duplicado:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 PLANOS API: Erro ao duplicar plano:', error);
-      throw error;
-    }
+    const response = await api.post<PlanoManutencaoApiResponse>(
+      `${this.baseEndpoint}/${id}/duplicar`,
+      data
+    );
+    // console.log('✅ PLANOS API: Plano duplicado:', response.data);
+    return response.data;
   }
 
   async clonarLote(id: string, data: ClonarPlanoLoteDto): Promise<ClonarPlanoLoteResponseDto> {

@@ -57,29 +57,24 @@ class AnexosAnomaliasApiService {
       formData.append('descricao', descricao);
     }
 
-    try {
-      const response = await api.post(
-        `${this.baseUrl}/${anomaliaId}/anexos`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          onUploadProgress: (progressEvent) => {
-            if (onProgress && progressEvent.total) {
-              const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-              onProgress(progress);
-            }
-          },
-        }
-      );
+    const response = await api.post(
+      `${this.baseUrl}/${anomaliaId}/anexos`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(progress);
+          }
+        },
+      }
+    );
 
-      // console.log('✅ [AnexosService] Upload concluído:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('❌ [AnexosService] Erro no upload:', error);
-      throw error;
-    }
+    // console.log('✅ [AnexosService] Upload concluído:', response.data);
+    return response.data;
   }
 
   // ==========================================
@@ -117,37 +112,32 @@ class AnexosAnomaliasApiService {
   async downloadAnexo(anexoId: string): Promise<void> {
     // console.log('⬇️ [AnexosService] Iniciando download:', anexoId);
 
-    try {
-      const response = await api.get(`/anomalias/anexos/${anexoId}/download`, {
-        responseType: 'blob',
-      });
+    const response = await api.get(`/anomalias/anexos/${anexoId}/download`, {
+      responseType: 'blob',
+    });
 
-      // Extrair nome do arquivo do header Content-Disposition
-      const contentDisposition = response.headers['content-disposition'];
-      let fileName = `anexo-${anexoId}`;
-      
-      if (contentDisposition) {
-        const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (fileNameMatch && fileNameMatch[1]) {
-          fileName = fileNameMatch[1].replace(/['"]/g, '');
-        }
+    // Extrair nome do arquivo do header Content-Disposition
+    const contentDisposition = response.headers['content-disposition'];
+    let fileName = `anexo-${anexoId}`;
+    
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (fileNameMatch && fileNameMatch[1]) {
+        fileName = fileNameMatch[1].replace(/['"]/g, '');
       }
-
-      // Criar URL temporária e fazer download
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-
-      // console.log('✅ [AnexosService] Download concluído:', fileName);
-    } catch (error) {
-      // console.error('❌ [AnexosService] Erro no download:', error);
-      throw error;
     }
+
+    // Criar URL temporária e fazer download
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    // console.log('✅ [AnexosService] Download concluído:', fileName);
   }
 
   // ==========================================

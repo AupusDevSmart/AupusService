@@ -120,7 +120,7 @@ export interface CreateUnidadeDto {
 /**
  * DTO para atualizar unidade
  */
-export interface UpdateUnidadeDto extends Partial<CreateUnidadeDto> {}
+export type UpdateUnidadeDto = Partial<CreateUnidadeDto>;
 
 // ===== FILTROS E QUERIES =====
 
@@ -299,7 +299,6 @@ export const formDataToDto = (formData: UnidadeFormData): CreateUnidadeDto => {
   // ✅ CRÍTICO: Só adicionar concessionaria_id se houver valor
   if (concessionariaId) {
     dto.concessionaria_id = concessionariaId;
-  } else {
   }
 
   // ✅ Adicionar numero_uc se houver valor

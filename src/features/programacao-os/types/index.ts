@@ -293,7 +293,7 @@ export interface CreateProgramacaoDto {
   itens_orcamento?: Omit<ItemOrcamento, 'id'>[];
 }
 
-export interface UpdateProgramacaoDto extends Partial<CreateProgramacaoDto> {}
+export type UpdateProgramacaoDto = Partial<CreateProgramacaoDto>;
 
 // ========================================
 // FILTROS

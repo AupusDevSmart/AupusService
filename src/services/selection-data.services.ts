@@ -86,111 +86,99 @@ export class SelectionDataService {
   // PROPRIETÁRIOS - TODOS OS USUÁRIOS COM ROLES VÁLIDAS
   // ============================================================================
   async getProprietarios(): Promise<ProprietarioSelection[]> {
-    try {
-      // console.log('🔍 [SELECTION] Buscando todos os proprietários...');
+    // console.log('🔍 [SELECTION] Buscando todos os proprietários...');
 
-      // Buscar TODOS os usuários com roles válidas
-      const response = await api.get<UsuarioDaApi[] | { data?: UsuarioDaApi[] }>('/usuarios', {
-        params: {
-          roles: 'admin,gerente,proprietario',
-          limit: 1000  // Buscar todos
-        }
-      });
-
-      const usuariosData = response.data;
-      const usuarios: UsuarioDaApi[] = (Array.isArray(usuariosData) ? usuariosData : usuariosData.data) || [];
-
-      if (usuarios.length === 0) {
-        console.warn('⚠️ [SELECTION] Nenhum proprietário cadastrado no sistema. Cadastre usuários com roles admin/gerente/proprietario.');
-        return [];
+    // Buscar TODOS os usuários com roles válidas
+    const response = await api.get<UsuarioDaApi[] | { data?: UsuarioDaApi[] }>('/usuarios', {
+      params: {
+        roles: 'admin,gerente,proprietario',
+        limit: 1000  // Buscar todos
       }
+    });
 
-      // Mapear usuários para formato de proprietários
-      const proprietarios: ProprietarioSelection[] = usuarios.map((usuario) => ({
-        id: usuario.id,
-        nome: usuario.nome,
-        cpf_cnpj: usuario.cpf_cnpj || '',
-        tipo: this.detectTipoPessoa(usuario.cpf_cnpj),
-        email: usuario.email,
-        telefone: usuario.telefone,
-        cidade: usuario.cidade,
-        estado: usuario.estado,
-        totalPlantas: 0, // Não precisamos contar plantas aqui
-        label: `${usuario.nome}${usuario.cpf_cnpj ? ` (${UsuariosService.formatCpfCnpj(usuario.cpf_cnpj)})` : ''}`
-      }));
+    const usuariosData = response.data;
+    const usuarios: UsuarioDaApi[] = (Array.isArray(usuariosData) ? usuariosData : usuariosData.data) || [];
 
-      // Ordenar por nome
-      proprietarios.sort((a, b) => a.nome.localeCompare(b.nome));
-
-      // console.log('✅ [SELECTION] Proprietários carregados:', proprietarios.length);
-
-      return proprietarios;
-
-    } catch (error) {
-      // console.error('❌ [SELECTION] Erro ao carregar proprietários:', error);
-      throw error;
+    if (usuarios.length === 0) {
+      console.warn('⚠️ [SELECTION] Nenhum proprietário cadastrado no sistema. Cadastre usuários com roles admin/gerente/proprietario.');
+      return [];
     }
+
+    // Mapear usuários para formato de proprietários
+    const proprietarios: ProprietarioSelection[] = usuarios.map((usuario) => ({
+      id: usuario.id,
+      nome: usuario.nome,
+      cpf_cnpj: usuario.cpf_cnpj || '',
+      tipo: this.detectTipoPessoa(usuario.cpf_cnpj),
+      email: usuario.email,
+      telefone: usuario.telefone,
+      cidade: usuario.cidade,
+      estado: usuario.estado,
+      totalPlantas: 0, // Não precisamos contar plantas aqui
+      label: `${usuario.nome}${usuario.cpf_cnpj ? ` (${UsuariosService.formatCpfCnpj(usuario.cpf_cnpj)})` : ''}`
+    }));
+
+    // Ordenar por nome
+    proprietarios.sort((a, b) => a.nome.localeCompare(b.nome));
+
+    // console.log('✅ [SELECTION] Proprietários carregados:', proprietarios.length);
+
+    return proprietarios;
   }
 
   // ============================================================================
   // PLANTAS - DINÂMICO POR PROPRIETÁRIO
   // ============================================================================
   async getPlantas(proprietarioId?: string): Promise<PlantaSelection[]> {
-    try {
-      // console.log('🔍 [SELECTION] Carregando plantas para proprietário:', proprietarioId);
-      
-      if (!proprietarioId || proprietarioId === 'all') {
-        // console.log('⚠️ [SELECTION] Proprietário não especificado, retornando array vazio');
-        return [];
-      }
-
-      // Buscar plantas do proprietário específico com paginação
-      let todasPlantas: PlantaResponse[] = [];
-      let page = 1;
-      let hasMore = true;
-      
-      while (hasMore) {
-        const plantasPage = await PlantasService.getAllPlantas({
-          proprietarioId,
-          limit: 100,
-          page: page
-        });
-        
-        if (!plantasPage.data || plantasPage.data.length === 0) {
-          hasMore = false;
-        } else {
-          todasPlantas = [...todasPlantas, ...plantasPage.data];
-          hasMore = plantasPage.pagination.page < plantasPage.pagination.totalPages;
-          page++;
-        }
-      }
-
-      if (todasPlantas.length === 0) {
-        console.warn(`⚠️ [SELECTION] Nenhuma planta cadastrada para o proprietário ${proprietarioId}. Cadastre pelo menos uma planta antes de criar equipamentos.`);
-        return [];
-      }
-
-      // Mapear plantas para formato de seleção
-      const plantas: PlantaSelection[] = todasPlantas.map(planta => ({
-        id: planta.id,
-        nome: planta.nome,
-        localizacao: planta.localizacao,
-        cnpj: planta.cnpj,
-        proprietario_id: planta.proprietarioId,
-        label: `${planta.nome} - ${planta.localizacao || 'Localização não informada'}`
-      }));
-
-      // Ordenar por nome
-      plantas.sort((a, b) => a.nome.localeCompare(b.nome));
-
-      // console.log(`✅ [SELECTION] ${plantas.length} plantas carregadas para proprietário ${proprietarioId}`);
-      
-      return plantas;
-
-    } catch (error) {
-      // console.error(`❌ [SELECTION] Erro ao carregar plantas para proprietário ${proprietarioId}:`, error);
-      throw error; // Re-throw ao invés de usar mock
+    // console.log('🔍 [SELECTION] Carregando plantas para proprietário:', proprietarioId);
+    
+    if (!proprietarioId || proprietarioId === 'all') {
+      // console.log('⚠️ [SELECTION] Proprietário não especificado, retornando array vazio');
+      return [];
     }
+
+    // Buscar plantas do proprietário específico com paginação
+    let todasPlantas: PlantaResponse[] = [];
+    let page = 1;
+    let hasMore = true;
+    
+    while (hasMore) {
+      const plantasPage = await PlantasService.getAllPlantas({
+        proprietarioId,
+        limit: 100,
+        page: page
+      });
+      
+      if (!plantasPage.data || plantasPage.data.length === 0) {
+        hasMore = false;
+      } else {
+        todasPlantas = [...todasPlantas, ...plantasPage.data];
+        hasMore = plantasPage.pagination.page < plantasPage.pagination.totalPages;
+        page++;
+      }
+    }
+
+    if (todasPlantas.length === 0) {
+      console.warn(`⚠️ [SELECTION] Nenhuma planta cadastrada para o proprietário ${proprietarioId}. Cadastre pelo menos uma planta antes de criar equipamentos.`);
+      return [];
+    }
+
+    // Mapear plantas para formato de seleção
+    const plantas: PlantaSelection[] = todasPlantas.map(planta => ({
+      id: planta.id,
+      nome: planta.nome,
+      localizacao: planta.localizacao,
+      cnpj: planta.cnpj,
+      proprietario_id: planta.proprietarioId,
+      label: `${planta.nome} - ${planta.localizacao || 'Localização não informada'}`
+    }));
+
+    // Ordenar por nome
+    plantas.sort((a, b) => a.nome.localeCompare(b.nome));
+
+    // console.log(`✅ [SELECTION] ${plantas.length} plantas carregadas para proprietário ${proprietarioId}`);
+    
+    return plantas;
   }
 
   private detectTipoPessoa(documento?: string): 'pessoa_fisica' | 'pessoa_juridica' {
@@ -305,24 +293,19 @@ export class SelectionDataService {
   // EQUIPAMENTOS UC DISPONÍVEIS
   // ============================================================================
   async getEquipamentosUCDisponiveis(plantaId?: string): Promise<SelectionOption[]> {
-    try {
-      const params = plantaId ? { planta_id: plantaId } : {};
-      const response = await api.get<UcDisponivelDaApi[]>('/equipamentos/ucs-disponiveis', { params });
-      
-      if (!response.data || !Array.isArray(response.data)) {
-        console.warn('⚠️ [SELECTION] Nenhum equipamento UC disponível. Resposta da API inválida ou vazia.');
-        return [];
-      }
-
-      return response.data.map((uc) => ({
-        id: String(uc.id),
-        nome: uc.nome || 'UC sem nome',
-        label: uc.nome || 'UC sem nome'
-      })).filter(uc => uc.id);
-    } catch (error) {
-      // console.error('❌ [SELECTION] Erro ao carregar equipamentos UC:', error);
-      throw error; // Re-throw ao invés de usar mock
+    const params = plantaId ? { planta_id: plantaId } : {};
+    const response = await api.get<UcDisponivelDaApi[]>('/equipamentos/ucs-disponiveis', { params });
+    
+    if (!response.data || !Array.isArray(response.data)) {
+      console.warn('⚠️ [SELECTION] Nenhum equipamento UC disponível. Resposta da API inválida ou vazia.');
+      return [];
     }
+
+    return response.data.map((uc) => ({
+      id: String(uc.id),
+      nome: uc.nome || 'UC sem nome',
+      label: uc.nome || 'UC sem nome'
+    })).filter(uc => uc.id);
   }
 }
 

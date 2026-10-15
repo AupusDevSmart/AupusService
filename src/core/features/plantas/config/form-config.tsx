@@ -1,8 +1,6 @@
 // src/features/plantas/config/form-config.tsx - ATUALIZADO COM MÁSCARA CNPJ
 import React from 'react';
 import { FormField, FormFieldProps } from '@/core/types/base';
-import { Button } from '@/core/components/ui/button';
-import { Input } from '@/core/components/ui/input';
 import { CNPJInput, CNPJUtils } from '@/core/components/ui/cnpj-input'; // ✅ Import do novo componente
 import { Factory, Settings, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

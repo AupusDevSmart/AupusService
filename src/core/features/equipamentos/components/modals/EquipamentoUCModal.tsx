@@ -18,6 +18,7 @@ import { Badge } from '@/core/components/ui/badge';
 import { Button } from '@/core/components/ui/button';
 import { Alert, AlertDescription } from '@/core/components/ui/alert';
 import { toast } from 'sonner';
+import { formatApiError } from '@/utils/api-error';
 import { Separator } from '@/core/components/ui/separator';
 import { normalizarTipoEquipamento } from '@/core/features/equipamentos/utils/tipo-equipamento';
 import { PosicaoSelector } from '@/core/features/equipamentos/components/PosicaoSelector';
@@ -27,7 +28,7 @@ import { camposDaCategoria } from '@/core/features/equipamentos/config/campos-po
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/core/components/ui/tabs';
 import { Checkbox } from '@/core/components/ui/checkbox';
 import { Combobox } from '@/core/components/ui/combobox';
-import { Wrench, Save, X, AlertCircle, Loader2, Eye, Edit2, Plus, Minus, Trash2, Component, History, ArrowLeft } from 'lucide-react';
+import { Wrench, Save, X, AlertCircle, Loader2, Eye, Edit2, Plus, Minus, Trash2, History, ArrowLeft } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -703,7 +704,6 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       let dadosCompletos = equipamento;
       if (getEquipamento && equipamento.id) {
         dadosCompletos = await getEquipamento(equipamento.id);
-      } else {
       }
 
 
@@ -823,7 +823,6 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         } else {
           setDadosTecnicosPersonalizados(dadosCompletos.dadosTecnicos);
         }
-      } else {
       }
 
       // Buscar hierarquia completa recursivamente (Unidade → Planta → Proprietário)
@@ -848,9 +847,12 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
                   setProprietarioDetalhes(planta.proprietario);
                 }
               } catch (err) {
+                // Antes era engolido: o sheet abria sem planta e sem proprietário, calado
+                avisar('Não foi possível carregar a planta deste equipamento', formatApiError(err));
               }
             }
           } catch (err) {
+            avisar('Não foi possível carregar a instalação deste equipamento', formatApiError(err));
           }
         }
 

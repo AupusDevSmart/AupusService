@@ -374,7 +374,7 @@ export function BaseForm({
           />
         );
       
-      case 'select':
+      case 'select': {
         // Get options dynamically if getOptions is defined, otherwise use static options
         const selectOptions = field.getOptions
           ? field.getOptions(data)
@@ -407,8 +407,9 @@ export function BaseForm({
             </SelectContent>
           </Select>
         );
+      }
 
-      case 'combobox':
+      case 'combobox': {
         // Get options dynamically if getOptions is defined, otherwise use static options
         // O Combobox compara texto: valor numerico vira string (como na BaseFilters)
         const comboboxOptions = (field.getOptions
@@ -435,6 +436,7 @@ export function BaseForm({
             className={cn(error ? 'border-red-500' : '')}
           />
         );
+      }
 
       case 'checkbox':
         return (

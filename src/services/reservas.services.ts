@@ -48,9 +48,9 @@ export interface ReservaResponse extends BaseReserva {
 
 // Create/Update interfaces: o que o CreateReservaDto aceita. O status nao
 // entra (nasce ativa; muda pelas rotas de status).
-export interface CreateReservaRequest extends Omit<BaseReserva, 'status'> {}
+export type CreateReservaRequest = Omit<BaseReserva, 'status'>;
 
-export interface UpdateReservaRequest extends Partial<CreateReservaRequest> {}
+export type UpdateReservaRequest = Partial<CreateReservaRequest>;
 
 // Query parameters
 export interface QueryReservasParams extends BaseFilters {

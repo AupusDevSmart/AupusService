@@ -60,7 +60,7 @@ export interface CreatePlantaDto {
   };
 }
 
-export interface UpdatePlantaDto extends Partial<CreatePlantaDto> {}
+export type UpdatePlantaDto = Partial<CreatePlantaDto>;
 
 /** Usuario como a rota /plantas/proprietarios devolve (os nomes alternativos cobrem formatos antigos). */
 interface ProprietarioDaRota {

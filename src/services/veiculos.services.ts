@@ -77,9 +77,9 @@ export interface VeiculoResponse extends BaseVeiculo {
 }
 
 // Create/Update interfaces
-export interface CreateVeiculoRequest extends BaseVeiculo {}
+export type CreateVeiculoRequest = BaseVeiculo;
 
-export interface UpdateVeiculoRequest extends Partial<BaseVeiculo> {}
+export type UpdateVeiculoRequest = Partial<BaseVeiculo>;
 
 // Query parameters
 export interface QueryVeiculosParams extends BaseFilters {

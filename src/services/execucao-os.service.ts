@@ -484,46 +484,31 @@ export class ExecucaoOSApiService {
   async findAll(params?: QueryExecucaoOSApiParams): Promise<ExecucaoOSListApiResponse> {
     // console.log('🔍 EXECUCAO-OS API: Listando execuções com parâmetros:', params);
 
-    try {
-      const response = await api.get<ExecucaoOSListApiResponse>(this.baseEndpoint, {
-        params: {
-          page: params?.page || 1,
-          limit: params?.limit || 10,
-          ...params
-        }
-      });
-      // console.log('✅ EXECUCAO-OS API: Execuções listadas:', response.data.pagination);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao listar execuções:', error);
-      throw error;
-    }
+    const response = await api.get<ExecucaoOSListApiResponse>(this.baseEndpoint, {
+      params: {
+        page: params?.page || 1,
+        limit: params?.limit || 10,
+        ...params
+      }
+    });
+    // console.log('✅ EXECUCAO-OS API: Execuções listadas:', response.data.pagination);
+    return response.data;
   }
 
   async findOne(id: string): Promise<OrdemServicoDaApi> {
     // console.log('🔍 EXECUCAO-OS API: Buscando execução por ID:', id);
 
-    try {
-      const response = await api.get<OrdemServicoDaApi>(`${this.baseEndpoint}/${id}`);
-      // console.log('✅ EXECUCAO-OS API: Execução encontrada:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao buscar execução:', error);
-      throw error;
-    }
+    const response = await api.get<OrdemServicoDaApi>(`${this.baseEndpoint}/${id}`);
+    // console.log('✅ EXECUCAO-OS API: Execução encontrada:', response.data);
+    return response.data;
   }
 
   async getDashboard(): Promise<DashboardExecucaoOSDto> {
     // console.log('📊 EXECUCAO-OS API: Obtendo dashboard');
 
-    try {
-      const response = await api.get<DashboardExecucaoOSDto>(`${this.baseEndpoint}/dashboard`);
-      // console.log('✅ EXECUCAO-OS API: Dashboard obtido:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter dashboard:', error);
-      throw error;
-    }
+    const response = await api.get<DashboardExecucaoOSDto>(`${this.baseEndpoint}/dashboard`);
+    // console.log('✅ EXECUCAO-OS API: Dashboard obtido:', response.data);
+    return response.data;
   }
 
   // ============================================================================
@@ -533,141 +518,96 @@ export class ExecucaoOSApiService {
   async iniciar(id: string, data: IniciarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
     // console.log('▶️ EXECUCAO-OS API: Iniciando execução:', id, data);
 
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/iniciar`,
-        data
-      );
-      // console.log('✅ EXECUCAO-OS API: Execução iniciada:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao iniciar execução:', error);
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/iniciar`,
+      data
+    );
+    // console.log('✅ EXECUCAO-OS API: Execução iniciada:', response.data);
+    return response.data;
   }
 
   async pausar(id: string, data: PausarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
     // console.log('⏸️ EXECUCAO-OS API: Pausando execução:', id, data);
 
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/pausar`,
-        data
-      );
-      // console.log('✅ EXECUCAO-OS API: Execução pausada:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao pausar execução:', error);
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/pausar`,
+      data
+    );
+    // console.log('✅ EXECUCAO-OS API: Execução pausada:', response.data);
+    return response.data;
   }
 
   async retomar(id: string, data: RetomarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
     // console.log('▶️ EXECUCAO-OS API: Retomando execução:', id, data);
 
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/retomar`,
-        data
-      );
-      // console.log('✅ EXECUCAO-OS API: Execução retomada:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao retomar execução:', error);
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/retomar`,
+      data
+    );
+    // console.log('✅ EXECUCAO-OS API: Execução retomada:', response.data);
+    return response.data;
   }
 
   async finalizar(id: string, data: FinalizarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
     // console.log('🏁 EXECUCAO-OS API: Finalizando execução:', id, data);
 
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/finalizar`,
-        data
-      );
-      // console.log('✅ EXECUCAO-OS API: Execução finalizada:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao finalizar execução:', error);
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/finalizar`,
+      data
+    );
+    // console.log('✅ EXECUCAO-OS API: Execução finalizada:', response.data);
+    return response.data;
   }
 
   async cancelar(id: string, data: CancelarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/cancelar`,
-        data
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/cancelar`,
+      data
+    );
+    return response.data;
   }
 
   async executar(id: string, data: ExecutarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/executar`,
-        data
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/executar`,
+      data
+    );
+    return response.data;
   }
 
   async auditar(id: string, data: AuditarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/auditar`,
-        data
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/auditar`,
+      data
+    );
+    return response.data;
   }
 
   async reabrir(id: string, data: ReabrirExecucaoApiData): Promise<ExecucaoOSApiResponse> {
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/reabrir`,
-        data
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/reabrir`,
+      data
+    );
+    return response.data;
   }
 
   async finalizarOS(id: string, data: FinalizarExecucaoOSApiData): Promise<ExecucaoOSApiResponse> {
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/finalizar`,
-        data
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/finalizar`,
+      data
+    );
+    return response.data;
   }
 
   async atualizarProgresso(id: string, data: AtualizarProgressoApiData): Promise<ExecucaoOSApiResponse> {
     // console.log('📈 EXECUCAO-OS API: Atualizando progresso:', id, data);
 
-    try {
-      const response = await api.put<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/progresso`,
-        data
-      );
-      // console.log('✅ EXECUCAO-OS API: Progresso atualizado:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao atualizar progresso:', error);
-      throw error;
-    }
+    const response = await api.put<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/progresso`,
+      data
+    );
+    // console.log('✅ EXECUCAO-OS API: Progresso atualizado:', response.data);
+    return response.data;
   }
 
   // ============================================================================
@@ -677,39 +617,29 @@ export class ExecucaoOSApiService {
   async aprovar(id: string, observacoesAprovacao?: string, aprovadoPor?: string): Promise<ExecucaoOSApiResponse> {
     // console.log('✅ EXECUCAO-OS API: Aprovando execução:', id);
 
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/aprovar`,
-        {
-          observacoes_aprovacao: observacoesAprovacao,
-          aprovado_por: aprovadoPor
-        }
-      );
-      // console.log('✅ EXECUCAO-OS API: Execução aprovada:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao aprovar execução:', error);
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/aprovar`,
+      {
+        observacoes_aprovacao: observacoesAprovacao,
+        aprovado_por: aprovadoPor
+      }
+    );
+    // console.log('✅ EXECUCAO-OS API: Execução aprovada:', response.data);
+    return response.data;
   }
 
   async reprovar(id: string, motivoReprovacao: string, reprovadoPor?: string): Promise<ExecucaoOSApiResponse> {
     // console.log('❌ EXECUCAO-OS API: Reprovando execução:', id);
 
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/reprovar`,
-        {
-          motivo_reprovacao: motivoReprovacao,
-          reprovado_por: reprovadoPor
-        }
-      );
-      // console.log('✅ EXECUCAO-OS API: Execução reprovada:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao reprovar execução:', error);
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/reprovar`,
+      {
+        motivo_reprovacao: motivoReprovacao,
+        reprovado_por: reprovadoPor
+      }
+    );
+    // console.log('✅ EXECUCAO-OS API: Execução reprovada:', response.data);
+    return response.data;
   }
 
   // ============================================================================
@@ -719,30 +649,20 @@ export class ExecucaoOSApiService {
   async getTarefas(id: string): Promise<TarefaExecucaoApiResponse[]> {
     // console.log('📋 EXECUCAO-OS API: Obtendo tarefas da execução:', id);
 
-    try {
-      const response = await api.get<TarefaExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/tarefas`);
-      // console.log('✅ EXECUCAO-OS API: Tarefas obtidas:', response.data.length);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter tarefas:', error);
-      throw error;
-    }
+    const response = await api.get<TarefaExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/tarefas`);
+    // console.log('✅ EXECUCAO-OS API: Tarefas obtidas:', response.data.length);
+    return response.data;
   }
 
   async executarTarefa(id: string, tarefaId: string, data: ExecutarTarefaApiData): Promise<TarefaExecucaoApiResponse> {
     // console.log('🔧 EXECUCAO-OS API: Executando tarefa:', id, tarefaId, data);
 
-    try {
-      const response = await api.put<TarefaExecucaoApiResponse>(
-        `${this.baseEndpoint}/${id}/tarefas/${tarefaId}/executar`,
-        data
-      );
-      // console.log('✅ EXECUCAO-OS API: Tarefa executada:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao executar tarefa:', error);
-      throw error;
-    }
+    const response = await api.put<TarefaExecucaoApiResponse>(
+      `${this.baseEndpoint}/${id}/tarefas/${tarefaId}/executar`,
+      data
+    );
+    // console.log('✅ EXECUCAO-OS API: Tarefa executada:', response.data);
+    return response.data;
   }
 
   // ============================================================================
@@ -752,45 +672,30 @@ export class ExecucaoOSApiService {
   async getEquipe(id: string): Promise<EquipeExecucaoApiResponse[]> {
     // console.log('👥 EXECUCAO-OS API: Obtendo equipe da execução:', id);
 
-    try {
-      const response = await api.get<EquipeExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/equipe`);
-      // console.log('✅ EXECUCAO-OS API: Equipe obtida:', response.data.length);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter equipe:', error);
-      throw error;
-    }
+    const response = await api.get<EquipeExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/equipe`);
+    // console.log('✅ EXECUCAO-OS API: Equipe obtida:', response.data.length);
+    return response.data;
   }
 
   async adicionarMembro(id: string, tecnicoId: string, papel: 'RESPONSAVEL' | 'AUXILIAR' | 'SUPERVISOR'): Promise<EquipeExecucaoApiResponse> {
     // console.log('➕ EXECUCAO-OS API: Adicionando membro à equipe:', id, tecnicoId, papel);
 
-    try {
-      const response = await api.post<EquipeExecucaoApiResponse>(
-        `${this.baseEndpoint}/${id}/equipe`,
-        {
-          tecnico_id: tecnicoId,
-          papel: papel
-        }
-      );
-      // console.log('✅ EXECUCAO-OS API: Membro adicionado:', response.data);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao adicionar membro:', error);
-      throw error;
-    }
+    const response = await api.post<EquipeExecucaoApiResponse>(
+      `${this.baseEndpoint}/${id}/equipe`,
+      {
+        tecnico_id: tecnicoId,
+        papel: papel
+      }
+    );
+    // console.log('✅ EXECUCAO-OS API: Membro adicionado:', response.data);
+    return response.data;
   }
 
   async removerMembro(id: string, membroId: string): Promise<void> {
     // console.log('➖ EXECUCAO-OS API: Removendo membro da equipe:', id, membroId);
 
-    try {
-      await api.delete(`${this.baseEndpoint}/${id}/equipe/${membroId}`);
-      // console.log('✅ EXECUCAO-OS API: Membro removido com sucesso');
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao remover membro:', error);
-      throw error;
-    }
+    await api.delete(`${this.baseEndpoint}/${id}/equipe/${membroId}`);
+    // console.log('✅ EXECUCAO-OS API: Membro removido com sucesso');
   }
 
   // ============================================================================
@@ -842,16 +747,11 @@ export class ExecucaoOSApiService {
   }): Promise<unknown> {
     // console.log('📊 EXECUCAO-OS API: Obtendo relatório de performance:', params);
 
-    try {
-      const response = await api.get(`${this.baseEndpoint}/relatorios/performance`, {
-        params
-      });
-      // console.log('✅ EXECUCAO-OS API: Relatório de performance obtido');
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter relatório:', error);
-      throw error;
-    }
+    const response = await api.get(`${this.baseEndpoint}/relatorios/performance`, {
+      params
+    });
+    // console.log('✅ EXECUCAO-OS API: Relatório de performance obtido');
+    return response.data;
   }
 
   async getRelatorioCustos(params?: {
@@ -862,16 +762,11 @@ export class ExecucaoOSApiService {
   }): Promise<unknown> {
     // console.log('💰 EXECUCAO-OS API: Obtendo relatório de custos:', params);
 
-    try {
-      const response = await api.get(`${this.baseEndpoint}/relatorios/custos`, {
-        params
-      });
-      // console.log('✅ EXECUCAO-OS API: Relatório de custos obtido');
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter relatório:', error);
-      throw error;
-    }
+    const response = await api.get(`${this.baseEndpoint}/relatorios/custos`, {
+      params
+    });
+    // console.log('✅ EXECUCAO-OS API: Relatório de custos obtido');
+    return response.data;
   }
 
   async getRelatorioEficiencia(params?: {
@@ -882,16 +777,11 @@ export class ExecucaoOSApiService {
   }): Promise<unknown> {
     // console.log('⚡ EXECUCAO-OS API: Obtendo relatório de eficiência:', params);
 
-    try {
-      const response = await api.get(`${this.baseEndpoint}/relatorios/eficiencia`, {
-        params
-      });
-      // console.log('✅ EXECUCAO-OS API: Relatório de eficiência obtido');
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter relatório:', error);
-      throw error;
-    }
+    const response = await api.get(`${this.baseEndpoint}/relatorios/eficiencia`, {
+      params
+    });
+    // console.log('✅ EXECUCAO-OS API: Relatório de eficiência obtido');
+    return response.data;
   }
 
   // ============================================================================
@@ -901,14 +791,9 @@ export class ExecucaoOSApiService {
   async getPausas(id: string): Promise<PausaExecucaoApiResponse[]> {
     // console.log('⏸️ EXECUCAO-OS API: Obtendo pausas da execução:', id);
 
-    try {
-      const response = await api.get<PausaExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/pausas`);
-      // console.log('✅ EXECUCAO-OS API: Pausas obtidas:', response.data.length);
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter pausas:', error);
-      throw error;
-    }
+    const response = await api.get<PausaExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/pausas`);
+    // console.log('✅ EXECUCAO-OS API: Pausas obtidas:', response.data.length);
+    return response.data;
   }
 
   /** Marca/desmarca itens do checklist (grava na hora; OS em execução ou pausada) */
@@ -945,14 +830,9 @@ export class ExecucaoOSApiService {
   async getHistoricoCompleto(id: string): Promise<unknown> {
     // console.log('📜 EXECUCAO-OS API: Obtendo histórico completo da execução:', id);
 
-    try {
-      const response = await api.get(`${this.baseEndpoint}/${id}/historico`);
-      // console.log('✅ EXECUCAO-OS API: Histórico obtido');
-      return response.data;
-    } catch (error) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter histórico:', error);
-      throw error;
-    }
+    const response = await api.get(`${this.baseEndpoint}/${id}/historico`);
+    // console.log('✅ EXECUCAO-OS API: Histórico obtido');
+    return response.data;
   }
 }
 

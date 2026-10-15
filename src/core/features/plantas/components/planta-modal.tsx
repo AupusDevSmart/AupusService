@@ -6,10 +6,7 @@ import {
   Factory,
   AlertCircle,
   CheckCircle,
-  Trash2,
-  MapPin,
-  Clock,
-  Building2
+  Trash2
 } from 'lucide-react';
 import { ModalMode, PlantaFormData, type Endereco, type Planta } from '../types';
 import { plantasFormFields } from '../config/form-config';

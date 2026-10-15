@@ -5,7 +5,6 @@ import { Button } from '@/core/components/ui/button';
 import {
   Factory,
   AlertCircle,
-  CheckCircle,
   Trash2
 } from 'lucide-react';
 import { ModalMode } from '@/core/types/base';
@@ -14,7 +13,7 @@ import { unidadesFormFields } from '../config/form-config';
 import { AnexosUnidadeField } from './AnexosUnidadeField';
 import { toast } from '@/core/hooks/use-toast';
 import { formatApiError } from '@/utils/api-error';
-import { formDataToDto, unidadeToFormData } from '../types';
+import { formDataToDto } from '../types';
 import {
   AlertDialog,
   AlertDialogAction,

@@ -78,7 +78,7 @@ export interface CreateConcessionariaDto {
   b?: TarifasB;
 }
 
-export interface UpdateConcessionariaDto extends Partial<CreateConcessionariaDto> {}
+export type UpdateConcessionariaDto = Partial<CreateConcessionariaDto>;
 
 /** O que a rota /concessionarias devolve: o total de paginas vem em `pages`. */
 interface ListaDeConcessionariasDaRota {

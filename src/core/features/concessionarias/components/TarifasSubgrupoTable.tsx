@@ -4,7 +4,7 @@ import { Input } from '@/core/components/ui/input';
 import { Label } from '@/core/components/ui/label';
 import { Button } from '@/core/components/ui/button';
 import { Card } from '@/core/components/ui/card';
-import { X, Check, Info } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import { SubgrupoInfo } from '../types';
 
 interface TarifasSubgrupoTableProps {

@@ -40,7 +40,7 @@ export interface CreateFeriadoData {
   plantaIds?: string[];
 }
 
-export interface UpdateFeriadoData extends Partial<CreateFeriadoData> {}
+export type UpdateFeriadoData = Partial<CreateFeriadoData>;
 
 export interface QueryFeriadosParams {
   page?: number;
@@ -102,7 +102,7 @@ export interface CreateConfiguracaoDiasUteisData {
   plantaIds?: string[];
 }
 
-export interface UpdateConfiguracaoDiasUteisData extends Partial<CreateConfiguracaoDiasUteisData> {}
+export type UpdateConfiguracaoDiasUteisData = Partial<CreateConfiguracaoDiasUteisData>;
 
 export interface QueryConfiguracoesDiasUteisParams {
   page?: number;

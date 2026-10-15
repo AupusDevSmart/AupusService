@@ -4,13 +4,6 @@ import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/core/lib/utils"
 import { buttonVariants } from "@/core/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/core/components/ui/select"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 

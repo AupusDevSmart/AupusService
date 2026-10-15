@@ -313,46 +313,38 @@ export class InstrucoesApiService {
   // CRUD
 
   async create(data: CreateInstrucaoApiData): Promise<InstrucaoApiResponse> {
-    try {
-      const payload: CreateInstrucaoApiData = {
-        ...data,
-        ...(data.sub_instrucoes !== undefined && { sub_instrucoes: this.sanitizeSubInstrucoes(data.sub_instrucoes) }),
-        ...(data.recursos !== undefined && { recursos: this.sanitizeRecursos(data.recursos) }),
-      };
-      const response = await api.post<InstrucaoApiResponse>(this.baseEndpoint, payload);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const payload: CreateInstrucaoApiData = {
+      ...data,
+      ...(data.sub_instrucoes !== undefined && { sub_instrucoes: this.sanitizeSubInstrucoes(data.sub_instrucoes) }),
+      ...(data.recursos !== undefined && { recursos: this.sanitizeRecursos(data.recursos) }),
+    };
+    const response = await api.post<InstrucaoApiResponse>(this.baseEndpoint, payload);
+    return response.data;
   }
 
   async findAll(params?: QueryInstrucoesApiParams): Promise<InstrucoesListApiResponse> {
-    try {
-      const cleanParams: Record<string, unknown> = {
-        page: params?.page || 1,
-        limit: params?.limit || 10
-      };
+    const cleanParams: Record<string, unknown> = {
+      page: params?.page || 1,
+      limit: params?.limit || 10
+    };
 
-      if (params) {
-        Object.entries(params).forEach(([key, value]) => {
-          if (key === 'page' || key === 'limit') return;
-          if (value !== undefined && value !== null) {
-            if (typeof value === 'boolean') {
-              if (value === true) cleanParams[key] = value;
-            } else if (value !== '') {
-              cleanParams[key] = value;
-            }
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (key === 'page' || key === 'limit') return;
+        if (value !== undefined && value !== null) {
+          if (typeof value === 'boolean') {
+            if (value === true) cleanParams[key] = value;
+          } else if (value !== '') {
+            cleanParams[key] = value;
           }
-        });
-      }
-
-      const response = await api.get<InstrucoesListApiResponse>(this.baseEndpoint, {
-        params: cleanParams
+        }
       });
-      return response.data;
-    } catch (error) {
-      throw error;
     }
+
+    const response = await api.get<InstrucoesListApiResponse>(this.baseEndpoint, {
+      params: cleanParams
+    });
+    return response.data;
   }
 
   /**
@@ -390,132 +382,80 @@ export class InstrucoesApiService {
   }
 
   async findOne(id: string): Promise<InstrucaoApiResponse> {
-    try {
-      const response = await api.get<InstrucaoApiResponse>(`${this.baseEndpoint}/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get<InstrucaoApiResponse>(`${this.baseEndpoint}/${id}`);
+    return response.data;
   }
 
   async update(id: string, data: UpdateInstrucaoApiData): Promise<InstrucaoApiResponse> {
-    try {
-      const payload: UpdateInstrucaoApiData = {
-        ...data,
-        ...(data.sub_instrucoes !== undefined && { sub_instrucoes: this.sanitizeSubInstrucoes(data.sub_instrucoes) }),
-        ...(data.recursos !== undefined && { recursos: this.sanitizeRecursos(data.recursos) }),
-      };
-      const response = await api.put<InstrucaoApiResponse>(`${this.baseEndpoint}/${id}`, payload);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const payload: UpdateInstrucaoApiData = {
+      ...data,
+      ...(data.sub_instrucoes !== undefined && { sub_instrucoes: this.sanitizeSubInstrucoes(data.sub_instrucoes) }),
+      ...(data.recursos !== undefined && { recursos: this.sanitizeRecursos(data.recursos) }),
+    };
+    const response = await api.put<InstrucaoApiResponse>(`${this.baseEndpoint}/${id}`, payload);
+    return response.data;
   }
 
   async remove(id: string): Promise<void> {
-    try {
-      await api.delete(`${this.baseEndpoint}/${id}`);
-    } catch (error) {
-      throw error;
-    }
+    await api.delete(`${this.baseEndpoint}/${id}`);
   }
 
   // Operacoes especificas
 
   async updateStatus(id: string, data: UpdateStatusInstrucaoApiData): Promise<InstrucaoApiResponse> {
-    try {
-      const response = await api.put<InstrucaoApiResponse>(`${this.baseEndpoint}/${id}/status`, data);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.put<InstrucaoApiResponse>(`${this.baseEndpoint}/${id}/status`, data);
+    return response.data;
   }
 
   async getDashboard(): Promise<DashboardInstrucoesDto> {
-    try {
-      const response = await api.get<DashboardInstrucoesDto>(`${this.baseEndpoint}/dashboard`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get<DashboardInstrucoesDto>(`${this.baseEndpoint}/dashboard`);
+    return response.data;
   }
 
   async listarTarefasDerivadas(id: string): Promise<TarefaDerivadaApiResponse[]> {
-    try {
-      const response = await api.get<TarefaDerivadaApiResponse[]>(`${this.baseEndpoint}/${id}/tarefas`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get<TarefaDerivadaApiResponse[]>(`${this.baseEndpoint}/${id}/tarefas`);
+    return response.data;
   }
 
   // Anomalias
 
   async associarAnomalia(id: string, data: AssociarAnomaliaApiData): Promise<AssociacaoDeAnomaliaApiResponse> {
-    try {
-      const response = await api.post<AssociacaoDeAnomaliaApiResponse>(`${this.baseEndpoint}/${id}/anomalias`, data);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post<AssociacaoDeAnomaliaApiResponse>(`${this.baseEndpoint}/${id}/anomalias`, data);
+    return response.data;
   }
 
   async listarAnomalias(id: string): Promise<AnomaliaAssociadaResponse[]> {
-    try {
-      const response = await api.get<AnomaliaAssociadaResponse[]>(`${this.baseEndpoint}/${id}/anomalias`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get<AnomaliaAssociadaResponse[]>(`${this.baseEndpoint}/${id}/anomalias`);
+    return response.data;
   }
 
   async desassociarAnomalia(id: string, anomaliaId: string): Promise<void> {
-    try {
-      await api.delete(`${this.baseEndpoint}/${id}/anomalias/${anomaliaId}`);
-    } catch (error) {
-      throw error;
-    }
+    await api.delete(`${this.baseEndpoint}/${id}/anomalias/${anomaliaId}`);
   }
 
   // Solicitacoes
 
   async associarSolicitacao(id: string, data: AssociarSolicitacaoApiData): Promise<AssociacaoDeSolicitacaoApiResponse> {
-    try {
-      const response = await api.post<AssociacaoDeSolicitacaoApiResponse>(`${this.baseEndpoint}/${id}/solicitacoes`, data);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post<AssociacaoDeSolicitacaoApiResponse>(`${this.baseEndpoint}/${id}/solicitacoes`, data);
+    return response.data;
   }
 
   async listarSolicitacoes(id: string): Promise<SolicitacaoAssociadaResponse[]> {
-    try {
-      const response = await api.get<SolicitacaoAssociadaResponse[]>(`${this.baseEndpoint}/${id}/solicitacoes`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get<SolicitacaoAssociadaResponse[]>(`${this.baseEndpoint}/${id}/solicitacoes`);
+    return response.data;
   }
 
   async desassociarSolicitacao(id: string, solicitacaoId: string): Promise<void> {
-    try {
-      await api.delete(`${this.baseEndpoint}/${id}/solicitacoes/${solicitacaoId}`);
-    } catch (error) {
-      throw error;
-    }
+    await api.delete(`${this.baseEndpoint}/${id}/solicitacoes/${solicitacaoId}`);
   }
 
   // Anexos
 
   async getAnexos(instrucaoId: string): Promise<AnexoInstrucaoApiResponse[]> {
-    try {
-      const response = await api.get<AnexoInstrucaoApiResponse[]>(
-        `${this.baseEndpoint}/${instrucaoId}/anexos`
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get<AnexoInstrucaoApiResponse[]>(
+      `${this.baseEndpoint}/${instrucaoId}/anexos`
+    );
+    return response.data;
   }
 
   async uploadAnexo(
@@ -524,43 +464,31 @@ export class InstrucoesApiService {
     descricao?: string,
     usuarioId?: string
   ): Promise<AnexoInstrucaoApiResponse> {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      if (descricao) formData.append('descricao', descricao);
-      if (usuarioId) formData.append('usuario_id', usuarioId);
+    const formData = new FormData();
+    formData.append('file', file);
+    if (descricao) formData.append('descricao', descricao);
+    if (usuarioId) formData.append('usuario_id', usuarioId);
 
-      const response = await api.post<AnexoInstrucaoApiResponse>(
-        `${this.baseEndpoint}/${instrucaoId}/anexos/upload`,
-        formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        }
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post<AnexoInstrucaoApiResponse>(
+      `${this.baseEndpoint}/${instrucaoId}/anexos/upload`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      }
+    );
+    return response.data;
   }
 
   async downloadAnexo(instrucaoId: string, anexoId: string): Promise<Blob> {
-    try {
-      const response = await api.get(
-        `${this.baseEndpoint}/${instrucaoId}/anexos/${anexoId}/download`,
-        { responseType: 'blob' }
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(
+      `${this.baseEndpoint}/${instrucaoId}/anexos/${anexoId}/download`,
+      { responseType: 'blob' }
+    );
+    return response.data;
   }
 
   async deleteAnexo(instrucaoId: string, anexoId: string): Promise<void> {
-    try {
-      await api.delete(`${this.baseEndpoint}/${instrucaoId}/anexos/${anexoId}`);
-    } catch (error) {
-      throw error;
-    }
+    await api.delete(`${this.baseEndpoint}/${instrucaoId}/anexos/${anexoId}`);
   }
 }
 

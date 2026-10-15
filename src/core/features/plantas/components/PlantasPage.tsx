@@ -12,7 +12,6 @@ import { InstalacoesExpandedRow } from './InstalacoesExpandedRow';
 import { UnidadeModal } from '@/core/features/unidades/components/unidade-modal';
 import { useUnidades } from '@/core/context/hooks';
 import type { Unidade } from '@/core/features/unidades/types';
-import { Button } from '@/core/components/ui/button';
 import { Plus, Factory, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/core/hooks/useGenericModal';
 import { toast } from '@/core/hooks/use-toast';

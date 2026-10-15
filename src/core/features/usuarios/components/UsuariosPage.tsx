@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/core/components/common/Layout';
 import { TitleCard } from '@/core/components/common/TitleCard';
-import { Button } from '@/core/components/ui/button';
 import { Plus } from 'lucide-react';
 import { UsuariosTable } from './usuarios-table';
 import { UsuariosFilters } from './usuarios-filters';

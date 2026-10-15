@@ -1,6 +1,6 @@
 // src/features/plantas/components/ProprietarioSelector.tsx - ATUALIZADO COM COMBOBOX
 import React, { useEffect, useState } from 'react';
-import { Building2, User, Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/core/components/ui/button';
 import { Combobox, ComboboxOption } from '@/core/components/ui/combobox';
 import { useProprietariosForPlantas, useHttpClient } from '@/core/context/hooks';

@@ -83,7 +83,7 @@ export interface CreateUsuarioRequest {
   permissions?: string[];
 }
 
-export interface UpdateUsuarioRequest extends Partial<CreateUsuarioRequest> {}
+export type UpdateUsuarioRequest = Partial<CreateUsuarioRequest>;
 
 // ============================================================================
 // SERVICE - COM LOGGING MELHORADO

@@ -120,7 +120,7 @@ export interface CreateUnidadeDto {
 /**
  * DTO para atualizar unidade
  */
-export interface UpdateUnidadeDto extends Partial<CreateUnidadeDto> {}
+export type UpdateUnidadeDto = Partial<CreateUnidadeDto>;
 
 // ===== FILTROS E QUERIES =====
 

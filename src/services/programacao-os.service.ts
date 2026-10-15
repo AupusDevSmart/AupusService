@@ -74,7 +74,7 @@ export interface CreateProgramacaoDto {
   itens_orcamento?: ItemOrcamentoProgramacaoDto[];
 }
 
-export interface UpdateProgramacaoDto extends Partial<CreateProgramacaoDto> {}
+export type UpdateProgramacaoDto = Partial<CreateProgramacaoDto>;
 
 export interface AprovarProgramacaoDto {
   observacoes?: string;
@@ -406,16 +406,11 @@ export class ProgramacaoOSApiService {
   async listar(filters?: ProgramacaoFiltersDto): Promise<ListarProgramacoesResponse> {
     // // console.log('🔍 PROGRAMACAO-OS API: Listando programações com filtros:', filters);
 
-    try {
-      const response = await api.get<ListarProgramacoesResponse>(this.baseEndpoint, {
-        params: filters
-      });
-      // // console.log('✅ PROGRAMACAO-OS API: Programações listadas:', response.data.pagination);
-      return response.data;
-    } catch (error) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao listar programações:', error);
-      throw error;
-    }
+    const response = await api.get<ListarProgramacoesResponse>(this.baseEndpoint, {
+      params: filters
+    });
+    // // console.log('✅ PROGRAMACAO-OS API: Programações listadas:', response.data.pagination);
+    return response.data;
   }
 
   async buscarPorId(id: string): Promise<ProgramacaoDetalhesResponse> {
@@ -431,41 +426,25 @@ export class ProgramacaoOSApiService {
   async criar(data: CreateProgramacaoDto): Promise<ProgramacaoResponse> {
     // // console.log('🚀 PROGRAMACAO-OS API: Criando programação:', data);
 
-    try {
-      const response = await api.post<ProgramacaoResponse>(this.baseEndpoint, data);
-      // // console.log('✅ PROGRAMACAO-OS API: Programação criada com sucesso:', response.data);
-      return response.data;
-    } catch (error) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao criar programação:', error);
-      // // console.error('💥 PROGRAMACAO-OS API: Detalhes do erro:', error.response?.data);
-      throw error;
-    }
+    const response = await api.post<ProgramacaoResponse>(this.baseEndpoint, data);
+    // // console.log('✅ PROGRAMACAO-OS API: Programação criada com sucesso:', response.data);
+    return response.data;
   }
 
   async atualizar(id: string, data: UpdateProgramacaoDto): Promise<ProgramacaoResponse> {
     // // console.log('🔄 PROGRAMACAO-OS API: Atualizando programação:', id, data);
 
-    try {
-      const response = await api.patch<ProgramacaoResponse>(`${this.baseEndpoint}/${id}`, data);
-      // // console.log('✅ PROGRAMACAO-OS API: Programação atualizada:', response.data);
-      return response.data;
-    } catch (error) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao atualizar programação:', error);
-      throw error;
-    }
+    const response = await api.patch<ProgramacaoResponse>(`${this.baseEndpoint}/${id}`, data);
+    // // console.log('✅ PROGRAMACAO-OS API: Programação atualizada:', response.data);
+    return response.data;
   }
 
   async deletar(id: string): Promise<{ message: string }> {
     // // console.log('🗑️ PROGRAMACAO-OS API: Deletando programação:', id);
 
-    try {
-      const response = await api.delete<{ message: string }>(`${this.baseEndpoint}/${id}`);
-      // // console.log('✅ PROGRAMACAO-OS API: Programação deletada com sucesso');
-      return response.data;
-    } catch (error) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao deletar programação:', error);
-      throw error;
-    }
+    const response = await api.delete<{ message: string }>(`${this.baseEndpoint}/${id}`);
+    // // console.log('✅ PROGRAMACAO-OS API: Programação deletada com sucesso');
+    return response.data;
   }
 
   // ============================================================================
@@ -473,34 +452,21 @@ export class ProgramacaoOSApiService {
   // ============================================================================
 
   async aprovar(id: string, data: AprovarProgramacaoDto): Promise<{ message: string }> {
-    try {
-      const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/aprovar`, data);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/aprovar`, data);
+    return response.data;
   }
 
   async finalizar(id: string, data: FinalizarProgramacaoDto): Promise<{ message: string }> {
-    try {
-      const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/finalizar`, data);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/finalizar`, data);
+    return response.data;
   }
 
   async cancelar(id: string, data: CancelarProgramacaoDto): Promise<{ message: string }> {
     // // console.log('🚫 PROGRAMACAO-OS API: Cancelando programação:', id, data);
 
-    try {
-      const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/cancelar`, data);
-      // // console.log('✅ PROGRAMACAO-OS API: Programação cancelada:', response.data);
-      return response.data;
-    } catch (error) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao cancelar programação:', error);
-      throw error;
-    }
+    const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/cancelar`, data);
+    // // console.log('✅ PROGRAMACAO-OS API: Programação cancelada:', response.data);
+    return response.data;
   }
 
   // ============================================================================
@@ -510,33 +476,23 @@ export class ProgramacaoOSApiService {
   async criarDeAnomalia(anomaliaId: string, data: CreateProgramacaoAnomaliaDto): Promise<ProgramacaoResponse> {
     // // console.log('📥 PROGRAMACAO-OS API: Criando programação de anomalia:', anomaliaId, data);
 
-    try {
-      const response = await api.post<ProgramacaoResponse>(
-        `${this.baseEndpoint}/from-anomalia/${anomaliaId}`,
-        data
-      );
-      // // console.log('✅ PROGRAMACAO-OS API: Programação criada de anomalia:', response.data);
-      return response.data;
-    } catch (error) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao criar de anomalia:', error);
-      throw error;
-    }
+    const response = await api.post<ProgramacaoResponse>(
+      `${this.baseEndpoint}/from-anomalia/${anomaliaId}`,
+      data
+    );
+    // // console.log('✅ PROGRAMACAO-OS API: Programação criada de anomalia:', response.data);
+    return response.data;
   }
 
   async criarDeTarefas(data: CreateProgramacaoTarefasDto): Promise<ProgramacaoResponse> {
     // // console.log('📥 PROGRAMACAO-OS API: Criando programação de tarefas:', data);
 
-    try {
-      const response = await api.post<ProgramacaoResponse>(
-        `${this.baseEndpoint}/from-tarefas`,
-        data
-      );
-      // // console.log('✅ PROGRAMACAO-OS API: Programação criada de tarefas:', response.data);
-      return response.data;
-    } catch (error) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao criar de tarefas:', error);
-      throw error;
-    }
+    const response = await api.post<ProgramacaoResponse>(
+      `${this.baseEndpoint}/from-tarefas`,
+      data
+    );
+    // // console.log('✅ PROGRAMACAO-OS API: Programação criada de tarefas:', response.data);
+    return response.data;
   }
 
   // ============================================================================
@@ -546,27 +502,17 @@ export class ProgramacaoOSApiService {
   async adicionarTarefas(id: string, data: AdicionarTarefasDto): Promise<{ message: string }> {
     // // console.log('➕ PROGRAMACAO-OS API: Adicionando tarefas à programação:', id, data);
 
-    try {
-      const response = await api.post<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas`, data);
-      // // console.log('✅ PROGRAMACAO-OS API: Tarefas adicionadas:', response.data);
-      return response.data;
-    } catch (error) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao adicionar tarefas:', error);
-      throw error;
-    }
+    const response = await api.post<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas`, data);
+    // // console.log('✅ PROGRAMACAO-OS API: Tarefas adicionadas:', response.data);
+    return response.data;
   }
 
   async atualizarTarefas(id: string, data: AtualizarTarefasDto): Promise<{ message: string }> {
     // // console.log('🔄 PROGRAMACAO-OS API: Atualizando tarefas da programação:', id, data);
 
-    try {
-      const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas`, data);
-      // // console.log('✅ PROGRAMACAO-OS API: Tarefas atualizadas:', response.data);
-      return response.data;
-    } catch (error) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao atualizar tarefas:', error);
-      throw error;
-    }
+    const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas`, data);
+    // // console.log('✅ PROGRAMACAO-OS API: Tarefas atualizadas:', response.data);
+    return response.data;
   }
 
   /** Opções de responsável e técnico: a equipe da planta e o apoio. */
@@ -580,14 +526,9 @@ export class ProgramacaoOSApiService {
   async removerTarefa(id: string, tarefaId: string): Promise<{ message: string }> {
     // // console.log('➖ PROGRAMACAO-OS API: Removendo tarefa da programação:', id, tarefaId);
 
-    try {
-      const response = await api.delete<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas/${tarefaId}`);
-      // // console.log('✅ PROGRAMACAO-OS API: Tarefa removida com sucesso');
-      return response.data;
-    } catch (error) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao remover tarefa:', error);
-      throw error;
-    }
+    const response = await api.delete<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas/${tarefaId}`);
+    // // console.log('✅ PROGRAMACAO-OS API: Tarefa removida com sucesso');
+    return response.data;
   }
 }
 
