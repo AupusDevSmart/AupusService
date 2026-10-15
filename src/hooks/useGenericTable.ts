@@ -7,7 +7,7 @@ interface UseGenericTableProps<T extends BaseEntity, F extends BaseFilters> {
   data: T[];
   initialFilters: F;
   searchFields?: (keyof T)[];
-  customFilters?: Record<string, (item: T, value: any) => boolean>;
+  customFilters?: Record<string, (item: T, value: unknown) => boolean>;
   /**
    * Chave da preferencia "linhas por pagina" desta tabela. Com ela, o tamanho
    * inicial vem do que o usuario escolheu da ultima vez e `handleLimitChange`
@@ -28,6 +28,11 @@ interface UseGenericTableReturn<T, F> {
   /** Troca o tamanho da pagina e volta para a primeira. */
   handleLimitChange: (limit: number) => void;
   resetFilters: () => void;
+}
+
+/** O `?.toString()` de antes: nulo e indefinido ficam sem texto. */
+function textoDe(valor: unknown): string | undefined {
+  return valor === null || valor === undefined ? undefined : String(valor);
 }
 
 export function useGenericTable<T extends BaseEntity, F extends BaseFilters>({
@@ -76,8 +81,8 @@ export function useGenericTable<T extends BaseEntity, F extends BaseFilters>({
         }
         
         // Filtro padrão
-        const itemValue = (item as any)[key];
-        return itemValue === value || itemValue?.toString() === value?.toString();
+        const itemValue: unknown = item[key as keyof T];
+        return itemValue === value || textoDe(itemValue) === textoDe(value);
       });
     });
   }, [data, filters, searchFields, customFilters]);

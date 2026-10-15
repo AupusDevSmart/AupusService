@@ -26,16 +26,18 @@ export interface Planta extends BaseEntity {
 
 export interface Unidade extends BaseEntity {
   id: string;
-  criadoEm: string;
-  plantaId: string;
+  // Opcionais como no transform do hook (features/equipamentos): a unidade
+  // embutida no equipamento so traz id, nome e planta.
+  criadoEm?: string;
+  plantaId?: string;
   nome: string;
-  tipo: string;
-  estado: string;
-  cidade: string;
-  latitude: number;
-  longitude: number;
-  potencia: number;
-  status: string;
+  tipo?: string;
+  estado?: string;
+  cidade?: string;
+  latitude?: number;
+  longitude?: number;
+  potencia?: number;
+  status?: string;
   planta?: {
     id: string;
     nome: string;
@@ -105,9 +107,10 @@ export interface Equipamento extends BaseEntity {
   /** O nome proprio do equipamento — `nome` traz o da posicao. */
   nome_proprio?: string;
 
+  // id/nome opcionais como no transform do hook (features/equipamentos).
   tipoEquipamentoObj?: {
-    id: string;
-    nome: string;
+    id?: string;
+    nome?: string;
     codigo?: string;
     categoria?: string | { id: string; nome: string };
     categoriaId?: string;

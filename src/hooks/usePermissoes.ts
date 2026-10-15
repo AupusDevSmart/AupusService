@@ -14,6 +14,16 @@ export interface PermissaoOption {
   guard_name?: string; // ✅ Campo do backend
 }
 
+/** Permissão como o backend manda em /permissions e /permissions/grouped. */
+interface PermissaoDaApi {
+  id?: number;
+  name: Permissao;
+  display_name?: string;
+  category?: string;
+  description?: string;
+  guard_name?: string;
+}
+
 interface UsePermissoesReturn {
   permissoes: PermissaoOption[];
   permissoesPorCategoria: Record<string, PermissaoOption[]>;
@@ -46,7 +56,7 @@ export function usePermissoes(): UsePermissoesReturn {
         throw new Error('Resposta da API não contém um array de permissões');
       }
       
-      const permissoesData = response.data.map((permission: any) => ({
+      const permissoesData = response.data.map((permission: PermissaoDaApi) => ({
         value: permission.name,
         // Nome e descrição da matriz de permissões (o backend manda)
         label: permission.display_name || permission.name,
@@ -149,7 +159,7 @@ export function usePermissoesGrouped() {
       
       Object.entries(response.data).forEach(([categoria, permissions]: [string, unknown]) => {
         if (Array.isArray(permissions)) {
-          groupedData[categoria] = permissions.map((permission: any) => ({
+          groupedData[categoria] = permissions.map((permission: PermissaoDaApi) => ({
             value: permission.name,
             label: permission.display_name || permission.name,
             categoria: categoria,

@@ -1,5 +1,6 @@
 // src/features/equipamentos/config/form-config.tsx - FORMULÁRIO DINÂMICO POR TIPO
 import { FormField, FormFieldProps } from '@/core/types/base';
+import type { Equipamento } from '../types';
 import { useState, useEffect } from 'react';
 import {
   Select,
@@ -695,7 +696,7 @@ export const equipamentosFormFields: FormField[] = [
     required: true,
     render: (props) => (
       <SearchableSelect
-        value={props.value || ''}
+        value={(props.value as string | undefined) || ''}
         onChange={props.onChange}
         options={TIPOS_EQUIPAMENTOS}
         placeholder="Buscar tipo de equipamento..."
@@ -736,49 +737,49 @@ export const equipamentosFormFields: FormField[] = [
     label: 'TUC',
     type: 'text',
     placeholder: 'Número/Código TUC',
-    condition: (formData) => formData?.temTUC === true
+    condition: (_entity, formData) => formData?.temTUC === true
   },
   {
     key: 'a1',
     label: 'A1',
     type: 'text',
     placeholder: 'Valor A1',
-    condition: (formData) => formData?.temTUC === true
+    condition: (_entity, formData) => formData?.temTUC === true
   },
   {
     key: 'a2',
     label: 'A2',
     type: 'text',
     placeholder: 'Valor A2',
-    condition: (formData) => formData?.temTUC === true
+    condition: (_entity, formData) => formData?.temTUC === true
   },
   {
     key: 'a3',
     label: 'A3',
     type: 'text',
     placeholder: 'Valor A3',
-    condition: (formData) => formData?.temTUC === true
+    condition: (_entity, formData) => formData?.temTUC === true
   },
   {
     key: 'a4',
     label: 'A4',
     type: 'text',
     placeholder: 'Valor A4',
-    condition: (formData) => formData?.temTUC === true
+    condition: (_entity, formData) => formData?.temTUC === true
   },
   {
     key: 'a5',
     label: 'A5',
     type: 'text',
     placeholder: 'Valor A5',
-    condition: (formData) => formData?.temTUC === true
+    condition: (_entity, formData) => formData?.temTUC === true
   },
   {
     key: 'a6',
     label: 'A6',
     type: 'text',
     placeholder: 'Valor A6',
-    condition: (formData) => formData?.temTUC === true
+    condition: (_entity, formData) => formData?.temTUC === true
   },
 
   // ============================================================================
@@ -798,9 +799,9 @@ export const equipamentosFormFields: FormField[] = [
     key: 'dadosTecnicosEspecificos',
     label: 'Dados Técnicos Específicos',
     type: 'custom',
-    render: (props) => (
+    render: (props: FormFieldProps & { entity?: Equipamento | null; value?: Partial<Equipamento> }) => (
       <CamposEspecificosPorTipo
-        tipoEquipamento={props.entity?.tipoEquipamento || props.value?.tipoEquipamento}
+        tipoEquipamento={(props.entity?.tipoEquipamento || props.value?.tipoEquipamento) as string}
         formData={props.entity || props.value || {}}
         onChange={(field: string, value: any) => {
           if (props.onMultipleChange) {

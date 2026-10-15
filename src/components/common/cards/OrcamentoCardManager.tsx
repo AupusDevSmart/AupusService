@@ -53,7 +53,7 @@ const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
     updateItens(itens.filter((_, i) => i !== index));
   };
 
-  const atualizarItem = (index: number, campo: keyof ItemOrcamento, valor: any) => {
+  const atualizarItem = <K extends keyof ItemOrcamento>(index: number, campo: K, valor: ItemOrcamento[K]) => {
     const novosItens = [...itens];
     novosItens[index] = { ...novosItens[index], [campo]: valor };
     updateItens(novosItens);

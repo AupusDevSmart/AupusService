@@ -33,7 +33,7 @@ import {
 import { FotoEquipamentoField } from '../FotoEquipamentoField';
 import { ItensDoLoteField } from '../ItensDoLoteField';
 import { AnexosEquipamentoField } from '../AnexosEquipamentoField';
-import type { EquipamentoDoLote } from '@/core/types/contracts';
+import type { EquipamentoDoLote, UseModelosContract } from '@/core/types/contracts';
 
 type AbaUAR = 'dados' | 'itens' | 'anexos';
 
@@ -141,7 +141,8 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
 
   // Estados para seleção hierárquica Categoria -> Modelo
   const [categoriaIdSelecionada, setCategoriaIdSelecionada] = useState<string>('');
-  const [modeloSelecionado, setModeloSelecionado] = useState<TipoEquipamento | null>(null);
+  // Vem do normalizador (tipo local) ou da lista de modelos do useModelos.
+  const [modeloSelecionado, setModeloSelecionado] = useState<TipoEquipamento | UseModelosContract['modelos'][number] | null>(null);
 
   // Hooks para categorias e modelos (from context)
   const { categorias, loading: loadingCategorias, refetch: refetchCategorias } = useCategorias();

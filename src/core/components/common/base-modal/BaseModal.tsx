@@ -3,22 +3,35 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/core/components/ui/button';
 import { Save, X, AlertCircle } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
-import { BaseEntity, ModalMode, FormField, ModalEntity } from '@/core/types/base';
+import {
+  BaseEntity,
+  DadosDoFormulario,
+  ModalMode,
+  FormField,
+  GrupoDoFormulario,
+  ModalEntity,
+} from '@/core/types/base';
 import { BaseForm } from './BaseForm';
 import { useMontadoAteSair } from '@/components/ui/expandir';
 
 /** Mesmas duracoes do Sheet do shadcn, para todos os paineis laterais baterem. */
 const DURACAO_SAIDA_MS = 300;
 
-interface BaseModalProps<T extends BaseEntity> {
+/**
+ * `D` e o formato que quem usa o modal espera do formulario (inferido do
+ * proprio `onSubmit`). O BaseModal nao converte nem valida o tipo: entrega o
+ * que os campos montaram, depois das regras `required`/`validation` deles.
+ */
+interface BaseModalProps<T extends BaseEntity, D = DadosDoFormulario> {
   isOpen: boolean;
   mode: ModalMode;
-  entity: ModalEntity<T>;
+  /** A entidade aberta (edit/view); na criacao pode vir ausente ou null. */
+  entity?: ModalEntity<T> | null;
   title: string;
   icon?: React.ReactNode;
   formFields: FormField[];
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: D) => Promise<void>;
   width?: string;
   children?: React.ReactNode;
   /**
@@ -30,7 +43,7 @@ interface BaseModalProps<T extends BaseEntity> {
    * salva), para quem precisa bloquear acao que descartaria o que foi digitado.
    */
   topo?: React.ReactNode | ((contexto: { alteracoesPendentes: boolean }) => React.ReactNode);
-  groups?: { key: string; title: string; fields?: string[] }[];
+  groups?: GrupoDoFormulario[];
   
   loading?: boolean;
   loadingText?: string;
@@ -48,12 +61,12 @@ interface BaseModalProps<T extends BaseEntity> {
   acaoDestrutiva?: React.ReactNode;
   submitButtonText?: string;
   cancelButtonText?: string;
-  onBeforeSubmit?: (data: any) => Promise<boolean> | boolean;
-  onAfterSubmit?: (data: any) => void;
+  onBeforeSubmit?: (data: D) => Promise<boolean> | boolean;
+  onAfterSubmit?: (data: D) => void;
   onValidationError?: (errors: Record<string, string>) => void;
 }
 
-export function BaseModal<T extends BaseEntity>({
+export function BaseModal<T extends BaseEntity, D = DadosDoFormulario>({
   isOpen,
   mode,
   entity,
@@ -77,17 +90,18 @@ export function BaseModal<T extends BaseEntity>({
   onBeforeSubmit,
   onAfterSubmit,
   onValidationError
-}: BaseModalProps<T>) {
+}: BaseModalProps<T, D>) {
   const isViewMode = mode === 'view';
   const isEditMode = mode === 'edit';
   const isCreateMode = mode === 'create';
 
   // Computar dados iniciais sincronamente para evitar flash de campos vazios
-  const computeInitialData = useCallback((entityData: any, formFieldsList: FormField[], viewOrEdit: boolean, create: boolean) => {
-    const normalize = (data: any): any => {
-      const normalized: any = {};
+  const computeInitialData = useCallback((entityData: ModalEntity<T> | null | undefined, formFieldsList: FormField[], viewOrEdit: boolean, create: boolean): DadosDoFormulario => {
+    // `object`: a entidade e, na recursao, qualquer objeto aninhado nela.
+    const normalize = (data: object): DadosDoFormulario => {
+      const normalized: DadosDoFormulario = {};
       Object.keys(data).forEach(key => {
-        const value = data[key];
+        const value: unknown = (data as DadosDoFormulario)[key];
         if (value === '' || value === null) {
           normalized[key] = undefined;
         } else if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
@@ -102,30 +116,30 @@ export function BaseModal<T extends BaseEntity>({
     if (entityData && viewOrEdit) {
       return normalize(entityData);
     } else if (entityData && create) {
-      const base: any = {};
+      const base: DadosDoFormulario = {};
       formFieldsList.forEach(field => {
         if (field.key.includes('.')) {
           const [parent, child] = field.key.split('.');
           if (!base[parent]) base[parent] = {};
-          base[parent][child] = (field as any).defaultValue ?? '';
+          (base[parent] as DadosDoFormulario)[child] = field.defaultValue ?? '';
         } else if (field.type === 'custom' && field.key === 'endereco') {
           base[field.key] = { uf: '', cidade: '', cep: '', logradouro: '', bairro: '' };
         } else {
-          base[field.key] = (field as any).defaultValue ?? '';
+          base[field.key] = field.defaultValue ?? '';
         }
       });
       return { ...base, ...normalize(entityData) };
     } else if (create) {
-      const base: any = {};
+      const base: DadosDoFormulario = {};
       formFieldsList.forEach(field => {
         if (field.key.includes('.')) {
           const [parent, child] = field.key.split('.');
           if (!base[parent]) base[parent] = {};
-          base[parent][child] = (field as any).defaultValue ?? '';
+          (base[parent] as DadosDoFormulario)[child] = field.defaultValue ?? '';
         } else if (field.type === 'custom' && field.key === 'endereco') {
           base[field.key] = { uf: '', cidade: '', cep: '', logradouro: '', bairro: '' };
         } else {
-          base[field.key] = (field as any).defaultValue ?? '';
+          base[field.key] = field.defaultValue ?? '';
         }
       });
       return base;
@@ -133,7 +147,7 @@ export function BaseModal<T extends BaseEntity>({
     return {};
   }, []);
 
-  const [formData, setFormData] = useState<any>(() =>
+  const [formData, setFormData] = useState<DadosDoFormulario>(() =>
     computeInitialData(entity, formFields, isViewMode || isEditMode, isCreateMode)
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -141,7 +155,7 @@ export function BaseModal<T extends BaseEntity>({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // ✅ CORREÇÃO: Refs para controle de inicialização
-  const initialDataRef = useRef<any>(formData);
+  const initialDataRef = useRef<DadosDoFormulario>(formData);
   const modalRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(Object.keys(formData).length > 0);
   const isLoading = loading || isSubmitting;
@@ -157,12 +171,12 @@ export function BaseModal<T extends BaseEntity>({
   }, [cancelButtonText, isViewMode]);
 
   const createInitialData = useCallback(() => {
-    const initialData: any = {};
+    const initialData: DadosDoFormulario = {};
     formFields.forEach(field => {
       if (field.key.includes('.')) {
         const [parent, child] = field.key.split('.');
         if (!initialData[parent]) initialData[parent] = {};
-        initialData[parent][child] = '';
+        (initialData[parent] as DadosDoFormulario)[child] = '';
       } else {
         // Para campos customizados (tipo 'custom'), inicializar com valor apropriado
         if (field.type === 'custom' && field.key === 'endereco') {
@@ -174,7 +188,7 @@ export function BaseModal<T extends BaseEntity>({
             bairro: ''
           };
         } else {
-          initialData[field.key] = (field as any).defaultValue ?? '';
+          initialData[field.key] = field.defaultValue ?? '';
         }
       }
     });
@@ -182,11 +196,12 @@ export function BaseModal<T extends BaseEntity>({
   }, [formFields]);
 
   // Helper para normalizar dados da entity - converte strings vazias em undefined para Selects
-  const normalizeEntityData = useCallback((data: any) => {
-    const normalized: any = {};
+  // `object`: a entidade e, na recursao, qualquer objeto aninhado nela.
+  const normalizeEntityData = useCallback((data: object): DadosDoFormulario => {
+    const normalized: DadosDoFormulario = {};
 
     Object.keys(data).forEach(key => {
-      const value = data[key];
+      const value: unknown = (data as DadosDoFormulario)[key];
 
       // Se é string vazia, converter para undefined
       if (value === '' || value === null) {
@@ -218,7 +233,7 @@ export function BaseModal<T extends BaseEntity>({
   const chaveAbertura = isOpen
     ? `${mode}::${
         (entity && typeof entity === 'object' && 'id' in entity
-          ? String((entity as any).id ?? '').trim()
+          ? String(entity.id ?? '').trim()
           : '') || 'novo'
       }`
     : null;
@@ -233,7 +248,7 @@ export function BaseModal<T extends BaseEntity>({
       // abertura muda a chave (null -> modo::id) e semeia de novo.
       isInitializedRef.current = false;
     } else {
-      let semente: any = {};
+      let semente: DadosDoFormulario = {};
       if (entity && (isViewMode || isEditMode)) {
         semente = normalizeEntityData(entity);
       } else if (entity && isCreateMode) {
@@ -258,11 +273,11 @@ export function BaseModal<T extends BaseEntity>({
     }
   }, [formData, isViewMode]);
 
-  const isFieldVisible = useCallback((field: any, data: any): boolean => {
+  const isFieldVisible = useCallback((field: FormField, data: DadosDoFormulario): boolean => {
     let shouldShow = true;
 
     if (field.conditionalRender) {
-      try { shouldShow = shouldShow && field.conditionalRender(data); }
+      try { shouldShow = shouldShow && Boolean(field.conditionalRender(data)); }
       catch { return false; }
     }
 
@@ -282,14 +297,14 @@ export function BaseModal<T extends BaseEntity>({
     }
 
     if (field.condition) {
-      try { shouldShow = shouldShow && field.condition(entity, data); }
+      try { shouldShow = shouldShow && Boolean(field.condition(entity, data)); }
       catch { /* keep current shouldShow */ }
     }
 
     return shouldShow;
   }, [mode, entity]);
 
-  const validateFields = useCallback((data: any): Record<string, string> => {
+  const validateFields = useCallback((data: DadosDoFormulario): Record<string, string> => {
     const newErrors: Record<string, string> = {};
 
     formFields.forEach(field => {
@@ -298,7 +313,7 @@ export function BaseModal<T extends BaseEntity>({
 
       if (field.required) {
         const value = field.key.includes('.')
-          ? data[field.key.split('.')[0]]?.[field.key.split('.')[1]]
+          ? (data[field.key.split('.')[0]] as DadosDoFormulario | undefined)?.[field.key.split('.')[1]]
           : data[field.key];
 
         if (!value || String(value).trim() === '') {
@@ -308,7 +323,7 @@ export function BaseModal<T extends BaseEntity>({
 
       if (field.validation) {
         const value = field.key.includes('.')
-          ? data[field.key.split('.')[0]]?.[field.key.split('.')[1]]
+          ? (data[field.key.split('.')[0]] as DadosDoFormulario | undefined)?.[field.key.split('.')[1]]
           : data[field.key];
 
         const error = field.validation(value, data);
@@ -348,7 +363,7 @@ export function BaseModal<T extends BaseEntity>({
 
     if (onBeforeSubmit) {
       try {
-        const canProceed = await onBeforeSubmit(formData);
+        const canProceed = await onBeforeSubmit(formData as D);
         if (!canProceed) {
           return;
         }
@@ -361,7 +376,7 @@ export function BaseModal<T extends BaseEntity>({
     setIsSubmitting(true);
     try {
       const fieldsToExclude = formFields
-        .filter(field => (field as any).excludeFromSubmit === true)
+        .filter(field => field.excludeFromSubmit === true)
         .map(field => field.key);
 
       const filteredData = { ...formData };
@@ -374,9 +389,10 @@ export function BaseModal<T extends BaseEntity>({
       }
 
 
-      await onSubmit(filteredData);
+      // O formulario e montado pelos campos; D e o que quem abriu o modal declarou esperar deles.
+      await onSubmit(filteredData as D);
 
-      onAfterSubmit?.(formData);
+      onAfterSubmit?.(formData as D);
       setHasUnsavedChanges(false);
 
     } catch (error) {
@@ -422,7 +438,7 @@ export function BaseModal<T extends BaseEntity>({
   }, [closeOnBackdropClick, handleClose]);
 
   // ✅ CORREÇÃO PRINCIPAL: handleFormDataChange sem dependência problemática
-  const handleFormDataChange = useCallback((newData: any) => {
+  const handleFormDataChange = useCallback((newData: DadosDoFormulario) => {
     // MESCLA sobre o estado atual em vez de substituir.
     //
     // Um campo pode disparar onChange ainda no mount, antes de o efeito de
@@ -434,7 +450,7 @@ export function BaseModal<T extends BaseEntity>({
     // dono derivado da planta e acabava sendo o unico campo restante. Mesclar
     // torna a ordem irrelevante. Limpar campo continua funcionando: a chave
     // vem no newData com undefined e o spread a sobrescreve.
-    setFormData((prev: any) => ({ ...prev, ...newData }));
+    setFormData((prev) => ({ ...prev, ...newData }));
 
     // Limpar erros dos campos que foram alterados
     setErrors(prev => {

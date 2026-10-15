@@ -4,7 +4,12 @@
 
 import React from 'react';
 import { SharedPagesProvider } from '@/core';
-import type { SharedHooks, SharedStores } from '@/core';
+import type { ConcessionariasFiltros, SharedHooks, SharedStores } from '@/core';
+import type {
+  ConcessionariaResponse,
+  CreateConcessionariaDto,
+  UpdateConcessionariaDto,
+} from '@/services/concessionarias.services';
 import { api } from '@/config/api';
 
 // ============================================================
@@ -122,13 +127,13 @@ function useUserPermissionsWrapper(userId: string, autoFetch: boolean = true) {
  * to satisfy the UseConcessionariasFeatureContract.
  */
 function useConcessionariasFeature() {
-  const [concessionarias, setConcessionarias] = React.useState<any[]>([]);
+  const [concessionarias, setConcessionarias] = React.useState<ConcessionariaResponse[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [pagination, setPagination] = React.useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
-  const [filters, setFilters] = React.useState<any>({});
+  const [filters, setFilters] = React.useState<ConcessionariasFiltros>({});
 
-  const fetchConcessionarias = React.useCallback(async (currentFilters?: any) => {
+  const fetchConcessionarias = React.useCallback(async (currentFilters?: ConcessionariasFiltros) => {
     try {
       setLoading(true);
       setError(null);
@@ -143,21 +148,21 @@ function useConcessionariasFeature() {
       const response = await ConcessionariasService.getAllConcessionarias(params);
       setConcessionarias(response.data);
       setPagination(response.pagination);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao carregar concessionarias');
+    } catch (err) {
+      setError((err instanceof Error && err.message) || 'Erro ao carregar concessionarias');
       setConcessionarias([]);
     } finally {
       setLoading(false);
     }
   }, [filters]);
 
-  const createConcessionaria = React.useCallback(async (data: any) => {
+  const createConcessionaria = React.useCallback(async (data: CreateConcessionariaDto) => {
     const result = await ConcessionariasService.createConcessionaria(data);
     await fetchConcessionarias();
     return result;
   }, [fetchConcessionarias]);
 
-  const updateConcessionaria = React.useCallback(async (id: string, data: any) => {
+  const updateConcessionaria = React.useCallback(async (id: string, data: UpdateConcessionariaDto) => {
     const result = await ConcessionariasService.updateConcessionaria(id, data);
     await fetchConcessionarias();
     return result;
@@ -172,12 +177,12 @@ function useConcessionariasFeature() {
     return ConcessionariasService.getConcessionaria(id);
   }, []);
 
-  const handleFilterChange = React.useCallback((newFilters: any) => {
-    setFilters((prev: any) => ({ ...prev, ...newFilters }));
+  const handleFilterChange = React.useCallback((newFilters: ConcessionariasFiltros) => {
+    setFilters((prev) => ({ ...prev, ...newFilters }));
   }, []);
 
   const handlePageChange = React.useCallback((page: number) => {
-    setFilters((prev: any) => ({ ...prev, page }));
+    setFilters((prev) => ({ ...prev, page }));
   }, []);
 
   const refetch = React.useCallback(() => {
@@ -216,7 +221,8 @@ function useConcessionariasServiceHook() {
       limit: params?.limit,
       estado: params?.estado,
       orderBy: params?.orderBy,
-      orderDirection: params?.orderDirection as any,
+      // O contrato aceita texto livre; o service so conhece asc/desc.
+      orderDirection: params?.orderDirection as 'asc' | 'desc' | undefined,
     });
     return { data: response.data, pagination: response.pagination };
   }, []);
@@ -233,10 +239,10 @@ const sharedHooks: SharedHooks = {
   useEquipamentos,
   useEquipamentoFilters,
   useLocationCascade,
-  useSelectionData: useSelectionData as any,
+  useSelectionData,
 
   // Unidades (local)
-  useUnidades: useUnidades as unknown as SharedHooks['useUnidades'],
+  useUnidades,
   useUnidadesByPlanta,
   useUnidade,
   useUnidadeEstatisticas,
@@ -253,7 +259,7 @@ const sharedHooks: SharedHooks = {
 
   // Concessionarias (built inline, using local service)
   useConcessionariasFeature,
-  useConcessionariasService: useConcessionariasServiceHook as unknown as SharedHooks['useConcessionariasService'],
+  useConcessionariasService: useConcessionariasServiceHook,
 
   // Permissoes & Roles (local)
   usePermissoes,
@@ -269,8 +275,8 @@ const sharedHooks: SharedHooks = {
 };
 
 const sharedStores: SharedStores = {
-  useUserStore: () => useUserStore() as any,
-  useConcessionariasStore: () => useConcessionariasStore() as any,
+  useUserStore: () => useUserStore(),
+  useConcessionariasStore: () => useConcessionariasStore(),
 };
 
 // ============================================================

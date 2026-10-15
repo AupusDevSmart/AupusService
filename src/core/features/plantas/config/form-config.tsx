@@ -12,7 +12,8 @@ import { useViaCEP } from '@/core/hooks/useViaCEP';
 import { cn } from '@/core/lib/utils';
 
 // ✅ COMPONENTE: CNPJ com máscara personalizada
-const CNPJFieldComponent = ({ value, onChange, disabled, hasError }: FormFieldProps) => {
+// hasError: o BaseForm nao manda (so `error`); declarado aqui porque o componente le.
+const CNPJFieldComponent = ({ value, onChange, disabled, hasError }: FormFieldProps & { hasError?: boolean }) => {
   const [displayValue, setDisplayValue] = React.useState(() => {
     // Inicializar com valor formatado se existir
     return value ? CNPJUtils.mask(value.toString()) : '';
@@ -446,7 +447,7 @@ export const plantasFormFields: FormField[] = [
         return 'Endereço é obrigatório';
       }
 
-      const { logradouro, cidade, uf, cep } = value;
+      const { logradouro, cidade, uf, cep } = value as { logradouro?: string; cidade?: string; uf?: string; cep?: string };
 
       if (!logradouro || logradouro.trim().length < 5) {
         return 'Logradouro deve ter pelo menos 5 caracteres';

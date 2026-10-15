@@ -15,19 +15,15 @@ import { Separator } from '@/core/components/ui/separator';
 import { DateTimePicker } from '@/core/components/ui/datetime-picker';
 import { Combobox } from '@/core/components/ui/combobox';
 import { cn } from '@/core/lib/utils';
-import { FormField, ModalMode, BaseEntity, ModalEntity } from '@/core/types/base';
+import {
+  FormField,
+  FormFieldProps,
+  FormFieldOption,
+  GrupoDoFormulario,
+  ModalMode,
+  EntidadeDoCampo,
+} from '@/core/types/base';
 import { parse, format, isValid } from 'date-fns';
-
-interface FormFieldProps {
-  value: any;
-  onChange: (value: any) => void;
-  onMultipleChange?: (updates: Record<string, unknown>) => void;
-  disabled: boolean;
-  error?: string;
-  mode?: ModalMode;
-  entity?: ModalEntity<BaseEntity>;
-  [key: string]: any;
-}
 
 interface BaseFormProps {
   fields: FormField[];
@@ -36,15 +32,8 @@ interface BaseFormProps {
   disabled: boolean;
   onChange: (data: Record<string, unknown>) => void;
   mode?: ModalMode;
-  entity?: ModalEntity<BaseEntity>;
-  groups?: {
-    key: string;
-    title: string;
-    fields?: string[];
-    conditional?: any;
-    /** Colunas da grade do grupo. Duas por padrao; tres para linhas de campos curtos. */
-    columns?: 2 | 3;
-  }[];
+  entity?: EntidadeDoCampo;
+  groups?: GrupoDoFormulario[];
 }
 
 export function BaseForm({
@@ -66,13 +55,14 @@ export function BaseForm({
   }, [data]);
 
   // ✅ handleOrigemChange corrigido - atualiza ref imediatamente
-  const handleOrigemChange = useCallback((newValue: any) => {
+  const handleOrigemChange = useCallback((newValue: unknown) => {
     // console.log('🔄 BaseForm: handleOrigemChange chamado:', newValue);
     // console.log('🔍 BaseForm: Data atual:', latestDataRef.current);
     
     const newData: Record<string, unknown> = {
       ...latestDataRef.current, // ✅ Usa ref que sempre tem estado atual
-      origem: { ...newValue } // Clone profundo para evitar mutação
+      // O OrigemOSSelector sempre devolve objeto
+      origem: { ...(newValue as Record<string, unknown>) } // Clone profundo para evitar mutação
     };
     
     // ✅ CORREÇÃO CRÍTICA: Atualizar ref IMEDIATAMENTE antes de chamar onChange
@@ -181,33 +171,33 @@ export function BaseForm({
     let shouldShow = true;
 
     // Check conditionalRender (new property for dynamic visibility)
-    if ((field as any).conditionalRender) {
+    if (field.conditionalRender) {
       try {
-        shouldShow = shouldShow && (field as any).conditionalRender(data);
+        shouldShow = shouldShow && Boolean(field.conditionalRender(data));
       } catch (error) {
         return false;
       }
     }
 
     // Check showOnlyOnMode
-    if ((field as any).showOnlyOnMode && mode) {
-      const showOnlyOnMode = Array.isArray((field as any).showOnlyOnMode)
-        ? (field as any).showOnlyOnMode
-        : [(field as any).showOnlyOnMode];
+    if (field.showOnlyOnMode && mode) {
+      const showOnlyOnMode = Array.isArray(field.showOnlyOnMode)
+        ? field.showOnlyOnMode
+        : [field.showOnlyOnMode];
       shouldShow = shouldShow && showOnlyOnMode.includes(mode);
     }
 
     // Check hideOnMode
-    if ((field as any).hideOnMode && mode) {
-      const hideOnMode = Array.isArray((field as any).hideOnMode)
-        ? (field as any).hideOnMode
-        : [(field as any).hideOnMode];
+    if (field.hideOnMode && mode) {
+      const hideOnMode = Array.isArray(field.hideOnMode)
+        ? field.hideOnMode
+        : [field.hideOnMode];
       shouldShow = shouldShow && !hideOnMode.includes(mode);
     }
 
     // Check showOnlyWhen
-    if ((field as any).showOnlyWhen) {
-      const condition = (field as any).showOnlyWhen;
+    if (field.showOnlyWhen) {
+      const condition = field.showOnlyWhen;
       const dependentFieldValue = data[condition.field];
       const conditionMet = dependentFieldValue === condition.value;
 
@@ -215,10 +205,10 @@ export function BaseForm({
     }
 
     // Check condition function
-    if ((field as any).condition) {
-      const conditionFn = (field as any).condition;
+    if (field.condition) {
+      const conditionFn = field.condition;
       try {
-        shouldShow = shouldShow && conditionFn(entity, data);
+        shouldShow = shouldShow && Boolean(conditionFn(entity, data));
       } catch (error) {
         // console.warn('Erro ao avaliar condição do campo:', field.key, error);
         shouldShow = shouldShow && true;
@@ -228,7 +218,7 @@ export function BaseForm({
     return shouldShow;
   });
 
-  const shouldShowGroup = (group: any): boolean => {
+  const shouldShowGroup = (group: GrupoDoFormulario): boolean => {
     if (!group.conditional) return true;
 
     const { field, value } = group.conditional;
@@ -240,7 +230,7 @@ export function BaseForm({
     // Se value é uma função, executá-la com a entity
     if (typeof value === 'function') {
       try {
-        return value(entity);
+        return Boolean(value(entity));
       } catch (error) {
         return false;
       }
@@ -291,8 +281,8 @@ export function BaseForm({
     const error = errors[field.key];
 
     let fieldDisabled = disabled || field.disabled;
-    if ((field as any).computeDisabled) {
-      fieldDisabled = fieldDisabled || (field as any).computeDisabled(entity, data);
+    if (field.computeDisabled) {
+      fieldDisabled = fieldDisabled || Boolean(field.computeDisabled(entity, data));
     }
     // Placeholder em campo de leitura aparecia como se fosse conteúdo ("Descreva
     // problemas…" numa OS finalizada). Na criação ele ainda orienta
@@ -311,8 +301,8 @@ export function BaseForm({
       formData: data, // Add formData for conditional logic
       geral: getValue('geral'),
       recorrente: getValue('recorrente'),
-      ...((field as any).dependencies && {
-        ...(field as any).dependencies.reduce((acc: Record<string, unknown>, dep: string) => {
+      ...(field.dependencies && {
+        ...field.dependencies.reduce((acc: Record<string, unknown>, dep: string) => {
           acc[dep] = getValue(dep);
           return acc;
         }, {} as Record<string, unknown>)
@@ -321,7 +311,7 @@ export function BaseForm({
 
     if (field.render) {
       try {
-        return React.createElement(field.render as any, fieldProps);
+        return React.createElement(field.render, fieldProps);
       } catch (error) {
         // console.error(`❌ Erro ao renderizar campo customizado ${field.key}:`, error);
         return (
@@ -386,8 +376,8 @@ export function BaseForm({
       
       case 'select':
         // Get options dynamically if getOptions is defined, otherwise use static options
-        const selectOptions = (field as any).getOptions
-          ? (field as any).getOptions(data)
+        const selectOptions = field.getOptions
+          ? field.getOptions(data)
           : field.options || [];
 
         // Ensure value is always defined (undefined or string) to keep Select controlled
@@ -409,7 +399,7 @@ export function BaseForm({
               <SelectValue placeholder={semPlaceholder ? '' : field.placeholder || `Selecione ${field.label}`} />
             </SelectTrigger>
             <SelectContent>
-              {selectOptions.map((option: any) => (
+              {selectOptions.map((option: FormFieldOption) => (
                 <SelectItem key={String(option.value)} value={String(option.value)}>
                   {option.label}
                 </SelectItem>
@@ -420,9 +410,11 @@ export function BaseForm({
 
       case 'combobox':
         // Get options dynamically if getOptions is defined, otherwise use static options
-        const comboboxOptions = (field as any).getOptions
-          ? (field as any).getOptions(data)
-          : field.options || [];
+        // O Combobox compara texto: valor numerico vira string (como na BaseFilters)
+        const comboboxOptions = (field.getOptions
+          ? field.getOptions(data)
+          : field.options || []
+        ).map((o) => ({ ...o, value: String(o.value) }));
 
         // Ensure value is string or undefined
         const comboboxValue = value !== undefined && value !== null && value !== '' && String(value).trim() !== ''
@@ -437,8 +429,8 @@ export function BaseForm({
               handleFieldChange(field.key, newValue || undefined);
             }}
             placeholder={semPlaceholder ? '' : field.placeholder || `Selecione ${field.label}`}
-            searchPlaceholder={(field as any).searchPlaceholder || `Buscar ${field.label?.toLowerCase()}...`}
-            emptyText={(field as any).emptyText || "Nenhum resultado encontrado"}
+            searchPlaceholder={field.searchPlaceholder || `Buscar ${field.label?.toLowerCase()}...`}
+            emptyText={field.emptyText || "Nenhum resultado encontrado"}
             disabled={fieldDisabled}
             className={cn(error ? 'border-red-500' : '')}
           />
@@ -531,9 +523,9 @@ export function BaseForm({
           const CustomComponent = field.component;
 
           // ✅ CORREÇÃO: Processar componentProps se for uma função
-          const computedComponentProps = typeof (field as any).componentProps === 'function'
-            ? (field as any).componentProps(data)
-            : (field as any).componentProps || {};
+          const computedComponentProps = typeof field.componentProps === 'function'
+            ? field.componentProps(data)
+            : field.componentProps || {};
 
           // ✅ Props especiais para OrigemOSSelector corrigidas
           let specialProps = {};
@@ -548,7 +540,7 @@ export function BaseForm({
           return (
             <CustomComponent
               value={value}
-              onChange={field.key === 'origem' ? handleOrigemChange : (newValue: any) => {
+              onChange={field.key === 'origem' ? handleOrigemChange : (newValue: unknown) => {
                 // console.log('🔄 BaseForm: CustomComponent onChange chamado:', { field: field.key, newValue });
                 handleFieldChange(field.key, newValue);
               }}
@@ -588,7 +580,7 @@ export function BaseForm({
 
         const currentGroup = groups?.find(g => g.key === groupName);
         // ✅ Grid é o padrão - só desativa se explicitamente definir layout: 'single' ou fullWidth: true
-        const useGridLayout = (currentGroup as any)?.layout !== 'single' && !(currentGroup as any)?.fullWidth;
+        const useGridLayout = currentGroup?.layout !== 'single' && !currentGroup?.fullWidth;
 
         return (
           <div key={groupName}>
@@ -605,12 +597,12 @@ export function BaseForm({
             <div
               className={
                 useGridLayout
-                  ? `${(currentGroup as any)?.columns === 3 ? 'grid-equal-cols-3' : 'grid-equal-cols-2'} gap-x-2 gap-y-4`
+                  ? `${currentGroup?.columns === 3 ? 'grid-equal-cols-3' : 'grid-equal-cols-2'} gap-x-2 gap-y-4`
                   : 'grid grid-cols-1 gap-4'
               }
             >
               {groupFields.map((field) => {
-                const colSpan = (field as any).colSpan || 1;
+                const colSpan = field.colSpan || 1;
 
                 // Classe responsiva para colSpan com grid
                 const colSpanClass = colSpan === 2 ? 'col-span-full' : '';
@@ -642,9 +634,9 @@ export function BaseForm({
                       </p>
                     )}
                     
-                    {(field as any).helpText && !errors[field.key] && (
+                    {field.helpText && !errors[field.key] && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        {(field as any).helpText}
+                        {field.helpText}
                       </p>
                     )}
                   </div>

@@ -430,7 +430,7 @@ export function ReservasPage() {
             setReservaParaCancelar(null);
             setMotivoCancelamento('');
           }}
-          onSubmit={async (data) => {
+          onSubmit={async (data: { motivoCancelamento: string }) => {
             setMotivoCancelamento(data.motivoCancelamento);
             await confirmarCancelamento();
           }}

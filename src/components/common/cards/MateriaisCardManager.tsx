@@ -65,7 +65,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
     updateMateriais(materiais.filter((_, i) => i !== index));
   };
 
-  const atualizarMaterial = (index: number, campo: keyof MaterialItem, valor: any) => {
+  const atualizarMaterial = <K extends keyof MaterialItem>(index: number, campo: K, valor: MaterialItem[K]) => {
     const novosMateriais = [...materiais];
     novosMateriais[index] = { ...novosMateriais[index], [campo]: valor };
 

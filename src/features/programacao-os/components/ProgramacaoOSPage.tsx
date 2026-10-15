@@ -563,6 +563,8 @@ export function ProgramacaoOSPage() {
   const getModalEntity = useMemo(() => {
     if (modalState.mode === 'create') {
       const baseEntity = {
+        // Ainda sem id: o BaseModal so exige o campo (vira undefined na semeadura)
+        id: '',
         descricao: '',
         condicoes: 'PARADO',
         tipo: 'PREVENTIVA',

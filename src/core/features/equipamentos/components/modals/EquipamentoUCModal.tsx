@@ -53,7 +53,7 @@ import { ComponenteUARModal } from './ComponenteUARModal';
 import { FotoEquipamentoField } from '../FotoEquipamentoField';
 import { AnexosEquipamentoField } from '../AnexosEquipamentoField';
 import { ItensDoLoteField } from '../ItensDoLoteField';
-import type { EquipamentoDoLote } from '@/core/types/contracts';
+import type { EquipamentoDoLote, UseModelosContract } from '@/core/types/contracts';
 import { PontosSection, type PontoFormItem } from '../PontosSection';
 import { useSelectionData, useEquipamentos, useLocationCascade, useCategorias, useModelos, useHttpClient } from '@/core/context/hooks';
 
@@ -317,7 +317,8 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
 
   // Estados para seleção de categoria e modelo
   const [categoriaIdSelecionada, setCategoriaIdSelecionada] = useState<string>('');
-  const [modeloSelecionado, setModeloSelecionado] = useState<TipoEquipamento | null>(null);
+  // Vem do normalizador (tipo local) ou da lista de modelos do useModelos.
+  const [modeloSelecionado, setModeloSelecionado] = useState<TipoEquipamento | UseModelosContract['modelos'][number] | null>(null);
 
   // Hooks para buscar categorias e modelos
   const { categorias, loading: loadingCategorias, refetch: refetchCategorias } = useCategorias();

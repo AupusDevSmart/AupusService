@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { FormField, FormFieldProps } from '@/core/types/base';
 import { usePlantasForUnidades } from '@/core/context/hooks';
-import { TipoUnidade, StatusUnidade, GrupoUnidade, SubgrupoUnidade } from '../types';
+import { TipoUnidade, StatusUnidade, GrupoUnidade, SubgrupoUnidade, type Unidade } from '../types';
 import { X, Plus } from 'lucide-react';
 import { Button } from '@/core/components/ui/button';
 import { Input } from '@/core/components/ui/input';
@@ -14,7 +14,7 @@ import { Checkbox } from '@/core/components/ui/checkbox';
 /**
  * Componente para selecionar/exibir Proprietário
  */
-const ProprietarioSelector = ({ value, onChange, mode, entity, formData }: FormFieldProps) => {
+const ProprietarioSelector = ({ value, onChange, mode, entity, formData }: FormFieldProps & { entity?: Unidade | null }) => {
   const { plantas, loading: loadingPlantas } = usePlantasForUnidades();
 
   // O proprietário NÃO é escolhido aqui: a instalação pertence à PLANTA, e a planta a um
@@ -389,10 +389,10 @@ export const unidadesFormFields: FormField[] = [
     required: false,
     colSpan: 2,
     render: ({ value, onChange, disabled, mode, formData, onMultipleChange }: FormFieldProps) => {
-      const irrigante = formData?.irrigante || false;
-      const sazonal = formData?.sazonal || false;
-      const industrial = formData?.industrial || false;
-      const geracao = formData?.geracao || false;
+      const irrigante = (formData?.irrigante as boolean | undefined) || false;
+      const sazonal = (formData?.sazonal as boolean | undefined) || false;
+      const industrial = (formData?.industrial as boolean | undefined) || false;
+      const geracao = (formData?.geracao as boolean | undefined) || false;
       const isView = mode === 'view';
 
       const handleCheck = (field: string, checked: boolean) => {
@@ -556,7 +556,7 @@ export const unidadesFormFields: FormField[] = [
           value={value as string}
           onChange={onChange}
           disabled={disabled || mode === 'view'}
-          estado={formData?.estado}
+          estado={formData?.estado as string | undefined}
         />
       );
     },

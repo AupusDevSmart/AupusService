@@ -14,7 +14,7 @@ import { PropostaSection } from './PropostaSection';
 import { PropostaCorrenteProvider, comBotaoDePdf } from './BotaoGerarPdf';
 import { AbrirInstrucaoContext, ValoresDaPropostaContext, type ValoresDaProposta } from './proposta-contexto';
 import { EditarInstrucaoSheet } from '@/features/instrucoes/components/EditarInstrucaoSheet';
-import type { FormField } from '@/types/base';
+import type { FormField, FormFieldProps } from '@/types/base';
 
 /**
  * O que o BaseForm entrega a um campo customizado. So o que esta secao usa —
@@ -215,7 +215,7 @@ export function SolicitacoesPage() {
         campo.key === 'proposta'
           ? {
               ...campo,
-              render: ({ entity, mode, formData }: PropsDoCampo) => (
+              render: ({ entity, mode, formData }: FormFieldProps & PropsDoCampo) => (
                 <PropostaSection
                   solicitacaoId={entity?.id ?? null}
                   instrucoesIds={formData?.instrucoes_ids ?? []}

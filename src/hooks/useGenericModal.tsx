@@ -7,12 +7,12 @@ interface ModalState<T extends BaseEntity> {
   isOpen: boolean;
   mode: ModalMode;
   entity: T | null;
-  preselectedData?: any; // ✅ NOVA: Campo opcional para não quebrar páginas existentes
+  preselectedData?: Record<string, unknown>; // ✅ NOVA: Campo opcional para não quebrar páginas existentes
 }
 
 interface UseGenericModalReturn<T extends BaseEntity> {
   modalState: ModalState<T>;
-  openModal: (mode: ModalMode, entity?: T | null, preselectedData?: any) => void; // ✅ ATUALIZANDO: Terceiro parâmetro opcional
+  openModal: (mode: ModalMode, entity?: T | null, preselectedData?: Record<string, unknown>) => void; // ✅ ATUALIZANDO: Terceiro parâmetro opcional
   closeModal: () => void;
   isViewMode: boolean;
   isEditMode: boolean;
@@ -28,7 +28,7 @@ export function useGenericModal<T extends BaseEntity>(): UseGenericModalReturn<T
   });
 
   // ✅ ATUALIZANDO: openModal agora aceita dados pré-selecionados opcionais
-  const openModal = useCallback((mode: ModalMode, entity: T | null = null, preselectedData?: any) => {
+  const openModal = useCallback((mode: ModalMode, entity: T | null = null, preselectedData?: Record<string, unknown>) => {
     setModalState({
       isOpen: true,
       mode,

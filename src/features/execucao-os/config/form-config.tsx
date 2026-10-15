@@ -1,5 +1,6 @@
 // src/features/execucao-os/config/form-config.tsx - CORRIGIDA COM MAPEAMENTO DE GRUPOS E COLSPAN
 import type { FormField } from '@/types/base';
+import type { ExecucaoOS } from '../types';
 import { ProgramacaoSelector } from '../components/ProgramacaoSelector';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
@@ -485,7 +486,7 @@ export const execucaoOSFormFields: FormField[] = [
     colSpan: 2,
     placeholder: 'Descreva o motivo do cancelamento',
     required: true,
-    condition: (entity, formData) => {
+    condition: (entity?: ExecucaoOS | null, formData?: Record<string, unknown>) => {
       return formData?.statusExecucao === 'CANCELADA' ||
              (entity && entity.statusExecucao === 'CANCELADA');
     },
@@ -513,7 +514,7 @@ export const execucaoOSFormFields: FormField[] = [
     disabled: true,
     group: 'auditoria',
     width: 'half',
-    condition: (entity, formData) => {
+    condition: (entity?: ExecucaoOS | null, formData?: Record<string, unknown>) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
       return status === 'FINALIZADA' || status === 'CANCELADA';
     }
@@ -527,7 +528,7 @@ export const execucaoOSFormFields: FormField[] = [
     disabled: true,
     group: 'auditoria',
     width: 'half',
-    condition: (entity, formData) => {
+    condition: (entity?: ExecucaoOS | null, formData?: Record<string, unknown>) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
       return status === 'FINALIZADA' || status === 'CANCELADA';
     }
@@ -540,7 +541,7 @@ export const execucaoOSFormFields: FormField[] = [
     group: 'auditoria',
     width: 'half',
     startNewRow: true,
-    condition: (entity, formData) => {
+    condition: (entity?: ExecucaoOS | null, formData?: Record<string, unknown>) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
       return status === 'FINALIZADA';
     }
@@ -552,7 +553,7 @@ export const execucaoOSFormFields: FormField[] = [
     disabled: true,
     group: 'auditoria',
     width: 'half',
-    condition: (entity, formData) => {
+    condition: (entity?: ExecucaoOS | null, formData?: Record<string, unknown>) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
       return status === 'FINALIZADA';
     }

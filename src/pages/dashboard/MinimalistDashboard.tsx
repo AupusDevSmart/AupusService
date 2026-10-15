@@ -34,8 +34,9 @@ import {
   Cell,
   ResponsiveContainer,
   Tooltip,
+  type TooltipProps,
 } from 'recharts';
-import { useAdvancedDashboard } from '@/hooks/useAdvancedDashboard';
+import { useAdvancedDashboard, type DashboardFilters } from '@/hooks/useAdvancedDashboard';
 import { useUserStore } from '@/store/useUserStore';
 
 // Paleta de cores minimalista (adaptada para suportar dark mode nos gráficos)
@@ -160,13 +161,16 @@ const ChartCard = ({
   );
 };
 
+/** Os periodos que o filtro do dashboard aceita. */
+type Periodo = NonNullable<DashboardFilters['periodo']>;
+
 // Tooltip customizado
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white dark:bg-gray-800 px-3 py-2 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700">
         <p className="text-xs font-medium text-gray-700 dark:text-gray-300">{label}</p>
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry, index: number) => (
           <p key={index} className="text-xs text-gray-600 dark:text-gray-400 mt-1">
             <span style={{ color: entry.color }}>●</span> {entry.name}: {entry.value}
           </p>
@@ -219,9 +223,9 @@ const CircularMetric = ({
 export function MinimalistDashboard() {
   const { user } = useUserStore();
   const [filters, setFilters] = useState({
-    periodo: '30dias' as any,
+    periodo: '30dias' as Periodo,
     plantaId: '',
-    criticidade: 'todas' as any
+    criticidade: 'todas'
   });
 
   const {
@@ -232,7 +236,7 @@ export function MinimalistDashboard() {
   } = useAdvancedDashboard({
     ...filters,
     usuarioId: user?.id,
-    proprietarioId: (user as any)?.proprietarioId
+    proprietarioId: user?.proprietarioId
   });
 
   // DEBUG: Log dos dados recebidos
@@ -362,7 +366,7 @@ export function MinimalistDashboard() {
             <div className="flex items-center gap-3">
               <Select
                 value={filters.periodo}
-                onValueChange={(v) => setFilters({ ...filters, periodo: v as any })}
+                onValueChange={(v) => setFilters({ ...filters, periodo: v as Periodo })}
               >
                 <SelectTrigger className="w-32 h-9 text-xs border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100">
                   <Calendar className="h-3 w-3 mr-2" />

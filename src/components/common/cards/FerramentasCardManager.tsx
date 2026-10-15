@@ -68,7 +68,7 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
     updateFerramentas(ferramentas.filter((_, i) => i !== index));
   };
 
-  const atualizarFerramenta = (index: number, campo: keyof FerramentaItem, valor: any) => {
+  const atualizarFerramenta = <K extends keyof FerramentaItem>(index: number, campo: K, valor: FerramentaItem[K]) => {
     const novasFerramentas = [...ferramentas];
     novasFerramentas[index] = { ...novasFerramentas[index], [campo]: valor };
     updateFerramentas(novasFerramentas);

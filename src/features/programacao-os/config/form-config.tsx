@@ -9,6 +9,7 @@ import { OrigemOSCard } from '../components/OrigemOSCard';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
 import { TecnicosDaPlanta } from '../components/TecnicosDaPlanta';
+import type { TecnicoItem } from '@/components/common/cards/TecnicosCardManager';
 import { ResponsavelDaOS } from '../components/ResponsavelDaOS';
 import { OrcamentoCardManager } from '@/components/common/cards/OrcamentoCardManager';
 import { ReservaViaturaField } from '../components/ReservaViaturaField';
@@ -429,7 +430,15 @@ export const programacaoOSFormFields: FormField[] = [
     key: 'responsavel_id',
     label: 'Responsável',
     type: 'custom',
-    render: ResponsavelDaOS,
+    // Embrulhado: o ResponsavelDaOS nao recebe onChange, e o valor do campo e o id (texto).
+    render: (props: FormFieldProps) => (
+      <ResponsavelDaOS
+        value={props.value as string | null | undefined}
+        formData={props.formData}
+        onMultipleChange={props.onMultipleChange}
+        disabled={props.disabled}
+      />
+    ),
     group: 'equipe',
     colSpan: 2,
     computeDisabled: (entity: any) => {
@@ -440,7 +449,7 @@ export const programacaoOSFormFields: FormField[] = [
     key: 'tecnicos',
     label: 'Técnicos Necessários',
     type: 'custom',
-    render: ({ value, onChange, formData, disabled }: FormFieldProps) => (
+    render: ({ value, onChange, formData, disabled }: FormFieldProps & { value?: TecnicoItem[] }) => (
       <TecnicosDaPlanta
         value={value ?? []}
         onChange={onChange}

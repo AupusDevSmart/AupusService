@@ -13,7 +13,7 @@ export const veiculosFormFields: FormField[] = [
     required: true,
     placeholder: 'Ex: Strada Adventure CD',
     width: 'half',
-    validation: (value) => {
+    validation: (value: string | undefined) => {
       if (!value || value.trim().length < 3) {
         return 'Nome deve ter pelo menos 3 caracteres';
       }
@@ -27,7 +27,7 @@ export const veiculosFormFields: FormField[] = [
     required: true,
     placeholder: 'ABC-1234 ou ABC1D23',
     width: 'half',
-    validation: (value) => {
+    validation: (value: string | undefined) => {
       if (!value) return 'Placa é obrigatória';
       const placaRegex = /^([A-Z]{3}-\d{4}|[A-Z]{3}\d[A-Z]\d{2})$/;
       if (!placaRegex.test(value.toUpperCase())) {
@@ -61,7 +61,7 @@ export const veiculosFormFields: FormField[] = [
     required: true,
     width: 'third',
     validation: (value) => {
-      const ano = parseInt(value);
+      const ano = parseInt(String(value));
       const anoAtual = new Date().getFullYear();
       if (isNaN(ano) || ano < 1990 || ano > anoAtual + 1) {
         return `Ano deve estar entre 1990 e ${anoAtual + 1}`;
@@ -115,7 +115,7 @@ export const veiculosFormFields: FormField[] = [
     required: true,
     width: 'half',
     validation: (value) => {
-      const passageiros = parseInt(value);
+      const passageiros = parseInt(String(value));
       if (isNaN(passageiros) || passageiros < 1 || passageiros > 50) {
         return 'Número de passageiros deve estar entre 1 e 50';
       }
@@ -129,7 +129,7 @@ export const veiculosFormFields: FormField[] = [
     required: true,
     width: 'half',
     validation: (value) => {
-      const capacidade = parseInt(value);
+      const capacidade = parseInt(String(value));
       if (isNaN(capacidade) || capacidade < 0) {
         return 'Capacidade deve ser um número positivo';
       }
@@ -145,7 +145,7 @@ export const veiculosFormFields: FormField[] = [
     required: true,
     width: 'half',
     validation: (value) => {
-      const km = parseInt(value);
+      const km = parseInt(String(value));
       if (isNaN(km) || km < 0) {
         return 'Quilometragem deve ser um número válido (0 ou maior)';
       }
