@@ -5,7 +5,11 @@ import { Car, Clock, Users, Weight, Fuel, AlertCircle, CheckCircle, Loader } fro
 import { ViaturaSelectorProps, ViaturaReservada } from '../../reservas/types';
 import { useReservasVeiculos } from '../../reservas/hooks/useReservasVeiculos';
 import { useVeiculos } from '../hooks/useVeiculos';
+import type { VeiculoResponse } from '@/services/veiculos.services';
 // Mock data removed - using API now
+
+/** A viatura como o cartao le: `numeroPassageiros` e `valorDiaria` sobraram do mock — a API nao manda. */
+type VeiculoDoSeletor = VeiculoResponse & { numeroPassageiros?: number; valorDiaria?: number };
 
 export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
   value,
@@ -23,7 +27,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
   showPeriodSummary = true,
   reservaIdParaExcluir
 }) => {
-  const [veiculosDisponiveis, setVeiculosDisponiveis] = useState<number[]>([]);
+  const [veiculosDisponiveis, setVeiculosDisponiveis] = useState<string[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [carregandoDisponibilidade, setCarregandoDisponibilidade] = useState(false);
 
@@ -65,7 +69,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
         // Se o veículo selecionado não estiver mais disponível, limpar seleção
         if (value && typeof value === 'object' && !disponiveis.includes(value.veiculoId)) {
           onChange(null);
-        } else if (value && typeof value === 'number' && !disponiveis.includes(value)) {
+        } else if (value && typeof value === 'string' && !disponiveis.includes(value)) {
           onChange(null);
         }
       } catch (error) {
@@ -80,10 +84,10 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
   }, [dataInicio, dataFim, horaInicio, horaFim, reservaIdParaExcluir, erroPeriodo, obterVeiculosDisponiveis, value, onChange]);
 
   // Selecionar veículo
-  const selecionarVeiculo = (veiculoId: number) => {
+  const selecionarVeiculo = (veiculoId: string) => {
     if (disabled) return;
 
-    const veiculo = mockVeiculos.find((v: any) => v.id === veiculoId);
+    const veiculo = mockVeiculos.find((v) => v.id === veiculoId);
     if (!veiculo) return;
 
     if (mode === 'simple') {
@@ -105,7 +109,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
   // Obter ID do veículo selecionado
   const veiculoSelecionadoId = useMemo(() => {
     if (!value) return null;
-    return typeof value === 'number' ? value : value.veiculoId;
+    return typeof value === 'string' ? value : value.veiculoId;
   }, [value]);
 
   // Calcular período em dias
@@ -166,7 +170,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
     );
   }
 
-  const veiculosParaExibir = mockVeiculos.filter((v: any) =>
+  const veiculosParaExibir = mockVeiculos.filter((v) =>
     veiculosDisponiveis.includes(v.id)
   );
 
@@ -194,7 +198,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
 
       {/* Lista de veículos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {veiculosParaExibir.map((veiculo: any) => {
+        {veiculosParaExibir.map((veiculo: VeiculoDoSeletor) => {
           const isSelected = veiculoSelecionadoId === veiculo.id;
           const custo = calcularCustoReserva(veiculo.id, dataInicio, dataFim);
 
@@ -288,7 +292,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
               {typeof value === 'object' ? (
                 <div className="text-sm text-green-700 mt-1">
                   <p className="font-medium">
-                    {mockVeiculos.find((v: any) => v.id === value.veiculoId)?.nome}
+                    {mockVeiculos.find((v) => v.id === value.veiculoId)?.nome}
                   </p>
                   <p>Período: {value.dataInicio} às {value.horaInicio} até {value.dataFim} às {value.horaFim}</p>
                   {value.responsavel && <p>Responsável: {value.responsavel}</p>}
@@ -299,7 +303,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
                 </div>
               ) : (
                 <p className="text-sm text-green-700 mt-1">
-                  {mockVeiculos.find((v: any) => v.id === value)?.nome} (ID: {value})
+                  {mockVeiculos.find((v) => v.id === value)?.nome} (ID: {value})
                 </p>
               )}
             </div>

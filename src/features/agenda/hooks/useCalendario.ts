@@ -42,13 +42,13 @@ export function useCalendario(): UseCalendarioResult {
 
       return resultado;
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [useCalendario] Erro ao verificar dia útil:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       toast({
         title: "Erro ao verificar dia útil",
-        description: error.message || "Não foi possível verificar se o dia é útil.",
+        description: (error instanceof Error && error.message) || "Não foi possível verificar se o dia é útil.",
         variant: "destructive",
       });
 
@@ -75,13 +75,13 @@ export function useCalendario(): UseCalendarioResult {
 
       return resultado;
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [useCalendario] Erro ao buscar próximos dias úteis:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       toast({
         title: "Erro ao buscar próximos dias úteis",
-        description: error.message || "Não foi possível buscar os próximos dias úteis.",
+        description: (error instanceof Error && error.message) || "Não foi possível buscar os próximos dias úteis.",
         variant: "destructive",
       });
 
@@ -108,13 +108,13 @@ export function useCalendario(): UseCalendarioResult {
 
       return resultado;
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [useCalendario] Erro ao carregar calendário:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       toast({
         title: "Erro ao carregar calendário",
-        description: error.message || "Não foi possível carregar o calendário do mês.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar o calendário do mês.",
         variant: "destructive",
       });
 

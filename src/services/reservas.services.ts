@@ -11,7 +11,7 @@ export type TipoSolicitante = 'ordem_servico' | 'viagem' | 'manutencao' | 'manua
 
 // Base interface for Reserva
 export interface BaseReserva {
-  veiculoId: number;
+  veiculoId: string;
   solicitanteId?: string;
   tipoSolicitante: TipoSolicitante;
   dataInicio: string; // YYYY-MM-DD
@@ -35,7 +35,7 @@ export interface ReservaResponse extends BaseReserva {
   createdAt: string;
   updatedAt: string;
   veiculo?: {
-    id: number;
+    id: string;
     nome: string;
     placa: string;
     marca: string;
@@ -46,15 +46,16 @@ export interface ReservaResponse extends BaseReserva {
   };
 }
 
-// Create/Update interfaces
-export interface CreateReservaRequest extends BaseReserva {}
+// Create/Update interfaces: o que o CreateReservaDto aceita. O status nao
+// entra (nasce ativa; muda pelas rotas de status).
+export interface CreateReservaRequest extends Omit<BaseReserva, 'status'> {}
 
-export interface UpdateReservaRequest extends Partial<BaseReserva> {}
+export interface UpdateReservaRequest extends Partial<CreateReservaRequest> {}
 
 // Query parameters
 export interface QueryReservasParams extends BaseFilters {
   search?: string;
-  veiculoId?: number;
+  veiculoId?: string;
   status?: StatusReserva;
   tipoSolicitante?: TipoSolicitante;
   responsavel?: string;
@@ -77,7 +78,7 @@ export interface DashboardReservasResponse {
   reservasHoje: number;
   reservasProximaSemana: number;
   veiculosMaisReservados: Array<{
-    veiculoId: number;
+    veiculoId: string;
     nomeVeiculo: string;
     totalReservas: number;
   }>;
@@ -182,7 +183,7 @@ export class ReservasService {
   }
 
   // GET /reservas/veiculo/:veiculoId - Get reservas by vehicle
-  static async getReservasByVeiculo(veiculoId: number, params: Partial<QueryReservasParams> = {}): Promise<ReservaResponse[]> {
+  static async getReservasByVeiculo(veiculoId: string, params: Partial<QueryReservasParams> = {}): Promise<ReservaResponse[]> {
     try {
       // console.log('📡 [RESERVAS SERVICE] Buscando reservas por veículo:', veiculoId);
 
@@ -283,7 +284,7 @@ export class ReservasService {
 
   // GET /reservas/conflitos - Check for conflicts
   static async verificarConflitos(
-    veiculoId: number,
+    veiculoId: string,
     dataInicio: string,
     dataFim: string,
     horaInicio: string,
@@ -316,16 +317,19 @@ export class ReservasService {
   }
 
   // Private method to handle errors
-  private static handleError(error: any, defaultMessage: string): Error {
-    if (error.response?.data?.message) {
-      if (Array.isArray(error.response.data.message)) {
-        return new Error(error.response.data.message.join(', '));
+  private static handleError(error: unknown, defaultMessage: string): Error {
+    // O erro do axios (ou qualquer objeto no mesmo formato), lido sem confiar no tipo
+    const { response, message } = (error ?? {}) as { response?: { data?: { message?: unknown } }; message?: unknown };
+    const mensagemDaApi = response?.data?.message;
+    if (mensagemDaApi) {
+      if (Array.isArray(mensagemDaApi)) {
+        return new Error(mensagemDaApi.join(', '));
       }
-      return new Error(error.response.data.message);
+      return new Error(String(mensagemDaApi));
     }
 
-    if (error.message) {
-      return new Error(error.message);
+    if (message) {
+      return new Error(String(message));
     }
 
     return new Error(defaultMessage);

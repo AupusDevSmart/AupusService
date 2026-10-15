@@ -1,5 +1,6 @@
 // src/features/equipamentos/types/index.ts - TIPOS CORRIGIDOS COM STRING IDS
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
+import type { PontoEquipamento } from '@/core/features/equipamentos/types';
 
 // ============================================================================
 // TIPOS BASE COMPATÍVEIS COM A API
@@ -131,6 +132,10 @@ export interface Equipamento extends BaseEntity {
   mqttHabilitado?: boolean;
   topicoMqtt?: string;
 
+  // Automacao (PR3): o sheet le os pontos daqui ao abrir o equipamento.
+  automacao?: boolean;
+  equipamento_pontos?: PontoEquipamento[];
+
   // Campos MCPSE
   mcpse?: boolean;
   mcpseAtivo?: boolean;
@@ -141,7 +146,7 @@ export interface Equipamento extends BaseEntity {
   a4?: string;
   a5?: string;
   a6?: string;
-  
+
   // Dados técnicos dinâmicos
   dadosTecnicos?: DadoTecnico[];
   
@@ -153,7 +158,7 @@ export interface Equipamento extends BaseEntity {
  /** A POSICAO onde este equipamento esta instalado. */
   ativo_funcional_id?: string;
   ativoFuncionalId?: string;
-  ativo_funcional?: { id: string; nome: string; categoria_id?: string };
+  ativo_funcional?: { id: string; nome: string; categoria_id?: string } | null;
   /** O nome proprio do equipamento — `nome` traz o da posicao. */
   nome_proprio?: string;
 

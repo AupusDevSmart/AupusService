@@ -27,13 +27,27 @@ import { cn } from "@/core/lib/utils";
 import { useHttpClient } from '@/core/context/hooks';
 import { unwrapApiResponse } from '@/core/lib/utils';
 
+/** A planta como /plantas devolve, no que o seletor le. */
+interface PlantaDoSeletor {
+  id: string;
+  nome: string;
+}
+
+/** A unidade como /plantas/:id/unidades devolve, no que o seletor le. */
+interface UnidadeDoSeletor {
+  id: string;
+  nome: string;
+  cidade?: string;
+  estado?: string;
+}
+
 /**
  * Componente de Seleção Cascata: Planta → Unidade
  */
 const PlantaUnidadeSelector = ({ value, onChange, disabled, mode }: FormFieldProps & { value: { plantaId?: string; unidadeId?: string } }) => {
   const httpClient = useHttpClient();
-  const [plantas, setPlantas] = useState<any[]>([]);
-  const [unidades, setUnidades] = useState<any[]>([]);
+  const [plantas, setPlantas] = useState<PlantaDoSeletor[]>([]);
+  const [unidades, setUnidades] = useState<UnidadeDoSeletor[]>([]);
   const [loadingPlantas, setLoadingPlantas] = useState(false);
   const [loadingUnidades, setLoadingUnidades] = useState(false);
   const [selectedPlantaId, setSelectedPlantaId] = useState(value?.plantaId || '');
@@ -45,7 +59,7 @@ const PlantaUnidadeSelector = ({ value, onChange, disabled, mode }: FormFieldPro
       try {
         setLoadingPlantas(true);
         const response = await httpClient.get('/plantas', { params: { limit: 100 } });
-        const { data: plantasArr } = unwrapApiResponse(response.data);
+        const { data: plantasArr } = unwrapApiResponse<PlantaDoSeletor>(response.data);
         setPlantas(plantasArr);
       } catch (error) {
         console.error('Erro ao carregar plantas:', error);
@@ -67,7 +81,7 @@ const PlantaUnidadeSelector = ({ value, onChange, disabled, mode }: FormFieldPro
       try {
         setLoadingUnidades(true);
         const response = await httpClient.get(`/plantas/${selectedPlantaId}/unidades`);
-        const { data: unidadesArr } = unwrapApiResponse(response.data);
+        const { data: unidadesArr } = unwrapApiResponse<UnidadeDoSeletor>(response.data);
         setUnidades(unidadesArr);
       } catch (error) {
         console.error('Erro ao carregar unidades:', error);
@@ -294,10 +308,17 @@ const TIPOS_DEPRECIACAO = [
   { value: 'uso', label: 'Uso' }
 ];
 
+/** Os campos especificos que esta secao le e escreve, por tipo. */
+type CampoEspecifico =
+  | 'classeIsolamento' | 'correnteNominal' | 'fatorServico' | 'grauProtecao' | 'grupoLigacao'
+  | 'impedancia' | 'numeroMPPTs' | 'numeroPolos' | 'potencia' | 'potenciaNominal' | 'rendimento'
+  | 'tensaoEntrada' | 'tensaoNominal' | 'tensaoPrimaria' | 'tensaoSaida' | 'tensaoSecundaria'
+  | 'tipoComunicacao' | 'tipoFundacao' | 'tipoPartida' | 'tipoRefrigeracao';
+
 interface CamposEspecificosPorTipoProps {
   tipoEquipamento: string;
-  formData: any;
-  onChange: (field: string, value: any) => void;
+  formData: Partial<Equipamento> & Partial<Record<CampoEspecifico, string>>;
+  onChange: (field: CampoEspecifico, value: string) => void;
 }
 
 const CamposEspecificosPorTipo = ({ tipoEquipamento, formData, onChange }: CamposEspecificosPorTipoProps) => {
@@ -803,7 +824,7 @@ export const equipamentosFormFields: FormField[] = [
       <CamposEspecificosPorTipo
         tipoEquipamento={(props.entity?.tipoEquipamento || props.value?.tipoEquipamento) as string}
         formData={props.entity || props.value || {}}
-        onChange={(field: string, value: any) => {
+        onChange={(field: string, value: string) => {
           if (props.onMultipleChange) {
             props.onMultipleChange({ [field]: value });
           }

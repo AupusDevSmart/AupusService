@@ -1,6 +1,8 @@
 // src/features/execucao-os/config/form-config.tsx - CORRIGIDA COM MAPEAMENTO DE GRUPOS E COLSPAN
-import type { FormField } from '@/types/base';
-import type { ExecucaoOS } from '../types';
+import type { FormField, FormFieldProps } from '@/types/base';
+import type { BaseEntity, DadosDoFormulario } from '@/core/types/base';
+import type { ExecucaoOS, HistoricoOS, MaterialOS, TecnicoOS } from '../types';
+import type { OSDaOrigem } from '../components/OrigemOSCardWrapper';
 import { ProgramacaoSelector } from '../components/ProgramacaoSelector';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
@@ -25,15 +27,22 @@ const DEPOIS_DE_AUDITAR = ['AUDITADA', 'FINALIZADA'];
 const temValor = (v: unknown) =>
   v !== undefined && v !== null && String(v).trim() !== '' && !(typeof v === 'number' && Number.isNaN(v));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- entidade/formData do BaseForm
-const exibirSe = (statuses: string[], chave: string, extra?: (entity: any) => boolean) => (entity: any, formData: any) => {
+/**
+ * A OS aberta no sheet (já transformada) ou o formulário vivo: lidos pela
+ * chave do campo, com os aliases que o transform monta.
+ */
+type CamposDaOS = DadosDoFormulario & { statusExecucao?: string };
+
+/** O que se lê da OS para saber se ela tem reserva de viatura. */
+type OSComReserva = BaseEntity & { reserva_veiculo?: unknown; reservaVeiculo?: unknown; reserva_id?: unknown };
+
+const exibirSe = (statuses: string[], chave: string, extra?: (entity?: OSComReserva | null) => boolean) => (entity?: (BaseEntity & CamposDaOS) | null, formData?: CamposDaOS) => {
   const status = formData?.statusExecucao || entity?.statusExecucao;
   const valor = formData?.[chave] ?? entity?.[chave];
-  return statuses.includes(status) && temValor(valor) && (!extra || extra(entity));
+  return statuses.includes(status ?? '') && temValor(valor) && (!extra || extra(entity));
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const temReservaNa = (entity: any) => Boolean(entity?.reserva_veiculo || entity?.reservaVeiculo || entity?.reserva_id);
+const temReservaNa = (entity?: OSComReserva | null) => Boolean(entity?.reserva_veiculo || entity?.reservaVeiculo || entity?.reserva_id);
 
 /**
  * Listas (técnicos, materiais, ferramentas, orçamento): enquanto a OS não foi
@@ -41,10 +50,9 @@ const temReservaNa = (entity: any) => Boolean(entity?.reserva_veiculo || entity?
  * vazio vira ruído ("Nenhum material cadastrado" no relatório): só aparece
  * se alguma das listas tiver item.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- entidade/formData do BaseForm
-const exibirListaSe = (...chaves: string[]) => (entity: any, formData: any) => {
+const exibirListaSe = (...chaves: string[]) => (entity?: (BaseEntity & CamposDaOS) | null, formData?: CamposDaOS) => {
   const status = formData?.statusExecucao || entity?.statusExecucao;
-  if (!DEPOIS_DE_EXECUTAR.includes(status)) return true;
+  if (!DEPOIS_DE_EXECUTAR.includes(status ?? '')) return true;
   return chaves.some((chave) => {
     const lista = formData?.[chave] ?? entity?.[chave];
     return Array.isArray(lista) && lista.length > 0;
@@ -116,7 +124,7 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'custom',
     group: 'origem',
     colSpan: 2, // ✅ Ocupa 2 colunas (largura total)
-    render: (props: any) => (
+    render: (props: FormFieldProps & { value?: OSDaOrigem; entity?: (BaseEntity & OSDaOrigem) | null; formData?: OSDaOrigem }) => (
       <OrigemOSCardWrapper
         value={props.value}
         entity={props.entity}
@@ -133,8 +141,7 @@ export const execucaoOSFormFields: FormField[] = [
     component: ReservaVeiculoCard,
     group: 'reserva',
     colSpan: 2, // ✅ Ocupa 2 colunas (largura total)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    condition: (entity: any) => temReservaNa(entity)
+    condition: (entity?: OSComReserva | null) => temReservaNa(entity)
   },
 
   // Dados de Execução da Reserva - GRUPO: reserva
@@ -352,13 +359,18 @@ export const execucaoOSFormFields: FormField[] = [
     label: '', // duplicava o titulo do grupo
     type: 'custom',
     component: OrcamentoCardManager,
-    componentProps: (formData: any) => {
+    componentProps: (formData: DadosDoFormulario & {
+      materiaisConsumidos?: MaterialOS[];
+      materiais?: MaterialOS[];
+      tecnicos?: TecnicoOS[];
+      tecnicosPresentes?: TecnicoOS[];
+    }) => {
       const materiais = formData?.materiaisConsumidos || formData?.materiais || [];
       const tecnicos = formData?.tecnicos || formData?.tecnicosPresentes || [];
-      const custoMateriais = materiais.reduce((acc: number, m: any) => {
+      const custoMateriais = materiais.reduce((acc: number, m) => {
         return acc + ((Number(m.custo_unitario) || 0) * (Number(m.quantidade_planejada) || Number(m.quantidade_consumida) || 0));
       }, 0);
-      const custoEquipe = tecnicos.reduce((acc: number, t: any) => {
+      const custoEquipe = tecnicos.reduce((acc: number, t) => {
         return acc + ((Number(t.custo_hora) || 0) * (Number(t.horas_estimadas) || Number(t.horas_trabalhadas) || 0));
       }, 0);
       return {
@@ -447,8 +459,7 @@ export const execucaoOSFormFields: FormField[] = [
     disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Avaliação da qualidade',
     type: 'custom',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    render: ({ entity, formData }: any) => (
+    render: ({ entity, formData }: FormFieldProps & { entity?: (BaseEntity & { avaliacaoQualidade?: number }) | null }) => (
       <AvaliacaoEstrelas valor={Number(formData?.avaliacaoQualidade ?? entity?.avaliacaoQualidade)} somenteLeitura />
     ),
     group: 'qualidade',
@@ -501,7 +512,7 @@ export const execucaoOSFormFields: FormField[] = [
     group: 'historico',
     colSpan: 2,
     showOnlyOnMode: ['view', 'edit'],
-    render: (props: any) => (
+    render: (props: FormFieldProps & { entity?: (BaseEntity & { historico?: HistoricoOS[] }) | null }) => (
       <HistoricoOSCard historico={props.entity?.historico} />
     )
   },

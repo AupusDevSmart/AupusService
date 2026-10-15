@@ -3,9 +3,26 @@ import { useEffect, useMemo, useState } from 'react';
 import { BaseModal } from '@/core';
 import { FileText, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { InstrucaoApiResponse } from '@/services/instrucoes.services';
+import { InstrucaoApiResponse, type CreateInstrucaoApiData } from '@/services/instrucoes.services';
 import { AnexosInstrucaoManager } from './AnexosInstrucaoManager';
 import { FormField } from '@/types/base';
+
+/** A instrucao como o formulario a recebe: a da API, com a criticidade em texto (o select guarda texto). */
+type InstrucaoDoFormulario = Omit<InstrucaoApiResponse, 'criticidade'> & { criticidade: string };
+
+/** Os padroes de uma instrucao nova: o que o formulario precisa para abrir o cadastro. */
+type SementeDaInstrucao = Pick<
+  InstrucaoDoFormulario,
+  | 'id' | 'nome' | 'descricao' | 'categoria' | 'tipo_manutencao' | 'condicao_ativo' | 'criticidade'
+  | 'status' | 'ativo' | 'duracao_estimada' | 'tempo_estimado' | 'sub_instrucoes' | 'recursos'
+>;
+
+/**
+ * O que o formulario entrega ao salvar. O BaseModal semeia com a instrucao
+ * inteira (ou com os padroes do cadastro), entao chegam tambem os campos que so
+ * o servidor gerencia — quem salva os tira antes de enviar.
+ */
+export type FormularioDaInstrucao = CreateInstrucaoApiData & Record<string, unknown>;
 
 interface InstrucoesModalProps {
   isOpen: boolean;
@@ -14,7 +31,7 @@ interface InstrucoesModalProps {
   formFields: FormField[];
   pendingFiles?: File[];
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: FormularioDaInstrucao) => Promise<void>;
   onFilesChange: (files: File[]) => void;
   /** Ausente, o botão de excluir não aparece. */
   onExcluir?: (instrucao: InstrucaoApiResponse) => Promise<void>;
@@ -119,9 +136,13 @@ export function InstrucoesModal({
     return titles[mode] || 'Instrução';
   };
 
-  const modalEntity = useMemo(() => {
+  const modalEntity = useMemo((): InstrucaoDoFormulario | SementeDaInstrucao | null => {
     if (mode === 'create') {
-      return {
+      const semente: SementeDaInstrucao = {
+        // Vazio, como na semente do plano: o cadastro ainda nao tem id e o
+        // BaseModal pede um. Vazio ele vale como "novo", e o formulario o
+        // guarda como undefined — nao vai no payload.
+        id: '',
         nome: '',
         descricao: '',
         categoria: 'MECANICA',
@@ -135,6 +156,7 @@ export function InstrucoesModal({
         sub_instrucoes: [],
         recursos: []
       };
+      return semente;
     }
 
     if (entity) {
@@ -154,7 +176,7 @@ export function InstrucoesModal({
     <BaseModal
       isOpen={isOpen}
       mode={mode}
-      entity={modalEntity as any}
+      entity={modalEntity}
       title={getModalTitle()}
       icon={<FileText className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
       formFields={formFields}

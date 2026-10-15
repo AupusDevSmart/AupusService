@@ -9,19 +9,101 @@ import { Expandir, useMontadoAteSair } from '@/components/ui/expandir';
 import PlanosManutencaoViewer from './PlanosManutencaoViewer';
 import { solicitacoesServicoService } from '@/services/solicitacoes-servico.service';
 import { tarefasApi, type TarefaApiResponse } from '@/services/tarefas.services';
+import type { Anomalia } from '@/features/anomalias/types';
+import type { SolicitacaoServico } from '@/features/solicitacoes-servico/types';
+import type { DadosOrigem, TarefasPorPlano } from '../types';
+
+/** Instrução na lista: o vínculo (`{ instrucao }`) ou a própria instrução. */
+export interface InstrucaoListada {
+  id?: string;
+  nome?: string;
+  tag?: string;
+  instrucao?: InstrucaoListada | null;
+}
+
+/** A anomalia como o card lê: da API, da prop ou, sem elas, do dados_origem. */
+export interface AnomaliaDoCard {
+  id?: string;
+  descricao?: string;
+  prioridade?: string;
+  status?: string;
+  localizacao?: { local?: string; ativo?: string } | null;
+  local?: string;
+  ativo?: string;
+  condicao?: string;
+  origem?: string;
+  createdAt?: string;
+  created_at?: string;
+  data?: string;
+  updatedAt?: string;
+  updated_at?: string;
+  atualizadoEm?: string;
+  observacoes?: string;
+  anomalias_instrucoes?: InstrucaoListada[];
+  instrucoes?: InstrucaoListada[];
+}
+
+/** A solicitação como o card lê: da API, da prop ou, sem elas, do dados_origem. */
+export interface SolicitacaoDoCard {
+  id?: string;
+  titulo?: string;
+  numero?: string;
+  prioridade?: string;
+  status?: string;
+  tipo?: string;
+  local?: string;
+  solicitante_nome?: string;
+  data_solicitacao?: string;
+  descricao?: string;
+  instrucoes?: InstrucaoListada[];
+  solicitacoes_instrucoes?: InstrucaoListada[];
+}
+
+/** Tarefa da programação/OS: o vínculo com o congelado (snapshot) ou a tarefa. */
+export interface TarefaDoCard {
+  id: string;
+  tarefa_id?: string;
+  nome?: string;
+  nome_snapshot?: string;
+  instrucao_nome?: string;
+  instrucao_tag?: string;
+  instrucao_id?: string | null;
+  plano_nome?: string;
+  criticidade_snapshot?: number;
+  criticidade?: number;
+  frequencia_snapshot?: string;
+  frequencia?: string;
+  status?: string;
+  tarefa?: {
+    id?: string;
+    nome?: string;
+    tag?: string;
+    instrucao_id?: string | null;
+    plano_manutencao?: { nome?: string } | null;
+    criticidade?: number;
+    frequencia?: string;
+  } | null;
+  instrucao?: { nome?: string } | null;
+}
+
+/**
+ * O card também lê do `dados_origem` os campos da anomalia e da solicitação,
+ * como último recurso (a programação de from-solicitacao grava número e tipo).
+ */
+export type DadosOrigemDoCard = DadosOrigem & AnomaliaDoCard & SolicitacaoDoCard;
 
 interface OrigemOSCardProps {
   origem: string;
-  dadosOrigem?: any;
-  anomalia?: any;
-  tarefas?: any[];
-  planoManutencao?: any;
-  planosSelecionados?: any[];
-  tarefasPorPlano?: { [planoId: string]: { plano: any; tarefas: any[] } };
-  solicitacaoServico?: any;
+  dadosOrigem?: DadosOrigemDoCard | null;
+  anomalia?: AnomaliaDoCard | null;
+  tarefas?: TarefaDoCard[];
+  planoManutencao?: unknown;
+  planosSelecionados?: unknown[];
+  tarefasPorPlano?: TarefasPorPlano;
+  solicitacaoServico?: SolicitacaoDoCard | null;
 }
 
-const formatarData = (dataField: any): string => {
+const formatarData = (dataField: string | number | Date): string => {
   if (!dataField) return 'Data não informada';
 
   try {
@@ -126,10 +208,10 @@ const BotaoInstrucao: React.FC<{ instrucaoId?: string | null; titulo?: string }>
  * a descrição do problema e parava por aí: quem ia executar não tinha como
  * chegar no procedimento.
  */
-const ListaDeInstrucoes: React.FC<{ instrucoes?: any[] }> = ({ instrucoes }) => {
+const ListaDeInstrucoes: React.FC<{ instrucoes?: InstrucaoListada[] }> = ({ instrucoes }) => {
   const lista = (instrucoes || [])
-    .map((i: any) => i?.instrucao ?? i)
-    .filter((i: any) => i?.id);
+    .map((i) => i?.instrucao ?? i)
+    .filter((i) => i?.id);
 
   if (lista.length === 0) return null;
 
@@ -138,7 +220,7 @@ const ListaDeInstrucoes: React.FC<{ instrucoes?: any[] }> = ({ instrucoes }) => 
       <p className="text-[11px] text-muted-foreground mb-1">
         Instruções ({lista.length})
       </p>
-      {lista.map((i: any) => (
+      {lista.map((i) => (
         <div key={i.id} className="flex items-center gap-3 py-2 border-t first:border-t-0">
           <div className="min-w-0 flex-1">
             <p className="text-xs text-foreground/90 truncate" title={i.nome}>{i.nome}</p>
@@ -175,8 +257,8 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
   // Os detalhes seguem montados durante a saida, para a altura animar.
   const detalhesMontados = useMontadoAteSair(expanded);
   const { obterAnomalia, loading: anomaliaLoading, error: anomaliaError } = useAnomalias();
-  const [anomaliaFromAPI, setAnomaliaFromAPI] = useState<any>(null);
-  const [solicitacaoFromAPI, setSolicitacaoFromAPI] = useState<any>(null);
+  const [anomaliaFromAPI, setAnomaliaFromAPI] = useState<Anomalia | null>(null);
+  const [solicitacaoFromAPI, setSolicitacaoFromAPI] = useState<SolicitacaoServico | null>(null);
   const [solicitacaoLoading, setSolicitacaoLoading] = useState(false);
   const [tarefasFromAPI, setTarefasFromAPI] = useState<TarefaApiResponse[]>([]);
   const [tarefasLoading, setTarefasLoading] = useState(false);
@@ -213,7 +295,7 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
    * "1 tarefa", sem dizer o que era para fazer.
    */
   const tarefasCongeladas = (tarefas || [])
-    .map((t: any) => ({
+    .map((t) => ({
       id: t.id,
       nome: t.nome_snapshot || t.instrucao_nome || t.tarefa?.nome || t.nome,
       tag: t.instrucao_tag || t.tarefa?.tag,
@@ -224,7 +306,7 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
       frequencia: t.frequencia_snapshot || t.frequencia || t.tarefa?.frequencia,
       status: t.status,
     }))
-    .filter((t) => t.nome);
+    .filter((t): t is typeof t & { nome: string } => Boolean(t.nome));
 
   // Buscar detalhes das tarefas quando expandir card de origem TAREFA
   useEffect(() => {
@@ -255,7 +337,7 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
       ? tarefasPorPlano
       : dadosOrigem?.tarefasPorPlano || {};
     const hasMultiplosPlanos = Object.keys(tarefasPorPlanoData).length > 0;
-    const hasTarefasLegacy = tarefas?.length > 0 || dadosOrigem?.tarefasSelecionadas?.length > 0;
+    const hasTarefasLegacy = tarefas?.length > 0 || (dadosOrigem?.tarefasSelecionadas?.length ?? 0) > 0;
     return hasMultiplosPlanos || hasTarefasLegacy;
   })();
 
@@ -274,7 +356,7 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
   const OrigemIcon = getOrigemIcon(origem);
 
   const renderAnomaliaDetails = () => {
-    const a = anomaliaFromAPI || anomalia || dadosOrigem;
+    const a: AnomaliaDoCard | null | undefined = anomaliaFromAPI || anomalia || dadosOrigem;
     const reportada = a?.createdAt || a?.created_at || a?.data;
     const atualizada = a?.updatedAt || a?.updated_at || a?.atualizadoEm;
     const critica = a?.prioridade === 'CRITICA' || a?.prioridade === 'ALTA';
@@ -345,7 +427,7 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
         }
       });
     } else if (tarefas && tarefas.length > 0) {
-      tarefas.forEach((tarefa: any) => {
+      tarefas.forEach((tarefa) => {
         const idReal = tarefa.tarefa_id || tarefa.id;
         if (idReal) {
           tarefasIds.push(idReal);
@@ -419,7 +501,7 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
       </div>
     );
 
-    const daApi = tarefasFromAPI.map((t: any) => ({
+    const daApi = tarefasFromAPI.map((t) => ({
       id: t.id,
       nome: t.nome,
       tag: t.tag,
@@ -434,7 +516,7 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
     const paraMostrar = tarefasCongeladas.length > 0 ? tarefasCongeladas : daApi;
 
     const planosDaOS = [
-      ...new Set(paraMostrar.map((t: any) => t.planoNome).filter(Boolean)),
+      ...new Set(paraMostrar.map((t) => t.planoNome).filter(Boolean)),
     ] as string[];
 
     const count =
@@ -469,9 +551,9 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
         )}
 
         {/* Sem id nem congelado, sobra o nome que a programação gravou. */}
-        {paraMostrar.length === 0 && !tarefasLoading && dadosOrigem.tarefas_nomes?.length > 0 && (
+        {paraMostrar.length === 0 && !tarefasLoading && (dadosOrigem.tarefas_nomes?.length ?? 0) > 0 && (
           <div className="border-t pt-1">
-            {dadosOrigem.tarefas_nomes.map((nome: string, i: number) => (
+            {dadosOrigem.tarefas_nomes?.map((nome: string, i: number) => (
               <p key={i} className="text-xs text-foreground/90 py-2 border-t first:border-t-0">
                 {nome}
               </p>
@@ -483,7 +565,7 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
   };
 
   const renderSolicitacaoDetails = () => {
-    const sol = solicitacaoFromAPI || solicitacaoServico || dadosOrigem;
+    const sol: SolicitacaoDoCard | null | undefined = solicitacaoFromAPI || solicitacaoServico || dadosOrigem;
     if (!sol) return null;
 
     const tipoLabels: Record<string, string> = {

@@ -14,11 +14,6 @@ interface UseAnomaliasReturn {
   obterAnomalia: (id: string) => Promise<Anomalia | null>;
   excluirAnomalia: (id: string) => Promise<boolean>;
   
-  // Operações específicas de anomalias
-  gerarOS: (anomaliaId: string) => Promise<Anomalia>;
-  resolverAnomalia: (anomaliaId: string, observacoes?: string) => Promise<Anomalia>;
-  cancelarAnomalia: (anomaliaId: string, motivo?: string) => Promise<Anomalia>;
-  
   // Utilitários
   clearError: () => void;
   testConnection: () => Promise<boolean>;
@@ -117,69 +112,6 @@ export function useAnomalias(): UseAnomaliasReturn {
     }
   }, []);
 
-  // Gerar OS
-  const gerarOS = useCallback(async (anomaliaId: string): Promise<Anomalia> => {
-    //console.log('🔧 [useAnomalias] Gerando OS para anomalia:', anomaliaId);
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const anomalia = await (anomaliasService as any).gerarOS(anomaliaId);
-      //console.log('✅ [useAnomalias] OS gerada com sucesso:', anomalia);
-      return anomalia;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao gerar OS';
-      console.error('❌ [useAnomalias] Erro ao gerar OS:', err);
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Resolver anomalia
-  const resolverAnomalia = useCallback(async (anomaliaId: string, observacoes?: string): Promise<Anomalia> => {
-    //console.log('✅ [useAnomalias] Resolvendo anomalia:', anomaliaId, observacoes);
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const anomalia = await (anomaliasService as any).resolver(anomaliaId, observacoes);
-      //console.log('✅ [useAnomalias] Anomalia resolvida com sucesso:', anomalia);
-      return anomalia;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao resolver anomalia';
-      console.error('❌ [useAnomalias] Erro ao resolver anomalia:', err);
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Cancelar anomalia
-  const cancelarAnomalia = useCallback(async (anomaliaId: string, motivo?: string): Promise<Anomalia> => {
-    //console.log('❌ [useAnomalias] Cancelando anomalia:', anomaliaId, motivo);
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const anomalia = await (anomaliasService as any).cancelar(anomaliaId, motivo);
-      //console.log('❌ [useAnomalias] Anomalia cancelada com sucesso:', anomalia);
-      return anomalia;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao cancelar anomalia';
-      console.error('❌ [useAnomalias] Erro ao cancelar anomalia:', err);
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   // Testar conexão com a API
   const testConnection = useCallback(async (): Promise<boolean> => {
     //console.log('🧪 [useAnomalias] Testando conexão com API...');
@@ -204,11 +136,6 @@ export function useAnomalias(): UseAnomaliasReturn {
     editarAnomalia,
     obterAnomalia,
     excluirAnomalia,
-    
-    // Operações específicas
-    gerarOS,
-    resolverAnomalia,
-    cancelarAnomalia,
     
     // Utilitários
     clearError,

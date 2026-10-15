@@ -1,7 +1,7 @@
 // src/services/selection-data.services.ts - COM PROPRIETÁRIOS COM PLANTAS
 import { api } from '@/config/api';
 import { UsuariosService } from './usuarios.services';
-import { PlantasService } from './plantas.services';
+import { PlantasService, type PlantaResponse } from './plantas.services';
 
 // ============================================================================
 // TIPOS PARA DADOS DE SELEÇÃO
@@ -29,11 +29,41 @@ export interface PlantaSelection extends SelectionOption {
   proprietario_id: string;
 }
 
+/**
+ * Item da lista de SELECAO que `getTiposEquipamentos` devolve (dados mockados,
+ * abaixo). Nao e o formato da rota /tipos-equipamentos (`codigo`, `nome`,
+ * `propriedadesSchema`), que fica em tipos-equipamentos.services.ts.
+ */
 export interface TipoEquipamento {
   value: string;
   label: string;
   categoria: 'eletrico' | 'mecanico' | 'hidraulico' | 'pneumatico' | 'eletronica' | 'outro';
   campos_tecnicos?: CampoTecnico[];
+}
+
+/** Um nivel da hierarquia (area, subarea, linha...) — hoje so os dados mockados abaixo. */
+export interface NivelDaHierarquia {
+  id: string;
+  nome: string;
+  parent_id?: string;
+  label: string;
+}
+
+/** O usuario como /usuarios devolve, no que a selecao de proprietario le. */
+interface UsuarioDaApi {
+  id: string;
+  nome: string;
+  cpf_cnpj?: string;
+  email?: string;
+  telefone?: string;
+  cidade?: string;
+  estado?: string;
+}
+
+/** A UC como /equipamentos/ucs-disponiveis devolve, no que a selecao le. */
+interface UcDisponivelDaApi {
+  id: string | number;
+  nome?: string;
 }
 
 export interface CampoTecnico {
@@ -60,7 +90,7 @@ export class SelectionDataService {
       // console.log('🔍 [SELECTION] Buscando todos os proprietários...');
 
       // Buscar TODOS os usuários com roles válidas
-      const response = await api.get('/usuarios', {
+      const response = await api.get<UsuarioDaApi[] | { data?: UsuarioDaApi[] }>('/usuarios', {
         params: {
           roles: 'admin,gerente,proprietario',
           limit: 1000  // Buscar todos
@@ -68,7 +98,7 @@ export class SelectionDataService {
       });
 
       const usuariosData = response.data;
-      const usuarios = usuariosData.data || usuariosData || [];
+      const usuarios: UsuarioDaApi[] = (Array.isArray(usuariosData) ? usuariosData : usuariosData.data) || [];
 
       if (usuarios.length === 0) {
         console.warn('⚠️ [SELECTION] Nenhum proprietário cadastrado no sistema. Cadastre usuários com roles admin/gerente/proprietario.');
@@ -76,7 +106,7 @@ export class SelectionDataService {
       }
 
       // Mapear usuários para formato de proprietários
-      const proprietarios: ProprietarioSelection[] = usuarios.map((usuario: any) => ({
+      const proprietarios: ProprietarioSelection[] = usuarios.map((usuario) => ({
         id: usuario.id,
         nome: usuario.nome,
         cpf_cnpj: usuario.cpf_cnpj || '',
@@ -115,7 +145,7 @@ export class SelectionDataService {
       }
 
       // Buscar plantas do proprietário específico com paginação
-      let todasPlantas: any[] = [];
+      let todasPlantas: PlantaResponse[] = [];
       let page = 1;
       let hasMore = true;
       
@@ -172,10 +202,10 @@ export class SelectionDataService {
   // ============================================================================
   // HIERARQUIA - MOCK (TEMPORÁRIO - AGUARDANDO IMPLEMENTAÇÃO DA API)
   // ============================================================================
-  async getHierarquiaNivel(nivel: string, parentId?: string): Promise<any[]> {
+  async getHierarquiaNivel(nivel: string, parentId?: string): Promise<NivelDaHierarquia[]> {
     console.warn(`⚠️ [SELECTION] USANDO DADOS MOCKADOS para hierarquia ${nivel}. Implementar endpoint real na API.`);
 
-    const mockData: Record<string, any[]> = {
+    const mockData: Record<string, Omit<NivelDaHierarquia, 'label'>[]> = {
       'area': [
         { id: '1', nome: 'Produção', parent_id: parentId },
         { id: '2', nome: 'Logística', parent_id: parentId },
@@ -277,14 +307,14 @@ export class SelectionDataService {
   async getEquipamentosUCDisponiveis(plantaId?: string): Promise<SelectionOption[]> {
     try {
       const params = plantaId ? { planta_id: plantaId } : {};
-      const response = await api.get('/equipamentos/ucs-disponiveis', { params });
+      const response = await api.get<UcDisponivelDaApi[]>('/equipamentos/ucs-disponiveis', { params });
       
       if (!response.data || !Array.isArray(response.data)) {
         console.warn('⚠️ [SELECTION] Nenhum equipamento UC disponível. Resposta da API inválida ou vazia.');
         return [];
       }
 
-      return response.data.map((uc: any) => ({
+      return response.data.map((uc) => ({
         id: String(uc.id),
         nome: uc.nome || 'UC sem nome',
         label: uc.nome || 'UC sem nome'

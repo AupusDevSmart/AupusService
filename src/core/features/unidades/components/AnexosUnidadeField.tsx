@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useHttpClient } from '@/core/context/hooks';
 import { toast } from '@/core/hooks/use-toast';
+import { formatApiError } from '@/utils/api-error';
 
 export interface AnexoUnidade {
   id: string;
@@ -97,15 +98,15 @@ export function AnexosUnidadeField({
     }
     setCarregando(true);
     try {
-      const resposta = await httpClient.get(`/unidades/${id}/anexos`);
+      const resposta = await httpClient.get<AnexoUnidade[] | { data?: AnexoUnidade[] }>(`/unidades/${id}/anexos`);
       // A resposta pode vir embrulhada em { success, data } pelo interceptor.
-      const lista = resposta.data?.data ?? resposta.data ?? [];
+      const lista = (Array.isArray(resposta.data) ? undefined : resposta.data?.data) ?? resposta.data ?? [];
       setAnexos(Array.isArray(lista) ? lista : []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('[ANEXOS] Erro ao listar anexos:', error);
       toast({
         title: 'Erro ao carregar anexos',
-        description: error?.response?.data?.message || error?.message,
+        description: formatApiError(error),
         variant: 'destructive',
       });
       setAnexos([]);
@@ -160,10 +161,10 @@ export function AnexosUnidadeField({
             // backend recusa com "Nenhum arquivo enviado".
             headers: { 'Content-Type': 'multipart/form-data' },
           });
-        } catch (error: any) {
+        } catch (error) {
           toast({
             title: `Não foi possível enviar "${arquivo.name}"`,
-            description: error?.response?.data?.message || error?.message,
+            description: formatApiError(error),
             variant: 'destructive',
           });
         }
@@ -177,7 +178,7 @@ export function AnexosUnidadeField({
 
   const baixar = async (anexo: AnexoUnidade) => {
     try {
-      const resposta = await httpClient.get(`/unidades/anexos/${anexo.id.trim()}/download`, {
+      const resposta = await httpClient.get<Blob>(`/unidades/anexos/${anexo.id.trim()}/download`, {
         responseType: 'blob',
       });
 
@@ -189,10 +190,10 @@ export function AnexosUnidadeField({
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Erro ao baixar anexo',
-        description: error?.response?.data?.message || error?.message,
+        description: formatApiError(error),
         variant: 'destructive',
       });
     }
@@ -206,10 +207,10 @@ export function AnexosUnidadeField({
       await httpClient.delete(`/unidades/anexos/${anexo.id.trim()}`);
       toast({ title: 'Anexo removido' });
       await carregar();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Erro ao remover anexo',
-        description: error?.response?.data?.message || error?.message,
+        description: formatApiError(error),
         variant: 'destructive',
       });
     } finally {

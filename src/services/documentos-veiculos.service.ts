@@ -41,7 +41,7 @@ class DocumentosVeiculosApiService {
   // ==========================================
 
   async uploadDocumento(
-    veiculoId: number,
+    veiculoId: string,
     uploadData: UploadDocumentoDto,
     onProgress?: (progress: number) => void
   ): Promise<DocumentoVeiculoResponse> {
@@ -107,7 +107,7 @@ class DocumentosVeiculosApiService {
   // 🔵 LISTAGEM E CONSULTA
   // ==========================================
 
-  async listarDocumentos(veiculoId: number): Promise<DocumentoVeiculoResponse[]> {
+  async listarDocumentos(veiculoId: string): Promise<DocumentoVeiculoResponse[]> {
     // console.log('📋 [DocumentosVeiculosService] Listando documentos do veículo:', veiculoId);
 
     try {
@@ -135,7 +135,7 @@ class DocumentosVeiculosApiService {
   // 🔵 DOWNLOAD
   // ==========================================
 
-  async downloadDocumento(veiculoId: number, documentoId: string): Promise<void> {
+  async downloadDocumento(veiculoId: string, documentoId: string): Promise<void> {
     // console.log('⬇️ [DocumentosVeiculosService] Iniciando download:', { veiculoId, documentoId });
 
     try {
@@ -211,7 +211,7 @@ class DocumentosVeiculosApiService {
   // 🔵 REMOÇÃO
   // ==========================================
 
-  async removerDocumento(veiculoId: number, documentoId: string): Promise<{ message: string }> {
+  async removerDocumento(veiculoId: string, documentoId: string): Promise<{ message: string }> {
     // console.log('🗑️ [DocumentosVeiculosService] Removendo documento:', { veiculoId, documentoId });
 
     const response = await api.delete(`${this.baseUrl}/${veiculoId}/documentacao/${documentoId}`);

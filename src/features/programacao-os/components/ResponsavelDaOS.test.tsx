@@ -139,7 +139,7 @@ describe('no formulário da programação', () => {
     comPessoas([{ id: 'tec-ana', nome: 'Ana Técnica' }]);
   });
 
-  const campos = programacaoOSFormFields.filter((c) => ['responsavel_id', 'tecnicos'].includes(c.key)) as unknown as CoreFormField[];
+  const campos: CoreFormField[] = programacaoOSFormFields.filter((c) => ['responsavel_id', 'tecnicos'].includes(c.key));
 
   it('usa a planta da programação salva e grava responsável com id e nome', async () => {
     const mudou = vi.fn();

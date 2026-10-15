@@ -21,7 +21,7 @@ import { Component, Save, Wrench, X, AlertCircle, Loader2, Plus, Minus } from 'l
 import { normalizarTipoEquipamento } from '@/core/features/equipamentos/utils/tipo-equipamento';
 import { camposDaCategoria } from '@/core/features/equipamentos/config/campos-por-categoria';
 import React, { useEffect, useState } from 'react';
-import { Equipamento } from '../../types';
+import { Equipamento, idDoEquipamentoCriado } from '../../types';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/core/components/ui/tabs';
 import {
   useCategorias,
@@ -34,6 +34,7 @@ import { FotoEquipamentoField } from '../FotoEquipamentoField';
 import { ItensDoLoteField } from '../ItensDoLoteField';
 import { AnexosEquipamentoField } from '../AnexosEquipamentoField';
 import type { EquipamentoDoLote, UseModelosContract } from '@/core/types/contracts';
+import { mensagemDoBackend } from '@/core/features/equipamentos/utils/mensagem-do-backend';
 
 type AbaUAR = 'dados' | 'itens' | 'anexos';
 
@@ -60,10 +61,72 @@ interface TipoEquipamento {
   nome: string;
   fabricante: string;
   categoriaId: string;
-  categoria?: { id: string; nome: string };
+  categoria?: { id: string; nome: string } | null;
   propriedadesSchema?: { campos: CampoTecnicoSchema[] };
   propriedades_schema?: { campos: CampoTecnicoSchema[] };
 }
+
+/** O que o sheet devolve por `onSubmit`: o componente no formato da API (snake_case). */
+export type DadosDoComponenteUAR = {
+  /** Obrigatorio: o sheet nao submete sem ele. */
+  nome: string;
+  tag?: string;
+  classificacao: 'UAR';
+  equipamento_pai_id?: string;
+  unidade_id?: string;
+  fabricante?: string;
+  fabricante_custom?: string;
+  modelo?: string;
+  numero_serie?: string;
+  criticidade?: Equipamento['criticidade'];
+  /** O CODIGO do tipo (compatibilidade); o id vai em `tipo_equipamento_id`. */
+  tipo_equipamento?: string;
+  tipo_equipamento_id?: string;
+  data_instalacao?: string;
+  localizacao_especifica?: string;
+  fornecedor?: string;
+  valor_imobilizado?: number;
+  valor_depreciacao?: number;
+  valor_contabil?: number;
+  observacoes?: string;
+  planta_id?: string;
+  proprietario_id?: string;
+  dados_tecnicos: { campo: string; valor: string; tipo: string; unidade?: string }[];
+};
+
+/** O bloco comum do lote: o que varia por exemplar vai nos itens. */
+type DadosComunsDoLoteUAR = Omit<DadosDoComponenteUAR, 'nome' | 'tag' | 'numero_serie' | 'localizacao_especifica'>;
+
+/**
+ * O formulario do sheet: o componente em camelCase, como os inputs guardam,
+ * mais os campos tecnicos — cada um pela propria chave (`formData[campo]`).
+ */
+type FormularioDoUAR = {
+  id?: string;
+  nome?: string;
+  tag?: string;
+  classificacao?: 'UC' | 'UAR';
+  criticidade?: Equipamento['criticidade'];
+  numeroSerie?: string;
+  localizacaoEspecifica?: string;
+  /** O CODIGO do tipo escolhido. */
+  tipoComponente?: string;
+  tipoEquipamentoId?: string;
+  fabricante?: string;
+  fabricanteCustom?: string;
+  modelo?: string;
+  dataInstalacao?: string;
+  equipamentoPaiId?: string;
+  plantaId?: string;
+  unidadeId?: string;
+  proprietarioId?: string;
+  fornecedor?: string;
+  valorImobilizado?: number | string;
+  valorDepreciacao?: number | string;
+  valorContabil?: number | string;
+  observacoes?: string;
+  fotoUrl?: string | null;
+} & { [campoTecnico: string]: unknown };
 
 interface ComponenteUARModalProps {
   isOpen: boolean;
@@ -75,7 +138,7 @@ interface ComponenteUARModalProps {
    * Devolve o componente criado quando houver. A foto escolhida antes de o
    * componente existir precisa do id para subir, e e daqui que ele vem.
    */
-  onSubmit: (data: any) => any;
+  onSubmit: (data: DadosDoComponenteUAR) => unknown;
   /** Componente de origem quando o cadastro e uma duplicacao. */
   duplicarDe?: Equipamento | null;
   /**
@@ -131,7 +194,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     [],
   );
 
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<FormularioDoUAR>({});
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -163,7 +226,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   const [loadingNovoModelo, setLoadingNovoModelo] = useState(false);
 
   // Helper para buscar tipo de equipamento
-  const getTipoEquipamento = (codigo: string): TipoEquipamentoModal | undefined => {
+  const getTipoEquipamento = (codigo?: string): TipoEquipamentoModal | undefined => {
     return tiposEquipamentos.find(t => t.value === codigo);
   };
 
@@ -173,16 +236,20 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
       setLoadingTipos(true);
       try {
         const tipos = await fetchTiposEquipamentos();
-        const tiposFormatados = tipos.map((tipo: any) => ({
-          value: tipo.codigo,
-          label: tipo.nome,
+        // A lista vem do useSelectionData, no formato DELE: { value, label,
+        // categoria, campos_tecnicos }. Lia-se `codigo`, `nome` e
+        // `propriedadesSchema`, que sao da rota /tipos-equipamentos e nao
+        // existem aqui: todo item saia sem valor, sem nome e sem campos.
+        const tiposFormatados = tipos.map((tipo) => ({
+          value: tipo.value,
+          label: tipo.label,
           categoria: tipo.categoria,
-          camposTecnicos: (tipo.propriedadesSchema?.campos || tipo.propriedades_schema?.campos || []).map((campo: any) => ({
-            campo: campo.campo || campo.nome,
-            tipo: campo.tipo === 'boolean' ? ('select' as const) : campo.tipo,
-            unidade: campo.unidade,
-            opcoes: campo.opcoes || (campo.tipo === 'boolean' ? ['Sim', 'Não'] : undefined),
-            obrigatorio: campo.obrigatorio,
+          camposTecnicos: (tipo.campos_tecnicos || []).map((campo) => ({
+            campo: campo.label,
+            tipo: campo.type === 'boolean' ? ('select' as const) : campo.type,
+            unidade: campo.unit,
+            opcoes: campo.options || (campo.type === 'boolean' ? ['Sim', 'Não'] : undefined),
+            obrigatorio: campo.required,
           })),
         }));
         setTiposEquipamentos(tiposFormatados);
@@ -213,7 +280,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
         // Extrair dados técnicos para o formData
         const dadosTecnicosObj: Record<string, string> = {};
         if (entity.dadosTecnicos && Array.isArray(entity.dadosTecnicos)) {
-          entity.dadosTecnicos.forEach((dt: any) => {
+          entity.dadosTecnicos.forEach((dt) => {
             dadosTecnicosObj[dt.campo] = dt.valor;
           });
         }
@@ -236,7 +303,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
          * certo. So se ele faltar e que sobra tentar o campo antigo, que nas
          * linhas anteriores ao relacionamento guardava mesmo um codigo.
          */
-        const tipoDaEntidade = (entity as any).tipoEquipamentoObj;
+        const tipoDaEntidade = entity.tipoEquipamentoObj;
         const codigoTipo = tipoDaEntidade?.codigo || entity.tipo || '';
 
         // O tipo ja vem junto do equipamento; consultar de novo so faz sentido
@@ -292,8 +359,15 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     initializeFormData();
   }, [entity, mode, equipamentoPai, duplicarDe]);
 
-  const handleFieldChange = (field: string, value: any) => {
-    setFormData((prev: any) => ({ ...prev, [field]: value }));
+  // `field` e livre: os campos tecnicos entram pelo nome que o tipo ou a categoria da.
+  const handleFieldChange = (field: string, value: unknown) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  /** O valor de um campo tecnico como o input mostra. */
+  const valorDoCampo = (campo: string): string => {
+    const valor = formData[campo];
+    return typeof valor === 'string' ? valor : valor == null ? '' : String(valor);
   };
 
   /**
@@ -319,7 +393,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     const escolhida = categorias.find(cat => cat.id?.trim() === trimmedId);
     const sugestao = escolhida?.nome || '';
 
-    setFormData((prev: any) => {
+    setFormData((prev) => {
       const atual = (prev.nome || '').trim();
       const intocado = !atual || atual === (anterior?.nome || '').trim();
 
@@ -371,7 +445,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     const modelo = modelos.find(m => m.id?.trim() === trimmedId);
     if (modelo) {
       setModeloSelecionado(modelo);
-      setFormData((prev: any) => ({
+      setFormData((prev) => ({
         ...prev,
         tipoComponente: modelo.codigo?.trim(),
         tipoEquipamentoId: modelo.id?.trim(),
@@ -402,7 +476,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
         setCategoriaIdSelecionada(novaCategoria.id);
 
         // Auto-preencher nome do componente
-        setFormData((prev: any) => ({
+        setFormData((prev) => ({
           ...prev,
           nome: novaCategoria.nome,
         }));
@@ -412,9 +486,9 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
         setPopoverCategoriaOpen(false);
 
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('❌ [MODAL UAR] Erro ao criar categoria:', err);
-      avisar(err.response?.data?.message || 'Erro ao criar nova categoria');
+      avisar(mensagemDoBackend(err) || 'Erro ao criar nova categoria');
     } finally {
       setLoadingNovaCategoria(false);
     }
@@ -460,7 +534,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
 
         // Selecionar automaticamente o novo modelo
         setModeloSelecionado(novoModelo);
-        setFormData((prev: any) => ({
+        setFormData((prev) => ({
           ...prev,
           tipoComponente: novoModelo.codigo,
           tipoEquipamentoId: novoModelo.id,
@@ -474,9 +548,9 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
         setPopoverModeloOpen(false);
 
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('❌ [MODAL UAR] Erro ao criar modelo:', err);
-      avisar(err.response?.data?.message || 'Erro ao criar novo modelo');
+      avisar(mensagemDoBackend(err) || 'Erro ao criar novo modelo');
     } finally {
       setLoadingNovoModelo(false);
     }
@@ -527,11 +601,11 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
               </label>
               {isReadOnly ? (
                 <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border text-sm">
-                  {formData[campo.campo] || <span className="text-gray-400">Não informado</span>}
+                  {valorDoCampo(campo.campo) || <span className="text-gray-400">Não informado</span>}
                 </div>
               ) : campo.tipo === 'select' && campo.opcoes ? (
                 <Select
-                  value={formData[campo.campo] || ''}
+                  value={valorDoCampo(campo.campo)}
                   onValueChange={(value) => handleFieldChange(campo.campo, value)}
                 >
                   <SelectTrigger>
@@ -548,7 +622,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
                   className="input-minimal"
                   type={campo.tipo === 'number' ? 'number' : 'text'}
                   placeholder={`${campo.campo}${campo.unidade ? ` (${campo.unidade})` : ''}`}
-                  value={formData[campo.campo] || ''}
+                  value={valorDoCampo(campo.campo)}
                   onChange={(e) => handleFieldChange(campo.campo, e.target.value)}
                 />
               )}
@@ -562,7 +636,16 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   const validateForm = (): boolean => {
     const errors: string[] = [];
 
-    if (!formData.nome?.trim()) {
+    // No lote o campo Nome some do formulário (o nome é de cada exemplar, na
+    // aba de itens): cobrar ali travava quem subiu a quantidade antes de
+    // digitar o nome, sem ter onde preenchê-lo. O sheet de UC já fazia assim.
+    if (modoLote) {
+      const semNome = itensDoLote.findIndex((item) => !item.nome?.trim());
+      if (semNome >= 0) {
+        setAbaAtiva('itens');
+        errors.push(`Informe o nome do componente da linha ${semNome + 1}`);
+      }
+    } else if (!formData.nome?.trim()) {
       errors.push('Nome é obrigatório');
     }
 
@@ -637,7 +720,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     if (alvo <= 1) {
       const primeiro = itensDoLote[0];
       if (primeiro) {
-        setFormData((prev: any) => ({
+        setFormData((prev) => ({
           ...prev,
           nome: primeiro.nome || prev.nome,
           tag: primeiro.tag || prev.tag,
@@ -694,7 +777,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     if (!entity?.id) return;
     try {
       const { fotoUrl } = await uploadFoto(entity.id.trim(), arquivo);
-      setFormData((prev: any) => ({ ...prev, fotoUrl }));
+      setFormData((prev) => ({ ...prev, fotoUrl }));
     } catch {
       avisar('Nao foi possivel enviar a foto.');
     }
@@ -707,7 +790,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
       setPreviewFoto(null);
       return;
     }
-    setFormData((prev: any) => ({ ...prev, fotoUrl: null }));
+    setFormData((prev) => ({ ...prev, fotoUrl: null }));
   };
 
   /**
@@ -718,10 +801,10 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
    * desfaz nada: os componentes ja existem, e o que faltou e dito com todas as
    * letras.
    */
-  const submeterLote = async (dadosComuns: any) => {
+  const submeterLote = async (dadosComuns: DadosComunsDoLoteUAR) => {
     const { total, equipamentos } = await createEquipamentosLote(dadosComuns, itensDoLote);
 
-    const ids = (equipamentos || []).map((e: any) => e?.id?.trim()).filter(Boolean);
+    const ids = (equipamentos || []).map((e) => e?.id?.trim()).filter((id): id is string => Boolean(id));
 
     if (ids.length === 0) {
       await aoCriarEmLote?.(total);
@@ -824,9 +907,9 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
         ? new Date(formData.dataInstalacao + 'T00:00:00.000Z').toISOString()
         : undefined;
 
-      const submitData = {
+      const submitData: DadosDoComponenteUAR = {
         // Dados básicos
-        nome: formData.nome,
+        nome: formData.nome ?? '', // validateForm ja exigiu o nome
         tag: formData.tag || undefined,
         classificacao: 'UAR',
         equipamento_pai_id: formData.equipamentoPaiId,
@@ -841,9 +924,9 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
         data_instalacao: dataInstalacaoFormatted,
         localizacao_especifica: formData.localizacaoEspecifica,
         fornecedor: formData.fornecedor,
-        valor_imobilizado: formData.valorImobilizado ? parseFloat(formData.valorImobilizado) : undefined,
-        valor_depreciacao: formData.valorDepreciacao ? parseFloat(formData.valorDepreciacao) : undefined,
-        valor_contabil: formData.valorContabil ? parseFloat(formData.valorContabil) : undefined,
+        valor_imobilizado: formData.valorImobilizado ? parseFloat(String(formData.valorImobilizado)) : undefined,
+        valor_depreciacao: formData.valorDepreciacao ? parseFloat(String(formData.valorDepreciacao)) : undefined,
+        valor_contabil: formData.valorContabil ? parseFloat(String(formData.valorContabil)) : undefined,
         observacoes: formData.observacoes,
         // Herdar do equipamento pai
         planta_id: formData.plantaId,
@@ -868,7 +951,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
       const criado = await onSubmit(submitData);
 
       // Foto escolhida antes de o componente existir: sobe agora que ha id.
-      const idCriado = (criado as any)?.id?.trim?.();
+      const idCriado = idDoEquipamentoCriado(criado);
       if (mode === 'create' && idCriado) {
         if (fotoPendente) {
           try {

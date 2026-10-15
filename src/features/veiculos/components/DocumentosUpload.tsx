@@ -22,7 +22,7 @@ import {
 } from '../types/documentos';
 
 interface DocumentosUploadProps extends FormFieldProps {
-  veiculoId?: number;
+  veiculoId?: string;
   mode?: 'create' | 'edit' | 'view';
 }
 
@@ -58,7 +58,7 @@ export const DocumentosUpload = ({
   const [novoDocumento, setNovoDocumento] = useState<Partial<NovoDocumento>>({});
   const [initialized, setInitialized] = useState(false);
   const [documentosCarregados, setDocumentosCarregados] = useState(false);
-  const lastVeiculoIdRef = useRef<number | undefined>(undefined);
+  const lastVeiculoIdRef = useRef<string | undefined>(undefined);
 
   const {
     documentos: documentosExistentes,

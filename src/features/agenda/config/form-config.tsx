@@ -1,15 +1,42 @@
 // src/features/agenda/config/form-config.tsx
-import { FormField } from '@/types/base';
+import type { ComponentProps } from 'react';
+import { FormField, FormFieldProps } from '@/types/base';
 import { PlantasSelector } from '../components/PlantasSelector';
 import { DiasUteisSelector } from '../components/DiasUteisSelector';
-import { TIPOS_FERIADO } from '../types';
+import { TIPOS_FERIADO, type FeriadoFormData } from '../types';
+
+/** Os dias da semana como o seletor guarda. */
+type DiasDaSemana = NonNullable<ComponentProps<typeof DiasUteisSelector>['value']>;
+
+/** O formulario de configuracao de dias uteis: os dias chegam juntos em `diasSemana`. */
+export interface ConfiguracaoDiasUteisDoFormulario {
+  nome: string;
+  descricao?: string;
+  geral?: boolean;
+  plantaIds?: string[];
+  diasSemana?: DiasDaSemana;
+}
+
+/**
+ * O que o seletor de plantas le: a lista de ids e o checkbox `geral`, que o
+ * BaseForm passa pelo nome (e, sem ele, o da entidade).
+ */
+type PropsDoSeletorDePlantas = FormFieldProps & {
+  value?: string[];
+  mode?: 'create' | 'edit' | 'view';
+  geral?: boolean;
+  entity?: { geral?: boolean } | null;
+};
+
+/** O contexto das regras de validacao: o formulario, no que elas leem. */
+type ContextoDaValidacao = { geral?: boolean };
 
 // ============================================================================
 // FORM FIELDS PARA FERIADOS
 // ============================================================================
 
 // Funções estáveis para render
-const PlantasSelectorRender = ({ value, onChange, disabled, mode, entity, onMultipleChange, ...props }: any) => {
+const PlantasSelectorRender = ({ value, onChange, disabled, mode, entity, onMultipleChange, ...props }: PropsDoSeletorDePlantas) => {
   // Usar o valor atual do checkbox geral, não o valor da entidade
   const geralValue = props.geral !== undefined ? props.geral : entity?.geral;
 
@@ -98,7 +125,7 @@ export const feriadosFormFields: FormField[] = [
 // FORM FIELDS PARA CONFIGURAÇÕES DIAS ÚTEIS
 // ============================================================================
 
-const DiasUteisSelectorRender = ({ value, onChange, disabled, mode }: any) => (
+const DiasUteisSelectorRender = ({ value, onChange, disabled, mode }: FormFieldProps & { value?: DiasDaSemana; mode?: 'create' | 'edit' | 'view' }) => (
   <DiasUteisSelector
     value={value}
     onChange={onChange}
@@ -107,7 +134,7 @@ const DiasUteisSelectorRender = ({ value, onChange, disabled, mode }: any) => (
   />
 );
 
-const PlantasSelectorConfigRender = ({ value, onChange, disabled, mode, entity, onMultipleChange, ...props }: any) => {
+const PlantasSelectorConfigRender = ({ value, onChange, disabled, mode, entity, onMultipleChange, ...props }: PropsDoSeletorDePlantas) => {
   // Usar o valor atual do checkbox geral, não o valor da entidade
   const geralValue = props.geral !== undefined ? props.geral : entity?.geral;
 
@@ -270,7 +297,7 @@ export const feriadosValidationRules = {
     required: 'Tipo do feriado é obrigatório'
   },
   plantaIds: {
-    validate: (value: string[], context: any) => {
+    validate: (value: string[], context: ContextoDaValidacao) => {
       if (!context.geral && (!value || value.length === 0)) {
         return 'Selecione pelo menos uma planta quando não for geral';
       }
@@ -287,12 +314,12 @@ export const configuracoesDiasUteisValidationRules = {
   },
   diasSemana: {
     required: 'Selecione pelo menos um dia da semana',
-    validate: (value: any) => {
+    validate: (value: DiasDaSemana | null | undefined) => {
       if (!value || typeof value !== 'object') {
         return 'Selecione pelo menos um dia da semana';
       }
 
-      const dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+      const dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'] as const;
       const algumDiaSelecionado = dias.some(dia => value[dia] === true);
 
       if (!algumDiaSelecionado) {
@@ -303,7 +330,7 @@ export const configuracoesDiasUteisValidationRules = {
     }
   },
   plantaIds: {
-    validate: (value: string[], context: any) => {
+    validate: (value: string[], context: ContextoDaValidacao) => {
       if (!context.geral && (!value || value.length === 0)) {
         return 'Selecione pelo menos uma planta quando não for geral';
       }
@@ -344,7 +371,7 @@ export const configuracoesDiasUteisFormDefaults = {
 // HELPER FUNCTIONS
 // ============================================================================
 
-export function transformFeriadoFormData(formData: any) {
+export function transformFeriadoFormData(formData: FeriadoFormData) {
   return {
     nome: formData.nome,
     data: formData.data,
@@ -356,7 +383,7 @@ export function transformFeriadoFormData(formData: any) {
   };
 }
 
-export function transformConfiguracaoDiasUteisFormData(formData: any) {
+export function transformConfiguracaoDiasUteisFormData(formData: ConfiguracaoDiasUteisDoFormulario) {
   return {
     nome: formData.nome,
     descricao: formData.descricao || undefined,

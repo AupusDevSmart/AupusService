@@ -31,7 +31,8 @@ interface PropsDoCampo {
   formData?: { instrucoes_ids?: string[] };
 }
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { SolicitacaoServico, SolicitacaoServicoFormData } from '../types';
+import { SolicitacaoServico, SolicitacaoServicoFormData, SolicitacoesFilters } from '../types';
+import type { IconeDeAcao } from '@/core/types/base';
 import { solicitacoesTableColumns } from '../config/table-config';
 import { createSolicitacoesTableActions } from '../config/actions-config';
 import { useSolicitacoesApi } from '../hooks/useSolicitacoesApi';
@@ -62,7 +63,7 @@ const initialStats: SolicitacoesStats = {
 
 export function SolicitacoesPage() {
   const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('solicitacoes-servico');
-  const [filters, setFilters] = useState(() => ({
+  const [filters, setFilters] = useState<SolicitacoesFilters>(() => ({
     ...initialFilters,
     limit: linhasPorPagina,
   }));
@@ -111,7 +112,7 @@ export function SolicitacoesPage() {
     return tableActions
       .filter((action) => action.label !== 'Visualizar' && action.label !== 'Editar')
       .map((action) => {
-        const Icon = action.icon as any;
+        const Icon = action.icon as IconeDeAcao | undefined;
         return {
           key: action.label.toLowerCase().replace(/\s+/g, '_'),
           label: action.label,
@@ -272,10 +273,10 @@ export function SolicitacoesPage() {
     solicitacoesActions.clearPendingAction();
   };
 
-  const handleFilterChange = async (newFilters: any) => {
+  const handleFilterChange = async (newFilters: Partial<SolicitacoesFilters>) => {
     const cleanedFilters = { ...newFilters };
 
-    Object.keys(cleanedFilters).forEach((key) => {
+    (Object.keys(cleanedFilters) as Array<keyof SolicitacoesFilters>).forEach((key) => {
       if (cleanedFilters[key] === 'all' || cleanedFilters[key] === '') {
         cleanedFilters[key] = undefined;
       }
@@ -283,7 +284,7 @@ export function SolicitacoesPage() {
 
     setFilters((prev) => {
       const updated = { ...prev, ...cleanedFilters, page: 1 };
-      Object.keys(updated).forEach(key => {
+      (Object.keys(updated) as Array<keyof SolicitacoesFilters>).forEach(key => {
         if (updated[key] === undefined && key !== 'page' && key !== 'limit' && key !== 'search') {
           delete updated[key];
         }
@@ -386,7 +387,7 @@ export function SolicitacoesPage() {
               <BaseModal
                 isOpen={modalState.isOpen}
                 mode={modalState.mode}
-                entity={modalState.entity as any}
+                entity={modalState.entity}
                 title={getModalTitle()}
                 icon={<FilePenLine className="h-4 w-4 md:h-5 md:w-5 text-primary" />}
                 formFields={camposDoSheet}

@@ -21,6 +21,8 @@ export interface IniciarExecucaoDto {
   responsavel_execucao?: string;
   observacoes?: string;
   data_hora_inicio_real?: string; // ISO DateTime
+  /** Saída da viatura reservada (o painel só pede com reserva ativa) */
+  km_inicial?: number;
 }
 
 export interface PausarExecucaoDto {
@@ -52,6 +54,8 @@ export interface ExecutarOSDto {
   custos_adicionais?: number;
   km_final?: number;
   observacoes_veiculo?: string;
+  /** Tarefa pendente ao executar: vira CANCELADA com o motivo e continua devendo */
+  tarefas_nao_feitas?: { id: string; motivo: string }[];
 }
 
 export interface AuditarOSDto {
@@ -85,7 +89,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao iniciar execucao:', error);
       throw error;
     }
@@ -102,7 +106,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao pausar execucao:', error);
       throw error;
     }
@@ -119,7 +123,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao retomar execucao:', error);
       throw error;
     }
@@ -136,7 +140,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao executar OS:', error);
       throw error;
     }
@@ -153,7 +157,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao auditar OS:', error);
       throw error;
     }
@@ -170,7 +174,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao reabrir OS:', error);
       throw error;
     }
@@ -187,7 +191,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao finalizar OS:', error);
       throw error;
     }
@@ -204,7 +208,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao cancelar OS:', error);
       throw error;
     }

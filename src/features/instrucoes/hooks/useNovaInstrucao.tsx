@@ -1,10 +1,9 @@
 // src/features/instrucoes/hooks/useNovaInstrucao.tsx
 import { useCallback, useRef, useState } from 'react';
-import { InstrucoesModal } from '../components/InstrucoesModal';
+import { InstrucoesModal, type FormularioDaInstrucao } from '../components/InstrucoesModal';
 import { instrucoesFormFields } from '../config/form-config';
 import {
   InstrucoesApiService,
-  type CreateInstrucaoApiData,
   type InstrucaoApiResponse,
 } from '@/services/instrucoes.services';
 import { useUserStore } from '@/store/useUserStore';
@@ -87,7 +86,7 @@ export function useNovaInstrucao(aoCriar?: (instrucao: InstrucaoApiResponse) => 
   }, [responder]);
 
   const submeter = useCallback(
-    async (dados: Record<string, unknown>) => {
+    async (dados: FormularioDaInstrucao) => {
       if (!user?.id) {
         toast({
           title: 'Sessão expirada',
@@ -101,12 +100,12 @@ export function useNovaInstrucao(aoCriar?: (instrucao: InstrucaoApiResponse) => 
       CAMPOS_DO_SERVIDOR.forEach((campo) => delete payload[campo]);
 
       try {
-        // O BaseModal entrega o formData solto; a forma tipada é a do DTO, e
+        // O BaseModal entrega o formData semeado com os padrões do cadastro;
         // quem valida de verdade é o backend.
         const nova = await instrucoesApi.create({
           ...payload,
           criado_por: user.id,
-        } as unknown as CreateInstrucaoApiData);
+        });
 
         // Anexo que falha não desfaz a instrução: ela já existe e é o que o
         // usuário veio buscar. O aviso diz qual arquivo ficou de fora.

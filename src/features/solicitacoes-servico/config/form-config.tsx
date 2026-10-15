@@ -1,5 +1,6 @@
 // src/features/solicitacoes-servico/config/form-config.tsx
-import { FormField } from '@/types/base';
+import { FormField, FormFieldProps } from '@/types/base';
+import type { SolicitacaoServico } from '../types';
 import { SimpleCascadeSelector } from '../components/SimpleCascadeSelector';
 import { AuthService } from '@/services/auth.service';
 import { useEffect, useState } from 'react';
@@ -16,7 +17,7 @@ import { Label } from '@/components/ui/label';
  * solicitação de outra pessoa mostrava o seu nome no lugar do dela: a tabela
  * dizia uma coisa e o sheet dizia outra sobre o mesmo registro.
  */
-const SolicitanteRender = ({ value, onChange, mode, entity }: any) => {
+const SolicitanteRender = ({ value, onChange, mode, entity }: FormFieldProps & { entity?: SolicitacaoServico | null }) => {
   const registrado = entity?.solicitante_nome || (typeof value === 'string' ? value : '');
   const cadastrando = mode === 'create';
 
@@ -109,7 +110,6 @@ export const solicitacoesFormFields: FormField[] = [
     type: 'textarea',
     required: true,
     placeholder: 'Descreva detalhadamente a solicitação',
-    rows: 4,
     colSpan: 2,
   },
   {
@@ -169,7 +169,7 @@ export const solicitacoesFormFields: FormField[] = [
     type: 'custom',
     required: false,
     colSpan: 2,
-  } as any,
+  },
   // Proposta comercial, depois das instrucoes e antes do solicitante: ela nasce
   // do que a instrucao traz, entao vem logo apos o escopo.
   //
@@ -183,7 +183,7 @@ export const solicitacoesFormFields: FormField[] = [
     type: 'custom',
     colSpan: 2,
     excludeFromSubmit: true,
-  } as any,
+  },
   // O solicitante fecha o formulario, sempre — e quem pediu, nao parte do que
   // sera feito.
   {

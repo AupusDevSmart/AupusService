@@ -5,9 +5,24 @@ import {
   ReservaFormData, 
   FiltrosDisponibilidade, 
   DisponibilidadeVeiculo,
-  TipoSolicitante 
+  TipoSolicitante,
+  ViaturaReservada
 } from '../types';
 // Mock data removed - using API now
+
+/** O que este hook le de cada viatura (a lista local ficou vazia quando os mocks sairam). */
+interface ViaturaLocal {
+  id: string;
+  status: string;
+  valorDiaria?: number;
+}
+
+/** Reserva pedida por outro modulo (OS, viagem): quem pede e a viatura escolhida no seletor. */
+export interface DadosDaReservaAutomatica {
+  tipo: TipoSolicitante;
+  responsavel: string;
+  viatura: ViaturaReservada;
+}
 
 interface UseReservasVeiculosReturn {
   // Estados
@@ -15,8 +30,8 @@ interface UseReservasVeiculosReturn {
   reservas: ReservaVeiculo[];
   
   // Core - Disponibilidade
-  verificarDisponibilidade: (veiculoIds: number[], filtros: FiltrosDisponibilidade) => Promise<DisponibilidadeVeiculo[]>;
-  obterVeiculosDisponiveis: (filtros: FiltrosDisponibilidade) => Promise<number[]>;
+  verificarDisponibilidade: (veiculoIds: string[], filtros: FiltrosDisponibilidade) => Promise<DisponibilidadeVeiculo[]>;
+  obterVeiculosDisponiveis: (filtros: FiltrosDisponibilidade) => Promise<string[]>;
   
   // CRUD - Reservas
   criarReserva: (dados: ReservaFormData) => Promise<ReservaVeiculo>;
@@ -25,19 +40,19 @@ interface UseReservasVeiculosReturn {
   finalizarReserva: (id: string, observacoes?: string, kmFinal?: number) => Promise<ReservaVeiculo>;
   
   // Integração - Automática
-  criarReservaAutomatica: (solicitanteId: string, dadosReserva: any) => Promise<ReservaVeiculo | null>;
+  criarReservaAutomatica: (solicitanteId: string, dadosReserva: DadosDaReservaAutomatica) => Promise<ReservaVeiculo | null>;
   liberarReservaAutomatica: (solicitanteId: string) => Promise<boolean>;
   
   // Utilitários
   validarPeriodoReserva: (dataInicio: string, dataFim: string, horaInicio: string, horaFim: string) => string | null;
   obterReservaPorSolicitante: (solicitanteId: string, tipo: TipoSolicitante) => ReservaVeiculo | null;
-  calcularCustoReserva: (veiculoId: number, dataInicio: string, dataFim: string) => number;
+  calcularCustoReserva: (veiculoId: string, dataInicio: string, dataFim: string) => number;
 }
 
 export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
   const [loading, setLoading] = useState(false);
   const [reservasState, setReservasState] = useState<ReservaVeiculo[]>([]);
-  const [veiculosState] = useState<any[]>([]);
+  const [veiculosState] = useState<ViaturaLocal[]>([]);
 
   // Função para verificar sobreposição de períodos
   const verificarSobreposicao = useCallback((
@@ -91,7 +106,7 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
 
   // Verificar disponibilidade de veículos específicos
   const verificarDisponibilidade = useCallback(async (
-    veiculoIds: number[], 
+    veiculoIds: string[], 
     filtros: FiltrosDisponibilidade
   ): Promise<DisponibilidadeVeiculo[]> => {
     setLoading(true);
@@ -103,7 +118,7 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
       const resultado: DisponibilidadeVeiculo[] = [];
 
       for (const veiculoId of veiculoIds) {
-        const veiculo = veiculosState.find((v: any) => v.id === veiculoId);
+        const veiculo = veiculosState.find((v) => v.id === veiculoId);
         
         // Verificar se veículo existe e está disponível
         if (!veiculo || veiculo.status !== 'disponivel') {
@@ -164,10 +179,10 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
   // Obter apenas IDs dos veículos disponíveis
   const obterVeiculosDisponiveis = useCallback(async (
     filtros: FiltrosDisponibilidade
-  ): Promise<number[]> => {
+  ): Promise<string[]> => {
     const veiculosAtivos = veiculosState
-      .filter((v: any) => v.status === 'disponivel')
-      .map((v: any) => v.id);
+      .filter((v) => v.status === 'disponivel')
+      .map((v) => v.id);
 
     const disponibilidades = await verificarDisponibilidade(veiculosAtivos, filtros);
     
@@ -369,7 +384,7 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
   // Criar reserva automática (para integração com OS, viagens, etc.)
   const criarReservaAutomatica = useCallback(async (
     solicitanteId: string, 
-    dadosReserva: any
+    dadosReserva: DadosDaReservaAutomatica
   ): Promise<ReservaVeiculo | null> => {
     try {
       const dadosCompletos: ReservaFormData = {
@@ -427,11 +442,11 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
 
   // Calcular custo da reserva
   const calcularCustoReserva = useCallback((
-    veiculoId: number, 
+    veiculoId: string, 
     dataInicio: string, 
     dataFim: string
   ): number => {
-    const veiculo = veiculosState.find((v: any) => v.id === veiculoId);
+    const veiculo = veiculosState.find((v) => v.id === veiculoId);
     if (!veiculo || !veiculo.valorDiaria) return 0;
 
     const inicio = new Date(dataInicio);

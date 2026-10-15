@@ -25,6 +25,10 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // `any` zerado no SN-36 (out/2026): 1.065 em 158 arquivos, muitos
+      // escondendo campo que a API nao manda ou rota que nao existe. ERRO para
+      // nao voltar: valor arbitrario e `unknown` com narrowing.
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': 'off',
       'unused-imports/no-unused-imports': 'error',
       'unused-imports/no-unused-vars': [

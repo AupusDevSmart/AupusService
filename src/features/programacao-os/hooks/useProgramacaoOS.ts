@@ -1,8 +1,17 @@
 // src/features/programacao-os/hooks/useProgramacaoOS.ts
 import { useState, useCallback } from 'react';
-import { programacaoOSApi, type ProgramacaoResponse, type ProgramacaoDetalhesResponse, type CreateProgramacaoDto } from '@/services/programacao-os.service';
+import {
+  programacaoOSApi,
+  type ProgramacaoResponse,
+  type ProgramacaoDetalhesResponse,
+  type CreateProgramacaoDto,
+  type CreateProgramacaoAnomaliaDto,
+  type CreateProgramacaoTarefasDto,
+  type ProgramacaoFiltersDto,
+} from '@/services/programacao-os.service';
 import { api } from '@/config/api';
 import { formatApiError } from '@/utils/api-error';
+import { isAxiosError } from 'axios';
 
 interface IniciarExecucaoData {
   equipePresente: string[];
@@ -15,7 +24,7 @@ export const useProgramacaoOS = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Função para lidar com erros
-  const handleError = useCallback((error: any, defaultMessage: string): never => {
+  const handleError = useCallback((error: unknown, defaultMessage: string): never => {
     // A API manda a mensagem em `error.message` ({ success: false, error: {...} });
     // ler só `data.message` caía no "Request failed with status code 409"
     const errorMessage = (error ? formatApiError(error) : '') || defaultMessage;
@@ -54,7 +63,7 @@ export const useProgramacaoOS = () => {
   }, [handleError]);
 
   // Listar programações
-  const listarProgramacoes = useCallback(async (filters: any) => {
+  const listarProgramacoes = useCallback(async (filters: ProgramacaoFiltersDto) => {
     setLoading(true);
     setError(null);
 
@@ -147,7 +156,7 @@ export const useProgramacaoOS = () => {
   }, [handleError]);
 
   // Criar de anomalia
-  const criarDeAnomalia = useCallback(async (anomaliaId: string, ajustes?: any) => {
+  const criarDeAnomalia = useCallback(async (anomaliaId: string, ajustes?: CreateProgramacaoAnomaliaDto['ajustes']) => {
     setLoading(true);
     setError(null);
 
@@ -162,7 +171,7 @@ export const useProgramacaoOS = () => {
   }, [handleError]);
 
   // Criar de tarefas
-  const criarDeTarefas = useCallback(async (data: any) => {
+  const criarDeTarefas = useCallback(async (data: CreateProgramacaoTarefasDto) => {
     setLoading(true);
     setError(null);
 
@@ -192,7 +201,7 @@ export const useProgramacaoOS = () => {
   }, [handleError]);
 
   // Funções de compatibilidade para transição (simulam execução de OS)
-  const planejarOS = useCallback(async (_id: string, _dados: any) => {
+  const planejarOS = useCallback(async (_id: string, _dados: unknown) => {
     // console.log('🔧 Planejando OS:', id, dados);
     // Aqui você chamaria a API de execução de OS quando ela estiver pronta
     // Por enquanto, simula o comportamento
@@ -212,7 +221,7 @@ export const useProgramacaoOS = () => {
 
     try {
       // ✅ Chamada real para a API de execução-os
-      const response = await api.post(
+      const response = await api.post<{ message?: string; os_id?: string }>(
         `/execucao-os/iniciar-de-programacao/${programacaoId}`,
         {
           responsavel_execucao: dados.responsavelExecucao,
@@ -229,9 +238,9 @@ export const useProgramacaoOS = () => {
         message: response.data.message || 'Execução iniciada com sucesso!',
         execucaoId: response.data.os_id
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Erro ao iniciar execução:', error);
-      setError(error.response?.data?.message || 'Erro ao iniciar execução');
+      setError((isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined) || 'Erro ao iniciar execução');
       throw error;
     } finally {
       setLoading(false);
@@ -264,7 +273,7 @@ export const useProgramacaoOS = () => {
     }
   }, []);
 
-  const exportarOS = useCallback(async (_filters: any) => {
+  const exportarOS = useCallback(async (_filters: ProgramacaoFiltersDto) => {
     // console.log('📄 Exportando OS com filtros:', filters);
     setLoading(true);
     

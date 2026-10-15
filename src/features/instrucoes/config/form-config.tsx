@@ -1,5 +1,5 @@
 // src/features/instrucoes/config/form-config.tsx
-import { FormField } from '@/types/base';
+import { FormField, type FormFieldProps } from '@/types/base';
 import { SubInstrucoesController } from '../components/form/SubInstrucoesController';
 import { RecursosInstrucaoController } from '../components/form/RecursosInstrucaoController';
 
@@ -15,7 +15,7 @@ export const instrucoesFormFields: FormField[] = [
     // mostrar, entao o campo so aparece depois que a instrucao existe.
     showOnlyOnMode: ['view', 'edit'],
     colSpan: 1
-  } as any,
+  },
   {
     key: 'nome',
     label: 'Nome da Instrução',
@@ -23,7 +23,7 @@ export const instrucoesFormFields: FormField[] = [
     required: true,
     placeholder: 'Ex: Lubrificação Completa do Compressor',
     colSpan: 1
-  } as any,
+  },
   {
     key: 'descricao',
     label: 'Descrição',
@@ -31,7 +31,7 @@ export const instrucoesFormFields: FormField[] = [
     required: true,
     placeholder: 'Descreva detalhadamente a instrução...',
     colSpan: 2
-  } as any,
+  },
 
   // Sub-instruções
   {
@@ -60,7 +60,7 @@ export const instrucoesFormFields: FormField[] = [
     // então este campo precisa enxergá-las enquanto são editadas. O BaseForm
     // entrega o valor de cada chave declarada aqui junto com os props do campo.
     dependencies: ['sub_instrucoes'],
-    render: ({ value, onChange, disabled, sub_instrucoes }: any) => (
+    render: ({ value, onChange, disabled, sub_instrucoes }: FormFieldProps & { sub_instrucoes?: { tempo_estimado?: number }[] }) => (
       <RecursosInstrucaoController
         value={value}
         onChange={onChange}

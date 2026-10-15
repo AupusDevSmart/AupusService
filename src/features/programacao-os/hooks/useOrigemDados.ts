@@ -1,6 +1,9 @@
 // src/features/programacao-os/hooks/useOrigemDados.ts
 import { useState, useCallback } from 'react';
+import { isAxiosError } from 'axios';
 import { anomaliasService } from '@/services/anomalias.service';
+import type { Anomalia } from '@/features/anomalias/types';
+import type { SolicitacaoServico } from '@/features/solicitacoes-servico/types';
 
 interface AnomaliaDisponivel {
   id: string;
@@ -26,7 +29,7 @@ interface PlanoDisponivel {
   totalTarefas: number;
   totalEquipamentos: number;
   ativo: boolean;
-  tarefasTemplate: any[];
+  tarefasTemplate: unknown[];
   plantaId?: string;
   /// Plano de manutencao e sempre de UM equipamento. Sem o nome dele na lista,
   /// dois planos parecidos ficam indistinguiveis e a OS sai para o ativo errado.
@@ -54,8 +57,7 @@ interface SolicitacaoDisponivel {
   dataSolicitacao: string;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- resposta da API sem tipo neste hook */
-function paraAnomaliaDisponivel(anomalia: any): AnomaliaDisponivel {
+function paraAnomaliaDisponivel(anomalia: Anomalia): AnomaliaDisponivel {
   return {
     id: String(anomalia.id),
     descricao: anomalia.descricao,
@@ -74,7 +76,7 @@ function paraAnomaliaDisponivel(anomalia: any): AnomaliaDisponivel {
   };
 }
 
-function paraSolicitacaoDisponivel(solicitacao: any): SolicitacaoDisponivel {
+function paraSolicitacaoDisponivel(solicitacao: SolicitacaoServico): SolicitacaoDisponivel {
   return {
     id: solicitacao.id,
     numero: solicitacao.numero,
@@ -93,7 +95,6 @@ function paraSolicitacaoDisponivel(solicitacao: any): SolicitacaoDisponivel {
     dataSolicitacao: solicitacao.data_solicitacao || solicitacao.created_at || '',
   };
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export type TipoDeOrigemResolvivel = 'ANOMALIA' | 'SOLICITACAO_SERVICO' | 'PLANO_MANUTENCAO';
 
@@ -230,12 +231,12 @@ export const useOrigemDados = () => {
           ativo: true,
           tarefasTemplate: plano.tarefas || [],
           plantaId:
-            (plano.equipamento as any)?.unidade?.planta?.id || plano.equipamento?.planta?.id,
+            plano.equipamento?.unidade?.planta?.id || plano.equipamento?.planta?.id,
           equipamentoId: plano.equipamento?.id,
           equipamentoNome: plano.equipamento?.nome,
           plantaNome:
-            (plano.equipamento as any)?.unidade?.planta?.nome || plano.equipamento?.planta?.nome,
-          unidadeNome: (plano.equipamento as any)?.unidade?.nome,
+            plano.equipamento?.unidade?.planta?.nome || plano.equipamento?.planta?.nome,
+          unidadeNome: plano.equipamento?.unidade?.nome,
         };
 
         console.log(`✅ [useOrigemDados] Plano ${index + 1} formatado:`, planoFormatado);
@@ -253,12 +254,13 @@ export const useOrigemDados = () => {
       setPlanosDisponiveis(planosFormatados);
       return planosFormatados;
 
-    } catch (error: any) {
+    } catch (error) {
+      const erroDaApi = isAxiosError(error) ? error : undefined;
       console.error('❌ [useOrigemDados] ERRO ao carregar planos:', {
         error,
-        message: error?.message,
-        response: error?.response?.data,
-        status: error?.response?.status,
+        message: error instanceof Error ? error.message : undefined,
+        response: erroDaApi?.response?.data,
+        status: erroDaApi?.response?.status,
         plantaId
       });
       setPlanosDisponiveis([]);

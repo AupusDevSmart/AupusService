@@ -8,12 +8,31 @@ import { instrucoesApi, opcaoDaInstrucao } from '@/services/instrucoes.services'
 import { formatApiError } from '@/utils/api-error';
 import { InstrucaoExpandableCard } from '@/components/common/InstrucaoExpandableCard';
 import { AbrirInstrucaoContext, ValoresDaPropostaContext } from './proposta-contexto';
+import type { BaseEntity } from '@/core/types/base';
+
+/** A instrução como vem na entidade: solicitação (`instrucoes`) ou vínculo de anomalia. */
+interface InstrucaoDaEntidade {
+  id?: string;
+  tag?: string;
+  nome?: string;
+}
+
+interface VinculoDeInstrucao extends InstrucaoDaEntidade {
+  instrucao?: InstrucaoDaEntidade | null;
+}
+
+/** O que o seletor lê da entidade aberta no sheet. */
+type EntidadeComInstrucoes = BaseEntity & {
+  instrucoes?: InstrucaoDaEntidade[];
+  anomalias_instrucoes?: VinculoDeInstrucao[];
+};
 
 interface InstrucoesSelectorProps {
-  value: any;
+  /** Os ids escolhidos; na abertura pode vir a lista de objetos da API. */
+  value: unknown;
   onChange: (value: string[]) => void;
   disabled?: boolean;
-  entity?: any;
+  entity?: EntidadeComInstrucoes | null;
 }
 
 interface InstrucaoMeta {
@@ -23,12 +42,12 @@ interface InstrucaoMeta {
 
 // Extrai instrucoes do entity - suporta tanto solicitacoes (entity.instrucoes)
 // quanto anomalias (entity.anomalias_instrucoes)
-function getEntityInstrucoes(entity?: any): any[] {
+function getEntityInstrucoes(entity?: EntidadeComInstrucoes | null): InstrucaoDaEntidade[] {
   if (entity?.instrucoes && Array.isArray(entity.instrucoes)) {
     return entity.instrucoes;
   }
   if (entity?.anomalias_instrucoes && Array.isArray(entity.anomalias_instrucoes)) {
-    return entity.anomalias_instrucoes.map((ai: any) => ai.instrucao || ai);
+    return entity.anomalias_instrucoes.map((ai) => ai.instrucao || ai);
   }
   return [];
 }
@@ -44,24 +63,24 @@ function getEntityInstrucoes(entity?: any): any[] {
 const apararId = (id: unknown): string => (typeof id === 'string' ? id.trim() : '');
 
 // Extrai IDs de instrucoes a partir de diferentes formatos
-function extractIds(value: any, entity?: any): string[] {
+function extractIds(value: unknown, entity?: EntidadeComInstrucoes | null): string[] {
   if (Array.isArray(value) && value.length > 0) {
     if (typeof value[0] === 'string') return value.map(apararId).filter(Boolean);
     if (typeof value[0] === 'object' && value[0]?.id)
-      return value.map((v: any) => apararId(v.id)).filter(Boolean);
+      return value.map((v: InstrucaoDaEntidade) => apararId(v.id)).filter(Boolean);
   }
   const instrucoes = getEntityInstrucoes(entity);
   if (instrucoes.length > 0) {
-    return instrucoes.map((inst: any) => apararId(inst.id)).filter(Boolean);
+    return instrucoes.map((inst) => apararId(inst.id)).filter(Boolean);
   }
   return [];
 }
 
 // Extrai tag/nome do entity para usar no card antes de carregar da API
-function extractEntityMeta(entity?: any): Record<string, InstrucaoMeta> {
+function extractEntityMeta(entity?: EntidadeComInstrucoes | null): Record<string, InstrucaoMeta> {
   const meta: Record<string, InstrucaoMeta> = {};
   const instrucoes = getEntityInstrucoes(entity);
-  instrucoes.forEach((inst: any) => {
+  instrucoes.forEach((inst) => {
     const id = apararId(inst.id);
     if (id) {
       meta[id] = { tag: inst.tag, nome: inst.nome };

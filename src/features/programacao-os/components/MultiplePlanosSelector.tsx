@@ -21,10 +21,21 @@ import { useOrigemDados } from '../hooks/useOrigemDados';
 import { usePlantas } from '@/features/plantas/hooks/usePlantas';
 import { useUnidadesByPlanta } from '@/features/unidades/hooks/useUnidades';
 
+type DadosDaOrigem = ReturnType<typeof useOrigemDados>;
+
+/** Tarefa como `gerarTarefasDoPlano` devolve, mais os campos do mock antigo que a tela ainda lê (a API não manda). */
+type TarefaDoPlano = Awaited<ReturnType<DadosDaOrigem['gerarTarefasDoPlano']>>[number] & {
+  local?: string;
+  ativo?: string;
+  tipo?: string;
+  tempoEstimado?: number;
+  duracaoEstimada?: number;
+};
+
 interface TarefasPorPlano {
   [planoId: string]: {
-    plano: any;
-    tarefas: any[];
+    plano: DadosDaOrigem['planosDisponiveis'][number];
+    tarefas: TarefaDoPlano[];
     expanded: boolean;
   };
 }

@@ -40,9 +40,9 @@ export const PlantasSelector: React.FC<PlantasSelectorProps> = ({
         const response = await PlantasService.getAllPlantas({ limit: 100 });
         setPlantas(response.data);
         console.log('✅ [PLANTAS SELECTOR] Plantas carregadas:', response.data.length);
-      } catch (err: any) {
+      } catch (err) {
         console.error('❌ [PLANTAS SELECTOR] Erro ao carregar plantas:', err);
-        setError(err.message || 'Erro ao carregar plantas');
+        setError((err instanceof Error && err.message) || 'Erro ao carregar plantas');
         setPlantas([]);
       } finally {
         setLoading(false);

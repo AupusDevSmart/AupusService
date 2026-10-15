@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { formatApiError } from '@/utils/api-error';
 import type { Proposta } from '@/services/proposta.services';
+import type { FormFieldProps } from '@/types/base';
+import type { SolicitacaoServico } from '../types';
 
 /**
  * A proposta corrente do sheet, para quem precisa dela fora da seção que a
@@ -82,8 +84,9 @@ export function BotaoGerarPdf({ numero, titulo, cliente }: BotaoGerarPdfProps) {
  * O render original vem do form-config e usa hooks próprios, então é montado
  * como componente — chamá-lo como função inlinearia os hooks dele aqui.
  */
-export function comBotaoDePdf(original: ((props: any) => ReactNode) | undefined) {
-  return function SolicitanteComPdf(props: any) {
+export function comBotaoDePdf(original: ((props: FormFieldProps) => ReactNode) | undefined) {
+  return function SolicitanteComPdf(props: FormFieldProps & { entity?: SolicitacaoServico | null }) {
+    const tituloDigitado = props?.formData?.titulo;
     const Original = original;
 
     return (
@@ -92,7 +95,7 @@ export function comBotaoDePdf(original: ((props: any) => ReactNode) | undefined)
         {/* No cadastro ainda não há entidade: o título vem do que foi digitado. */}
         <BotaoGerarPdf
           numero={props?.entity?.numero}
-          titulo={props?.entity?.titulo ?? props?.formData?.titulo}
+          titulo={props?.entity?.titulo ?? (typeof tituloDigitado === 'string' ? tituloDigitado : undefined)}
           cliente={props?.entity?.planta?.nome}
         />
       </div>

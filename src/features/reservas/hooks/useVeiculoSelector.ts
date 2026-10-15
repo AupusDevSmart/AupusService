@@ -29,12 +29,12 @@ interface UseVeiculoSelectorReturn {
   // Actions
   fetchVeiculosDisponiveis: () => Promise<void>;
   selecionarVeiculo: (veiculo: VeiculoResponse | null) => void;
-  verificarDisponibilidade: (veiculoId: number) => Promise<boolean>;
-  verificarConflitos: (veiculoId: number) => Promise<ReservaResponse[]>;
+  verificarDisponibilidade: (veiculoId: string) => Promise<boolean>;
+  verificarConflitos: (veiculoId: string) => Promise<ReservaResponse[]>;
 
   // Utils
   clearError: () => void;
-  isVeiculoDisponivel: (veiculoId: number) => boolean;
+  isVeiculoDisponivel: (veiculoId: string) => boolean;
 }
 
 export const useVeiculoSelector = (params: UseVeiculoSelectorParams = {}): UseVeiculoSelectorReturn => {
@@ -82,7 +82,7 @@ export const useVeiculoSelector = (params: UseVeiculoSelectorParams = {}): UseVe
   }, [dataInicio, dataFim, horaInicio, horaFim]);
 
   // Check vehicle availability
-  const verificarDisponibilidade = useCallback(async (veiculoId: number): Promise<boolean> => {
+  const verificarDisponibilidade = useCallback(async (veiculoId: string): Promise<boolean> => {
     if (!dataInicio || !dataFim || !horaInicio || !horaFim) {
       return true; // Cannot check without date/time info
     }
@@ -105,7 +105,7 @@ export const useVeiculoSelector = (params: UseVeiculoSelectorParams = {}): UseVe
   }, [dataInicio, dataFim, horaInicio, horaFim, reservaIdIgnorar]);
 
   // Check conflicts for specific vehicle
-  const verificarConflitos = useCallback(async (veiculoId: number): Promise<ReservaResponse[]> => {
+  const verificarConflitos = useCallback(async (veiculoId: string): Promise<ReservaResponse[]> => {
     if (!dataInicio || !dataFim || !horaInicio || !horaFim) {
       setConflitos([]);
       return [];
@@ -137,7 +137,7 @@ export const useVeiculoSelector = (params: UseVeiculoSelectorParams = {}): UseVe
   }, [dataInicio, dataFim, horaInicio, horaFim, reservaIdIgnorar]);
 
   // Helper to check if vehicle is available
-  const isVeiculoDisponivel = useCallback((veiculoId: number): boolean => {
+  const isVeiculoDisponivel = useCallback((veiculoId: string): boolean => {
     const veiculo = veiculosDisponiveis.find(v => v.id === veiculoId);
     return veiculo?.status === 'disponivel';
   }, [veiculosDisponiveis]);
@@ -199,7 +199,7 @@ interface UseVeiculoInfoReturn {
   clearError: () => void;
 }
 
-export const useVeiculoInfo = (veiculoId: number | null): UseVeiculoInfoReturn => {
+export const useVeiculoInfo = (veiculoId: string | null): UseVeiculoInfoReturn => {
   // States
   const [veiculo, setVeiculo] = useState<VeiculoResponse | null>(null);
   const [reservasAtivas, setReservasAtivas] = useState<ReservaResponse[]>([]);

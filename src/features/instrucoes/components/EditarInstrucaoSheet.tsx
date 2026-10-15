@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { formatApiError } from '@/utils/api-error';
 import { instrucoesApi, type InstrucaoApiResponse } from '@/services/instrucoes.services';
 import { useInstrucoesFilters } from '../hooks/useInstrucoesFilters';
-import { InstrucoesModal } from './InstrucoesModal';
+import { InstrucoesModal, type FormularioDaInstrucao } from './InstrucoesModal';
 
 interface EditarInstrucaoSheetProps {
   /** A instrução a abrir. Nulo mantém o sheet fechado. */
@@ -67,7 +67,7 @@ export function EditarInstrucaoSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instrucaoId]);
 
-  const salvar = async (dados: any) => {
+  const salvar = async (dados: FormularioDaInstrucao) => {
     if (!instrucao) return;
 
     // O BaseModal semeia o formData com a entidade inteira, e o

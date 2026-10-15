@@ -19,6 +19,8 @@ import { planosManutencaoApi, PlanoManutencaoApiResponse } from '@/services/plan
 
 // Usar tipos da API diretamente
 type TarefaDetalhada = TarefaApiResponse & {
+  /** Nome antigo de `plano_manutencao_id`; a tela ainda aceita os dois. */
+  plano_id?: string;
   sub_tarefas?: Array<{
     id: string;
     descricao: string;
@@ -155,8 +157,8 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
 
           const planosIdsFromTarefas = [...new Set(
             tarefasCarregadas
-              .map(tarefa => tarefa.plano_manutencao_id || (tarefa as any).plano_id)
-              .filter(Boolean)
+              .map(tarefa => tarefa.plano_manutencao_id || tarefa.plano_id)
+              .filter((id): id is string => Boolean(id))
           )];
 
           const todosPlansIds = [...new Set([...planosIds, ...planosIdsFromTarefas])];
@@ -319,7 +321,7 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
       <CardContent className="space-y-4">
         {planos.map((plano, planoIndex) => {
           const tarefasDoPlano = tarefas.filter(tarefa =>
-            (tarefa.plano_manutencao_id || (tarefa as any).plano_id) === plano.id
+            (tarefa.plano_manutencao_id || tarefa.plano_id) === plano.id
           );
           const isExpanded = expandedPlanos.has(plano.id);
 

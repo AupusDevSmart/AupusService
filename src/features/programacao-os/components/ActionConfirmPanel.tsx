@@ -2,13 +2,13 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { CheckCircle, Ban, Loader2 } from 'lucide-react';
+import { CheckCircle, Ban, Loader2, type LucideIcon } from 'lucide-react';
 
 export type PendingAction = 'aprovar' | 'cancelar';
 
 const actionConfig: Record<PendingAction, {
   confirmLabel: string;
-  icon: any;
+  icon: LucideIcon;
   variant: 'default' | 'destructive';
   inputLabel: string;
   inputPlaceholder: string;

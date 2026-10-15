@@ -1,5 +1,6 @@
 // src/services/user-permissions.service.ts
 
+import { isAxiosError } from 'axios';
 import { api } from '@/config/api';
 
 export interface Permission {
@@ -39,13 +40,51 @@ export interface CheckPermissionResponse {
   source?: 'role' | 'direct' | 'none';
 }
 
+/**
+ * O que este service le de GET /usuarios/:id/permissions. Hoje o backend manda
+ * `{ role, permissions, permissionNames }` (papel no singular, sem `all_permissions`):
+ * `roles` e `allPermissions` chegam vazios.
+ */
+/**
+ * GET /usuarios/:id/permissions devolve `{ role, permissions, permissionNames }`
+ * (papel único; `permissions` com `source` role/direct). Lia `roles` e
+ * `all_permissions`, que a rota não manda: chegavam sempre vazios (SN-36).
+ */
+interface PermissoesDaRota {
+  role?: Role | null;
+  permissions?: Permission[];
+  permissionNames?: string[];
+}
+
+/** O que este service le de GET /usuarios/:id/permissions/summary (aceita os dois formatos de nome). */
+interface ResumoDaRota {
+  roles?: string[];
+  roleNames?: string[];
+  permissions?: string[];
+  permissionNames?: string[];
+  totalPermissions?: number;
+  totalRoles?: number;
+}
+
+/** O que a verificacao de uma permissao devolve (aceita os dois formatos de nome). */
+interface VerificacaoDaRota {
+  hasPermission?: boolean;
+  has_permission?: boolean;
+  source?: CheckPermissionResponse['source'];
+}
+
+/** O status HTTP do erro, quando ele veio da API. */
+function statusDoErro(error: unknown): number | undefined {
+  return isAxiosError(error) ? error.response?.status : undefined;
+}
+
 // Aliases de compatibilidade para hooks externos
 export type UserPermission = Permission;
 export type UserRole = Role;
 export type UserPermissionsCategorized = Record<string, Permission[]>;
 
 class UserPermissionsService {
-  private cache: Map<string, { data: any; timestamp: number }> = new Map();
+  private cache: Map<string, { data: unknown; timestamp: number }> = new Map();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   /**
@@ -74,7 +113,7 @@ class UserPermissionsService {
   /**
    * Save data to cache
    */
-  private saveToCache(key: string, data: any): void {
+  private saveToCache(key: string, data: unknown): void {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
@@ -95,22 +134,22 @@ class UserPermissionsService {
 
     try {
       console.log(`📡 [UserPermissionsService] Buscando permissões do usuário ${userId}`);
-      const response = await api.get(`/usuarios/${userId}/permissions`);
+      const response = await api.get<PermissoesDaRota>(`/usuarios/${userId}/permissions`);
       const data = response.data;
 
       const result: UserPermissionsResponse = {
         userId,
-        roles: data.roles || [],
-        permissions: data.permissions || [],
-        allPermissions: data.all_permissions || data.allPermissions || [],
+        roles: data.role ? [data.role] : [],
+        permissions: (data.permissions || []).filter((p) => p.source === 'direct'),
+        allPermissions: data.permissions || [],
       };
 
       this.saveToCache(cacheKey, result);
       return result;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [UserPermissionsService] Erro ao buscar permissões:`, error);
       // Return empty permissions if endpoint doesn't exist
-      if (error.response?.status === 404) {
+      if (statusDoErro(error) === 404) {
         return {
           userId,
           roles: [],
@@ -136,7 +175,7 @@ class UserPermissionsService {
 
     try {
       console.log(`📡 [UserPermissionsService] Buscando resumo de permissões do usuário ${userId}`);
-      const response = await api.get(`/usuarios/${userId}/permissions/summary`);
+      const response = await api.get<ResumoDaRota>(`/usuarios/${userId}/permissions/summary`);
       const data = response.data;
 
       const result: UserPermissionsSummary = {
@@ -149,10 +188,10 @@ class UserPermissionsService {
 
       this.saveToCache(cacheKey, result);
       return result;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [UserPermissionsService] Erro ao buscar resumo:`, error);
       // Fallback: build summary from full permissions
-      if (error.response?.status === 404) {
+      if (statusDoErro(error) === 404) {
         try {
           const fullPermissions = await this.getUserPermissions(userId);
           const result: UserPermissionsSummary = {
@@ -192,16 +231,14 @@ class UserPermissionsService {
 
       // Try to use dedicated endpoint first
       try {
-        const response = await api.get(`/usuarios/${userId}/permissions/check`, {
-          params: { permission: permissionName },
-        });
+        const response = await api.post<VerificacaoDaRota>(`/usuarios/${userId}/check-permission`, { permissionName });
         return {
           hasPermission: response.data.hasPermission || response.data.has_permission || false,
           source: response.data.source,
         };
-      } catch (error: any) {
+      } catch (error) {
         // If endpoint doesn't exist, check permissions manually
-        if (error.response?.status === 404) {
+        if (statusDoErro(error) === 404) {
           const permissions = await this.getUserPermissions(userId);
           const hasPermission = permissions.allPermissions.some(
             (p) => p.name === permissionName
@@ -210,7 +247,7 @@ class UserPermissionsService {
         }
         throw error;
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error(
         `❌ [UserPermissionsService] Erro ao verificar permissão "${permissionName}":`,
         error
@@ -225,9 +262,9 @@ class UserPermissionsService {
   async assignUserRole(userId: string, roleId: number): Promise<void> {
     try {
       console.log(`📝 [UserPermissionsService] Atribuindo role ${roleId} ao usuário ${userId}`);
-      await api.post(`/usuarios/${userId}/roles`, { roleId });
+      await api.post(`/usuarios/${userId}/assign-role`, { roleId });
       this.invalidateUserCache(userId);
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [UserPermissionsService] Erro ao atribuir role:`, error);
       throw error;
     }
@@ -241,9 +278,9 @@ class UserPermissionsService {
       console.log(
         `📝 [UserPermissionsService] Sincronizando ${permissionIds.length} permissões para usuário ${userId}`
       );
-      await api.post(`/usuarios/${userId}/permissions/sync`, { permissions: permissionIds });
+      await api.post(`/usuarios/${userId}/sync-permissions`, { permissionIds });
       this.invalidateUserCache(userId);
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [UserPermissionsService] Erro ao sincronizar permissões:`, error);
       throw error;
     }
@@ -254,9 +291,9 @@ class UserPermissionsService {
    */
   async getUserPermissionsCategorized(userId: string): Promise<UserPermissionsCategorized> {
     try {
-      const response = await api.get(`/usuarios/${userId}/permissions/categorized`);
-      return (response.data || {}) as UserPermissionsCategorized;
-    } catch (error: any) {
+      const response = await api.get<UserPermissionsCategorized>(`/usuarios/${userId}/permissions/categorized`);
+      return response.data || {};
+    } catch (error) {
       console.error(`❌ [UserPermissionsService] Erro ao buscar permissões categorizadas:`, error);
       return {};
     }
@@ -267,9 +304,9 @@ class UserPermissionsService {
    */
   async assignUserPermission(userId: string, permissionId: number): Promise<void> {
     try {
-      await api.post(`/usuarios/${userId}/permissions`, { permissionId });
+      await api.post(`/usuarios/${userId}/assign-permission`, { permissionId });
       this.invalidateUserCache(userId);
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [UserPermissionsService] Erro ao atribuir permissão:`, error);
       throw error;
     }
@@ -280,9 +317,9 @@ class UserPermissionsService {
    */
   async removeUserPermission(userId: string, permissionId: number): Promise<void> {
     try {
-      await api.delete(`/usuarios/${userId}/permissions/${permissionId}`);
+      await api.delete(`/usuarios/${userId}/remove-permission/${permissionId}`);
       this.invalidateUserCache(userId);
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [UserPermissionsService] Erro ao remover permissão:`, error);
       throw error;
     }
@@ -310,15 +347,15 @@ class UserPermissionsService {
     mode: 'any' | 'all' = 'any'
   ): Promise<{ hasPermissions: boolean; details: Record<string, boolean> }> {
     try {
-      const response = await api.post(`/usuarios/${userId}/permissions/check-multiple`, {
-        permissions: permissionNames,
+      const response = await api.post<{ hasPermissions?: boolean; details?: Record<string, boolean> }>(`/usuarios/${userId}/check-permissions`, {
+        permissionNames,
         mode,
       });
       return {
         hasPermissions: response.data?.hasPermissions ?? false,
         details: response.data?.details ?? {},
       };
-    } catch (error: any) {
+    } catch (error) {
       // Fallback: iterar localmente
       const details: Record<string, boolean> = {};
       for (const name of permissionNames) {
@@ -336,9 +373,9 @@ class UserPermissionsService {
    */
   async getAvailableRoles(): Promise<Role[]> {
     try {
-      const response = await api.get('/roles');
-      return (response.data || []) as Role[];
-    } catch (error: any) {
+      const response = await api.get<Role[]>('/roles');
+      return response.data || [];
+    } catch (error) {
       console.error(`❌ [UserPermissionsService] Erro ao buscar roles:`, error);
       return [];
     }
@@ -349,9 +386,9 @@ class UserPermissionsService {
    */
   async getAvailablePermissions(): Promise<Permission[]> {
     try {
-      const response = await api.get('/permissions');
-      return (response.data || []) as Permission[];
-    } catch (error: any) {
+      const response = await api.get<Permission[]>('/permissions');
+      return response.data || [];
+    } catch (error) {
       console.error(`❌ [UserPermissionsService] Erro ao buscar permissões:`, error);
       return [];
     }
@@ -362,9 +399,9 @@ class UserPermissionsService {
    */
   async getAvailablePermissionsGrouped(): Promise<UserPermissionsCategorized> {
     try {
-      const response = await api.get('/permissions/grouped');
-      return (response.data || {}) as UserPermissionsCategorized;
-    } catch (error: any) {
+      const response = await api.get<UserPermissionsCategorized>('/permissions/grouped');
+      return response.data || {};
+    } catch (error) {
       console.error(`❌ [UserPermissionsService] Erro ao buscar permissões agrupadas:`, error);
       return {};
     }

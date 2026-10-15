@@ -43,6 +43,9 @@ import type {
   CreateUnidadeDto as CreateUnidadeDoApp,
   UnidadeFilters as UnidadeFiltersDoApp,
   UpdateUnidadeDto as UpdateUnidadeDoApp,
+  Unidade as UnidadeDoApp,
+  UnidadeEstatisticas,
+  UnidadeEquipamentosResponse,
 } from '@/features/unidades/types';
 
 // ============================================================
@@ -288,21 +291,16 @@ export interface UseSelectionDataContract {
 // UNIDADES CONTRACTS
 // ============================================================
 
-/*
- * Unidades: o service do app declara as respostas como `UnidadeNexon`, que nao
- * e o que a rota devolve (as paginas leem o formato de `Unidade`). Ate o
- * service ser corrigido, o contrato nao afirma o formato: `unknown`, e quem le
- * converte.
- */
+/** Unidades: o formato que a rota /unidades devolve (o `Unidade` da feature). */
 export interface UseUnidadesContract {
-  unidades: unknown[];
+  unidades: UnidadeDoApp[];
   /** Ausente enquanto a primeira pagina carrega. */
   pagination?: Pagination;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
-  createUnidade: (data: CreateUnidadeDoApp) => Promise<unknown>;
-  updateUnidade: (params: { id: string; data: UpdateUnidadeDoApp }) => Promise<unknown>;
+  createUnidade: (data: CreateUnidadeDoApp) => Promise<UnidadeDoApp>;
+  updateUnidade: (params: { id: string; data: UpdateUnidadeDoApp }) => Promise<UnidadeDoApp>;
   deleteUnidade: (id: string) => Promise<void>;
   isCreating: boolean;
   isUpdating: boolean;
@@ -310,19 +308,19 @@ export interface UseUnidadesContract {
 }
 
 export interface UseUnidadesByPlantaContract {
-  unidades: unknown[];
+  unidades: UnidadeDoApp[];
   isLoading: boolean;
   error: Error | null;
 }
 
 export interface UseUnidadeContract {
-  unidade: unknown;
+  unidade: UnidadeDoApp | undefined;
   isLoading: boolean;
   error: Error | null;
 }
 
 export interface UseUnidadeEstatisticasContract {
-  estatisticas: unknown;
+  estatisticas: UnidadeEstatisticas | undefined;
   isLoading: boolean;
   error: Error | null;
 }
@@ -331,7 +329,7 @@ export interface UseUnidadeEquipamentosContract {
   // Nenhuma pagina do nucleo le esta lista ainda; o formato e o da rota /unidades/:id/equipamentos.
   equipamentos: unknown[];
   pagination?: Pagination;
-  unidade: unknown;
+  unidade: UnidadeEquipamentosResponse['unidade'] | undefined;
   isLoading: boolean;
   error: Error | null;
 }

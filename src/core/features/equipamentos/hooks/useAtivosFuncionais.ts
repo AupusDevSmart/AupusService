@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useHttpClient } from '@/core/context/hooks';
+import { mensagemDoBackend } from '@/core/features/equipamentos/utils/mensagem-do-backend';
 
 export interface EquipamentoDaPosicao {
   id: string;
@@ -49,8 +50,8 @@ export function useAtivosFuncionais(unidadeId?: string | null) {
       const lista: AtivoFuncional[] = resp.data?.data ?? resp.data ?? [];
       setAtivos(Array.isArray(lista) ? lista : []);
       return lista;
-    } catch (e: any) {
-      setErro(e?.response?.data?.message ?? 'Nao foi possivel carregar as posicoes');
+    } catch (e) {
+      setErro(mensagemDoBackend(e) ?? 'Nao foi possivel carregar as posicoes');
       setAtivos([]);
       return [];
     } finally {

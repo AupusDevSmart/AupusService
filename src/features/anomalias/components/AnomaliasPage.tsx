@@ -11,7 +11,8 @@ import { BaseFilters } from '@/core';
 import { AnomaliasModal } from './AnomaliasModal';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { Anomalia, AnomaliaFormData } from '../types';
+import { Anomalia, AnomaliaFormData, AnomaliasFilters } from '../types';
+import type { IconeDeAcao } from '@/core/types/base';
 import { anomaliasTableColumns } from '../config/table-config';
 import { createAnomaliasTableActions } from '../config/actions-config';
 import { useAnomaliasApi } from '../hooks/useAnomaliasApi';
@@ -37,7 +38,7 @@ const initialStats: AnomaliasStats = {
 export function AnomaliasPage() {
   // Estados
   const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('anomalias');
-  const [filters, setFilters] = useState(() => ({
+  const [filters, setFilters] = useState<Partial<AnomaliasFilters>>(() => ({
     ...initialFilters,
     limit: linhasPorPagina,
   }));
@@ -97,7 +98,7 @@ export function AnomaliasPage() {
     return tableActions
       .filter((action) => action.label !== 'Visualizar' && action.label !== 'Editar')
       .map((action) => {
-        const Icon = action.icon as any;
+        const Icon = action.icon as IconeDeAcao | undefined;
         return {
           key: action.label.toLowerCase().replace(/\s+/g, '_'),
           label: action.label,
@@ -155,8 +156,10 @@ export function AnomaliasPage() {
       }
 
       // Transformar para o formato que o backend espera
-      const transformedData: any = {
+      const transformedData: AnomaliaFormData = {
         descricao: data.descricao,
+        local: local.trim(),
+        ativo: ativo.trim(),
         condicao: data.condicao,
         origem: data.origem,
         prioridade: data.prioridade,
@@ -196,7 +199,7 @@ export function AnomaliasPage() {
     }
   };
 
-  const handleFilterChange = async (newFilters: any) => {
+  const handleFilterChange = async (newFilters: Partial<AnomaliasFilters>) => {
     // Se mudou a planta, recarregar unidades
     if ('planta' in newFilters) {
       const plantaId = newFilters.planta === 'all' ? undefined : newFilters.planta;
@@ -212,7 +215,7 @@ export function AnomaliasPage() {
 
     // Limpar filtros com valor 'all'
     const cleanedFilters = { ...newFilters };
-    Object.keys(cleanedFilters).forEach((key) => {
+    (Object.keys(cleanedFilters) as Array<keyof AnomaliasFilters>).forEach((key) => {
       if (cleanedFilters[key] === 'all') {
         cleanedFilters[key] = undefined;
       }
@@ -287,7 +290,8 @@ export function AnomaliasPage() {
           local: entity.local || '',
           ativo: entity.ativo || '',
         },
-        anexos: (entity as any).anexos || [],
+        // A anomalia nao traz anexos: o AnexosUpload busca os existentes pelo id
+        anexos: [],
       };
     }
 
@@ -324,7 +328,7 @@ export function AnomaliasPage() {
           <div className="flex flex-col gap-3 mb-4 md:mb-6">
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-start">
               <div className="flex-1 min-w-0">
-                <BaseFilters
+                <BaseFilters<Partial<AnomaliasFilters>>
                   filters={filters}
                   config={filterConfigs}
                   onFilterChange={handleFilterChange}

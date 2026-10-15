@@ -3,7 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { AuthService } from '@/services/auth.service';
 import { useUserStore } from '@/store/useUserStore';
 import { LoginDto } from '@/types/dtos/auth-dto';
+import type { Permissao } from '@/types/dtos/usuarios-dto';
+import { formatApiError } from '@/utils/api-error';
 import { toast } from 'sonner';
+
+/** A permissao como o login manda: o nome (hoje) ou o objeto { name } (formato antigo). */
+type PermissaoDoLogin = Permissao | { name?: Permissao };
 
 /**
  * Hook para gerenciar o processo de login
@@ -40,14 +45,16 @@ export function useLogin() {
 
       // Extrai permissões (all_permissions pode ser array ou undefined)
       const permissoes = Array.isArray(response.user.all_permissions)
-        ? response.user.all_permissions.map((p: any) => p.name || p)
+        ? response.user.all_permissions.map((p: PermissaoDoLogin) => (typeof p === 'string' ? p : p.name || p))
         : [];
 
       // Atualiza o store com dados do usuário e permissões
-      setUser({
+      // `acessivel` vai junto no usuario guardado (o store recalcula o dele das all_permissions).
+      const usuarioDoLogin = {
         ...response.user,
         acessivel: permissoes,
-      } as any);
+      };
+      setUser(usuarioDoLogin);
 
       // Exibe mensagem de sucesso
       toast.success('Login realizado com sucesso!', {
@@ -56,15 +63,11 @@ export function useLogin() {
 
       // Redireciona para a página desejada
       navigate(redirectTo, { replace: true });
-    } catch (err: any) {
+    } catch (err) {
       console.error('❌ [USE LOGIN] Erro ao fazer login:', err);
 
-      // Extrai mensagem de erro da resposta do backend
-      const errorMessage =
-        err.response?.data?.error?.message ||  // Formato padrão do backend
-        err.response?.data?.message ||          // Formato alternativo
-        err.message ||                          // Mensagem do erro
-        'Erro ao fazer login. Tente novamente.';
+      // Extrai mensagem de erro da resposta do backend (data.message, data.error.message ou a do erro)
+      const errorMessage = formatApiError(err);
 
       setError(errorMessage);
 

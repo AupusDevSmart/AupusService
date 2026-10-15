@@ -54,7 +54,7 @@ class AnomaliasApiService {
   // 🔵 1. OPERAÇÕES CRUD BÁSICAS
   // ==========================================
 
-  async findAll(filters: AnomaliasFilters): Promise<AnomaliasResponse> {
+  async findAll(filters: Partial<AnomaliasFilters>): Promise<AnomaliasResponse> {
     // // console.log('🔍 [AnomaliasService] Buscando anomalias com filtros:', filters);
     
     const params = new URLSearchParams();
@@ -174,12 +174,17 @@ class AnomaliasApiService {
       instrucoes_ids: data.instrucoes_ids,
     };
     
-    // Se há dados de localização, estruturar corretamente
-    if (data.equipamentoId || data.local || data.ativo) {
+    // Se há dados de localização, estruturar corretamente. A página manda a
+    // localização aninhada (como no create); sem ler `localizacao`, trocar o
+    // equipamento na edição não chegava ao backend.
+    const equipamentoId = data.localizacao?.equipamentoId ?? data.equipamentoId;
+    const local = data.localizacao?.local ?? data.local;
+    const ativo = data.localizacao?.ativo ?? data.ativo;
+    if (equipamentoId || local || ativo) {
       updateDto.localizacao = {
-        equipamentoId: data.equipamentoId?.toString() || '',
-        local: data.local || '',
-        ativo: data.ativo || ''
+        equipamentoId: equipamentoId?.toString() || '',
+        local: local || '',
+        ativo: ativo || ''
       };
     }
     

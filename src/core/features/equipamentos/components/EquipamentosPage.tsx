@@ -28,7 +28,9 @@ import { useEquipamentos, useEquipamentoFilters, useUserStore } from '@/core/con
 
 // Modais separados
 import { EquipamentoUCModal, type ContextoSlot } from './modals/EquipamentoUCModal';
-import { ComponenteUARModal } from './modals/ComponenteUARModal';
+import { ComponenteUARModal, type DadosDoComponenteUAR } from './modals/ComponenteUARModal';
+import type { DadosDoFormulario } from '@/core/types/base';
+import { formatApiError } from '@/utils/api-error';
 import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
 import { exportarEquipamentos, lerEquipamentos } from '../utils/planilha';
 
@@ -258,8 +260,8 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
         // Sem isto, o setState no mount recriava o objeto e disparava a busca
         // de novo — a segunda ja com o filtro certo, mas concorrendo com a
         // primeira.
-        const igual = Object.entries(urlFilters).every(
-          ([chave, valor]) => (prev as unknown as Record<string, unknown>)[chave] === valor,
+        const igual = (Object.keys(urlFilters) as (keyof EquipamentosFilters)[]).every(
+          (chave) => prev[chave] === urlFilters[chave],
         );
         if (igual) return prev;
 
@@ -420,7 +422,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
     setDuplicarDe(null);
   };
 
-  const handleSubmitUC = async (data: any) => {
+  const handleSubmitUC = async (data: DadosDoFormulario) => {
     try {
 
       let criado: Equipamento | null = null;
@@ -459,7 +461,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
     setDuplicarDe(null);
   };
 
-  const handleSubmitUAR = async (data: any) => {
+  const handleSubmitUAR = async (data: DadosDoComponenteUAR) => {
     try {
       let criado: Equipamento | null = null;
 
@@ -554,11 +556,8 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
       // Recarregar dados
       await loadEquipamentos(filters);
 
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.error?.message ||
-                          error?.response?.data?.message ||
-                          error?.message ||
-                          'Erro desconhecido ao remover equipamento';
+    } catch (error) {
+      const errorMessage = formatApiError(error);
 
       toast.error('Erro ao remover equipamento', {
         description: errorMessage,

@@ -42,16 +42,57 @@ export interface Anomalia extends BaseEntity {
   deleted_at?: string;
   
   // Support for related objects from API
-  planta?: any;
-  unidade?: any;
-  equipamento?: any;
-  usuario?: any;
-  
+  planta?: PlantaDaAnomalia | null;
+  unidade?: UnidadeDaAnomalia | null;
+  equipamento?: EquipamentoDaAnomalia | null;
+  usuario?: UsuarioDaAnomalia | null;
+
   // Histórico da anomalia
   historico?: HistoricoAnomalia[];
 
   // Instruções vinculadas
-  anomalias_instrucoes?: any[];
+  anomalias_instrucoes?: InstrucaoDaAnomalia[];
+}
+
+// Relações que o GET da anomalia inclui (o backend manda snake_case; os
+// camelCase ficam porque a tela ainda lê os dois).
+export interface PlantaDaAnomalia {
+  id: string;
+  nome?: string;
+}
+
+export interface UnidadeDaAnomalia {
+  id: string;
+  nome?: string;
+  planta_id?: string | null;
+  planta?: PlantaDaAnomalia | null;
+}
+
+export interface EquipamentoDaAnomalia {
+  id: string;
+  nome?: string;
+  unidadeId?: string | number;
+  unidade_id?: string | null;
+  plantaId?: string | number;
+  unidade?: UnidadeDaAnomalia | null;
+  planta?: PlantaDaAnomalia | null;
+}
+
+export interface UsuarioDaAnomalia {
+  id: string;
+  nome?: string;
+  email?: string;
+}
+
+export interface InstrucaoDaAnomalia {
+  instrucao_id?: string;
+  instrucao?: {
+    id: string;
+    tag?: string;
+    nome?: string;
+    status?: string;
+    ativo?: boolean;
+  } | null;
 }
 
 // Interface para histórico da anomalia

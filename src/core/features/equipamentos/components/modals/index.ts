@@ -3,21 +3,23 @@ export { EquipamentoUCModal } from './EquipamentoUCModal';
 export { ComponenteUARModal } from './ComponenteUARModal';
 export { GerenciarUARsModal } from './GerenciarUARsModal';
 
+import type { Equipamento } from '../../types';
+
 // Tipos para os modais
 export interface ModalUCState {
   isOpen: boolean;
   mode: 'create' | 'edit' | 'view';
-  entity: any | null;
+  entity: Equipamento | null;
 }
 
 export interface ModalUARState {
   isOpen: boolean;
   mode: 'create' | 'edit' | 'view';
-  entity: any | null;
-  equipamentoPai: any | null;
+  entity: Equipamento | null;
+  equipamentoPai: Equipamento | null;
 }
 
 export interface ModalGerenciarUARsState {
   isOpen: boolean;
-  equipamentoUC: any | null;
+  equipamentoUC: Equipamento | null;
 }

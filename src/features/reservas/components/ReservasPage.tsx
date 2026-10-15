@@ -15,7 +15,9 @@ import { toast } from '@/hooks/use-toast';
 import {
   ReservaResponse,
   CreateReservaRequest,
-  LocalReservasFilters
+  LocalReservasFilters,
+  StatusReserva,
+  TipoSolicitante
 } from '../types';
 import { reservasTableColumns } from '../config/table-config';
 
@@ -89,9 +91,10 @@ export function ReservasPage() {
         page: filtersToUse.page,
         limit: filtersToUse.limit,
         search: filtersToUse.search || undefined,
-        veiculoId: filtersToUse.veiculoId !== 'all' ? Number(filtersToUse.veiculoId) : undefined,
-        status: filtersToUse.status !== 'all' ? filtersToUse.status as any : undefined,
-        tipoSolicitante: filtersToUse.tipoSolicitante !== 'all' ? filtersToUse.tipoSolicitante as any : undefined,
+        // O id da viatura e texto: Number() dava NaN e o filtro nao chegava a API
+        veiculoId: filtersToUse.veiculoId !== 'all' ? filtersToUse.veiculoId : undefined,
+        status: filtersToUse.status !== 'all' ? filtersToUse.status as StatusReserva : undefined,
+        tipoSolicitante: filtersToUse.tipoSolicitante !== 'all' ? filtersToUse.tipoSolicitante as TipoSolicitante : undefined,
         responsavel: filtersToUse.responsavel || undefined,
         dataInicioFrom: filtersToUse.dataInicioFrom || undefined,
         dataInicioTo: filtersToUse.dataInicioTo || undefined,
@@ -186,12 +189,12 @@ export function ReservasPage() {
         fetchReservasWithFilters(filters);
       }, 500);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao salvar reserva:', error);
 
       toast({
         title: modalState.mode === 'create' ? "Erro ao criar reserva" : "Erro ao atualizar reserva",
-        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        description: (error instanceof Error && error.message) || "Ocorreu um erro interno. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -225,12 +228,12 @@ export function ReservasPage() {
         fetchReservasWithFilters(filters);
       }, 500);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao cancelar reserva:', error);
 
       toast({
         title: "Erro ao cancelar reserva",
-        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        description: (error instanceof Error && error.message) || "Ocorreu um erro interno. Tente novamente.",
         variant: "destructive",
       });
     }
@@ -250,12 +253,12 @@ export function ReservasPage() {
         fetchReservasWithFilters(filters);
       }, 500);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao finalizar reserva:', error);
 
       toast({
         title: "Erro ao finalizar reserva",
-        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        description: (error instanceof Error && error.message) || "Ocorreu um erro interno. Tente novamente.",
         variant: "destructive",
       });
     }
@@ -267,7 +270,7 @@ export function ReservasPage() {
     if (modalState.mode === 'create') {
       return {
         id: '',
-        veiculoId: 0,
+        veiculoId: '',
         tipoSolicitante: 'manual' as const,
         dataInicio: '',
         dataFim: '',
@@ -279,7 +282,8 @@ export function ReservasPage() {
       };
     }
 
-    return entity || {};
+    // Editar/visualizar sempre abre com a reserva; sem ela nao ha o que mostrar
+    return entity ?? null;
   };
 
   const pagination = {
@@ -403,7 +407,7 @@ export function ReservasPage() {
         <ReservaModal
           isOpen={modalState.isOpen}
           mode={modalState.mode as 'create' | 'edit' | 'view'}
-          entity={getModalEntity() as any}
+          entity={getModalEntity()}
           onClose={closeModal}
           onSubmit={handleSubmit}
           reservaId={modalState.entity?.id}

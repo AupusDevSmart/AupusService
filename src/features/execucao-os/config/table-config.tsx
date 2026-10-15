@@ -103,7 +103,8 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
         TAREFA: 'Plano',
         MANUAL: 'Manual',
       };
-      const origem = (item as any).origem || (item as any).os?.origem;
+      // O transform não põe origem no `os` aninhado: a da própria OS é a que vale
+      const origem = item.origem;
       return origem ? <Texto>{rotulos[origem] || origem}</Texto> : <Texto fraco>-</Texto>;
     },
   },

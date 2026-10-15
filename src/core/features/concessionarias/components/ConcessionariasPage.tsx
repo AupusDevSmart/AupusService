@@ -9,11 +9,13 @@ import { BaseModal } from '@/core/components/common/base-modal/BaseModal';
 import { Plus, Zap, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/core/hooks/useGenericModal';
 import { toast } from '@/core/hooks/use-toast';
-import { ConcessionariasFilters } from '../types';
+import { isAxiosError } from 'axios';
+import { ehAnexoTemporario, type AnexoItem, type ConcessionariasFilters, type TarifasDoFormulario } from '../types';
+import type { ConcessionariaResponse, CreateConcessionariaDto } from '@/services/concessionarias.services';
 import { concessionariasTableColumns } from '../config/table-config';
 import { useConcessionariasFilters } from '../hooks/useConcessionariasFilters';
 import { concessionariasFormFields } from '../config/form-config';
-import { useUserStore, useConcessionariasFeature } from '@/core/context/hooks';
+import { useUserStore, useConcessionariasFeature, useHttpClient } from '@/core/context/hooks';
 import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
 import { exportarConcessionarias, lerConcessionarias } from '../utils/planilha';
 
@@ -24,9 +26,22 @@ const initialFilters: ConcessionariasFilters = {
   limit: LINHAS_POR_PAGINA_PADRAO
 };
 
+/** O formulario de concessionaria: as tarifas ficam agrupadas em `tarifas`. */
+interface ConcessionariaDoFormulario {
+  id?: string;
+  nome?: string;
+  estado?: string;
+  numero_reh?: string;
+  /** Obrigatorias no formulario (o BaseModal cobra antes do submit). */
+  data_inicio: string;
+  data_validade: string;
+  tarifas?: TarifasDoFormulario;
+  anexos?: AnexoItem[];
+}
+
 // ✅ HELPER: Transformar dados do formulário para API
-const transformFormDataToAPI = (data: any): any => {
-  const transformedData: any = {
+const transformFormDataToAPI = (data: ConcessionariaDoFormulario): CreateConcessionariaDto => {
+  const transformedData: CreateConcessionariaDto = {
     nome: (data.nome || '').trim(),
     estado: (data.estado || '').toUpperCase(),
     numero_reh: (data.numero_reh || '').trim() || undefined,
@@ -51,7 +66,7 @@ const transformFormDataToAPI = (data: any): any => {
 };
 
 // ✅ HELPER: Transformar dados da API para o formulário
-const transformAPIToFormData = (concessionaria: any): any => {
+const transformAPIToFormData = (concessionaria: ConcessionariaResponse): ConcessionariaDoFormulario & { id: string } => {
   return {
     id: concessionaria.id,
     nome: concessionaria.nome,
@@ -72,10 +87,11 @@ export function ConcessionariasPage() {
   const { hasPermission } = useUserStore();
   const podeGerenciar = hasPermission('concessionarias.manage');
   const concessionariasFeature = useConcessionariasFeature();
+  const httpClient = useHttpClient();
 
   // Estados locais
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [concessionarias, setConcessionarias] = useState<any[]>([]);
+  const [concessionarias, setConcessionarias] = useState<ConcessionariaResponse[]>([]);
   const [totalConcessionarias, setTotalConcessionarias] = useState(0);
   const [loading, setLoading] = useState(true);
   const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('concessionarias');
@@ -92,7 +108,7 @@ export function ConcessionariasPage() {
     modalState,
     openModal,
     closeModal
-  } = useGenericModal<any>();
+  } = useGenericModal<ConcessionariaResponse>();
 
   // ✅ FUNÇÃO: Buscar concessionárias da API
   const fetchConcessionarias = async (currentFilters: ConcessionariasFilters) => {
@@ -118,11 +134,11 @@ export function ConcessionariasPage() {
       // pagina e vieram os mesmos registros". O efeito de sincronia abaixo faz
       // a copia no render seguinte, quando o hook ja tem os dados novos.
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [CONCESSIONARIAS PAGE] Erro ao carregar concessionárias:', error);
       toast({
         title: "Erro ao carregar concessionárias",
-        description: error.message || "Não foi possível carregar a lista de concessionárias.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar a lista de concessionárias.",
         variant: "destructive",
       });
       setConcessionarias([]);
@@ -177,14 +193,14 @@ export function ConcessionariasPage() {
   };
 
   // ✅ HANDLER: Buscar dados detalhados da concessionária para modal
-  const fetchConcessionariaDetails = async (id: string): Promise<any | null> => {
+  const fetchConcessionariaDetails = async (id: string): Promise<ConcessionariaResponse | null> => {
     try {
       return await concessionariasFeature.getConcessionaria(id);
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [CONCESSIONARIAS PAGE] Erro ao buscar detalhes da concessionária:', error);
       toast({
         title: "Erro ao carregar concessionária",
-        description: error.message || "Não foi possível carregar os detalhes da concessionária.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar os detalhes da concessionária.",
         variant: "destructive",
       });
       return null;
@@ -192,7 +208,7 @@ export function ConcessionariasPage() {
   };
 
   // ✅ HANDLER: Visualizar concessionária (abertura otimista)
-  const handleView = async (concessionaria: any) => {
+  const handleView = async (concessionaria: ConcessionariaResponse) => {
 
     // Abrir modal IMEDIATAMENTE com dados básicos
     openModal('view', concessionaria);
@@ -209,7 +225,7 @@ export function ConcessionariasPage() {
   };
 
   // ✅ HANDLER: Editar concessionária (abertura otimista)
-  const handleEdit = async (concessionaria: any) => {
+  const handleEdit = async (concessionaria: ConcessionariaResponse) => {
 
     // Abrir modal IMEDIATAMENTE com dados básicos
     openModal('edit', concessionaria);
@@ -226,7 +242,7 @@ export function ConcessionariasPage() {
   };
 
   // ✅ HANDLER: Submissão do formulário (Create e Update)
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: ConcessionariaDoFormulario) => {
     setIsSubmitting(true);
 
     try {
@@ -236,14 +252,35 @@ export function ConcessionariasPage() {
         // 1. Criar a concessionária
         const novaConcessionaria = await concessionariasFeature.createConcessionaria(transformedData);
 
-        // Note: Anexo uploads are handled by AnexosConcessionariaField via useHttpClient
-        // For temporary anexos during create, we rely on the field component logic
+        // 2. Os arquivos escolhidos antes de a concessionária existir. Antes nada
+        // os enviava: a tela dizia "será enviado ao salvar" e o arquivo sumia.
+        const pendentes = (data.anexos ?? []).filter(ehAnexoTemporario);
+        const naoSubiram: string[] = [];
+        for (const anexo of pendentes) {
+          const form = new FormData();
+          form.append('file', anexo.file);
+          try {
+            await httpClient.post(`/concessionarias/${String(novaConcessionaria.id).trim()}/anexos`, form, {
+              headers: { 'Content-Type': 'multipart/form-data' },
+            });
+          } catch (erro) {
+            console.error('Erro ao enviar anexo da concessionária:', erro);
+            naoSubiram.push(anexo.nome_original);
+          }
+        }
 
         toast({
           title: "Concessionária cadastrada!",
           description: `A concessionária "${novaConcessionaria.nome}" foi cadastrada com sucesso.`,
           variant: "default",
         });
+        if (naoSubiram.length > 0) {
+          toast({
+            title: "Alguns anexos não foram enviados",
+            description: `Abra a concessionária e anexe de novo: ${naoSubiram.join(', ')}.`,
+            variant: "destructive",
+          });
+        }
 
       } else if (modalState.mode === 'edit') {
         // Usar o ID da entidade original ou do data se disponível
@@ -270,13 +307,13 @@ export function ConcessionariasPage() {
       await fetchConcessionarias(filters);
       closeModal();
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [CONCESSIONARIAS PAGE] Erro ao salvar concessionária:', error);
-      console.error('❌ [CONCESSIONARIAS PAGE] Error details:', error.response?.data || error);
+      console.error('❌ [CONCESSIONARIAS PAGE] Error details:', (isAxiosError(error) && error.response?.data) || error);
 
       toast({
         title: modalState.mode === 'create' ? "Erro ao cadastrar concessionária" : "Erro ao atualizar concessionária",
-        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        description: (error instanceof Error && error.message) || "Ocorreu um erro interno. Tente novamente.",
         variant: "destructive",
       });
     } finally {

@@ -1,5 +1,7 @@
 // src/features/planos-manutencao/hooks/usePlanosManutencaoApi.ts - CORRIGIDO
 import { useState, useCallback } from 'react';
+import { isAxiosError } from 'axios';
+import { formatApiError } from '@/utils/api-error';
 import {
   planosManutencaoApi,
   PlanoManutencaoApiResponse,
@@ -58,16 +60,8 @@ export function usePlanosManutencaoApi(): UsePlanosManutencaoApiReturn {
   const [total, setTotal] = useState(0);
   const [lastParams, setLastParams] = useState<QueryPlanosApiParams | undefined>();
 
-  const handleError = useCallback((err: any, context?: string) => {
-    let message = 'Erro desconhecido';
-    
-    if (err?.response?.data?.message) {
-      message = err.response.data.message;
-    } else if (err?.message) {
-      message = err.message;
-    } else if (typeof err === 'string') {
-      message = err;
-    }
+  const handleError = useCallback((err: unknown, context?: string) => {
+    const message = formatApiError(err);
 
     console.error(`💥 Erro na API de planos de manutenção${context ? ` (${context})` : ''}:`, err);
     setError(message);
@@ -268,9 +262,9 @@ export function usePlanosManutencaoApi(): UsePlanosManutencaoApiReturn {
     } catch (err) {
       console.error('❌ HOOK API: Erro em fetchPlanosByPlanta:', {
         error: err,
-        message: (err as any)?.message,
-        response: (err as any)?.response?.data,
-        status: (err as any)?.response?.status
+        message: err instanceof Error ? err.message : undefined,
+        response: isAxiosError(err) ? err.response?.data : undefined,
+        status: isAxiosError(err) ? err.response?.status : undefined
       });
 
       handleError(err, 'fetchPlanosByPlanta');

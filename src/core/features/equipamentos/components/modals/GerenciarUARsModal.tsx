@@ -20,7 +20,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { Equipamento } from '../../types';
-import { ComponenteUARModal } from './ComponenteUARModal';
+import { ComponenteUARModal, type DadosDoComponenteUAR } from './ComponenteUARModal';
 import { useEquipamentos } from '@/core/context/hooks';
 
 interface GerenciarUARsModalProps {
@@ -113,7 +113,8 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
     });
   };
 
-  const handleSubmitUARModal = async (data: any) => {
+  // Tambem aceita o codigo do tipo em camelCase, como os itens da lista guardam.
+  const handleSubmitUARModal = async (data: DadosDoComponenteUAR & { tipoEquipamento?: string }) => {
 
     if (modalUARDetalhes.mode === 'create') {
       // Adicionar novo UAR à lista local

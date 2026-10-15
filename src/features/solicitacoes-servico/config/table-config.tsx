@@ -62,7 +62,7 @@ export const solicitacoesTableColumns: TableColumn<SolicitacaoServico>[] = [
     hideOnMobile: true,
     // Vem da relacao, entao nao e ordenavel: nao ha coluna para ordenar.
     render: (s) =>
-      (s as any).unidade?.nome ? <Texto>{(s as any).unidade.nome}</Texto> : <Vazio />,
+      s.unidade?.nome ? <Texto>{s.unidade.nome}</Texto> : <Vazio />,
   },
   {
     key: 'status',
@@ -92,7 +92,7 @@ export const solicitacoesTableColumns: TableColumn<SolicitacaoServico>[] = [
     sortable: true,
     hideOnMobile: true,
     render: (s) => {
-      const quando = dataCurta((s as any).created_at);
+      const quando = dataCurta(s.created_at);
       return quando ? <Texto fraco>{quando}</Texto> : <Vazio />;
     },
   },
@@ -102,7 +102,7 @@ export const solicitacoesTableColumns: TableColumn<SolicitacaoServico>[] = [
     width: '11%',
     sortable: true,
     render: (s) => {
-      const total = Number((s as any).total_geral ?? 0);
+      const total = Number(s.total_geral ?? 0);
       // Sem proposta montada nao ha valor. Mostrar R$ 0,00 se leria como
       // "custa zero", que e outra afirmacao.
       if (!Number.isFinite(total) || total <= 0) return <Vazio />;

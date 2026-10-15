@@ -6,10 +6,36 @@ import { AlertCircle } from 'lucide-react';
 import { ViaturaSelector } from './ViaturaSelector';
 import { ViaturaReservada } from '../../reservas/types';
 
+/** O que o campo le da entidade do formulario (OS, viagem...) para montar o periodo. */
+export interface EntidadeComPeriodo {
+  id?: string;
+  programacao?: { dataProgramada?: string; horaProgramada?: string } | null;
+  duracaoEstimada?: number;
+  dataInicio?: string;
+  data_inicio?: string;
+  dataProgramada?: string;
+  dataFim?: string;
+  data_fim?: string;
+  horaInicio?: string;
+  hora_inicio?: string;
+  horaProgramada?: string;
+  horaFim?: string;
+  hora_fim?: string;
+  responsavel?: string;
+  tecnico?: string;
+  usuario?: string;
+  finalidade?: string;
+  descricao?: string;
+  observacoes?: string;
+  numeroOS?: string;
+  codigo?: string;
+}
+
+// No modo simples o valor e so o id da viatura (texto, como no backend)
 interface ViaturaFormFieldProps {
-  value?: number | ViaturaReservada | null;
-  onChange: (value: ViaturaReservada | number | null) => void;
-  entity?: any; // Objeto do formulário para extrair dados automaticamente
+  value?: string | ViaturaReservada | null;
+  onChange: (value: ViaturaReservada | string | null) => void;
+  entity?: EntidadeComPeriodo | null; // Objeto do formulário para extrair dados automaticamente
   mode?: 'simple' | 'complete';
   disabled?: boolean;
   required?: boolean;
@@ -20,11 +46,11 @@ interface ViaturaFormFieldProps {
 }
 
 // Hook auxiliar para gerenciar estado do campo
-export const useViaturaField = (initialValue?: number | ViaturaReservada | null) => {
-  const [value, setValue] = React.useState<number | ViaturaReservada | null>(initialValue || null);
+export const useViaturaField = (initialValue?: string | ViaturaReservada | null) => {
+  const [value, setValue] = React.useState<string | ViaturaReservada | null>(initialValue || null);
   const [error, setError] = React.useState<string | null>(null);
 
-  const onChange = React.useCallback((newValue: ViaturaReservada | number | null) => {
+  const onChange = React.useCallback((newValue: ViaturaReservada | string | null) => {
     setValue(newValue);
     setError(null);
   }, []);

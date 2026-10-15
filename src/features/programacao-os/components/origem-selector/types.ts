@@ -1,4 +1,5 @@
 // src/features/programacao-os/components/origem-selector/types.ts
+import type { TarefasPorPlano } from '@/features/programacao-os/types';
 
 /**
  * Tipo de origem da ordem de serviço
@@ -17,7 +18,7 @@ export interface OrigemOSValue {
   plantaId?: string;
   unidadeId?: string;
   planosSelecionados?: string[];
-  tarefasPorPlano?: any;
+  tarefasPorPlano?: TarefasPorPlano;
   /**
    * Origem pedida pelo atalho "Programar" de outra tela (`?origem=&id=`). O
    * seletor resolve, escolhe pela mesma função do clique e remove este campo —

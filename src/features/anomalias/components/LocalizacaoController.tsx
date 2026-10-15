@@ -4,8 +4,12 @@ import { ComboboxField, ComboboxOption } from '@/components/ui/combobox-field';
 import { PlantasService } from '@/services/plantas.services';
 import { getUnidadesByPlanta } from '@/services/unidades.services';
 import { useEquipamentos } from '@/features/equipamentos/hooks/useEquipamentos';
+import type { Equipamento } from '@/features/equipamentos/types';
+import type { PlantaResponse } from '@/services/plantas.services';
+import { unwrapApiResponse } from '@/core/lib/utils';
+import type { Anomalia } from '../types';
 
-interface LocalizacaoValue {
+export interface LocalizacaoValue {
   plantaId?: string | number;
   unidadeId?: string | number;
   equipamentoId?: string | number;
@@ -13,12 +17,12 @@ interface LocalizacaoValue {
   ativo?: string;
 }
 
-interface LocalizacaoControllerProps {
-  value?: any;
-  onChange: (value: any) => void;
+export interface LocalizacaoControllerProps {
+  value?: LocalizacaoValue;
+  onChange: (value: LocalizacaoValue) => void;
   disabled?: boolean;
   mode?: 'create' | 'edit' | 'view';
-  entity?: any;
+  entity?: Anomalia | null;
 }
 
 export const LocalizacaoController = ({
@@ -58,8 +62,8 @@ export const LocalizacaoController = ({
     const loadPlantas = async () => {
       try {
         const response = await PlantasService.getAllPlantas({ limit: 100 });
-        const plantasData = Array.isArray(response.data) ? response.data : (response as any).data?.data || [];
-        const options = plantasData.map((p: any) => ({
+        const plantasData = Array.isArray(response.data) ? response.data : unwrapApiResponse<PlantaResponse>(response.data).data;
+        const options = plantasData.map((p) => ({
           value: p.id.toString().trim(),
           label: p.nome,
         }));
@@ -85,7 +89,7 @@ export const LocalizacaoController = ({
       setLoadingUnidades(true);
       try {
         const response = await getUnidadesByPlanta(plantaId);
-        const options = (response || []).map((u: any) => ({
+        const options = (response || []).map((u) => ({
           value: u.id.toString().trim(),
           label: u.nome,
         }));
@@ -144,7 +148,8 @@ export const LocalizacaoController = ({
   const equipamentosOptions = useMemo<ComboboxOption[]>(() => {
     return equipamentos
       .filter(eq => {
-        const eqUnidadeId = (eq.unidadeId || (eq as any).unidade_id || eq.unidade?.id)?.toString().trim();
+        // A API manda `unidade_id` cru, que o tipo Equipamento nao declara
+        const eqUnidadeId = (eq.unidadeId || (eq as Equipamento & { unidade_id?: string | null }).unidade_id || eq.unidade?.id)?.toString().trim();
         return eq.classificacao === 'UC' && (unidadeId ? eqUnidadeId === unidadeId.trim() : true);
       })
       .map(eq => ({

@@ -1,6 +1,6 @@
 // src/features/usuarios/config/form-config.tsx - ATUALIZADO PARA DTO
-import { useMemo } from 'react';
-import { FormField } from '@/core/types/base';
+import { useMemo, type ComponentProps } from 'react';
+import { FormField, FormFieldProps } from '@/core/types/base';
 import {  Permissao } from '../types';
 import { Checkbox } from '@/core/components/ui/checkbox';
 import { Button } from '@/core/components/ui/button';
@@ -21,11 +21,14 @@ import { OrganizacaoSelect } from '@/core/components/common/OrganizacaoSelect';
 import { useRoles, usePermissoesGrouped, useUserStore } from '@/core/context/hooks';
 import { papeisQuePodeDar, permissoesMarcadas, soAsExtras, type PapelDaTela } from '@/core/features/usuarios/utils/papeis';
 
+/** Uma permissao como pode chegar: o nome, ou um objeto com o nome em name, value ou permission. */
+type PermissaoRecebida = string | { name?: string; value?: string; permission?: string } | null;
+
 // Normaliza o valor recebido pelo selector de permissoes para sempre ser string[]
 const normalizePermissionValue = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return value
-    .map((item: any) => {
+    .map((item: PermissaoRecebida) => {
       if (typeof item === 'string') return item;
       if (item && typeof item === 'object') {
         return item.name || item.value || item.permission || '';
@@ -122,7 +125,7 @@ const getPermissionLabel = (permissao: { value: string; label?: string }): strin
 // TIPO DO USUÁRIO: só os papéis que quem está na tela pode dar
 // (usuarios.create_<papel>, a mesma regra do backend), com o que cada um faz e
 // o que enxerga.
-const RoleSelector = ({ value, onChange, disabled }: any) => {
+const RoleSelector = ({ value, onChange, disabled }: FormFieldProps) => {
   const { roles, loading, error } = useRoles();
   const { hasPermission, isSuperAdmin } = useUserStore();
   const atual: string | undefined = typeof value === 'string' && value.trim() ? value : undefined;
@@ -192,7 +195,7 @@ const RoleSelector = ({ value, onChange, disabled }: any) => {
 // acesso). Só as extras se escolhem, e só quem gerencia usuários — o backend
 // grava como direta apenas o que o tipo não dá. O valor do campo guarda só as
 // extras.
-const PermissoesSelector = ({ value, onChange, disabled, formData, onMultipleChange }: any) => {
+const PermissoesSelector = ({ value, onChange, disabled, formData, onMultipleChange }: FormFieldProps) => {
   const { permissoesPorCategoria, loading, error } = usePermissoesGrouped();
   const { roles } = useRoles();
   const { hasPermission } = useUserStore();
@@ -266,7 +269,7 @@ const PermissoesSelector = ({ value, onChange, disabled, formData, onMultipleCha
         {Object.entries(permissoesPorCategoria).map(([categoria, permissoes]) => (
           <div key={categoria} className="space-y-2">
             <h4 className="border-b pb-1 text-sm font-medium text-muted-foreground">{categoria}</h4>
-            {(permissoes as any[]).map((permissao) => {
+            {permissoes.map((permissao) => {
               const doTipo = doPapel.includes(permissao.value);
               const marcada = marcadas.has(permissao.value);
               return (
@@ -300,8 +303,14 @@ const PermissoesSelector = ({ value, onChange, disabled, formData, onMultipleCha
   );
 };
 
+/** O que os seletores de localizacao leem: o id do IBGE no valor e o nome no formulario. */
+type PropsDeLocalizacao = FormFieldProps & {
+  value?: string;
+  formData?: { estado?: string; cidade?: string };
+};
+
 // Componente para seleção de estado com IBGE
-const EstadoSelector = ({ value, onChange, disabled, onMultipleChange, formData }: any) => {
+const EstadoSelector = ({ value, onChange, disabled, onMultipleChange, formData }: PropsDeLocalizacao) => {
   const handleEstadoChange = (estado: { id: string; nome: string; sigla: string }) => {
 
     // Atualizar estadoId (para o CidadeSelect depender)
@@ -330,7 +339,8 @@ const EstadoSelector = ({ value, onChange, disabled, onMultipleChange, formData 
 };
 
 // Componente para seleção de cidade com IBGE
-const CidadeSelector = ({ value, onChange, disabled, estadoId, onMultipleChange, formData }: any) => {
+// estadoId chega pelo nome (dependencies do campo): id do IBGE, texto ou numero.
+const CidadeSelector = ({ value, onChange, disabled, estadoId, onMultipleChange, formData }: PropsDeLocalizacao & { estadoId?: string | number }) => {
   const handleCidadeChange = (cidade: { id: string; nome: string }) => {
 
     // Atualizar cidadeId
@@ -352,16 +362,19 @@ const CidadeSelector = ({ value, onChange, disabled, estadoId, onMultipleChange,
       value={value}
       displayValue={formData?.cidade}
       onCidadeChange={handleCidadeChange}
-      estadoId={estadoId ? parseInt(estadoId) : null}
+      estadoId={estadoId ? parseInt(String(estadoId)) : null}
       disabled={disabled}
       placeholder="Selecione uma cidade"
     />
   );
 };
 
+/** O endereco que o CEPInput acha pelo CEP. */
+type EnderecoDoCEP = Parameters<NonNullable<ComponentProps<typeof CEPInput>['onEnderecoChange']>>[0];
+
 // Componente para CEP com busca automática
-const CEPSelector = ({ value, onChange, disabled, onMultipleChange }: any) => {
-  const handleEnderecoChange = (endereco: any) => {
+const CEPSelector = ({ value, onChange, disabled, onMultipleChange }: FormFieldProps & { value?: string }) => {
+  const handleEnderecoChange = (endereco: EnderecoDoCEP) => {
     // Atualizar campo de endereço completo quando CEP for encontrado
     if (onMultipleChange && endereco) {
       // Concatenar endereço e bairro em um único campo
@@ -398,7 +411,7 @@ const CEPSelector = ({ value, onChange, disabled, onMultipleChange }: any) => {
 };
 
 // Componente para seleção de gerente responsável
-const GerenteSelector = ({ value, onChange, disabled }: any) => {
+const GerenteSelector = ({ value, onChange, disabled }: FormFieldProps & { value?: string }) => {
   return (
     <GerenteSelect
       value={value}
@@ -410,7 +423,7 @@ const GerenteSelector = ({ value, onChange, disabled }: any) => {
 };
 
 // Componente para seleção de concessionária
-const ConcessionariaSelector = ({ value, onChange, disabled }: any) => {
+const ConcessionariaSelector = ({ value, onChange, disabled }: FormFieldProps & { value?: string }) => {
   return (
     <ConcessionariaSelect
       value={value}
@@ -422,7 +435,7 @@ const ConcessionariaSelector = ({ value, onChange, disabled }: any) => {
 };
 
 // Componente para seleção de organização
-const OrganizacaoSelector = ({ value, onChange, disabled }: any) => {
+const OrganizacaoSelector = ({ value, onChange, disabled }: FormFieldProps & { value?: string }) => {
   return (
     <OrganizacaoSelect
       value={value}

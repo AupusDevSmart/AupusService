@@ -1,5 +1,6 @@
 // src/services/programacao-os.service.ts
 import { api } from '@/config/api';
+import type { DadosOrigem } from '@/features/programacao-os/types';
 
 // ============================================================================
 // ENUMS E TIPOS (alinhados com o backend)
@@ -8,7 +9,7 @@ import { api } from '@/config/api';
 export type StatusProgramacao = 'PENDENTE' | 'APROVADA' | 'FINALIZADA' | 'CANCELADA';
 export type TipoManutencao = 'PREVENTIVA' | 'PREDITIVA' | 'CORRETIVA' | 'INSPECAO';
 export type PrioridadeProgramacao = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA';
-export type OrigemProgramacao = 'ANOMALIA' | 'PLANO_MANUTENCAO' | 'TAREFA';
+export type OrigemProgramacao = 'ANOMALIA' | 'PLANO_MANUTENCAO' | 'TAREFA' | 'SOLICITACAO_SERVICO' | 'MANUAL';
 
 // ============================================================================
 // DTOs DE REQUEST (baseados no backend real)
@@ -41,8 +42,9 @@ export interface ItemOrcamentoProgramacaoDto {
 
 export interface CreateProgramacaoDto {
   descricao: string;
-  local: string;
-  ativo: string;
+  // Opcionais no backend: a programação herda da origem
+  local?: string;
+  ativo?: string;
   condicoes?: string;
   tipo: TipoManutencao;
   prioridade: PrioridadeProgramacao;
@@ -51,7 +53,7 @@ export interface CreateProgramacaoDto {
   equipamento_id?: string;
   anomalia_id?: string;
   plano_manutencao_id?: string;
-  dados_origem?: any;
+  dados_origem?: DadosOrigem | null;
   tempo_estimado?: number;
   duracao_estimada?: number;
   data_previsao_inicio?: string; // ISO DateTime string
@@ -203,7 +205,7 @@ export interface HistoricoProgramacaoResponse {
   observacoes?: string;
   status_anterior?: StatusProgramacao;
   status_novo?: StatusProgramacao;
-  dados_extras?: any;
+  dados_extras?: Record<string, unknown> | null;
 }
 
 /** Instalacao (`unidades`) derivada da origem — ver `instalacao.ts`. */
@@ -236,7 +238,7 @@ export interface ProgramacaoResponse {
   equipamento_id?: string;
   anomalia_id?: string;
   plano_manutencao_id?: string;
-  dados_origem?: any;
+  dados_origem?: DadosOrigem | null;
   data_previsao_inicio?: string; // ISO DateTime string
   data_previsao_fim?: string; // ISO DateTime string
   tempo_estimado: number;
@@ -279,7 +281,7 @@ export interface ProgramacaoResponse {
   tecnicos?: TecnicoProgramacaoResponse[];
   itens_orcamento?: ItemOrcamentoProgramacaoResponse[];
   historico?: HistoricoProgramacaoResponse[];
-  ordem_servico?: any;
+  ordem_servico?: OrdemServicoDaProgramacao | null;
   /** Reserva de viatura da programação (a API manda; antes não estava no tipo) */
   reserva_id?: string | null;
   reserva_veiculo?: {
@@ -292,8 +294,39 @@ export interface ProgramacaoResponse {
     responsavel: string;
     finalidade: string;
     status: string;
-    veiculo?: any;
-  };
+    /** A linha da viatura inteira (o backend inclui a relação) */
+    veiculo?: {
+      id: string;
+      nome: string;
+      placa: string;
+      marca?: string;
+      modelo?: string;
+      tipo?: string;
+      capacidade_passageiros?: number;
+    };
+  } | null;
+  /** Coluna da programação; a solicitação também pode vir só em dados_origem */
+  solicitacao_servico_id?: string | null;
+  /** A solicitação de origem, resumida (null nas outras origens) */
+  solicitacao_servico?: {
+    id: string;
+    numero?: string;
+    titulo?: string;
+    descricao?: string;
+    tipo?: string;
+    prioridade?: string;
+    status?: string;
+    local?: string;
+    solicitante_nome?: string;
+    data_solicitacao?: string;
+  } | null;
+}
+
+/** A OS que a aprovação criou: só o que a tela lê (a linha da tabela não traz). */
+export interface OrdemServicoDaProgramacao {
+  id?: string | null;
+  status?: string | null;
+  numero_os?: string | null;
 }
 
 export interface ProgramacaoDetalhesResponse extends ProgramacaoResponse {
@@ -302,7 +335,7 @@ export interface ProgramacaoDetalhesResponse extends ProgramacaoResponse {
   tecnicos: TecnicoProgramacaoResponse[];
   itens_orcamento: ItemOrcamentoProgramacaoResponse[];
   historico: HistoricoProgramacaoResponse[];
-  ordem_servico?: any;
+  ordem_servico?: OrdemServicoDaProgramacao | null;
 }
 
 export interface ProgramacaoStatsResponse {
@@ -379,7 +412,7 @@ export class ProgramacaoOSApiService {
       });
       // // console.log('✅ PROGRAMACAO-OS API: Programações listadas:', response.data.pagination);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // // console.error('💥 PROGRAMACAO-OS API: Erro ao listar programações:', error);
       throw error;
     }
@@ -389,7 +422,7 @@ export class ProgramacaoOSApiService {
     try {
       const response = await api.get<ProgramacaoDetalhesResponse>(`${this.baseEndpoint}/${id}`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('💥 PROGRAMACAO-OS API: Erro ao buscar programação:', error);
       throw error;
     }
@@ -402,7 +435,7 @@ export class ProgramacaoOSApiService {
       const response = await api.post<ProgramacaoResponse>(this.baseEndpoint, data);
       // // console.log('✅ PROGRAMACAO-OS API: Programação criada com sucesso:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // // console.error('💥 PROGRAMACAO-OS API: Erro ao criar programação:', error);
       // // console.error('💥 PROGRAMACAO-OS API: Detalhes do erro:', error.response?.data);
       throw error;
@@ -416,7 +449,7 @@ export class ProgramacaoOSApiService {
       const response = await api.patch<ProgramacaoResponse>(`${this.baseEndpoint}/${id}`, data);
       // // console.log('✅ PROGRAMACAO-OS API: Programação atualizada:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // // console.error('💥 PROGRAMACAO-OS API: Erro ao atualizar programação:', error);
       throw error;
     }
@@ -429,7 +462,7 @@ export class ProgramacaoOSApiService {
       const response = await api.delete<{ message: string }>(`${this.baseEndpoint}/${id}`);
       // // console.log('✅ PROGRAMACAO-OS API: Programação deletada com sucesso');
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // // console.error('💥 PROGRAMACAO-OS API: Erro ao deletar programação:', error);
       throw error;
     }
@@ -443,7 +476,7 @@ export class ProgramacaoOSApiService {
     try {
       const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/aprovar`, data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -452,7 +485,7 @@ export class ProgramacaoOSApiService {
     try {
       const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/finalizar`, data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -464,7 +497,7 @@ export class ProgramacaoOSApiService {
       const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/cancelar`, data);
       // // console.log('✅ PROGRAMACAO-OS API: Programação cancelada:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // // console.error('💥 PROGRAMACAO-OS API: Erro ao cancelar programação:', error);
       throw error;
     }
@@ -484,7 +517,7 @@ export class ProgramacaoOSApiService {
       );
       // // console.log('✅ PROGRAMACAO-OS API: Programação criada de anomalia:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // // console.error('💥 PROGRAMACAO-OS API: Erro ao criar de anomalia:', error);
       throw error;
     }
@@ -500,7 +533,7 @@ export class ProgramacaoOSApiService {
       );
       // // console.log('✅ PROGRAMACAO-OS API: Programação criada de tarefas:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // // console.error('💥 PROGRAMACAO-OS API: Erro ao criar de tarefas:', error);
       throw error;
     }
@@ -517,7 +550,7 @@ export class ProgramacaoOSApiService {
       const response = await api.post<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas`, data);
       // // console.log('✅ PROGRAMACAO-OS API: Tarefas adicionadas:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // // console.error('💥 PROGRAMACAO-OS API: Erro ao adicionar tarefas:', error);
       throw error;
     }
@@ -530,7 +563,7 @@ export class ProgramacaoOSApiService {
       const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas`, data);
       // // console.log('✅ PROGRAMACAO-OS API: Tarefas atualizadas:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // // console.error('💥 PROGRAMACAO-OS API: Erro ao atualizar tarefas:', error);
       throw error;
     }
@@ -551,7 +584,7 @@ export class ProgramacaoOSApiService {
       const response = await api.delete<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas/${tarefaId}`);
       // // console.log('✅ PROGRAMACAO-OS API: Tarefa removida com sucesso');
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // // console.error('💥 PROGRAMACAO-OS API: Erro ao remover tarefa:', error);
       throw error;
     }

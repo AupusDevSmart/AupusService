@@ -1,6 +1,6 @@
 // src/features/reservas/config/table-config.tsx
 import { Car, User, Calendar } from 'lucide-react';
-import { ReservaResponse } from '../types';
+import { ReservaResponse, StatusReserva } from '../types';
 import { reservasUtils } from '@/services/reservas.services';
 
 import { TableColumn } from '@/types/base';
@@ -16,7 +16,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 
   return (
     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[status as keyof typeof variants] || variants.vencida}`}>
-      {reservasUtils.formatStatus(status as any)}
+      {reservasUtils.formatStatus(status as StatusReserva)}
     </span>
   );
 };

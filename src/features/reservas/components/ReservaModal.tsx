@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { VeiculoSelector } from './VeiculoSelector';
 import { Car, X } from 'lucide-react';
-import { ReservaVeiculo, ReservaFormData } from '../types';
+import { ReservaVeiculo, ReservaFormData, CreateReservaRequest } from '../types';
 import {
   formatDateForInput,
   formatDateForAPI,
@@ -17,7 +17,7 @@ interface ReservaModalProps {
   mode: 'create' | 'edit' | 'view';
   entity?: ReservaVeiculo | null;
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: CreateReservaRequest) => Promise<void>;
   reservaId?: string;
   loading?: boolean;
 }
@@ -75,7 +75,7 @@ export function ReservaModal({
     excluirReservaId: mode === 'edit' ? reservaId : undefined
   }), [formData.dataInicio, formData.dataFim, formData.horaInicio, formData.horaFim, mode, reservaId]);
 
-  const handleInputChange = (key: string, value: any) => {
+  const handleInputChange = (key: keyof ReservaFormData, value: string) => {
     setFormData(prev => ({ ...prev, [key]: value }));
 
     if (errors[key]) {

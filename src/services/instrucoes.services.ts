@@ -1,5 +1,6 @@
 // src/services/instrucoes.services.ts
 import { api } from '@/config/api';
+import type { TarefaApiResponse } from './tarefas.services';
 
 // ============================================================================
 // ENUMS E TIPOS BASE
@@ -40,7 +41,8 @@ export interface CreateInstrucaoApiData {
   categoria: CategoriaTarefa;
   tipo_manutencao: TipoManutencao;
   condicao_ativo: CondicaoAtivo;
-  criticidade: number;
+  /** O formulario manda em texto (o select guarda texto); o DTO converte (@Type(() => Number)). */
+  criticidade: number | string;
   duracao_estimada: number;
   tempo_estimado: number;
   observacoes?: string;
@@ -259,6 +261,18 @@ export interface SolicitacaoAssociadaResponse {
   };
 }
 
+/** O vínculo recém-criado (POST /instrucoes/:id/anomalias): a linha, sem a anomalia embutida. */
+export type AssociacaoDeAnomaliaApiResponse = Omit<AnomaliaAssociadaResponse, 'anomalia'> & { created_by?: string | null };
+
+/** O vínculo recém-criado (POST /instrucoes/:id/solicitacoes): a linha, sem a solicitação embutida. */
+export type AssociacaoDeSolicitacaoApiResponse = Omit<SolicitacaoAssociadaResponse, 'solicitacao'> & { created_by?: string | null };
+
+/** Tarefa que nasceu desta instrução (GET /instrucoes/:id/tarefas), com o plano e o equipamento resumidos. */
+export type TarefaDerivadaApiResponse = Omit<TarefaApiResponse, 'plano_manutencao' | 'equipamento'> & {
+  plano_manutencao?: { id: string; nome: string; versao: string } | null;
+  equipamento?: { id: string; nome: string; tipo_equipamento?: string | null; classificacao: string } | null;
+};
+
 // ============================================================================
 // SERVICO DE API PARA INSTRUCOES
 // ============================================================================
@@ -307,14 +321,14 @@ export class InstrucoesApiService {
       };
       const response = await api.post<InstrucaoApiResponse>(this.baseEndpoint, payload);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
 
   async findAll(params?: QueryInstrucoesApiParams): Promise<InstrucoesListApiResponse> {
     try {
-      const cleanParams: any = {
+      const cleanParams: Record<string, unknown> = {
         page: params?.page || 1,
         limit: params?.limit || 10
       };
@@ -336,7 +350,7 @@ export class InstrucoesApiService {
         params: cleanParams
       });
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -379,7 +393,7 @@ export class InstrucoesApiService {
     try {
       const response = await api.get<InstrucaoApiResponse>(`${this.baseEndpoint}/${id}`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -393,7 +407,7 @@ export class InstrucoesApiService {
       };
       const response = await api.put<InstrucaoApiResponse>(`${this.baseEndpoint}/${id}`, payload);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -401,7 +415,7 @@ export class InstrucoesApiService {
   async remove(id: string): Promise<void> {
     try {
       await api.delete(`${this.baseEndpoint}/${id}`);
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -412,7 +426,7 @@ export class InstrucoesApiService {
     try {
       const response = await api.put<InstrucaoApiResponse>(`${this.baseEndpoint}/${id}/status`, data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -421,27 +435,27 @@ export class InstrucoesApiService {
     try {
       const response = await api.get<DashboardInstrucoesDto>(`${this.baseEndpoint}/dashboard`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
 
-  async listarTarefasDerivadas(id: string): Promise<any[]> {
+  async listarTarefasDerivadas(id: string): Promise<TarefaDerivadaApiResponse[]> {
     try {
-      const response = await api.get(`${this.baseEndpoint}/${id}/tarefas`);
+      const response = await api.get<TarefaDerivadaApiResponse[]>(`${this.baseEndpoint}/${id}/tarefas`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
 
   // Anomalias
 
-  async associarAnomalia(id: string, data: AssociarAnomaliaApiData): Promise<any> {
+  async associarAnomalia(id: string, data: AssociarAnomaliaApiData): Promise<AssociacaoDeAnomaliaApiResponse> {
     try {
-      const response = await api.post(`${this.baseEndpoint}/${id}/anomalias`, data);
+      const response = await api.post<AssociacaoDeAnomaliaApiResponse>(`${this.baseEndpoint}/${id}/anomalias`, data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -450,7 +464,7 @@ export class InstrucoesApiService {
     try {
       const response = await api.get<AnomaliaAssociadaResponse[]>(`${this.baseEndpoint}/${id}/anomalias`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -458,18 +472,18 @@ export class InstrucoesApiService {
   async desassociarAnomalia(id: string, anomaliaId: string): Promise<void> {
     try {
       await api.delete(`${this.baseEndpoint}/${id}/anomalias/${anomaliaId}`);
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
 
   // Solicitacoes
 
-  async associarSolicitacao(id: string, data: AssociarSolicitacaoApiData): Promise<any> {
+  async associarSolicitacao(id: string, data: AssociarSolicitacaoApiData): Promise<AssociacaoDeSolicitacaoApiResponse> {
     try {
-      const response = await api.post(`${this.baseEndpoint}/${id}/solicitacoes`, data);
+      const response = await api.post<AssociacaoDeSolicitacaoApiResponse>(`${this.baseEndpoint}/${id}/solicitacoes`, data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -478,7 +492,7 @@ export class InstrucoesApiService {
     try {
       const response = await api.get<SolicitacaoAssociadaResponse[]>(`${this.baseEndpoint}/${id}/solicitacoes`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -486,7 +500,7 @@ export class InstrucoesApiService {
   async desassociarSolicitacao(id: string, solicitacaoId: string): Promise<void> {
     try {
       await api.delete(`${this.baseEndpoint}/${id}/solicitacoes/${solicitacaoId}`);
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -499,7 +513,7 @@ export class InstrucoesApiService {
         `${this.baseEndpoint}/${instrucaoId}/anexos`
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -524,7 +538,7 @@ export class InstrucoesApiService {
         }
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -536,7 +550,7 @@ export class InstrucoesApiService {
         { responseType: 'blob' }
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -544,7 +558,7 @@ export class InstrucoesApiService {
   async deleteAnexo(instrucaoId: string, anexoId: string): Promise<void> {
     try {
       await api.delete(`${this.baseEndpoint}/${instrucaoId}/anexos/${anexoId}`);
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }

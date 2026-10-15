@@ -21,9 +21,9 @@ export function usePlantas() {
         const response = await PlantasService.getAllPlantas({ limit: 100 });
         setPlantas(response.data);
         console.log('✅ [AGENDA FILTERS] Plantas carregadas:', response.data.length);
-      } catch (err: any) {
+      } catch (err) {
         console.error('❌ [AGENDA FILTERS] Erro ao carregar plantas:', err);
-        setError(err.message || 'Erro ao carregar plantas');
+        setError((err instanceof Error && err.message) || 'Erro ao carregar plantas');
         setPlantas([]);
       } finally {
         setLoading(false);
@@ -246,7 +246,7 @@ export const configuracoesDiasUteisFilterPresets = {
 // FILTER HELPERS
 // ============================================================================
 
-export function getActiveFiltersCount(filters: Record<string, any>): number {
+export function getActiveFiltersCount(filters: Record<string, unknown>): number {
   return Object.entries(filters).filter(([key, value]) => {
     if (key === 'page' || key === 'limit') return false;
     if (value === 'all' || value === '' || value === null || value === undefined) return false;
@@ -286,8 +286,11 @@ export function formatFilterValue(key: string, value: string, plantas: PlantaRes
   }
 }
 
-export function buildApiFilters(filters: Record<string, any>) {
-  const apiFilters: Record<string, any> = {};
+/** Valor de um filtro da tela: texto ('all', 'true', o ano...) ou numero (pagina). */
+type ValorDoFiltro = string | number | null | undefined;
+
+export function buildApiFilters(filters: Record<string, ValorDoFiltro>) {
+  const apiFilters: Record<string, string | number | boolean> = {};
 
   Object.entries(filters).forEach(([key, value]) => {
     if (value && value !== 'all' && value !== '') {
@@ -301,7 +304,7 @@ export function buildApiFilters(filters: Record<string, any>) {
 
         case 'ano':
         case 'mes':
-          apiFilters[key] = parseInt(value);
+          apiFilters[key] = parseInt(String(value));
           break;
 
         default:

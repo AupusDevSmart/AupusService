@@ -12,7 +12,15 @@ import { montarDeInstrucoes, type ItemProposta } from './proposta.services';
  * porque a linha existe e tem um número plausível.
  */
 
-const instrucoes: Record<string, any> = {
+/** A instrução como o findOne devolve, só no que a montagem lê. */
+interface InstrucaoDoTeste {
+  id: string;
+  tag: string | null;
+  nome: string;
+  recursos: { descricao: string; quantidade: number; recurso: { preco_medio: number } }[];
+}
+
+const instrucoes: Record<string, InstrucaoDoTeste> = {
   A: {
     id: 'A',
     tag: 'INST-001',

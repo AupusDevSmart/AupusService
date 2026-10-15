@@ -1,6 +1,11 @@
 // src/features/programacao-os/config/form-config.tsx - CORRIGIDA COM MAPEAMENTO DE GRUPOS
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
 import type { FormField, FormFieldProps } from '@/types/base';
+import type { BaseEntity, DadosDoFormulario } from '@/core/types/base';
+import type { DadosOrigem, TarefasPorPlano } from '../types';
+import type { OrigemOSValue } from '../components/origem-selector/types';
+import type { AnomaliaDoCard, SolicitacaoDoCard, TarefaDoCard } from '../components/OrigemOSCard';
+import type { ReservaVinculada } from '../components/ReservaVinculadaCard';
 import { OrigemOSSelector } from '../components/OrigemOSSelector';
 import { InstrucoesDaOrigem } from '../components/InstrucoesDaOrigem';
 import { RecursosDaOrigem } from '../components/RecursosDaOrigem';
@@ -15,6 +20,50 @@ import { OrcamentoCardManager } from '@/components/common/cards/OrcamentoCardMan
 import { ReservaViaturaField } from '../components/ReservaViaturaField';
 import { ReservaVinculadaCard } from '../components/ReservaVinculadaCard';
 
+/**
+ * A programação aberta no sheet, como o `getModalEntity` da página a monta:
+ * `origem` já é o objeto do seletor (com `tipo`), e as relações vêm da API.
+ * Só o que estes campos leem.
+ */
+type ProgramacaoAberta = BaseEntity & {
+  status?: string;
+  origem?: DadosOrigem | null;
+  dados_origem?: DadosOrigem | null;
+  anomalia?: AnomaliaDoCard | null;
+  anomalia_id?: string;
+  tarefas_programacao?: TarefaDoCard[];
+  plano_manutencao?: { id?: string } | null;
+  plano_manutencao_id?: string;
+  planos_selecionados?: unknown[];
+  tarefas_por_plano?: TarefasPorPlano;
+  solicitacao_servico?: SolicitacaoDoCard | null;
+  solicitacao_servico_id?: string;
+  data_previsao_fim?: string;
+  reserva_veiculo?: ReservaVinculada | null;
+  observacoes_aprovacao?: string;
+  data_analise?: string;
+  data_aprovacao?: string;
+};
+
+/** O formulário vivo da programação: só as chaves que estes campos leem. */
+type CamposDaProgramacao = DadosDoFormulario & {
+  origem?: OrigemOSValue | null;
+  status?: string;
+  data_previsao_fim?: string;
+  data_previsao_inicio?: string;
+  data_hora_programada?: string;
+  reserva_id?: string | null;
+  reserva_veiculo?: { id?: string } | null;
+  observacoes_aprovacao?: string;
+  materiais?: Array<{ custo_unitario?: number; quantidade_planejada?: number }>;
+  tecnicos?: Array<{ custo_hora?: number; horas_estimadas?: number }>;
+};
+
+/** O render de um campo: o fieldProps inteiro, com a entidade e o formulário da programação. */
+type PropsDoRender = FormFieldProps & {
+  entity?: ProgramacaoAberta | null;
+  formData?: CamposDaProgramacao;
+};
 
 /**
  * As instrucoes da origem, e os recursos que elas trazem.
@@ -26,7 +75,9 @@ import { ReservaVinculadaCard } from '../components/ReservaVinculadaCard';
 function InstrucoesOrigemComRecursos({
   onMultipleChange,
   ...props
-}: any) {
+}: Omit<ComponentProps<typeof InstrucoesDaOrigem>, 'onInstrucoes'> & {
+  onMultipleChange?: (valores: Record<string, unknown>) => void;
+}) {
   const [instrucaoIds, setInstrucaoIds] = useState<string[]>([]);
 
   return (
@@ -35,7 +86,7 @@ function InstrucoesOrigemComRecursos({
       <RecursosDaOrigem
         instrucaoIds={instrucaoIds}
         ativo={Boolean(onMultipleChange)}
-        onCarregar={(recursos) => onMultipleChange?.(recursos)}
+        onCarregar={(recursos) => onMultipleChange?.({ ...recursos })}
       />
     </>
   );
@@ -76,7 +127,7 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Descreva o serviço a ser executado',
     group: 'identificacao',
     colSpan:2,
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -107,11 +158,11 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'origem',
     showOnlyOnMode: ['view', 'edit'],
     colSpan: 2, // Ocupar largura total no sheet
-    render: (props: any) => {
+    render: (props: PropsDoRender) => {
       const { entity } = props;
       return (
         <OrigemOSCard
-          origem={entity?.origem?.tipo || entity?.origem || 'MANUAL'}
+          origem={entity?.origem?.tipo || 'MANUAL'}
           dadosOrigem={entity?.origem || entity?.dados_origem}
           anomalia={entity?.anomalia}
           tarefas={entity?.tarefas_programacao}
@@ -130,16 +181,16 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'origem',
     colSpan: 2,
     excludeFromSubmit: true,
-    render: ({ entity, formData, onMultipleChange }: any) => {
+    render: ({ entity, formData, onMultipleChange }: PropsDoRender) => {
       // No cadastro a origem esta no formulario; numa OS ja salva, na entidade.
       const origem = formData?.origem;
-      const tipo = origem?.tipo || entity?.origem?.tipo || entity?.origem || 'MANUAL';
+      const tipo = origem?.tipo || entity?.origem?.tipo || 'MANUAL';
 
       const tarefaIds: string[] = origem?.tarefasSelecionadas?.length
         ? origem.tarefasSelecionadas
         : (entity?.tarefas_programacao || [])
-            .map((t: any) => t?.tarefa_id || t?.tarefa?.id || t?.id)
-            .filter(Boolean);
+            .map((t) => t?.tarefa_id || t?.tarefa?.id || t?.id)
+            .filter((id): id is string => Boolean(id));
 
       return (
         <InstrucoesOrigemComRecursos
@@ -174,7 +225,7 @@ export const programacaoOSFormFields: FormField[] = [
     ],
     group: 'classificacao',
     width: 'third', // 33.33% em desktop (3 campos na linha)
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -193,7 +244,7 @@ export const programacaoOSFormFields: FormField[] = [
     ],
     group: 'classificacao',
     width: 'third', // 33.33% em desktop (3 campos na linha)
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -208,7 +259,7 @@ export const programacaoOSFormFields: FormField[] = [
     ],
     group: 'classificacao',
     width: 'third', // 33.33% em desktop (3 campos na linha)
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -220,7 +271,7 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'datetime-local',
     group: 'planejamento',
     width: 'half', // 50% em desktop
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -230,7 +281,7 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'datetime-local',
     group: 'planejamento',
     width: 'half', // 50% em desktop
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -252,9 +303,9 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'planejamento',
     colSpan: 2,
     excludeFromSubmit: true,
-    render: ({ entity, formData }: any) => {
+    render: ({ entity, formData }: PropsDoRender) => {
       const origem = formData?.origem;
-      const tipo = origem?.tipo || entity?.origem?.tipo || entity?.origem;
+      const tipo = origem?.tipo || entity?.origem?.tipo;
 
       return (
         <PrazoDaOrigem
@@ -278,7 +329,7 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Ex: 6',
     group: 'planejamento',
     width: 'half', // 50% em desktop
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -338,7 +389,7 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'checkbox',
     defaultValue: false, // ✅ Sempre iniciar com false para evitar uncontrolled
     group: 'veiculo',
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -347,7 +398,7 @@ export const programacaoOSFormFields: FormField[] = [
     label: 'Reserva de Veículo',
     type: 'custom',
     component: ReservaViaturaField,
-    componentProps: (formData: any) => ({
+    componentProps: (formData: CamposDaProgramacao) => ({
       dataProgramada: formData?.data_hora_programada || formData?.data_previsao_inicio,
       reservaId: formData?.reserva_id || formData?.reserva_veiculo?.id
     }),
@@ -358,7 +409,7 @@ export const programacaoOSFormFields: FormField[] = [
     showOnlyOnMode: ['create', 'edit'],
     group: 'veiculo',
     colSpan: 2, // Ocupar largura total no sheet
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -373,7 +424,7 @@ export const programacaoOSFormFields: FormField[] = [
     showOnlyOnMode: 'view',
     group: 'veiculo',
     colSpan: 2, // Ocupar largura total no sheet
-    render: (props: any) => {
+    render: (props: PropsDoRender) => {
       const { entity } = props;
       return (
         <ReservaVinculadaCard
@@ -398,7 +449,7 @@ export const programacaoOSFormFields: FormField[] = [
     defaultValue: [],
     group: 'recursos',
     colSpan: 2, // Ocupar largura total no sheet
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -418,7 +469,7 @@ export const programacaoOSFormFields: FormField[] = [
     defaultValue: [],
     group: 'recursos',
     colSpan: 2, // Ocupar largura total no sheet
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -441,7 +492,7 @@ export const programacaoOSFormFields: FormField[] = [
     ),
     group: 'equipe',
     colSpan: 2,
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -464,7 +515,7 @@ export const programacaoOSFormFields: FormField[] = [
     defaultValue: [],
     group: 'equipe',
     colSpan: 2, // Ocupar largura total no sheet
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -475,11 +526,11 @@ export const programacaoOSFormFields: FormField[] = [
     label: '', // duplicava o titulo do grupo
     type: 'custom',
     component: OrcamentoCardManager,
-    componentProps: (formData: any) => {
-      const custoMateriais = (formData?.materiais || []).reduce((acc: number, m: any) => {
+    componentProps: (formData: CamposDaProgramacao) => {
+      const custoMateriais = (formData?.materiais || []).reduce((acc: number, m) => {
         return acc + ((m.custo_unitario || 0) * (m.quantidade_planejada || 0));
       }, 0);
-      const custoEquipe = (formData?.tecnicos || []).reduce((acc: number, t: any) => {
+      const custoEquipe = (formData?.tecnicos || []).reduce((acc: number, t) => {
         return acc + ((t.custo_hora || 0) * (t.horas_estimadas || 0));
       }, 0);
       return {
@@ -491,7 +542,7 @@ export const programacaoOSFormFields: FormField[] = [
     defaultValue: [],
     group: 'orcamento',
     colSpan: 2,
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -515,9 +566,9 @@ export const programacaoOSFormFields: FormField[] = [
     disabled: true,
     group: 'workflow',
     colSpan: 2,
-    condition: (entity: any, data: any) => {
+    condition: (entity?: ProgramacaoAberta | null, data?: CamposDaProgramacao) => {
       const status = data?.status || entity?.status;
-      return ['APROVADA', 'FINALIZADA'].includes(status) && (data?.observacoes_aprovacao || entity?.observacoes_aprovacao);
+      return ['APROVADA', 'FINALIZADA'].includes(status ?? '') && (data?.observacoes_aprovacao || entity?.observacoes_aprovacao);
     }
   },
 
@@ -531,7 +582,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'workflow',
     colSpan: 2,
     showOnlyOnMode: ['view'],
-    condition: (entity: any, data: any) => {
+    condition: (entity?: ProgramacaoAberta | null, data?: CamposDaProgramacao) => {
       const status = data?.status || entity?.status;
       return status === 'FINALIZADA';
     }
@@ -544,7 +595,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'workflow',
     colSpan: 1,
     showOnlyOnMode: ['view'],
-    condition: (entity: any, data: any) => {
+    condition: (entity?: ProgramacaoAberta | null, data?: CamposDaProgramacao) => {
       const status = data?.status || entity?.status;
       return status === 'FINALIZADA';
     }
@@ -557,7 +608,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'workflow',
     colSpan: 1,
     showOnlyOnMode: ['view'],
-    condition: (entity: any, data: any) => {
+    condition: (entity?: ProgramacaoAberta | null, data?: CamposDaProgramacao) => {
       const status = data?.status || entity?.status;
       return status === 'FINALIZADA';
     }
@@ -572,7 +623,7 @@ export const programacaoOSFormFields: FormField[] = [
     disabled: true,
     group: 'workflow',
     colSpan: 2,
-    condition: (entity: any, data: any) => {
+    condition: (entity?: ProgramacaoAberta | null, data?: CamposDaProgramacao) => {
       const status = data?.status || entity?.status;
       return status === 'CANCELADA';
     }
@@ -606,7 +657,7 @@ export const programacaoOSFormFields: FormField[] = [
     showOnlyOnMode: ['view'],
     group: 'auditoria',
     width: 'half', // 50% em desktop
-    condition: (entity: any) => entity?.data_analise
+    condition: (entity?: ProgramacaoAberta | null) => entity?.data_analise
   },
   {
     key: 'data_analise',
@@ -616,7 +667,7 @@ export const programacaoOSFormFields: FormField[] = [
     showOnlyOnMode: ['view'],
     group: 'auditoria',
     width: 'half', // 50% em desktop
-    condition: (entity: any) => entity?.data_analise
+    condition: (entity?: ProgramacaoAberta | null) => entity?.data_analise
   },
   {
     key: 'aprovado_por',
@@ -626,7 +677,7 @@ export const programacaoOSFormFields: FormField[] = [
     showOnlyOnMode: ['view'],
     group: 'auditoria',
     width: 'half', // 50% em desktop
-    condition: (entity: any) => entity?.data_aprovacao
+    condition: (entity?: ProgramacaoAberta | null) => entity?.data_aprovacao
   },
   {
     key: 'data_aprovacao',
@@ -636,7 +687,7 @@ export const programacaoOSFormFields: FormField[] = [
     showOnlyOnMode: ['view'],
     group: 'auditoria',
     width: 'half', // 50% em desktop
-    condition: (entity: any) => entity?.data_aprovacao
+    condition: (entity?: ProgramacaoAberta | null) => entity?.data_aprovacao
   }
 ];
 
@@ -724,7 +775,7 @@ export const programacaoOSFormGroups = [
     ],
     conditional: {
       field: 'status',
-      value: function(entity: any) {
+      value: function(entity?: ProgramacaoAberta | null) {
         // Mostrar grupo sempre que o status indica que passou por alguma ação de workflow
         return entity?.status && entity.status !== 'PENDENTE';
       }

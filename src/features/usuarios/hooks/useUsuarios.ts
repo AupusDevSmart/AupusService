@@ -13,13 +13,53 @@ import {
   mapUsuarioToFormData,
   mapUsuarioToFormDataAsync,
   ChangePasswordDto,
-  ResetPasswordDto
+  ResetPasswordDto,
+  type ConcessionariaDTO,
+  type Pagination,
+  type Permissao,
 } from '../types';
 import { 
   userPermissionsService,
   UserPermissionsResponse,
   UserPermissionsSummary 
 } from '@/services/user-permissions.service';
+
+/** Uma permissao como a API manda: o nome, ou o objeto { id, name, guard_name, source }. */
+type PermissaoDaApi = string | { name?: string; permission?: string } | null;
+
+/** O papel como a API manda: objeto no detalhe (GET /usuarios/:id), so o nome na lista. */
+type PapelDaApi = string | { id?: number; name?: string; guard_name?: string };
+
+/** Usuario como a rota /usuarios devolve, no que o mapeamento le. */
+interface UsuarioDaApi {
+  id: string;
+  status: UsuarioStatus;
+  concessionaria_atual_id?: string;
+  concessionaria_atual?: ConcessionariaDTO;
+  organizacao_atual?: string;
+  nome: string;
+  email: string;
+  telefone?: string;
+  instagram?: string;
+  cpf_cnpj?: string;
+  cidade?: string;
+  estado?: string;
+  endereco?: string;
+  cep?: string;
+  manager_id?: string;
+  created_at: string;
+  updated_at: string;
+  all_permissions?: PermissaoDaApi[];
+  permissions?: PermissaoDaApi[];
+  roles?: PapelDaApi[];
+  is_active?: boolean;
+  senhaTemporaria?: string;
+  primeiroAcesso?: boolean;
+  plantas?: number;
+}
+
+/** O nome do papel, venha como texto ou como objeto. */
+const nomeDoPapel = (papel: PapelDaApi | undefined) => (typeof papel === 'string' ? papel : papel?.name);
 
 // ✅ SERVICE PARA COMUNICAÇÃO COM API
 class UsuariosApiService {
@@ -47,12 +87,12 @@ class UsuariosApiService {
     });
 
     const data = response.data;
-    const usuariosArray = data?.data?.data || data?.data || [];
-    const paginationData = data?.data?.pagination || data?.pagination || { page: 1, limit: filters.limit ?? LINHAS_POR_PAGINA_PADRAO, total: 0, totalPages: 0 };
+    const usuariosArray: UsuarioDaApi[] = data?.data?.data || data?.data || [];
+    const paginationData: Pagination = data?.data?.pagination || data?.pagination || { page: 1, limit: filters.limit ?? LINHAS_POR_PAGINA_PADRAO, total: 0, totalPages: 0 };
 
     // Mapear usuários (sem buscar dados completos para evitar sobrecarga)
     const mappedData = {
-      data: usuariosArray.map((usuario: any) => this.mapApiResponseToUsuario(usuario)),
+      data: usuariosArray.map((usuario) => this.mapApiResponseToUsuario(usuario)),
       pagination: paginationData
     };
 
@@ -101,7 +141,7 @@ class UsuariosApiService {
   }
 
   // ✅ MAPEAR RESPOSTA DA API PARA FORMATO DO FRONTEND
-  private mapApiResponseToUsuario(apiResponse: any): Usuario {
+  private mapApiResponseToUsuario(apiResponse: UsuarioDaApi): Usuario {
     const mappedUser = {
       id: apiResponse.id,
       status: apiResponse.status,
@@ -136,7 +176,7 @@ class UsuariosApiService {
         }
         
         // Mapear para strings (nomes das permissões)
-        return perms.map((perm: any) => {
+        return perms.map((perm) => {
           if (typeof perm === 'string') {
             return perm;
           }
@@ -147,20 +187,22 @@ class UsuariosApiService {
         }).filter(Boolean); // Remove valores vazios
       })(),
       
-      // ✅ SIMPLIFICADO: API já retorna roles como array de strings
-      roles: apiResponse.roles || [],
+      // A lista traz os nomes; o detalhe traz objetos { id, name, guard_name }.
+      // Usuario.roles declara string[] e mapUsuarioToFormData le as duas formas.
+      roles: (apiResponse.roles || []) as string[],
 
-      // ✅ SIMPLIFICADO: Usar apenas roles[0] para tipo
-      tipo: this.mapRoleToTipo(apiResponse.roles?.[0] || 'vendedor'),
-      perfil: this.mapRoleToTipo(apiResponse.roles?.[0] || 'vendedor'),
+      // ✅ SIMPLIFICADO: Usar apenas roles[0] para tipo (pelo nome: no detalhe o papel e objeto)
+      tipo: this.mapRoleToTipo(nomeDoPapel(apiResponse.roles?.[0]) || 'vendedor'),
+      perfil: this.mapRoleToTipo(nomeDoPapel(apiResponse.roles?.[0]) || 'vendedor'),
       permissao: (() => {
         const perms = apiResponse.all_permissions || apiResponse.permissions || [];
         if (Array.isArray(perms)) {
-          return perms.map((perm: any) => {
+          // Os nomes sao os do catalogo de permissoes (Permissao).
+          return perms.map((perm) => {
             if (typeof perm === 'string') return perm;
             if (perm && typeof perm === 'object' && perm.name) return perm.name;
             return String(perm);
-          });
+          }) as Permissao[];
         }
         return [];
       })(),

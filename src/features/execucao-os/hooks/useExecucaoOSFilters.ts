@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { execucaoOSFilterConfig } from '../config/filter-config';
 import { execucaoOSFormFields, execucaoOSFormGroups } from '../config/form-config';
 import type { ExecucaoOSFilters } from '../types';
+import type { QueryExecucaoOSApiParams } from '@/services/execucao-os.service';
 
 /**
  * Hook customizado para gerenciar filtros da feature Execução de OS
@@ -20,7 +21,7 @@ export function useExecucaoOSFilters(currentFilters: ExecucaoOSFilters) {
 
   // Converte filtros do frontend para parâmetros da API
   const toApiParams = useMemo(() => {
-    const params: any = {
+    const params: QueryExecucaoOSApiParams & { data_execucao?: string } = {
       page: currentFilters.page || 1,
       limit: currentFilters.limit || 10,
     };

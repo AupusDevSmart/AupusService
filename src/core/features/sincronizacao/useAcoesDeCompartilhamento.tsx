@@ -1,14 +1,21 @@
 import { useMemo, useState } from 'react';
+import type { CustomAction } from '@/core/types/base';
 import { Share2, Unlink } from 'lucide-react';
 import { AlvoDoCompartilhamento, DialogoCompartilhar } from './DialogoCompartilhar';
 import { OUTRO_PRODUTO, RecursoSincronizavel, useSincronizacao } from './useSincronizacao';
 
-interface Opcoes {
+/** O que o compartilhamento le de uma linha: o id, e o nome para a confirmacao. */
+interface RegistroCompartilhavel {
+  id: string;
+  nome?: string | null;
+}
+
+interface Opcoes<T extends RegistroCompartilhavel> {
   recurso: RecursoSincronizavel;
   /** As linhas da pagina atual. So os ids importam. */
-  registros: Array<{ id?: string | null } & Record<string, any>>;
+  registros: T[];
   /** De onde tirar o nome legivel do registro, para a confirmacao. */
-  nomeDe?: (registro: any) => string;
+  nomeDe?: (registro: T) => string;
   /** Some com as acoes para quem nao pode compartilhar. */
   habilitado?: boolean;
 }
@@ -24,9 +31,9 @@ interface Opcoes {
  * Devolve `acoes` no formato que o `BaseTable` espera e o `dialogo` ja montado,
  * que a pagina renderiza UMA vez fora da tabela.
  */
-export function useAcoesDeCompartilhamento({
+export function useAcoesDeCompartilhamento<T extends RegistroCompartilhavel>({
   recurso, registros, nomeDe, habilitado = true,
-}: Opcoes) {
+}: Opcoes<T>) {
   const ids = useMemo(
     () => registros.map(r => r?.id).filter(Boolean) as string[],
     [registros],
@@ -35,8 +42,8 @@ export function useAcoesDeCompartilhamento({
   const sinc = useSincronizacao(recurso, ids);
   const [alvo, setAlvo] = useState<AlvoDoCompartilhamento | null>(null);
 
-  const nome = (r: any) => nomeDe?.(r) ?? r?.nome ?? r?.id?.trim?.() ?? 'este registro';
-  const estadoDe = (r: any) => sinc.estados[r?.id?.trim?.()];
+  const nome = (r: T) => nomeDe?.(r) ?? r?.nome ?? r?.id?.trim?.() ?? 'este registro';
+  const estadoDe = (r: T) => sinc.estados[r?.id?.trim?.()];
 
   /**
    * DUAS acoes com `condition`, e nao uma com rotulo dinamico: o tipo
@@ -44,21 +51,21 @@ export function useAcoesDeCompartilhamento({
    * componente React pelo renderizador do BaseTable. Mudar o tipo compartilhado
    * afetaria todas as tabelas do sistema.
    */
-  const acoes = habilitado
+  const acoes: CustomAction<T>[] = habilitado
     ? [
         {
           key: 'compartilhar',
           label: `Compartilhar com o ${OUTRO_PRODUTO}`,
           icon: <Share2 className="h-4 w-4" />,
-          condition: (r: any) => !estadoDe(r)?.compartilhado,
-          handler: (r: any) => setAlvo({ id: r?.id, nome: nome(r), acao: 'ligar' }),
+          condition: (r: T) => !estadoDe(r)?.compartilhado,
+          handler: (r: T) => setAlvo({ id: r?.id, nome: nome(r), acao: 'ligar' }),
         },
         {
           key: 'parar_compartilhar',
           label: 'Parar de compartilhar',
           icon: <Unlink className="h-4 w-4" />,
-          condition: (r: any) => !!estadoDe(r)?.compartilhado,
-          handler: (r: any) => setAlvo({ id: r?.id, nome: nome(r), acao: 'desligar' }),
+          condition: (r: T) => !!estadoDe(r)?.compartilhado,
+          handler: (r: T) => setAlvo({ id: r?.id, nome: nome(r), acao: 'desligar' }),
         },
       ]
     : [];
@@ -80,7 +87,7 @@ export function useAcoesDeCompartilhamento({
    * expandida de instalacoes desenha os proprios botoes, entao precisa de um
    * jeito de disparar o mesmo dialogo.
    */
-  const abrir = (registro: any, acao: 'ligar' | 'desligar') =>
+  const abrir = (registro: T, acao: 'ligar' | 'desligar') =>
     setAlvo({ id: registro?.id, nome: nome(registro), acao });
 
   return { acoes, dialogo, abrir, estados: sinc.estados, recarregar: sinc.recarregar };

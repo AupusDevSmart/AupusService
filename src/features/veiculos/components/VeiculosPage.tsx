@@ -15,7 +15,8 @@ import { veiculosFormFields } from '../config/form-config';
 import { veiculosTableColumns } from '../config/table-config';
 import { toast } from '@/hooks/use-toast';
 import { CreateVeiculoRequest, VeiculosFilters } from '../types';
-import type { StatusVeiculo, TipoCombustivel, TipoVeiculo } from '@/services/veiculos.services';
+import type { StatusVeiculo, TipoCombustivel, TipoVeiculo, UpdateVeiculoRequest, VeiculoResponse } from '@/services/veiculos.services';
+import type { UploadDocumentoDto } from '../types/documentos';
 import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
 import { exportarVeiculos, lerVeiculos } from '../utils/planilha';
 
@@ -62,7 +63,7 @@ export function VeiculosPage() {
     clearError
   } = useVeiculos({ autoFetch: false });
 
-  const { modalState, openModal, closeModal } = useGenericModal<any>();
+  const { modalState, openModal, closeModal } = useGenericModal<VeiculoResponse>();
   const { uploadDocumento } = useDocumentosVeiculos();
 
   // Buscar veículos com filtros
@@ -142,7 +143,7 @@ export function VeiculosPage() {
         let documentosUploadados = 0;
         let totalDocumentos = 0;
 
-        const documentos = (data as CreateVeiculoRequest & { documentos?: Array<{ file: File; categoria: any; descricao?: string; dataVencimento?: string }> }).documentos;
+        const documentos = (data as CreateVeiculoRequest & { documentos?: UploadDocumentoDto[] }).documentos;
         if (documentos && Array.isArray(documentos) && documentos.length > 0) {
           totalDocumentos = documentos.length;
 
@@ -172,7 +173,7 @@ export function VeiculosPage() {
         });
 
       } else if (modalState.mode === 'edit' && modalState.entity) {
-        const updateData: Partial<any> = {
+        const updateData: UpdateVeiculoRequest = {
           nome: data.nome,
           placa: data.placa,
           marca: data.marca,
@@ -204,12 +205,12 @@ export function VeiculosPage() {
 
       closeModal();
       fetchVeiculosWithFilters(filters);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao salvar veículo:', error);
 
       toast({
         title: modalState.mode === 'create' ? "Erro ao criar veículo" : "Erro ao atualizar veículo",
-        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        description: (error instanceof Error && error.message) || "Ocorreu um erro interno. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -223,7 +224,7 @@ export function VeiculosPage() {
 
     if (modalState.mode === 'create') {
       return {
-        id: 0,
+        id: '',
         nome: '',
         placa: '',
         marca: '',
@@ -277,7 +278,7 @@ export function VeiculosPage() {
       };
     }
 
-    return {};
+    return null;
   };
 
   // Paginação
@@ -348,14 +349,14 @@ export function VeiculosPage() {
           {/* Tabela */}
           <div className="sm:flex-1 sm:min-h-0">
             <BaseTable
-              data={veiculos as any}
-              columns={veiculosTableColumns as any}
+              data={veiculos}
+              columns={veiculosTableColumns}
               pagination={pagination}
               loading={loading}
               onPageChange={handlePageChange}
               onLimitChange={handleLimitChange}
-              onView={(v: any) => openModal('view', v)}
-              onEdit={(v: any) => openModal('edit', v)}
+              onView={(v) => openModal('view', v)}
+              onEdit={(v) => openModal('edit', v)}
               emptyMessage="Nenhum veículo encontrado"
               emptyIcon={<Car className="h-8 w-8 text-muted-foreground/50" />}
             />
@@ -366,7 +367,7 @@ export function VeiculosPage() {
         <BaseModal
           isOpen={modalState.isOpen}
           mode={modalState.mode}
-          entity={getModalEntity() as any}
+          entity={getModalEntity()}
           title={`${modalState.mode === 'create' ? 'Novo' : modalState.mode === 'edit' ? 'Editar' : 'Visualizar'} Veículo`}
           icon={<Car className="h-5 w-5 text-blue-600" />}
           formFields={veiculosFormFields}

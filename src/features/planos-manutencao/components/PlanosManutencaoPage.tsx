@@ -18,7 +18,7 @@ import {
   CreatePlanoManutencaoApiData,
   UpdatePlanoManutencaoApiData
 } from '@/services/planos-manutencao.services';
-import { PlanosModal } from './PlanosModal';
+import { PlanosModal, type FormularioDoPlano } from './PlanosModal';
 import { TarefasExpandedRow } from './TarefasExpandedRow';
 import {
   InstrucoesApiService,
@@ -169,7 +169,7 @@ export function PlanosManutencaoPage() {
     await reloadAll();
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: FormularioDoPlano) => {
     try {
       if (modalState.mode === 'create') {
         if (!user?.id) {
@@ -277,7 +277,7 @@ export function PlanosManutencaoPage() {
     const cleanedFilters = { ...newFilters };
     Object.keys(cleanedFilters).forEach((key) => {
       if (cleanedFilters[key as keyof typeof cleanedFilters] === 'all') {
-        cleanedFilters[key as keyof typeof cleanedFilters] = undefined as any;
+        cleanedFilters[key as keyof typeof cleanedFilters] = undefined;
       }
     });
 
@@ -298,13 +298,11 @@ export function PlanosManutencaoPage() {
   // Criar ações customizadas da tabela - apenas visualizar, editar e associar
   // Ler: todos; escrever (novo, importar, editar, tarefas): quem gerencia manutenção.
   const podeGerenciar = usePermission('manutencao.manage');
-  const customActions = (
-    createPlanosTableActions({
-      handleView,
-      handleEdit,
-      handleAdicionarTarefa,
-    }) as { key: string }[]
-  ).filter((acao) => podeGerenciar || acao.key === 'visualizar') as any;
+  const customActions = createPlanosTableActions({
+    handleView,
+    handleEdit,
+    handleAdicionarTarefa,
+  }).filter((acao) => podeGerenciar || acao.key === 'visualizar');
 
   return (
     <Layout>

@@ -11,7 +11,25 @@ export type PrioridadeExecucao = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA';
 export type StatusTarefaExecucao = 'PENDENTE' | 'EM_EXECUCAO' | 'PAUSADA' | 'FINALIZADA' | 'NAO_EXECUTADA';
 // Os tipos de anexo são os do backend (enum TipoAnexoOS); o contrato mora em features/execucao-os/types.
 export type { TipoAnexoOS as TipoAnexoExecucao, AnexoOS as AnexoExecucaoApiResponse } from '@/features/execucao-os/types';
-import type { AnexoOS, TipoAnexoOS } from '@/features/execucao-os/types';
+import type {
+  AnexoOS,
+  TipoAnexoOS,
+  ExecucaoOS,
+  TarefaOS,
+  MaterialOS,
+  FerramentaOS,
+  TecnicoOS,
+  ChecklistAtividadeOS,
+  ItemDeChecklistLegado,
+  RegistroTempoOS,
+  HistoricoOS,
+  CondicaoOS,
+  TipoOS,
+  PrioridadeOS,
+  OrigemOS,
+} from '@/features/execucao-os/types';
+import type { DadosOrigem, ItemOrcamento } from '@/features/programacao-os/types';
+import type { InstalacaoDaOrigem } from '@/utils/instalacao';
 
 // ============================================================================
 // TIPOS DA API PARA EXECUCAO OS
@@ -288,6 +306,97 @@ export interface ExecucaoOSApiResponse {
   custo_total_real?: number;
 }
 
+/**
+ * A OS como a API manda em GET /execucao-os (lista) e /execucao-os/:id — o
+ * OrdemServicoResponseDto do backend, com as datas em texto ISO. As chaves
+ * marcadas "antiga" o backend não manda mais; o transform ainda as aceita.
+ */
+export interface OrdemServicoDaApi {
+  instalacoes?: InstalacaoDaOrigem[];
+  id: string;
+  criado_em?: string;
+  atualizado_em?: string;
+  deletado_em?: string;
+  programacao_id: string;
+  numero_os: string;
+  /** Antiga: o código da programação */
+  codigo?: string;
+  descricao: string;
+  local: string;
+  ativo: string;
+  condicoes: CondicaoOS;
+  status: StatusExecucaoOS;
+  tipo: TipoOS;
+  prioridade: PrioridadeOS;
+  origem: OrigemOS;
+  planta_id?: string;
+  equipamento_id?: string;
+  anomalia_id?: string;
+  plano_manutencao_id?: string;
+  reserva_id?: string;
+  dados_origem?: DadosOrigem | null;
+  tempo_estimado: number;
+  duracao_estimada: number;
+  data_hora_programada: string;
+  responsavel: string;
+  responsavel_id?: string;
+  time_equipe?: string;
+  data_hora_inicio_real?: string;
+  data_hora_fim_real?: string;
+  equipe_presente?: string[];
+  orcamento_previsto?: number;
+  custo_real?: number;
+  observacoes?: string;
+  observacoes_programacao?: string;
+  observacoes_execucao?: string;
+  /** Antiga */
+  observacoes_inicio?: string;
+  /** Antiga */
+  observacoes_finalizacao?: string;
+  /** Antiga */
+  motivo_pausa?: string;
+  motivo_cancelamento?: string;
+  resultado_servico?: string;
+  problemas_encontrados?: string;
+  recomendacoes?: string;
+  proxima_manutencao?: string;
+  avaliacao_qualidade?: number;
+  observacoes_qualidade?: string;
+  atividades_realizadas?: string;
+  checklist_concluido?: number;
+  procedimentos_seguidos?: string;
+  equipamentos_seguranca?: string;
+  incidentes_seguranca?: string;
+  medidas_seguranca_adicionais?: string;
+  custos_adicionais?: number;
+  tarefas_os?: TarefaOS[];
+  materiais?: MaterialOS[];
+  ferramentas?: FerramentaOS[];
+  tecnicos?: TecnicoOS[];
+  itens_orcamento?: ItemOrcamento[];
+  checklist?: ChecklistAtividadeOS[];
+  /** Antiga: o checklist vinha aqui, com `descricao` no lugar de `atividade` */
+  checklist_atividades?: ItemDeChecklistLegado[];
+  anexos?: AnexoOS[];
+  registros_tempo?: RegistroTempoOS[];
+  historico?: HistoricoOS[];
+  criado_por?: string;
+  criado_por_id?: string;
+  programado_por?: string;
+  programado_por_id?: string;
+  finalizado_por?: string;
+  finalizado_por_id?: string;
+  aprovado_por?: string;
+  aprovado_por_id?: string;
+  data_aprovacao?: string;
+  programacao?: { id: string; codigo?: string; descricao?: string };
+  anomalia?: { id: string; descricao: string; prioridade?: string; status?: string };
+  plano_manutencao?: { id: string; nome: string; descricao?: string | null };
+  planta?: { id: string; nome: string };
+  equipamento?: { id: string; nome: string; tipo_equipamento?: string | null; fabricante?: string | null; modelo?: string | null };
+  reserva_veiculo?: ExecucaoOS['reserva_veiculo'];
+}
+
 export interface DashboardExecucaoOSDto {
   total_execucoes: number;
   execucoes_programadas: number;
@@ -351,7 +460,7 @@ export interface QueryExecucaoOSApiParams {
 }
 
 export interface ExecucaoOSListApiResponse {
-  data: ExecucaoOSApiResponse[];
+  data: OrdemServicoDaApi[];
   pagination: {
     page: number;
     limit: number;
@@ -385,20 +494,20 @@ export class ExecucaoOSApiService {
       });
       // console.log('✅ EXECUCAO-OS API: Execuções listadas:', response.data.pagination);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao listar execuções:', error);
       throw error;
     }
   }
 
-  async findOne(id: string): Promise<ExecucaoOSApiResponse> {
+  async findOne(id: string): Promise<OrdemServicoDaApi> {
     // console.log('🔍 EXECUCAO-OS API: Buscando execução por ID:', id);
 
     try {
-      const response = await api.get<ExecucaoOSApiResponse>(`${this.baseEndpoint}/${id}`);
+      const response = await api.get<OrdemServicoDaApi>(`${this.baseEndpoint}/${id}`);
       // console.log('✅ EXECUCAO-OS API: Execução encontrada:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao buscar execução:', error);
       throw error;
     }
@@ -411,7 +520,7 @@ export class ExecucaoOSApiService {
       const response = await api.get<DashboardExecucaoOSDto>(`${this.baseEndpoint}/dashboard`);
       // console.log('✅ EXECUCAO-OS API: Dashboard obtido:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao obter dashboard:', error);
       throw error;
     }
@@ -431,7 +540,7 @@ export class ExecucaoOSApiService {
       );
       // console.log('✅ EXECUCAO-OS API: Execução iniciada:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao iniciar execução:', error);
       throw error;
     }
@@ -447,7 +556,7 @@ export class ExecucaoOSApiService {
       );
       // console.log('✅ EXECUCAO-OS API: Execução pausada:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao pausar execução:', error);
       throw error;
     }
@@ -463,7 +572,7 @@ export class ExecucaoOSApiService {
       );
       // console.log('✅ EXECUCAO-OS API: Execução retomada:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao retomar execução:', error);
       throw error;
     }
@@ -479,7 +588,7 @@ export class ExecucaoOSApiService {
       );
       // console.log('✅ EXECUCAO-OS API: Execução finalizada:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao finalizar execução:', error);
       throw error;
     }
@@ -492,7 +601,7 @@ export class ExecucaoOSApiService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -504,7 +613,7 @@ export class ExecucaoOSApiService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -516,7 +625,7 @@ export class ExecucaoOSApiService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -528,7 +637,7 @@ export class ExecucaoOSApiService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -540,7 +649,7 @@ export class ExecucaoOSApiService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   }
@@ -555,7 +664,7 @@ export class ExecucaoOSApiService {
       );
       // console.log('✅ EXECUCAO-OS API: Progresso atualizado:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao atualizar progresso:', error);
       throw error;
     }
@@ -578,7 +687,7 @@ export class ExecucaoOSApiService {
       );
       // console.log('✅ EXECUCAO-OS API: Execução aprovada:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao aprovar execução:', error);
       throw error;
     }
@@ -597,7 +706,7 @@ export class ExecucaoOSApiService {
       );
       // console.log('✅ EXECUCAO-OS API: Execução reprovada:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao reprovar execução:', error);
       throw error;
     }
@@ -614,7 +723,7 @@ export class ExecucaoOSApiService {
       const response = await api.get<TarefaExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/tarefas`);
       // console.log('✅ EXECUCAO-OS API: Tarefas obtidas:', response.data.length);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao obter tarefas:', error);
       throw error;
     }
@@ -630,7 +739,7 @@ export class ExecucaoOSApiService {
       );
       // console.log('✅ EXECUCAO-OS API: Tarefa executada:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao executar tarefa:', error);
       throw error;
     }
@@ -647,7 +756,7 @@ export class ExecucaoOSApiService {
       const response = await api.get<EquipeExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/equipe`);
       // console.log('✅ EXECUCAO-OS API: Equipe obtida:', response.data.length);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao obter equipe:', error);
       throw error;
     }
@@ -666,7 +775,7 @@ export class ExecucaoOSApiService {
       );
       // console.log('✅ EXECUCAO-OS API: Membro adicionado:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao adicionar membro:', error);
       throw error;
     }
@@ -678,7 +787,7 @@ export class ExecucaoOSApiService {
     try {
       await api.delete(`${this.baseEndpoint}/${id}/equipe/${membroId}`);
       // console.log('✅ EXECUCAO-OS API: Membro removido com sucesso');
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao remover membro:', error);
       throw error;
     }
@@ -730,7 +839,7 @@ export class ExecucaoOSApiService {
     planta_id?: string;
     equipamento_id?: string;
     tipo?: TipoOrdemServico;
-  }): Promise<any> {
+  }): Promise<unknown> {
     // console.log('📊 EXECUCAO-OS API: Obtendo relatório de performance:', params);
 
     try {
@@ -739,7 +848,7 @@ export class ExecucaoOSApiService {
       });
       // console.log('✅ EXECUCAO-OS API: Relatório de performance obtido');
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao obter relatório:', error);
       throw error;
     }
@@ -750,7 +859,7 @@ export class ExecucaoOSApiService {
     data_fim?: string; // ISO DateTime string
     planta_id?: string;
     tipo?: TipoOrdemServico;
-  }): Promise<any> {
+  }): Promise<unknown> {
     // console.log('💰 EXECUCAO-OS API: Obtendo relatório de custos:', params);
 
     try {
@@ -759,7 +868,7 @@ export class ExecucaoOSApiService {
       });
       // console.log('✅ EXECUCAO-OS API: Relatório de custos obtido');
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao obter relatório:', error);
       throw error;
     }
@@ -770,7 +879,7 @@ export class ExecucaoOSApiService {
     data_fim?: string; // ISO DateTime string
     planta_id?: string;
     tecnico_id?: string;
-  }): Promise<any> {
+  }): Promise<unknown> {
     // console.log('⚡ EXECUCAO-OS API: Obtendo relatório de eficiência:', params);
 
     try {
@@ -779,7 +888,7 @@ export class ExecucaoOSApiService {
       });
       // console.log('✅ EXECUCAO-OS API: Relatório de eficiência obtido');
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao obter relatório:', error);
       throw error;
     }
@@ -796,7 +905,7 @@ export class ExecucaoOSApiService {
       const response = await api.get<PausaExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/pausas`);
       // console.log('✅ EXECUCAO-OS API: Pausas obtidas:', response.data.length);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao obter pausas:', error);
       throw error;
     }
@@ -833,14 +942,14 @@ export class ExecucaoOSApiService {
     await api.patch(`${this.baseEndpoint}/${id}/ferramentas`, { ferramentas });
   }
 
-  async getHistoricoCompleto(id: string): Promise<any> {
+  async getHistoricoCompleto(id: string): Promise<unknown> {
     // console.log('📜 EXECUCAO-OS API: Obtendo histórico completo da execução:', id);
 
     try {
       const response = await api.get(`${this.baseEndpoint}/${id}/historico`);
       // console.log('✅ EXECUCAO-OS API: Histórico obtido');
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 EXECUCAO-OS API: Erro ao obter histórico:', error);
       throw error;
     }

@@ -83,18 +83,38 @@ export interface ListaRecursosResposta {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
-/** O interceptor pode embrulhar em { success, data }; às vezes duas vezes. */
-const desembrulhar = (resposta: any) => resposta?.data?.data ?? resposta?.data ?? resposta;
+/** A página da listagem como a rota devolve — com um embrulho a mais, ela vem dentro de `data`. */
+interface PaginaDeRecursosDaApi {
+  data?: RecursoApiResponse[] | PaginaDeRecursosDaApi;
+  pagination?: ListaRecursosResposta['pagination'];
+}
+
+const ehObjeto = (valor: unknown): valor is Record<string, unknown> =>
+  typeof valor === 'object' && valor !== null;
+
+/**
+ * O interceptor pode embrulhar em { success, data }; às vezes duas vezes.
+ * Só desembrulha: `T` é o que a rota devolve, não é conferido aqui.
+ */
+const desembrulhar = <T>(resposta: unknown): T => {
+  const corpo = ehObjeto(resposta) ? resposta.data : undefined;
+  const interno = ehObjeto(corpo) ? corpo.data : undefined;
+  return (interno ?? corpo ?? resposta) as T;
+};
 
 class RecursosApiService {
   private readonly endpoint = '/recursos';
 
   async listar(params: QueryRecursosParams = {}): Promise<ListaRecursosResposta> {
-    const response = await api.get<any>(this.endpoint, { params });
-    const corpo = response.data?.data ?? response.data;
+    const response = await api.get<RecursoApiResponse[] | PaginaDeRecursosDaApi>(this.endpoint, { params });
+    const bruto = response.data;
 
-    // A listagem responde { data, pagination }; um embrulho a mais deixaria
-    // `data` sendo o corpo inteiro em vez do array.
+    // A listagem responde { data, pagination }; um embrulho a mais deixa essa
+    // página dentro de `data`, no lugar do array. Tomar `data.data` direto
+    // pegava o ARRAY da resposta normal e descartava a paginação: a tabela
+    // ficava sempre em uma página só e a exportação parava na primeira.
+    const corpo = !Array.isArray(bruto) && bruto?.data && !Array.isArray(bruto.data) ? bruto.data : bruto;
+
     if (Array.isArray(corpo)) {
       return {
         data: corpo,
@@ -103,24 +123,24 @@ class RecursosApiService {
     }
 
     return {
-      data: corpo?.data ?? [],
+      data: Array.isArray(corpo?.data) ? corpo.data : [],
       pagination: corpo?.pagination ?? { page: 1, limit: 10, total: 0, totalPages: 1 },
     };
   }
 
   async buscarPorId(id: string): Promise<RecursoApiResponse> {
-    const response = await api.get<any>(`${this.endpoint}/${id.trim()}`);
-    return desembrulhar(response);
+    const response = await api.get<unknown>(`${this.endpoint}/${id.trim()}`);
+    return desembrulhar<RecursoApiResponse>(response);
   }
 
   async criar(data: CreateRecursoApiData): Promise<RecursoApiResponse> {
-    const response = await api.post<any>(this.endpoint, data);
-    return desembrulhar(response);
+    const response = await api.post<unknown>(this.endpoint, data);
+    return desembrulhar<RecursoApiResponse>(response);
   }
 
   async atualizar(id: string, data: Partial<CreateRecursoApiData>): Promise<RecursoApiResponse> {
-    const response = await api.put<any>(`${this.endpoint}/${id.trim()}`, data);
-    return desembrulhar(response);
+    const response = await api.put<unknown>(`${this.endpoint}/${id.trim()}`, data);
+    return desembrulhar<RecursoApiResponse>(response);
   }
 
   async remover(id: string): Promise<void> {

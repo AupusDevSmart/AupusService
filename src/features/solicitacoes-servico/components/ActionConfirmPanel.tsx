@@ -5,13 +5,14 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Trash2,
   Loader2,
+  type LucideIcon,
 } from 'lucide-react';
 
 export type PendingAction = 'excluir';
 
 const actionConfig: Record<PendingAction, {
   confirmLabel: string;
-  icon: any;
+  icon: LucideIcon;
   variant: 'default' | 'destructive';
   inputLabel?: string;
   inputPlaceholder?: string;

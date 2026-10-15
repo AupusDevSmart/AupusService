@@ -1,5 +1,6 @@
 // src/services/equipamentos.services.ts
 import { api } from '@/config/api';
+import type { PontoEquipamento } from '@/core/features/equipamentos/types';
 
 // ============================================================================
 // TIPOS DA API (baseados nos DTOs do backend)
@@ -96,6 +97,9 @@ export interface EquipamentoApiResponse {
   a5?: string;
   a6?: string;
   foto_url?: string;
+  /** Automacao (PR3): o equipamento expoe pontos; o findOne inclui os pontos. */
+  automacao?: boolean;
+  equipamento_pontos?: PontoEquipamento[];
   created_at: Date;
   updated_at: Date;
   deleted_at?: Date;
@@ -118,6 +122,7 @@ export interface EquipamentoApiResponse {
   planta?: {
     id: string;
     nome: string;
+    localizacao?: string;
   };
   proprietario?: {
     id: string;
@@ -133,6 +138,9 @@ export interface EquipamentoApiResponse {
     nome: string;
     classificacao: string;
     criticidade: string;
+    fabricante?: string;
+    modelo?: string;
+    localizacao?: string;
   };
   componentes_uar?: {
     id: string;
@@ -147,13 +155,20 @@ export interface EquipamentoApiResponse {
     unidade?: string;
   }[];
   totalComponentes?: number;
+  _count?: { componentes_uar?: number };
+
+  // A POSICAO (ativo funcional) onde o equipamento esta instalado.
+  ativo_funcional_id?: string | null;
+  ativo_funcional?: { id: string; nome: string; categoria_id?: string } | null;
+  /** O nome proprio do equipamento — `nome` traz o da posicao. */
+  nome_proprio?: string;
 
   // ✅ Tipo de equipamento (via relação tipo_equipamento_rel)
   tipoEquipamento?: {
     id: string;
     codigo: string;  // Ex: "INVERSOR_FRONIUS", "M160_SCHNEIDER"
     nome: string;
-    categoria?: any;
+    categoria?: CategoriaDoTipoApi;
     largura_padrao?: number;
     altura_padrao?: number;
     icone_svg?: string;
@@ -162,12 +177,17 @@ export interface EquipamentoApiResponse {
     id: string;
     codigo: string;
     nome: string;
-    categoria?: any;
+    categoria_id?: string;
+    categoria?: CategoriaDoTipoApi;
+    fabricante?: string;
     largura_padrao?: number;
     altura_padrao?: number;
     icone_svg?: string;
   };
 }
+
+/** A categoria do tipo: objeto quando a rota inclui a relacao; texto em dado antigo. */
+export type CategoriaDoTipoApi = { id: string; nome: string } | string | null;
 
 export interface EquipamentosQueryParams {
   page?: number;
@@ -194,13 +214,18 @@ export interface EquipamentosPaginationMeta {
   pages: number;
 }
 
-// Hook acessa: response.data.data (ou response.data como fallback) e response.data.pagination
+/**
+ * A listagem depois do interceptor: { data: [...], pagination, meta }. Com um
+ * embrulho a mais, essa pagina inteira viria dentro de `data` — o hook aceita
+ * os dois.
+ */
 export interface EquipamentosListApiResponse {
-  data: {
-    data: EquipamentoApiResponse[];
+  data: EquipamentoApiResponse[] | {
+    data?: EquipamentoApiResponse[];
     pagination?: EquipamentosPaginationMeta;
-    [key: string]: any;
   };
+  pagination?: EquipamentosPaginationMeta;
+  meta?: Record<string, unknown>;
 }
 
 export interface PlantaEquipamentosResponse {
@@ -262,6 +287,9 @@ export interface ComponentesGerenciamentoResponse {
 // ============================================================================
 
 
+/** O corpo como a rota manda, que pode vir com mais um { data } por cima (o interceptor so tira um). */
+type TalvezEmbrulhado<T> = T & { data?: T };
+
 /** O que muda de um equipamento para o outro dentro de um lote. */
 export interface ItemDoLoteApi {
   nome: string;
@@ -269,6 +297,12 @@ export interface ItemDoLoteApi {
   numero_serie?: string;
   localizacao_especifica?: string;
 }
+
+/** O bloco comum do lote: o que varia por exemplar (nome, TAG, serie, localizacao) vai em `itens`. */
+export type DadosComunsDoLoteApi = Omit<
+  CreateEquipamentoApiData,
+  'nome' | 'tag' | 'numero_serie' | 'localizacao_especifica'
+>;
 
 export interface RespostaLoteApi {
   total: number;
@@ -290,7 +324,7 @@ export class EquipamentosApiService {
     const response = await api.post<EquipamentoApiResponse>(this.baseEndpoint, data);
     // console.log('✅ API SERVICE: Resposta recebida:', response.data);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     // console.log('💥 API SERVICE: Erro capturado:', error);
     // console.log('💥 API SERVICE: Mensagem específica da API:', error.response?.data?.message);
     // console.log('💥 API SERVICE: Data completo:', JSON.stringify(error.response?.data, null, 2));
@@ -309,10 +343,10 @@ export class EquipamentosApiService {
    * equipamento, depois.
    */
   async createLote(
-    data: CreateEquipamentoApiData,
+    data: DadosComunsDoLoteApi,
     itens: ItemDoLoteApi[],
   ): Promise<RespostaLoteApi> {
-    const response = await api.post<any>(`${this.baseEndpoint}/lote`, { ...data, itens });
+    const response = await api.post<TalvezEmbrulhado<RespostaLoteApi>>(`${this.baseEndpoint}/lote`, { ...data, itens });
     // A resposta pode vir embrulhada em { success, data } pelo interceptor.
     return response.data?.data ?? response.data;
   }
@@ -328,7 +362,7 @@ export class EquipamentosApiService {
     base_nome?: string;
     base_tag?: string;
   }): Promise<{ proximo_nome: number; proximo_tag: number }> {
-    const response = await api.get<any>(`${this.baseEndpoint}/proximo-sequencial`, {
+    const response = await api.get<TalvezEmbrulhado<{ proximo_nome: number; proximo_tag: number }>>(`${this.baseEndpoint}/proximo-sequencial`, {
       params,
     });
     return response.data?.data ?? response.data;
@@ -344,7 +378,7 @@ export class EquipamentosApiService {
     origemId: string,
     destinoIds: string[],
   ): Promise<{ total: number; anexos_por_equipamento: number }> {
-    const response = await api.post<any>(`${this.baseEndpoint}/anexos/replicar`, {
+    const response = await api.post<TalvezEmbrulhado<{ total: number; anexos_por_equipamento: number }>>(`${this.baseEndpoint}/anexos/replicar`, {
       origem_equipamento_id: origemId?.trim(),
       destino_equipamento_ids: destinoIds.map((id) => id?.trim()).filter(Boolean),
     });
@@ -487,8 +521,8 @@ export class EquipamentosApiService {
     unidadeId: string,
     tipo: 'BARRAMENTO' | 'PONTO',
     nome?: string
-  ): Promise<{ success: boolean; data: EquipamentoApiResponse; meta?: any }> {
-    const response = await api.post<{ success: boolean; data: EquipamentoApiResponse; meta?: any }>(
+  ): Promise<{ success: boolean; data: EquipamentoApiResponse; meta?: Record<string, unknown> }> {
+    const response = await api.post<{ success: boolean; data: EquipamentoApiResponse; meta?: Record<string, unknown> }>(
       `${this.baseEndpoint}/virtual/${unidadeId}/${tipo}`,
       nome ? { nome } : {}
     );

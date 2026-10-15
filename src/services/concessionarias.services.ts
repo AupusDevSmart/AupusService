@@ -1,31 +1,35 @@
 // src/services/concessionarias.services.ts
 
+import { isAxiosError } from 'axios';
 import { api } from '@/config/api';
+import type { Pagination } from '@/core/types/base';
 
 // ✅ INTERFACES
 
-export interface TarifasA4Verde {
+// `type`, e nao `interface`: o formulario guarda as tarifas como mapa campo -> valor
+// (ValoresDasTarifas), e so o alias de tipo encaixa num Record.
+export type TarifasA4Verde = {
   tusd_d?: number;
   tusd_p?: number;
   tusd_fp?: number;
   te_d?: number;
   te_p?: number;
   te_fp?: number;
-}
+};
 
-export interface TarifasA3aVerde {
+export type TarifasA3aVerde = {
   tusd_d?: number;
   tusd_p?: number;
   tusd_fp?: number;
   te_d?: number;
   te_p?: number;
   te_fp?: number;
-}
+};
 
-export interface TarifasB {
+export type TarifasB = {
   tusd_valor?: number;
   te_valor?: number;
-}
+};
 
 export interface AnexoConcessionaria {
   id: string;
@@ -76,13 +80,27 @@ export interface CreateConcessionariaDto {
 
 export interface UpdateConcessionariaDto extends Partial<CreateConcessionariaDto> {}
 
+/** O que a rota /concessionarias devolve: o total de paginas vem em `pages`. */
+interface ListaDeConcessionariasDaRota {
+  data?: ConcessionariaResponse[];
+  pagination?: { page: number; limit: number; total: number; pages: number };
+}
+
+/** A paginacao da lista: a da rota (`pages`) mais o `totalPages` que o contrato le. */
+export type PaginacaoDasConcessionarias = Pagination & { pages: number };
+
+/** A mensagem que o backend mandou no corpo do erro, se mandou. */
+function mensagemDoBackend(error: unknown): string | undefined {
+  return isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined;
+}
+
 // ✅ SERVICE CLASS
 
 class ConcessionariasServiceClass {
   /**
    * Get all concessionarias with pagination and filters
    */
-  async getAllConcessionarias(params: FindAllConcessionariasParams = {}): Promise<{ data: ConcessionariaResponse[]; pagination: any }> {
+  async getAllConcessionarias(params: FindAllConcessionariasParams = {}): Promise<{ data: ConcessionariaResponse[]; pagination: PaginacaoDasConcessionarias }> {
     try {
       const queryParams = new URLSearchParams();
 
@@ -93,12 +111,12 @@ class ConcessionariasServiceClass {
       if (params.orderBy) queryParams.append('orderBy', params.orderBy);
       if (params.orderDirection) queryParams.append('orderDirection', params.orderDirection);
 
-      const response = await api.get(`/concessionarias?${queryParams.toString()}`);
+      const response = await api.get<ListaDeConcessionariasDaRota | ConcessionariaResponse[]>(`/concessionarias?${queryParams.toString()}`);
 
       // Normalize response
-      const responseData: any = response.data;
-      const data = responseData?.data || responseData || [];
-      const pagination = responseData?.pagination || (response.data as any)?.pagination || {
+      const responseData = response.data;
+      const data = (Array.isArray(responseData) ? responseData : responseData?.data) || [];
+      const pagination = (!Array.isArray(responseData) && responseData?.pagination) || {
         page: params.page || 1,
         limit: params.limit || 10,
         total: Array.isArray(data) ? data.length : 0,
@@ -107,11 +125,12 @@ class ConcessionariasServiceClass {
 
       return {
         data: Array.isArray(data) ? data : [],
-        pagination,
+        // A rota manda o total de paginas em `pages`; o contrato (Pagination) le `totalPages`.
+        pagination: { ...pagination, totalPages: pagination.pages },
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [ConcessionariasService] Error fetching concessionarias:', error);
-      throw new Error(error.response?.data?.message || 'Erro ao buscar concessionárias');
+      throw new Error(mensagemDoBackend(error) || 'Erro ao buscar concessionárias');
     }
   }
 
@@ -127,9 +146,9 @@ class ConcessionariasServiceClass {
       console.log('✅ [ConcessionariasService] Concessionaria fetched:', concessionaria?.nome);
 
       return concessionaria;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [ConcessionariasService] Error fetching concessionaria ${id}:`, error);
-      throw new Error(error.response?.data?.message || 'Erro ao buscar concessionária');
+      throw new Error(mensagemDoBackend(error) || 'Erro ao buscar concessionária');
     }
   }
 
@@ -145,9 +164,9 @@ class ConcessionariasServiceClass {
       console.log('✅ [ConcessionariasService] Concessionaria created:', concessionaria?.id);
 
       return concessionaria;
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [ConcessionariasService] Error creating concessionaria:', error);
-      throw new Error(error.response?.data?.message || 'Erro ao criar concessionária');
+      throw new Error(mensagemDoBackend(error) || 'Erro ao criar concessionária');
     }
   }
 
@@ -163,9 +182,9 @@ class ConcessionariasServiceClass {
       console.log('✅ [ConcessionariasService] Concessionaria updated:', concessionaria?.id);
 
       return concessionaria;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [ConcessionariasService] Error updating concessionaria ${id}:`, error);
-      throw new Error(error.response?.data?.message || 'Erro ao atualizar concessionária');
+      throw new Error(mensagemDoBackend(error) || 'Erro ao atualizar concessionária');
     }
   }
 
@@ -177,9 +196,9 @@ class ConcessionariasServiceClass {
       console.log(`📡 [ConcessionariasService] DELETE /concessionarias/${id}`);
       await api.delete(`/concessionarias/${id}`);
       console.log('✅ [ConcessionariasService] Concessionaria deleted:', id);
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [ConcessionariasService] Error deleting concessionaria ${id}:`, error);
-      throw new Error(error.response?.data?.message || 'Erro ao excluir concessionária');
+      throw new Error(mensagemDoBackend(error) || 'Erro ao excluir concessionária');
     }
   }
 
@@ -210,9 +229,9 @@ class ConcessionariasServiceClass {
       console.log('✅ [ConcessionariasService] Anexo uploaded:', anexo?.id);
 
       return anexo;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [ConcessionariasService] Error uploading anexo:`, error);
-      throw new Error(error.response?.data?.message || 'Erro ao fazer upload do anexo');
+      throw new Error(mensagemDoBackend(error) || 'Erro ao fazer upload do anexo');
     }
   }
 
@@ -230,9 +249,9 @@ class ConcessionariasServiceClass {
       console.log('✅ [ConcessionariasService] Anexos fetched:', anexos.length);
 
       return Array.isArray(anexos) ? anexos : [];
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [ConcessionariasService] Error fetching anexos:`, error);
-      throw new Error(error.response?.data?.message || 'Erro ao buscar anexos');
+      throw new Error(mensagemDoBackend(error) || 'Erro ao buscar anexos');
     }
   }
 
@@ -242,14 +261,14 @@ class ConcessionariasServiceClass {
   async downloadAnexo(anexoId: string): Promise<Blob> {
     try {
       console.log(`📡 [ConcessionariasService] GET /concessionarias/anexos/${anexoId}/download`);
-      const response = await api.get(`/concessionarias/anexos/${anexoId}/download`, {
+      const response = await api.get<Blob>(`/concessionarias/anexos/${anexoId}/download`, {
         responseType: 'blob',
       });
 
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [ConcessionariasService] Error downloading anexo:`, error);
-      throw new Error(error.response?.data?.message || 'Erro ao baixar anexo');
+      throw new Error(mensagemDoBackend(error) || 'Erro ao baixar anexo');
     }
   }
 
@@ -261,9 +280,9 @@ class ConcessionariasServiceClass {
       console.log(`📡 [ConcessionariasService] DELETE /concessionarias/anexos/${anexoId}`);
       await api.delete(`/concessionarias/anexos/${anexoId}`);
       console.log('✅ [ConcessionariasService] Anexo deleted:', anexoId);
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [ConcessionariasService] Error deleting anexo:`, error);
-      throw new Error(error.response?.data?.message || 'Erro ao excluir anexo');
+      throw new Error(mensagemDoBackend(error) || 'Erro ao excluir anexo');
     }
   }
 

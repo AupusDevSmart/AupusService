@@ -1,5 +1,6 @@
 // src/services/plantas.services.ts
 
+import { isAxiosError } from 'axios';
 import { api } from '@/config/api';
 import type { PaginatedResponse } from '@/types/base';
 
@@ -61,6 +62,22 @@ export interface CreatePlantaDto {
 
 export interface UpdatePlantaDto extends Partial<CreatePlantaDto> {}
 
+/** Usuario como a rota /plantas/proprietarios devolve (os nomes alternativos cobrem formatos antigos). */
+interface ProprietarioDaRota {
+  id: string;
+  nome?: string | null;
+  name?: string;
+  cpf_cnpj?: string | null;
+  cpf?: string;
+  cnpj?: string;
+  tipo?: ProprietarioBasico['tipo'];
+}
+
+/** A mensagem que o backend mandou no corpo do erro, se mandou. */
+function mensagemDoBackend(error: unknown): string | undefined {
+  return isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined;
+}
+
 // ✅ SERVICE CLASS
 
 class PlantasServiceClass {
@@ -80,13 +97,13 @@ class PlantasServiceClass {
       if (params.orderBy) queryParams.append('orderBy', params.orderBy);
       if (params.orderDirection) queryParams.append('orderDirection', params.orderDirection);
 
-      const response = await api.get(`/plantas?${queryParams.toString()}`);
+      const response = await api.get<PaginatedResponse<PlantaResponse> | PlantaResponse[]>(`/plantas?${queryParams.toString()}`);
 
       // Normalize response - handle nested data structure from backend
       // Backend returns: { success: true, data: { data: [...plantas], pagination: {...} } }
       const responseData = response.data;
-      const data = responseData?.data || responseData || [];
-      const pagination = responseData?.pagination || response.data?.pagination || {
+      const data = (Array.isArray(responseData) ? responseData : responseData?.data) || [];
+      const pagination = (!Array.isArray(responseData) && responseData?.pagination) || {
         page: params.page || 1,
         limit: params.limit || 10,
         total: Array.isArray(data) ? data.length : 0,
@@ -97,9 +114,9 @@ class PlantasServiceClass {
         data: Array.isArray(data) ? data : [],
         pagination,
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [PlantasService] Error fetching plantas:', error);
-      throw new Error(error.response?.data?.message || 'Erro ao buscar plantas');
+      throw new Error(mensagemDoBackend(error) || 'Erro ao buscar plantas');
     }
   }
 
@@ -114,9 +131,9 @@ class PlantasServiceClass {
       const planta = response.data;
 
       return planta;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [PlantasService] Error fetching planta ${id}:`, error);
-      throw new Error(error.response?.data?.message || 'Erro ao buscar planta');
+      throw new Error(mensagemDoBackend(error) || 'Erro ao buscar planta');
     }
   }
 
@@ -133,9 +150,9 @@ class PlantasServiceClass {
       console.log('✅ [PlantasService] Planta created:', planta?.id);
 
       return planta;
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [PlantasService] Error creating planta:', error);
-      throw new Error(error.response?.data?.message || 'Erro ao criar planta');
+      throw new Error(mensagemDoBackend(error) || 'Erro ao criar planta');
     }
   }
 
@@ -152,9 +169,9 @@ class PlantasServiceClass {
       console.log('✅ [PlantasService] Planta updated:', planta?.id);
 
       return planta;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [PlantasService] Error updating planta ${id}:`, error);
-      throw new Error(error.response?.data?.message || 'Erro ao atualizar planta');
+      throw new Error(mensagemDoBackend(error) || 'Erro ao atualizar planta');
     }
   }
 
@@ -166,9 +183,9 @@ class PlantasServiceClass {
       console.log(`📡 [PlantasService] DELETE /plantas/${id}`);
       await api.delete(`/plantas/${id}`);
       console.log('✅ [PlantasService] Planta deleted:', id);
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [PlantasService] Error deleting planta ${id}:`, error);
-      throw new Error(error.response?.data?.message || 'Erro ao excluir planta');
+      throw new Error(mensagemDoBackend(error) || 'Erro ao excluir planta');
     }
   }
 
@@ -179,7 +196,7 @@ class PlantasServiceClass {
     try {
       console.log('📡 [PlantasService] GET /plantas/proprietarios - buscando proprietários');
 
-      const response = await api.get('/plantas/proprietarios', {
+      const response = await api.get<ProprietarioDaRota[]>('/plantas/proprietarios', {
         params: {
           ...(comUnidades ? { comUnidades: 'true' } : {}),
         }
@@ -196,7 +213,7 @@ class PlantasServiceClass {
       });
 
       // Transform to ProprietarioBasico format
-      const proprietarios: ProprietarioBasico[] = usuarios.map((user: any) => ({
+      const proprietarios: ProprietarioBasico[] = usuarios.map((user) => ({
         id: user.id,
         nome: user.nome || user.name || 'Nome não informado',
         cpf_cnpj: user.cpf_cnpj || user.cpf || user.cnpj || 'Não informado',
@@ -205,7 +222,7 @@ class PlantasServiceClass {
 
       console.log('✅ [PlantasService] Proprietarios fetched from /usuarios:', proprietarios.length);
       return proprietarios;
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [PlantasService] Error fetching proprietarios:', error);
 
       // Return empty array instead of throwing to prevent blocking the UI

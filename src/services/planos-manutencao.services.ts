@@ -1,4 +1,5 @@
 // src/services/planos-manutencao.services.ts
+import { isAxiosError } from 'axios';
 import { api } from '@/config/api';
 
 // ============================================================================
@@ -257,7 +258,7 @@ export class PlanosManutencaoApiService {
       const response = await api.post<PlanoManutencaoApiResponse>(this.baseEndpoint, data);
       // console.log('✅ PLANOS API: Plano criado com sucesso:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 PLANOS API: Erro ao criar plano:', error);
       // console.error('💥 PLANOS API: Detalhes do erro:', error.response?.data);
       throw error;
@@ -312,7 +313,7 @@ export class PlanosManutencaoApiService {
           pages: corpo?.totalPages ?? corpo?.pages ?? 0
         }
       };
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 PLANOS API: Erro ao listar planos:', error);
       throw error;
     }
@@ -327,7 +328,7 @@ export class PlanosManutencaoApiService {
       });
       // console.log('✅ PLANOS API: Plano encontrado:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 PLANOS API: Erro ao buscar plano:', error);
       throw error;
     }
@@ -340,7 +341,7 @@ export class PlanosManutencaoApiService {
       const response = await api.put<PlanoManutencaoApiResponse>(`${this.baseEndpoint}/${id}`, data);
       // console.log('✅ PLANOS API: Plano atualizado:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 PLANOS API: Erro ao atualizar plano:', error);
       throw error;
     }
@@ -352,7 +353,7 @@ export class PlanosManutencaoApiService {
     try {
       await api.delete(`${this.baseEndpoint}/${id}`);
       // console.log('✅ PLANOS API: Plano excluído com sucesso');
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 PLANOS API: Erro ao excluir plano:', error);
       throw error;
     }
@@ -369,7 +370,7 @@ export class PlanosManutencaoApiService {
       const response = await api.get<DashboardPlanosDto>(`${this.baseEndpoint}/dashboard`);
       // console.log('✅ PLANOS API: Dashboard obtido:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 PLANOS API: Erro ao obter dashboard:', error);
       throw error;
     }
@@ -384,7 +385,7 @@ export class PlanosManutencaoApiService {
       );
       // console.log('✅ PLANOS API: Plano do equipamento encontrado:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 PLANOS API: Erro ao buscar plano do equipamento:', error);
       throw error;
     }
@@ -405,7 +406,7 @@ export class PlanosManutencaoApiService {
     console.log('📡 SERVIÇO API: Fazendo requisição:', {
       url: url,
       params: finalParams,
-      fullUrl: `/api${url}?${new URLSearchParams(finalParams as any).toString()}`
+      fullUrl: `/api${url}?${new URLSearchParams(Object.entries(finalParams).map(([chave, valor]) => [chave, String(valor)])).toString()}`
     });
 
     try {
@@ -416,20 +417,21 @@ export class PlanosManutencaoApiService {
       console.log('✅ SERVIÇO API: Resposta HTTP recebida:', {
         status: response.status,
         headers: response.headers,
-        dataLength: (response.data as any)?.length || 0,
+        dataLength: Array.isArray(response.data) ? response.data.length : 0,
         pagination: response.data?.pagination
       });
 
       console.log('🎯 SERVIÇO API: Dados completos da resposta:', response.data);
 
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const resposta = isAxiosError(error) ? error.response : undefined;
       console.error('❌ SERVIÇO API: Erro na requisição:', {
         error,
-        message: error?.message,
-        status: error?.response?.status,
-        statusText: error?.response?.statusText,
-        responseData: error?.response?.data,
+        message: error instanceof Error ? error.message : undefined,
+        status: resposta?.status,
+        statusText: resposta?.statusText,
+        responseData: resposta?.data,
         url: url,
         params: finalParams
       });
@@ -454,7 +456,7 @@ export class PlanosManutencaoApiService {
       );
       // console.log('✅ PLANOS API: Planos da unidade encontrados:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 PLANOS API: Erro ao buscar planos da unidade:', error);
       throw error;
     }
@@ -467,7 +469,7 @@ export class PlanosManutencaoApiService {
       const response = await api.get<PlanoResumoDto>(`${this.baseEndpoint}/${id}/resumo`);
       // console.log('✅ PLANOS API: Resumo obtido:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 PLANOS API: Erro ao obter resumo:', error);
       throw error;
     }
@@ -483,7 +485,7 @@ export class PlanosManutencaoApiService {
       );
       // console.log('✅ PLANOS API: Plano duplicado:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 PLANOS API: Erro ao duplicar plano:', error);
       throw error;
     }
@@ -499,7 +501,7 @@ export class PlanosManutencaoApiService {
       );
       console.log('✅ PLANOS API: Clonagem em lote concluída:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('💥 PLANOS API: Erro ao clonar plano em lote:', error);
       throw error;
     }

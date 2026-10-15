@@ -2,18 +2,24 @@
 import { useState, useCallback } from 'react';
 import { execucaoOSApi } from '@/services/execucao-os.service';
 import type { TipoAnexoOS } from '@/features/execucao-os/types';
-import { execucaoOSTransitionsService } from '@/services/execucao-os-transitions.service';
+import {
+  execucaoOSTransitionsService,
+  type IniciarExecucaoDto,
+  type PausarExecucaoDto,
+  type RetomarExecucaoDto,
+  type ExecutarOSDto,
+  type AuditarOSDto,
+  type ReabrirOSDto,
+  type FinalizarOSFinalDto,
+  type CancelarOSDto,
+} from '@/services/execucao-os-transitions.service';
 import type {
-  ExecucaoOSApiResponse,
+  OrdemServicoDaApi,
   ExecucaoOSListApiResponse,
   QueryExecucaoOSApiParams,
-  IniciarExecucaoApiData,
-  PausarExecucaoApiData,
-  RetomarExecucaoApiData,
-  FinalizarExecucaoApiData,
-  CancelarExecucaoApiData,
   DashboardExecucaoOSDto,
 } from '@/services/execucao-os.service';
+import { formatApiError } from '@/utils/api-error';
 import { transformApiArrayToExecucaoOS } from '../utils/transform-api-data';
 import type { ExecucaoOS } from '../types';
 
@@ -52,8 +58,8 @@ export function useExecucaoOSApi() {
       setStats(response.stats || {});
 
       return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao buscar execuções';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao buscar execuções';
       setError(errorMessage);
       console.error('Erro ao buscar execuções:', err);
       throw err;
@@ -67,12 +73,12 @@ export function useExecucaoOSApi() {
       setLoading(true);
       setError(null);
 
-      const response: ExecucaoOSApiResponse = await execucaoOSApi.findOne(id);
+      const response: OrdemServicoDaApi = await execucaoOSApi.findOne(id);
       const execucoesTransformadas = transformApiArrayToExecucaoOS([response]);
 
       return execucoesTransformadas[0];
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao buscar execução';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao buscar execução';
       setError(errorMessage);
       console.error('Erro ao buscar execução:', err);
       throw err;
@@ -90,8 +96,8 @@ export function useExecucaoOSApi() {
       setDashboard(response);
 
       return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao buscar dashboard';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao buscar dashboard';
       setError(errorMessage);
       console.error('Erro ao buscar dashboard:', err);
       throw err;
@@ -104,15 +110,15 @@ export function useExecucaoOSApi() {
   // TRANSIÇÕES DE STATUS
   // ============================================================================
 
-  const iniciar = useCallback(async (id: string, data: IniciarExecucaoApiData) => {
+  const iniciar = useCallback(async (id: string, data: IniciarExecucaoDto) => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await execucaoOSTransitionsService.iniciar(id, data);
       return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao iniciar execução';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao iniciar execução';
       setError(errorMessage);
       console.error('Erro ao iniciar execução:', err);
       throw err;
@@ -121,15 +127,15 @@ export function useExecucaoOSApi() {
     }
   }, []);
 
-  const pausar = useCallback(async (id: string, data: PausarExecucaoApiData) => {
+  const pausar = useCallback(async (id: string, data: PausarExecucaoDto) => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await execucaoOSTransitionsService.pausar(id, data);
       return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao pausar execução';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao pausar execução';
       setError(errorMessage);
       console.error('Erro ao pausar execução:', err);
       throw err;
@@ -138,15 +144,15 @@ export function useExecucaoOSApi() {
     }
   }, []);
 
-  const retomar = useCallback(async (id: string, data: RetomarExecucaoApiData) => {
+  const retomar = useCallback(async (id: string, data: RetomarExecucaoDto) => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await execucaoOSTransitionsService.retomar(id, data);
       return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao retomar execução';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao retomar execução';
       setError(errorMessage);
       console.error('Erro ao retomar execução:', err);
       throw err;
@@ -155,15 +161,17 @@ export function useExecucaoOSApi() {
     }
   }, []);
 
-  const finalizar = useCallback(async (id: string, data: FinalizarExecucaoApiData) => {
+  // A rota PATCH :id/finalizar só aceita observacoes: o tipo antigo (FinalizarExecucaoApiData)
+  // mandava data_hora_fim_real, relatorio_final... e o ValidationPipe recusava
+  const finalizar = useCallback(async (id: string, data: FinalizarOSFinalDto) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await execucaoOSTransitionsService.finalizar(id, data as any);
+      const response = await execucaoOSTransitionsService.finalizar(id, data);
       return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao finalizar execução';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao finalizar execução';
       setError(errorMessage);
       console.error('Erro ao finalizar execução:', err);
       throw err;
@@ -172,15 +180,15 @@ export function useExecucaoOSApi() {
     }
   }, []);
 
-  const cancelar = useCallback(async (id: string, data: CancelarExecucaoApiData) => {
+  const cancelar = useCallback(async (id: string, data: CancelarOSDto) => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await execucaoOSTransitionsService.cancelar(id, data);
       return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao cancelar execução';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao cancelar execução';
       setError(errorMessage);
       console.error('Erro ao cancelar execução:', err);
       throw err;
@@ -189,15 +197,15 @@ export function useExecucaoOSApi() {
     }
   }, []);
 
-  const executar = useCallback(async (id: string, data: any) => {
+  const executar = useCallback(async (id: string, data: ExecutarOSDto) => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await execucaoOSTransitionsService.executar(id, data);
       return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao registrar execução';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao registrar execução';
       setError(errorMessage);
       console.error('Erro ao registrar execução:', err);
       throw err;
@@ -206,15 +214,15 @@ export function useExecucaoOSApi() {
     }
   }, []);
 
-  const auditar = useCallback(async (id: string, data: any) => {
+  const auditar = useCallback(async (id: string, data: AuditarOSDto) => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await execucaoOSTransitionsService.auditar(id, data);
       return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao auditar execução';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao auditar execução';
       setError(errorMessage);
       console.error('Erro ao auditar execução:', err);
       throw err;
@@ -223,15 +231,15 @@ export function useExecucaoOSApi() {
     }
   }, []);
 
-  const reabrir = useCallback(async (id: string, data: any) => {
+  const reabrir = useCallback(async (id: string, data: ReabrirOSDto) => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await execucaoOSTransitionsService.reabrir(id, data);
       return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao reabrir execução';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao reabrir execução';
       setError(errorMessage);
       console.error('Erro ao reabrir execução:', err);
       throw err;
@@ -240,15 +248,15 @@ export function useExecucaoOSApi() {
     }
   }, []);
 
-  const finalizarOS = useCallback(async (id: string, data: any) => {
+  const finalizarOS = useCallback(async (id: string, data: FinalizarOSFinalDto) => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await execucaoOSTransitionsService.finalizar(id, data);
       return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao finalizar OS';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao finalizar OS';
       setError(errorMessage);
       console.error('Erro ao finalizar OS:', err);
       throw err;
@@ -268,8 +276,8 @@ export function useExecucaoOSApi() {
 
       const response = await execucaoOSApi.getAnexos(id);
       return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao buscar anexos';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao buscar anexos';
       setError(errorMessage);
       console.error('Erro ao buscar anexos:', err);
       throw err;
@@ -290,8 +298,8 @@ export function useExecucaoOSApi() {
 
       const response = await execucaoOSApi.uploadAnexo(id, file, tipo, descricao);
       return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao fazer upload de anexo';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao fazer upload de anexo';
       setError(errorMessage);
       console.error('Erro ao fazer upload de anexo:', err);
       throw err;
@@ -300,15 +308,15 @@ export function useExecucaoOSApi() {
     }
   }, []);
 
-  const getRelatorioPerformance = useCallback(async (params?: any) => {
+  const getRelatorioPerformance = useCallback(async (params?: Parameters<typeof execucaoOSApi.getRelatorioPerformance>[0]) => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await execucaoOSApi.getRelatorioPerformance(params);
       return response;
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Erro ao gerar relatório';
+    } catch (err) {
+      const errorMessage = formatApiError(err) || 'Erro ao gerar relatório';
       setError(errorMessage);
       console.error('Erro ao gerar relatório:', err);
       throw err;

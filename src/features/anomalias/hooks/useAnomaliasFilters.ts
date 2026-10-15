@@ -14,7 +14,7 @@ export function useAnomaliasFilters(_initialFilters: Partial<AnomaliasFilters>) 
       const { unidadesService } = await import('@/services/unidades.services');
       const unidadesResponse = await unidadesService.listarUnidades({ limit: 100 });
 
-      const unidadesOptions = unidadesResponse.data.map((unidade: any) => ({
+      const unidadesOptions = unidadesResponse.data.map((unidade) => ({
         value: unidade.id.toString(),
         label: unidade.nome,
       }));
@@ -38,7 +38,7 @@ export function useAnomaliasFilters(_initialFilters: Partial<AnomaliasFilters>) 
         limit: 100,
       });
 
-      const unidadesOptions = unidadesResponse.data.map((unidade: any) => ({
+      const unidadesOptions = unidadesResponse.data.map((unidade) => ({
         value: unidade.id.toString(),
         label: unidade.nome,
       }));

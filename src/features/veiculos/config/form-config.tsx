@@ -1,6 +1,6 @@
 // src/features/veiculos/config/form-config.tsx
 import React from 'react';
-import { type FormField } from '@/types/base';
+import { type FormField, type FormFieldProps } from '@/types/base';
 import { DocumentosUpload } from '../components/DocumentosUpload';
 
 // Configuração do formulário de veículos - REORGANIZADA
@@ -216,7 +216,8 @@ export const veiculosFormFields: FormField[] = [
     type: 'custom',
     width: 'full',
     colSpan: 2, // ✅ Adiciona colspan 2 para ocupar 100% da largura
-    render: (props: any) => React.createElement(DocumentosUpload, {
+    // O sheet de veiculos so abre em criar, editar ou ver
+    render: (props: FormFieldProps & { mode?: 'create' | 'edit' | 'view' }) => React.createElement(DocumentosUpload, {
       ...props,
       veiculoId: props.entity?.id,
       mode: props.mode

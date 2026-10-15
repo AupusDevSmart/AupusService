@@ -1,5 +1,6 @@
 // src/features/instrucoes/types/index.ts
 import { type ModalMode } from '@/types/base';
+import type { InstrucaoApiResponse } from '@/services/instrucoes.services';
 
 export type TipoManutencao = 'PREVENTIVA' | 'PREDITIVA' | 'CORRETIVA' | 'INSPECAO' | 'VISITA_TECNICA';
 export type CondicaoAtivo = 'PARADO' | 'FUNCIONANDO' | 'QUALQUER';
@@ -34,7 +35,7 @@ export interface AnexoInstrucao {
 export interface ModalState {
   isOpen: boolean;
   mode: ModalMode;
-  instrucao: any | null;
+  instrucao: InstrucaoApiResponse | null;
 }
 
 export { type ModalMode };

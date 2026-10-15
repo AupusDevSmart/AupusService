@@ -1,11 +1,12 @@
 // src/features/execucao-os/utils/transform-api-data.ts
 
-import { ExecucaoOS, ChecklistAtividade } from '../types';
+import { ExecucaoOS } from '../types';
+import type { OrdemServicoDaApi } from '@/services/execucao-os.service';
 
 /**
  * Transforma a resposta da API para o formato esperado pelo frontend
  */
-export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
+export function transformApiResponseToExecucaoOS(apiData: OrdemServicoDaApi): ExecucaoOS {
   // Calcular tempo total de execução em minutos
   const calcularTempoExecucao = (): number | undefined => {
     if (!apiData.data_hora_inicio_real) return undefined;
@@ -46,8 +47,9 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   };
 
-  // Transformar checklist_atividades para camelCase
-  const checklistAtividades: ChecklistAtividade[] = (apiData.checklist_atividades || []).map((item: any) => ({
+  // Transformar checklist_atividades para camelCase (formato antigo: a API
+  // manda o checklist em `checklist`, e ninguem le este campo)
+  const checklistAtividades = (apiData.checklist_atividades || []).map((item) => ({
     id: item.id,
     descricao: item.descricao,
     obrigatoria: item.obrigatoria,
@@ -72,7 +74,8 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     programacao_id: apiData.programacao_id,
 
     // Identificação
-    numero_os: apiData.numero_os || apiData.codigo,
+    // Vazio no lugar de ausente: o BaseModal trata os dois igual
+    numero_os: apiData.numero_os || apiData.codigo || '',
     numeroOS: apiData.numero_os || apiData.codigo,
     descricao: apiData.descricao,
     descricaoOS: apiData.descricao,
@@ -242,7 +245,7 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     // Objeto "os" aninhado para compatibilidade com componentes antigos
     os: {
       id: apiData.id,
-      numeroOS: apiData.numero_os || apiData.codigo,
+      numeroOS: apiData.numero_os || apiData.codigo || '',
       descricao: apiData.descricao,
       local: apiData.local,
       ativo: apiData.ativo,
@@ -257,15 +260,15 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
         modelo: apiData.reserva_veiculo.veiculo?.modelo || '',
         placa: apiData.reserva_veiculo.veiculo?.placa || '',
       } : undefined,
-    } as any,
+    },
   };
 
-  return transformed as unknown as ExecucaoOS;
+  return transformed;
 }
 
 /**
  * Transforma um array de respostas da API
  */
-export function transformApiArrayToExecucaoOS(apiDataArray: any[]): ExecucaoOS[] {
+export function transformApiArrayToExecucaoOS(apiDataArray: OrdemServicoDaApi[]): ExecucaoOS[] {
   return apiDataArray.map(transformApiResponseToExecucaoOS);
 }

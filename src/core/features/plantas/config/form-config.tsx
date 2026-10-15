@@ -12,8 +12,8 @@ import { useViaCEP } from '@/core/hooks/useViaCEP';
 import { cn } from '@/core/lib/utils';
 
 // ✅ COMPONENTE: CNPJ com máscara personalizada
-// hasError: o BaseForm nao manda (so `error`); declarado aqui porque o componente le.
-const CNPJFieldComponent = ({ value, onChange, disabled, hasError }: FormFieldProps & { hasError?: boolean }) => {
+// A borda de erro vem de `error`, que e o que o BaseForm passa (lia `hasError`, que nunca chegava).
+const CNPJFieldComponent = ({ value, onChange, disabled, error }: FormFieldProps) => {
   const [displayValue, setDisplayValue] = React.useState(() => {
     // Inicializar com valor formatado se existir
     return value ? CNPJUtils.mask(value.toString()) : '';
@@ -40,7 +40,7 @@ const CNPJFieldComponent = ({ value, onChange, disabled, hasError }: FormFieldPr
         value={CNPJUtils.unmask(displayValue)}
         onChange={handleCNPJChange}
         disabled={disabled}
-        className={hasError ? 'border-red-500' : ''}
+        className={error ? 'border-red-500' : ''}
       />
       
       {/* ✅ Dica sobre validação */}
@@ -53,8 +53,20 @@ const CNPJFieldComponent = ({ value, onChange, disabled, hasError }: FormFieldPr
   );
 };
 
+/** O endereco da planta como o formulario guarda. */
+interface EnderecoDoFormulario {
+  uf?: string;
+  cidade?: string;
+  cep?: string;
+  logradouro?: string;
+  bairro?: string;
+}
+
 // ✅ COMPONENTE COMPLETO: UF, Cidade e CEP com busca automática
-const EnderecoCompleto = ({ onChange, disabled, entity, value }: FormFieldProps & { entity?: any }) => {
+const EnderecoCompleto = ({ onChange, disabled, entity, value }: FormFieldProps & {
+  value?: EnderecoDoFormulario | null;
+  entity?: { endereco?: EnderecoDoFormulario } | null;
+}) => {
   const [selectedUF, setSelectedUF] = React.useState<string>('');
   const [selectedCidade, setSelectedCidade] = React.useState<string>('');
   const [cep, setCep] = React.useState<string>('');
@@ -284,7 +296,7 @@ const EnderecoCompleto = ({ onChange, disabled, entity, value }: FormFieldProps 
 };
 
 // ✅ COMPONENTE ATUALIZADO: Gestão de Equipamentos com navegação inteligente (SEM MUDANÇAS)
-const GestaoEquipamentosButton = ({ entity, mode }: { entity?: any; mode?: 'create' | 'edit' | 'view' }) => {
+const GestaoEquipamentosButton = ({ entity, mode }: { entity?: { id?: string; nome?: string } | null; mode?: 'create' | 'edit' | 'view' }) => {
   const navigate = useNavigate();
 
   const handleOpenEquipamentos = () => {

@@ -9,6 +9,7 @@ import {
   SolicitacaoServico,
   SolicitacaoServicoFormData,
   AdicionarComentarioDto,
+  SolicitacoesFilters,
 } from '../types';
 
 export function useSolicitacoesApi() {
@@ -18,7 +19,7 @@ export function useSolicitacoesApi() {
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchSolicitacoes = useCallback(async (params: any = {}) => {
+  const fetchSolicitacoes = useCallback(async (params: SolicitacoesFilters = {}) => {
     try {
       setLoading(true);
       const response: SolicitacoesResponse = await solicitacoesServicoService.findAll(params);

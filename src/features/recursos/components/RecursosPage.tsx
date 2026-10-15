@@ -15,7 +15,10 @@ import { Button } from '@/components/ui/button';
 import { Plus, Package } from 'lucide-react';
 import { useUserStore } from '@/store/useUserStore';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
-import type { QueryRecursosParams, RecursoApiResponse } from '@/services/recursos.services';
+import type { CategoriaRecurso, QueryRecursosParams, RecursoApiResponse } from '@/services/recursos.services';
+
+/** Os filtros como a tela guarda: a categoria pode ser 'all', o "sem filtro" do BaseFilters. */
+type FiltrosDaTela = Omit<QueryRecursosParams, 'categoria'> & { categoria?: CategoriaRecurso | 'all' };
 import { recursosTableColumns } from '../config/table-config';
 import { recursosFilterConfig } from '../config/filter-config';
 import { useRecursos } from '../hooks/useRecursos';
@@ -34,7 +37,7 @@ export function RecursosPage() {
   const podeGerenciar = hasPermission('recursos.manage');
 
   const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('recursos');
-  const [filtrosBrutos, setFiltrosBrutos] = useState<Record<string, any>>(() => ({
+  const [filtrosBrutos, setFiltrosBrutos] = useState<FiltrosDaTela>(() => ({
     ...FILTROS_INICIAIS,
     limit: linhasPorPagina,
   }));
@@ -61,7 +64,7 @@ export function RecursosPage() {
 
   const [aRemover, setARemover] = useState<RecursoApiResponse | null>(null);
 
-  const mudarFiltro = (novos: Record<string, any>) => {
+  const mudarFiltro = (novos: Partial<FiltrosDaTela>) => {
     setFiltrosBrutos((atuais) => ({ ...atuais, ...novos, page: 1 }));
   };
 

@@ -13,6 +13,10 @@ import {
 import { useInstrucoesApi } from '../hooks/useInstrucoesApi';
 import { AnexoInstrucaoApiResponse, TipoAnexo } from '@/services/instrucoes.services';
 
+/** A mensagem do erro, quando ha uma. */
+const mensagemDoErro = (erro: unknown): string | undefined =>
+  erro instanceof Error ? erro.message : undefined;
+
 interface AnexosInstrucaoManagerProps {
   instrucaoId: string | null;
   readonly?: boolean;
@@ -39,8 +43,8 @@ export function AnexosInstrucaoManager({ instrucaoId, readonly = false, onFilesC
       setError(null);
       const lista = await getAnexos(instrucaoId!);
       setAnexos(lista);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao carregar anexos');
+    } catch (err) {
+      setError(mensagemDoErro(err) || 'Erro ao carregar anexos');
     } finally {
       setLoading(false);
     }
@@ -80,8 +84,8 @@ export function AnexosInstrucaoManager({ instrucaoId, readonly = false, onFilesC
         await uploadAnexo(instrucaoId!, file, `Anexo: ${file.name}`);
         await loadAnexos();
         event.target.value = '';
-      } catch (err: any) {
-        setError(err.message || 'Erro ao fazer upload do arquivo');
+      } catch (err) {
+        setError(mensagemDoErro(err) || 'Erro ao fazer upload do arquivo');
       } finally {
         setUploading(false);
       }
@@ -99,8 +103,8 @@ export function AnexosInstrucaoManager({ instrucaoId, readonly = false, onFilesC
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao fazer download do arquivo');
+    } catch (err) {
+      setError(mensagemDoErro(err) || 'Erro ao fazer download do arquivo');
     }
   };
 
@@ -109,8 +113,8 @@ export function AnexosInstrucaoManager({ instrucaoId, readonly = false, onFilesC
     try {
       await deleteAnexo(instrucaoId!, anexo.id);
       await loadAnexos();
-    } catch (err: any) {
-      setError(err.message || 'Erro ao excluir anexo');
+    } catch (err) {
+      setError(mensagemDoErro(err) || 'Erro ao excluir anexo');
     }
   };
 

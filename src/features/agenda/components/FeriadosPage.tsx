@@ -15,7 +15,8 @@ import {
   FeriadoResponse,
   CreateFeriadoData,
   UpdateFeriadoData,
-  QueryFeriadosParams
+  QueryFeriadosParams,
+  FeriadoFormData
 } from '../types';
 import { feriadosTableColumns } from '../config/table-config';
 import { usePlantas, createFeriadosFilterConfig } from '../config/filter-config';
@@ -108,11 +109,11 @@ export function FeriadosPage() {
       setFeriados(response.data);
       setTotalFeriados(response.pagination.total);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [FERIADOS PAGE] Erro ao carregar feriados:', error);
       toast({
         title: "Erro ao carregar feriados",
-        description: error.message || "Não foi possível carregar a lista de feriados.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar a lista de feriados.",
         variant: "destructive",
       });
       setFeriados([]);
@@ -162,11 +163,11 @@ export function FeriadosPage() {
   const fetchFeriadoDetails = async (id: string): Promise<FeriadoResponse | null> => {
     try {
       return await agendaService.getFeriadoById(id);
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [FERIADOS PAGE] Erro ao buscar detalhes do feriado:', error);
       toast({
         title: "Erro ao carregar feriado",
-        description: error.message || "Não foi possível carregar os detalhes do feriado.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar os detalhes do feriado.",
         variant: "destructive",
       });
       return null;
@@ -190,7 +191,7 @@ export function FeriadosPage() {
   };
 
   // Handler: Submissão do formulário
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: FeriadoFormData) => {
     setIsSubmitting(true);
 
     try {
@@ -220,12 +221,12 @@ export function FeriadosPage() {
       await fetchFeriados(filters);
       closeModal();
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [FERIADOS PAGE] Erro ao salvar feriado:', error);
 
       toast({
         title: modalState.mode === 'create' ? "Erro ao cadastrar feriado" : "Erro ao atualizar feriado",
-        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        description: (error instanceof Error && error.message) || "Ocorreu um erro interno. Tente novamente.",
         variant: "destructive",
       });
     } finally {

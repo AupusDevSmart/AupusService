@@ -81,6 +81,8 @@ export interface Equipamento extends BaseEntity {
 
   // Relacionamentos hierárquicos - TODOS CORRIGIDOS PARA STRING
   unidadeId?: string; // NOVO: Equipamentos UC agora pertencem a Unidades
+  /** Vem do transform (planta_id) e da localizacao que abre o cadastro. */
+  plantaId?: string;
   proprietarioId?: string;
   equipamentoPaiId?: string;
 
@@ -103,7 +105,7 @@ export interface Equipamento extends BaseEntity {
   /** A POSICAO onde este equipamento esta instalado. */
   ativo_funcional_id?: string;
   ativoFuncionalId?: string;
-  ativo_funcional?: { id: string; nome: string; categoria_id?: string };
+  ativo_funcional?: { id: string; nome: string; categoria_id?: string } | null;
   /** O nome proprio do equipamento — `nome` traz o da posicao. */
   nome_proprio?: string;
 
@@ -157,6 +159,9 @@ export interface Equipamento extends BaseEntity {
   // Automacao (PR3) — equipamento expoe pontos (comando/status/medicao) para integracao com TONs.
   // Ver tipos PontoEquipamento abaixo + service equipamento-pontos.
   automacao?: boolean;
+  /** Os pontos do equipamento, como o findOne inclui (`pontos` e o nome que o sheet aceita tambem). */
+  equipamento_pontos?: PontoEquipamento[];
+  pontos?: PontoEquipamento[];
 
   // Campos MCPSE
   mcpse?: boolean;
@@ -335,6 +340,7 @@ export interface EstatisticasPlanta {
 }
 
 export interface ComponentesGerenciamento {
+  /** Nulo quando a consulta falhou (o hook devolve a lista vazia e o erro). */
   equipamentoUC: {
     id: string;
     nome: string;
@@ -348,7 +354,7 @@ export interface ComponentesGerenciamento {
       id: string;
       nome: string;
     };
-  };
+  } | null;
   componentes: Equipamento[];
 }
 
@@ -393,6 +399,15 @@ export const validateEquipamentoData = (data: EquipamentoFormData): {
 export const isUC = (equipamento: Equipamento): boolean => {
   return equipamento.classificacao === 'UC';
 };
+
+/**
+ * O id do equipamento que o `onSubmit` de um sheet devolveu, aparado — ou
+ * `undefined` quando ele nao devolveu um equipamento (edicao, erro).
+ */
+export const idDoEquipamentoCriado = (retorno: unknown): string | undefined =>
+  typeof retorno === 'object' && retorno !== null && 'id' in retorno && typeof retorno.id === 'string'
+    ? retorno.id.trim()
+    : undefined;
 
 export const isUAR = (equipamento: Equipamento): boolean => {
   return equipamento.classificacao === 'UAR';

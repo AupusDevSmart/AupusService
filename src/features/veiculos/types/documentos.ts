@@ -1,7 +1,7 @@
 // src/features/veiculos/types/documentos.ts
 export interface DocumentoVeiculoResponse {
   id: string;
-  veiculoId: number;
+  veiculoId: string;
   nome_original: string;
   nome_arquivo: string;
   tipo: string;

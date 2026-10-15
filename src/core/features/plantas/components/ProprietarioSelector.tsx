@@ -5,6 +5,7 @@ import { Button } from '@/core/components/ui/button';
 import { Combobox, ComboboxOption } from '@/core/components/ui/combobox';
 import { useProprietariosForPlantas, useHttpClient } from '@/core/context/hooks';
 import { ProprietarioBasico } from '@/core/types/contracts';
+import type { Planta } from '../types';
 
 interface ProprietarioSelectorProps {
   value: string | null;
@@ -30,32 +31,35 @@ export function ProprietarioSelector({ value, onChange, disabled }: Proprietario
 
       // Se há um value, buscar o proprietário atual (pode não estar na lista inicial)
       if (value) {
-        const proprietarioNaLista = data.find((p: any) => p.id === value);
+        const proprietarioNaLista = data.find((p) => p.id === value);
         if (proprietarioNaLista) {
           setCurrentProprietario(proprietarioNaLista as ProprietarioBasico);
         } else {
           // Se o proprietário atual não está na lista, buscar seus dados
-          httpClient.get('/plantas', {
+          httpClient.get<{ data?: Planta[] }>('/plantas', {
             params: { proprietarioId: value, page: 1, limit: 1 }
           }).then((response) => {
             const plantaData = response.data;
             if (plantaData.data?.[0]?.proprietario) {
               const prop = plantaData.data[0].proprietario;
+              // A rota manda `cpf_cnpj` (lia `cpfCnpj`, que nao vem: o documento saia vazio no rotulo).
               setCurrentProprietario({
                 id: prop.id,
                 nome: prop.nome,
-                cpf_cnpj: prop.cpfCnpj || ''
-              } as ProprietarioBasico);
+                cpf_cnpj: prop.cpf_cnpj || '',
+                tipo: prop.tipo,
+              });
 
               // Adicionar à lista se não estiver presente
-              const proprietarioJaExiste = data.some((p: any) => p.id === prop.id);
+              const proprietarioJaExiste = data.some((p) => p.id === prop.id);
               if (!proprietarioJaExiste) {
                 setProprietarios(prev => [
                   {
                     id: prop.id,
                     nome: prop.nome,
-                    cpf_cnpj: prop.cpfCnpj || ''
-                  } as ProprietarioBasico,
+                    cpf_cnpj: prop.cpf_cnpj || '',
+                    tipo: prop.tipo,
+                  },
                   ...prev
                 ]);
               }

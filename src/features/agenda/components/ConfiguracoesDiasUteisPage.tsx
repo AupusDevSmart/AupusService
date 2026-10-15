@@ -22,7 +22,8 @@ import { usePlantas, createConfiguracoesDiasUteisFilterConfig } from '../config/
 import {
   configuracoesDiasUteisFormFields,
   configuracoesDiasUteisFormGroups,
-  transformConfiguracaoDiasUteisFormData
+  transformConfiguracaoDiasUteisFormData,
+  type ConfiguracaoDiasUteisDoFormulario
 } from '../config/form-config';
 
 const initialFilters: ConfiguracoesDiasUteisFilters = {
@@ -94,11 +95,11 @@ export function ConfiguracoesDiasUteisPage() {
       setConfiguracoes(response.data);
       setTotalConfiguracoes(response.pagination.total);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Erro ao carregar configurações:', error);
       toast({
         title: "Erro ao carregar configurações",
-        description: error.message || "Não foi possível carregar a lista de configurações.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar a lista de configurações.",
         variant: "destructive",
       });
       setConfiguracoes([]);
@@ -148,11 +149,11 @@ export function ConfiguracoesDiasUteisPage() {
   const fetchConfiguracaoDetails = async (id: string): Promise<ConfiguracaoDiasUteisResponse | null> => {
     try {
       return await agendaService.getConfiguracaoDiasUteisById(id);
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Erro ao buscar detalhes da configuração:', error);
       toast({
         title: "Erro ao carregar configuração",
-        description: error.message || "Não foi possível carregar os detalhes da configuração.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar os detalhes da configuração.",
         variant: "destructive",
       });
       return null;
@@ -176,7 +177,7 @@ export function ConfiguracoesDiasUteisPage() {
   };
 
   // Handler: Submissão do formulário
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: ConfiguracaoDiasUteisDoFormulario) => {
     setIsSubmitting(true);
 
     try {
@@ -206,12 +207,12 @@ export function ConfiguracoesDiasUteisPage() {
       await fetchConfiguracoes(filters);
       closeModal();
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Erro ao salvar configuração:', error);
 
       toast({
         title: modalState.mode === 'create' ? "Erro ao cadastrar configuração" : "Erro ao atualizar configuração",
-        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        description: (error instanceof Error && error.message) || "Ocorreu um erro interno. Tente novamente.",
         variant: "destructive",
       });
     } finally {

@@ -16,7 +16,7 @@ import { Button } from '@/core/components/ui/button';
 import { Plus, Factory, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/core/hooks/useGenericModal';
 import { toast } from '@/core/hooks/use-toast';
-import { PlantasFilters } from '../types';
+import type { Endereco, PaginatedPlantasResponse, PlantaApiResponse, PlantasFilters } from '../types';
 import { plantasTableColumns } from '../config/table-config';
 import { useProprietarios } from '../config/filter-config';
 import { useUserStore, usePlantasFeature, useHttpClient } from '@/core/context/hooks';
@@ -30,6 +30,12 @@ const initialFilters: PlantasFilters = {
   page: 1,
   limit: LINHAS_POR_PAGINA_PADRAO
 };
+
+/**
+ * A planta de uma linha: a da lista vem com o endereco aninhado; a que alimenta
+ * o combobox de plantas vem achatada (uf, cidade). Ver handleNovaInstalacao.
+ */
+type PlantaDaLinha = PlantaApiResponse & { uf?: string; cidade?: string };
 
 interface PlantasPageProps {
   /**
@@ -51,7 +57,7 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
   const plantasFeature = usePlantasFeature();
 
   // Estados locais
-  const [plantas, setPlantas] = useState<any[]>([]);
+  const [plantas, setPlantas] = useState<PlantaApiResponse[]>([]);
 
   // Estado em lote, acoes de linha e dialogo de confirmacao das PLANTAS.
   // Uma consulta por pagina; uma por linha seria uma requisicao por planta so
@@ -93,7 +99,7 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
     modalState,
     openModal,
     closeModal
-  } = useGenericModal<any>();
+  } = useGenericModal<PlantaApiResponse>();
 
   // Linha expandida: as instalacoes da planta. Substitui a pagina
   // /cadastros/unidades, que deixou de existir.
@@ -128,18 +134,19 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
   // As instalacoes da linha expandida sao outro recurso, com estado e dialogo
   // proprios. Precisa vir DEPOIS do `useUnidades`: `instalacoes` e `const`, e
   // le-la antes da declaracao quebra em runtime por TDZ.
+  const listaDeInstalacoes: Unidade[] = instalacoes ?? [];
   const compartilhamentoInstalacoes = useAcoesDeCompartilhamento({
     recurso: 'unidades',
-    registros: (instalacoes ?? []) as any[],
+    registros: listaDeInstalacoes,
     habilitado: podeCompartilhar,
   });
 
-  const handleRowToggle = useCallback((planta: any) => {
+  const handleRowToggle = useCallback((planta: PlantaApiResponse) => {
     const id = planta?.id?.trim() || '';
     setPlantaExpandidaId((atual) => (atual === id ? null : id));
   }, []);
 
-  const handleNovaInstalacao = useCallback((planta: any) => {
+  const handleNovaInstalacao = useCallback((planta: PlantaDaLinha) => {
     const id = planta?.id?.trim() || null;
     setPlantaExpandidaId(id);
     // A planta ja vem da linha em que se clicou — nao faz sentido pedir de novo
@@ -156,15 +163,16 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
     // com o endereco aninhado (Planta.endereco.uf), enquanto a lista que
     // alimenta o combobox achata para planta.uf. Ler so uma das formas funciona
     // num caminho e devolve undefined no outro.
-    const endereco = (planta as any)?.endereco || {};
+    const endereco: Partial<Endereco> = planta?.endereco || {};
     const uf = String(endereco.uf ?? planta?.uf ?? '').trim();
     const cidade = String(endereco.cidade ?? planta?.cidade ?? '').trim();
 
+    // Semente do formulario: so o que a linha ja sabe (o resto o sheet preenche).
     abrirInstalacao('create', {
       plantaId: id,
       estado: uf,
       cidade,
-    } as unknown as Unidade);
+    } as Unidade);
   }, []);
 
   // Descarta resposta de requisição atrasada. Clicar rápido entre páginas
@@ -178,7 +186,7 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
     try {
       setLoading(true);
 
-      const params: any = {
+      const params = {
         page: currentFilters.page,
         limit: currentFilters.limit,
         search: currentFilters.search || undefined,
@@ -188,20 +196,20 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
       };
 
 
-      const response = await httpClient.get('/plantas', { params });
+      const response = await httpClient.get<PaginatedPlantasResponse>('/plantas', { params });
       if (minhaVez !== requisicaoRef.current) return;
 
-      const { data: plantasData, pagination: paginationData } = unwrapApiResponse(response.data);
+      const { data: plantasData, pagination: paginationData } = unwrapApiResponse<PlantaApiResponse>(response.data);
       setPlantas(plantasData);
       setTotalPlantas(paginationData.total || plantasData.length);
 
-    } catch (error: any) {
+    } catch (error) {
       if (minhaVez !== requisicaoRef.current) return;
 
       console.error('[PLANTAS PAGE] Erro ao carregar plantas:', error);
       toast({
         title: "Erro ao carregar plantas",
-        description: error.message || "Não foi possível carregar a lista de plantas.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar a lista de plantas.",
         variant: "destructive",
       });
       setPlantas([]);
@@ -285,14 +293,14 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
   const filteredByProprietario = !!proprietarioInfo;
 
   // ✅ HANDLER: Buscar dados detalhados da planta para modal
-  const fetchPlantaDetails = async (id: string): Promise<any | null> => {
+  const fetchPlantaDetails = async (id: string): Promise<PlantaApiResponse | null> => {
     try {
       return await plantasFeature.obterPlanta(id);
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [PLANTAS PAGE] Erro ao buscar detalhes da planta:', error);
       toast({
         title: "Erro ao carregar planta",
-        description: error.message || "Não foi possível carregar os detalhes da planta.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar os detalhes da planta.",
         variant: "destructive",
       });
       return null;
@@ -300,7 +308,7 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
   };
 
   // ✅ HANDLER: Visualizar planta (otimista)
-  const handleView = async (planta: any) => {
+  const handleView = async (planta: PlantaApiResponse) => {
     // Abrir modal IMEDIATAMENTE com dados básicos
     openModal('view', planta);
     // Carregar detalhes em background
@@ -316,7 +324,7 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
   };
 
   // ✅ HANDLER: Editar planta (otimista)
-  const handleEdit = async (planta: any) => {
+  const handleEdit = async (planta: PlantaApiResponse) => {
     // Abrir modal IMEDIATAMENTE com dados básicos
     openModal('edit', planta);
     // Carregar detalhes em background
@@ -452,9 +460,9 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
               ]}
               expandedRowId={plantaExpandidaId}
               onRowToggle={handleRowToggle}
-              renderExpandedRow={(planta: any) => (
+              renderExpandedRow={(planta) => (
                 <InstalacoesExpandedRow
-                  unidades={(instalacoes ?? []) as Unidade[]}
+                  unidades={listaDeInstalacoes}
                   carregando={carregandoInstalacoes}
                   somenteLeitura={!podeGerenciarInstalacoes}
                   onVisualizar={(unidade) => abrirInstalacao('view', unidade)}

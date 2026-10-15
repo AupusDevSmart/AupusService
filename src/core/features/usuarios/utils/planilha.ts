@@ -194,9 +194,9 @@ async function plantasDosOperadores(usuarios: UsuarioDaApi[]) {
 }
 
 export async function exportarUsuarios(filtros: FiltrosDeUsuarios) {
-  const usuarios = (await todasAsPaginas((page, limit) =>
+  const usuarios: UsuarioDaApi[] = await todasAsPaginas((page, limit) =>
     UsuariosService.getAllUsuarios({ ...filtros, page, limit }),
-  )) as unknown as UsuarioDaApi[];
+  );
   await plantasDosOperadores(usuarios);
   await exportarPlana(definicaoDeUsuarios, usuarios);
 }

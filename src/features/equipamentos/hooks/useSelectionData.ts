@@ -1,12 +1,19 @@
 // src/features/equipamentos/hooks/useSelectionData.ts - COM CARREGAMENTO OTIMIZADO
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { isAxiosError } from 'axios';
 import { 
   selectionDataService,
   ProprietarioSelection,
   PlantaSelection,
   TipoEquipamento,
-  SelectionOption
+  SelectionOption,
+  type CampoTecnico,
+  type NivelDaHierarquia,
 } from '@/services/selection-data.services';
+
+/** A mensagem do erro, quando ha uma. */
+const mensagemDoErro = (erro: unknown): string | undefined =>
+  erro instanceof Error ? erro.message : undefined;
 
 interface UseSelectionDataReturn {
   // Estados de loading
@@ -25,7 +32,7 @@ interface UseSelectionDataReturn {
   // Funções para carregar dados
   fetchProprietarios: () => Promise<ProprietarioSelection[]>;
   fetchPlantas: (proprietarioId?: string) => Promise<PlantaSelection[]>;
-  fetchHierarquiaNivel: (nivel: string, parentId?: string) => Promise<any[]>;
+  fetchHierarquiaNivel: (nivel: string, parentId?: string) => Promise<NivelDaHierarquia[]>;
   fetchTiposEquipamentos: () => Promise<TipoEquipamento[]>;
   fetchEquipamentosUC: (plantaId?: string) => Promise<SelectionOption[]>;
   
@@ -33,7 +40,7 @@ interface UseSelectionDataReturn {
   getProprietarioById: (id: string) => ProprietarioSelection | null;
   getPlantaById: (id: string) => PlantaSelection | null;
   getTipoEquipamentoById: (id: string) => TipoEquipamento | null;
-  getCamposTecnicosPorTipo: (tipo: string) => any[];
+  getCamposTecnicosPorTipo: (tipo: string) => CampoTecnico[];
   
   // Estados para o modal
   error: string | null;
@@ -75,13 +82,13 @@ export function useSelectionData(): UseSelectionDataReturn {
       
       setProprietarios(data);
       return data;
-    } catch (error: any) {
+    } catch (error) {
       // 403 e esperado para roles sem `usuarios.view`. Nao mostrar banner de erro.
-      if (error?.response?.status === 403) {
+      if (isAxiosError(error) && error.response?.status === 403) {
         console.warn('[HOOK] Sem permissao para listar proprietarios (403). Lista fica vazia.');
       } else {
         console.error('❌ [HOOK] Erro ao carregar proprietários:', error);
-        const errorMessage = error.message || 'Erro ao carregar proprietários';
+        const errorMessage = mensagemDoErro(error) || 'Erro ao carregar proprietários';
         setError(`Erro ao carregar proprietários: ${errorMessage}`);
       }
       setProprietarios([]); // Limpar dados em caso de erro
@@ -113,9 +120,9 @@ export function useSelectionData(): UseSelectionDataReturn {
       
       setPlantas(data);
       return data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [HOOK] Erro ao carregar plantas:', error);
-      const errorMessage = error.message || 'Erro ao carregar plantas';
+      const errorMessage = mensagemDoErro(error) || 'Erro ao carregar plantas';
       setError(`Erro ao carregar plantas: ${errorMessage}`);
       setPlantas([]); // Limpar dados em caso de erro
       return [];
@@ -127,14 +134,14 @@ export function useSelectionData(): UseSelectionDataReturn {
   // ============================================================================
   // HIERARQUIA
   // ============================================================================
-  const fetchHierarquiaNivel = useCallback(async (nivel: string, parentId?: string): Promise<any[]> => {
+  const fetchHierarquiaNivel = useCallback(async (nivel: string, parentId?: string): Promise<NivelDaHierarquia[]> => {
     try {
       setLoadingHierarquia(true);
       setError(null);
       return await selectionDataService.getHierarquiaNivel(nivel, parentId);
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [HOOK] Erro ao carregar ${nivel}:`, error);
-      const errorMessage = error.message || `Erro ao carregar ${nivel}`;
+      const errorMessage = mensagemDoErro(error) || `Erro ao carregar ${nivel}`;
       setError(`Erro ao carregar ${nivel}: ${errorMessage}`);
       return [];
     } finally {
@@ -156,9 +163,9 @@ export function useSelectionData(): UseSelectionDataReturn {
       
       setTiposEquipamentos(data);
       return data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [HOOK] Erro ao carregar tipos de equipamentos:', error);
-      const errorMessage = error.message || 'Erro ao carregar tipos de equipamentos';
+      const errorMessage = mensagemDoErro(error) || 'Erro ao carregar tipos de equipamentos';
       setError(`Erro ao carregar tipos: ${errorMessage}`);
       setTiposEquipamentos([]); // Limpar dados em caso de erro
       return [];
@@ -178,9 +185,9 @@ export function useSelectionData(): UseSelectionDataReturn {
       const data = await selectionDataService.getEquipamentosUCDisponiveis(plantaId);
       setEquipamentosUC(data);
       return data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [HOOK] Erro ao carregar equipamentos UC:', error);
-      const errorMessage = error.message || 'Erro ao carregar equipamentos UC';
+      const errorMessage = mensagemDoErro(error) || 'Erro ao carregar equipamentos UC';
       setError(`Erro ao carregar equipamentos UC: ${errorMessage}`);
       setEquipamentosUC([]);
       return [];

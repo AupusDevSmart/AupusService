@@ -69,13 +69,13 @@ export function useConfiguracoesDiasUteis(): UseConfiguracoesDiasUteisResult {
         count: response.data.length
       });
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [useConfiguracoesDiasUteis] Erro ao buscar configurações:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       toast({
         title: "Erro ao carregar configurações",
-        description: error.message || "Não foi possível carregar as configurações.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar as configurações.",
         variant: "destructive",
       });
     } finally {
@@ -102,13 +102,13 @@ export function useConfiguracoesDiasUteis(): UseConfiguracoesDiasUteisResult {
         data: novaConfiguracao
       };
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [useConfiguracoesDiasUteis] Erro ao criar configuração:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : undefined
       };
     } finally {
       setLoading(prev => ({ ...prev, isCreating: false }));
@@ -134,13 +134,13 @@ export function useConfiguracoesDiasUteis(): UseConfiguracoesDiasUteisResult {
         data: configuracaoAtualizada
       };
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [useConfiguracoesDiasUteis] Erro ao atualizar configuração:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : undefined
       };
     } finally {
       setLoading(prev => ({ ...prev, isUpdating: false }));
@@ -167,13 +167,13 @@ export function useConfiguracoesDiasUteis(): UseConfiguracoesDiasUteisResult {
         variant: "default",
       });
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [useConfiguracoesDiasUteis] Erro ao deletar configuração:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       toast({
         title: "Erro ao excluir configuração",
-        description: error.message || "Não foi possível excluir a configuração.",
+        description: (error instanceof Error && error.message) || "Não foi possível excluir a configuração.",
         variant: "destructive",
       });
     } finally {

@@ -16,7 +16,7 @@ import { useExecucaoOSApi } from '../hooks/useExecucaoOSApi';
 import { useExecucaoOSFilters } from '../hooks/useExecucaoOSFilters';
 import { execucaoOSTableColumns } from '../config/table-config';
 import { createExecucaoOSTableActions } from '../config/actions-config';
-import { ActionConfirmPanel, type PendingAction } from './ActionConfirmPanel';
+import { ActionConfirmPanel, type PendingAction, type DadosDaConfirmacao } from './ActionConfirmPanel';
 import { AcoesDaOS } from './AcoesDaOS';
 import { OQueFoiFeito } from './OQueFoiFeito';
 import { AnexosDaOS } from './AnexosDaOS';
@@ -29,7 +29,8 @@ import { statusDaExecucao } from '../config/actions-config';
 
 // Tipos
 import type { ExecucaoOS, ExecucaoOSFilters } from '../types';
-import { execucaoOSTransitionsService } from '@/services/execucao-os-transitions.service';
+import { execucaoOSTransitionsService, type ExecutarOSDto } from '@/services/execucao-os-transitions.service';
+import type { IconeDeAcao } from '@/core/types/base';
 import { toast } from '@/hooks/use-toast';
 import { formatApiError } from '@/utils/api-error';
 import { execucaoOSApi } from '@/services/execucao-os.service';
@@ -82,7 +83,7 @@ export function ExecucaoOSPage() {
   const { modalState, openModal, closeModal } = useGenericModal<ExecucaoOS>();
 
   useEffect(() => {
-    const os = modalState.entity as (ExecucaoOS & { checklist?: never[]; tarefas_os?: never[] }) | null;
+    const os = modalState.entity;
     setProgresso(montarProgresso(os?.tarefas_os ?? [], os?.checklist ?? []));
   }, [modalState.entity]);
 
@@ -125,7 +126,7 @@ export function ExecucaoOSPage() {
   };
 
   // Confirm action handler - recebe objeto com todos os campos do painel
-  const handleConfirmAction = async (data: Record<string, any>) => {
+  const handleConfirmAction = async (data: DadosDaConfirmacao) => {
     if (!pendingAction || !modalState.entity) return;
 
     const entity = modalState.entity;
@@ -145,7 +146,8 @@ export function ExecucaoOSPage() {
           await execucaoOSTransitionsService.retomar(entity.id, data);
           break;
         case 'executar':
-          await execucaoOSTransitionsService.executar(entity.id, data as any);
+          // resultado_servico é obrigatório no painel: não confirma sem ele
+          await execucaoOSTransitionsService.executar(entity.id, data as ExecutarOSDto);
           break;
         case 'auditar':
           await execucaoOSTransitionsService.auditar(entity.id, {
@@ -262,12 +264,12 @@ export function ExecucaoOSPage() {
 
     const registros = registrosAlterados(
       {
-        materiais: (entity.materiaisConsumidos ?? []) as never[],
-        ferramentas: (entity.ferramentasUtilizadas ?? []) as never[],
+        materiais: entity.materiaisConsumidos ?? [],
+        ferramentas: entity.ferramentasUtilizadas ?? [],
       },
       {
-        materiais: (data.materiaisConsumidos ?? []) as never[],
-        ferramentas: (data.ferramentasUtilizadas ?? []) as never[],
+        materiais: data.materiaisConsumidos ?? [],
+        ferramentas: data.ferramentasUtilizadas ?? [],
       },
     );
 
@@ -373,14 +375,17 @@ export function ExecucaoOSPage() {
             <BaseTable
               data={items}
               columns={execucaoOSTableColumns}
-              customActions={actions.map((action: any) => ({
-                key: action.label.toLowerCase().replace(' ', ''),
-                label: action.label,
-                handler: action.onClick,
-                condition: action.condition,
-                icon: action.icon ? <action.icon className="h-4 w-4" /> : undefined,
-                variant: action.variant,
-              }))}
+              customActions={actions.map((action) => {
+                const Icone = action.icon as IconeDeAcao | undefined;
+                return {
+                  key: action.label.toLowerCase().replace(' ', ''),
+                  label: action.label,
+                  handler: action.onClick,
+                  condition: action.condition,
+                  icon: Icone ? <Icone className="h-4 w-4" /> : undefined,
+                  variant: action.variant,
+                };
+              })}
               loading={loading}
               pagination={{
                 page: currentPage,

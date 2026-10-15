@@ -1,6 +1,7 @@
 // src/features/fornecedores/config/form-config.tsx - SOLUÇÃO COMPLETA
 import React from 'react';
 import { FormField, FormFieldProps } from '@/types/base';
+import type { EnderecoFornecedor, TipoFornecedor } from '../types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +16,7 @@ import {
 } from 'lucide-react';
 
 // ✅ COMPONENTE CORRIGIDO: Seletor de Tipo com callback
-const TipoFornecedorSelector = ({ value, onChange, disabled, onTypeChange }: FormFieldProps & { onTypeChange?: (tipo: string) => void }) => {
+const TipoFornecedorSelector = ({ value, onChange, disabled, onTypeChange }: FormFieldProps & { onTypeChange?: (tipo: TipoFornecedor) => void }) => {
   const handleTipoChange = (novoTipo: 'pessoa_fisica' | 'pessoa_juridica') => {
     onChange(novoTipo);
     // ✅ Notificar mudança de tipo para o componente pai
@@ -176,8 +177,8 @@ const StatusSelector = ({ value, onChange, disabled }: FormFieldProps) => {
 };
 
 // ✅ ENDEREÇO SIMPLIFICADO
-const EnderecoSimples = ({ value, onChange, disabled }: FormFieldProps) => {
-  const endereco = (value as any) || {};
+const EnderecoSimples = ({ value, onChange, disabled }: FormFieldProps & { value?: Partial<EnderecoFornecedor> }) => {
+  const endereco = value || {};
 
   const updateEndereco = (campo: string, valor: string) => {
     onChange({
@@ -440,7 +441,7 @@ const createFieldsForType = (tipo: 'pessoa_fisica' | 'pessoa_juridica'): FormFie
 };
 
 // ✅ CAMPOS BASE (sempre mostrados) - COM CALLBACK PARA TIPO
-const createCamposBase = (onTypeChange?: (tipo: string) => void): FormField[] => [
+const createCamposBase = (onTypeChange?: (tipo: TipoFornecedor) => void): FormField[] => [
   {
     key: 'tipo',
     label: 'Tipo de Fornecedor',
@@ -499,7 +500,7 @@ const createCamposBase = (onTypeChange?: (tipo: string) => void): FormField[] =>
 // ✅ FUNÇÃO PRINCIPAL: Gerar campos baseados no tipo
 export const getFornecedoresFormFields = (
   tipo: 'pessoa_fisica' | 'pessoa_juridica' = 'pessoa_juridica',
-  onTypeChange?: (tipo: string) => void
+  onTypeChange?: (tipo: TipoFornecedor) => void
 ): FormField[] => {
   const camposEspecificos = createFieldsForType(tipo);
   const camposBase = createCamposBase(onTypeChange);

@@ -75,10 +75,12 @@ export type Pagination = {
 // ✅ NOVOS TIPOS PARA TRANSFORMAÇÃO DE DADOS
 
 // Tipo para converter dados da API para o formato interno
-export type PlantaApiToInternal = (apiPlanta: any) => Planta;
+export type PlantaApiToInternal = (apiPlanta: PlantaApiResponse) => Planta;
 
 // Tipo para converter dados internos para formato da API
-export type PlantaInternalToApi = (internalPlanta: PlantaFormData) => any;
+export type PlantaInternalToApi = (
+  internalPlanta: PlantaFormData,
+) => Omit<PlantaApiResponse, 'id' | 'proprietario' | 'criadoEm' | 'atualizadoEm'>;
 
 // ✅ UTILITIES TYPES
 

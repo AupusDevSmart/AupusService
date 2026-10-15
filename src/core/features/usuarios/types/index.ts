@@ -223,13 +223,31 @@ export const SPATIE_TO_DB_ROLE_MAPPING = {
   'vendedor': 'vendedor',
 } as const;
 
+/** Uma permissao como pode chegar: o nome, ou um objeto com o nome em name, value ou permission. */
+type PermissaoRecebida = string | { name?: string; value?: string; permission?: string } | null;
+
+/** O papel como pode chegar em `roles`: o nome, ou o objeto { id, name, guard_name } do backend. */
+type PapelRecebido = string | { name?: string; value?: string } | null | undefined;
+
+/** O usuario com os ids do IBGE, quando a resposta os traz (camelCase ou snake_case). */
+type UsuarioComIdsDoIbge = Usuario & {
+  cidadeId?: string | number;
+  cidade_id?: string | number;
+  estadoId?: string | number;
+  estado_id?: string | number;
+};
+
+/** Estado e municipio como a API do IBGE devolve, no que se le aqui. */
+interface EstadoDoIbge { id: number; sigla: string }
+interface MunicipioDoIbge { id: number; nome: string }
+
 // ✅ FUNÇÃO AUXILIAR PARA EXTRAIR PERMISSÕES COMO STRINGS
 // Tolera variantes: array de strings, array de objetos {name|value|permission}, ou undefined.
 const extractPermissionNames = (permissions: UserPermission[] | string[] | undefined): string[] => {
   if (!Array.isArray(permissions)) return [];
 
   return permissions
-    .map((p: any) => {
+    .map((p: PermissaoRecebida) => {
       if (typeof p === 'string') return p;
       if (p && typeof p === 'object') {
         return p.name || p.value || p.permission || '';
@@ -260,8 +278,8 @@ export const mapUsuarioToFormDataAsync = async (usuario: Usuario): Promise<Usuar
     // Buscar estadoId pela sigla se necessário
     if (!estadoId && baseFormData.estado) {
       const response = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados');
-      const estados = await response.json();
-      const estado = estados.find((e: any) =>
+      const estados: EstadoDoIbge[] = await response.json();
+      const estado = estados.find((e) =>
         e.sigla.toLowerCase() === baseFormData.estado?.toLowerCase()
       );
       if (estado) {
@@ -274,8 +292,8 @@ export const mapUsuarioToFormDataAsync = async (usuario: Usuario): Promise<Usuar
       const response = await fetch(
         `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${estadoId}/municipios`
       );
-      const cidades = await response.json();
-      const cidade = cidades.find((c: any) =>
+      const cidades: MunicipioDoIbge[] = await response.json();
+      const cidade = cidades.find((c) =>
         c.nome.toLowerCase() === baseFormData.cidade?.toLowerCase()
       );
       if (cidade) {
@@ -303,7 +321,8 @@ export const mapUsuarioToFormData = (usuario: Usuario): UsuarioFormData => {
   if (usuario.role_details?.name) {
     primaryRoleName = usuario.role_details.name;
   } else if (usuario.roles && usuario.roles.length > 0) {
-    const first: any = usuario.roles[0];
+    // `as` alarga: roles declara string[], mas o detalhe traz o papel como objeto.
+    const first = usuario.roles[0] as PapelRecebido;
     if (typeof first === 'string') {
       primaryRoleName = first;
     } else if (first && typeof first === 'object') {
@@ -324,6 +343,7 @@ export const mapUsuarioToFormData = (usuario: Usuario): UsuarioFormData => {
     statusNormalizado = UsuarioStatus.INATIVO;
   }
   
+  const comIdsDoIbge: UsuarioComIdsDoIbge = usuario;
   const formData = {
     id: usuario.id,
     nome: usuario.nome,
@@ -333,9 +353,9 @@ export const mapUsuarioToFormData = (usuario: Usuario): UsuarioFormData => {
     status: statusNormalizado,
     cpfCnpj: usuario.cpf_cnpj,
     cidade: usuario.cidade,
-    cidadeId: (usuario as any).cidadeId || (usuario as any).cidade_id,
+    cidadeId: comIdsDoIbge.cidadeId || comIdsDoIbge.cidade_id,
     estado: usuario.estado,
-    estadoId: (usuario as any).estadoId || (usuario as any).estado_id,
+    estadoId: comIdsDoIbge.estadoId || comIdsDoIbge.estado_id,
     endereco: usuario.endereco,
     cep: usuario.cep,
     concessionariaAtualId: usuario.concessionaria_atual_id,

@@ -1,10 +1,10 @@
 // src/features/anomalias/config/form-config.tsx
-import { FormField } from '@/types/base';
-import { LocalizacaoController } from '../components/LocalizacaoController';
+import { FormField, FormFieldProps } from '@/types/base';
+import { LocalizacaoController, type LocalizacaoControllerProps } from '../components/LocalizacaoController';
 import { AnexosUpload } from '../components/AnexosUpload';
 
 // ✅ SOLUÇÃO: Extrair renders como funções estáveis FORA do array
-const LocalizacaoRender = ({ value, onChange, disabled, mode, entity }: any) => (
+const LocalizacaoRender = ({ value, onChange, disabled, mode, entity }: LocalizacaoControllerProps) => (
   <LocalizacaoController
     value={value}
     onChange={onChange}
@@ -14,7 +14,7 @@ const LocalizacaoRender = ({ value, onChange, disabled, mode, entity }: any) => 
   />
 );
 
-const AnexosRender = ({ value, onChange, disabled, mode, entity }: any) => (
+const AnexosRender = ({ value, onChange, disabled, mode, entity }: FormFieldProps & { mode?: 'create' | 'edit' | 'view' }) => (
   <AnexosUpload 
     value={value} 
     onChange={onChange} 

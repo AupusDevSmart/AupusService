@@ -32,6 +32,7 @@ export type OrigemOS =
   | 'ANOMALIA'
   | 'TAREFA'
   | 'PLANO_MANUTENCAO'
+  | 'SOLICITACAO_SERVICO'
   | 'MANUAL';
 
 // Aliases para compatibilidade
@@ -48,6 +49,46 @@ export interface ItemOrcamento {
   id?: string;
   descricao: string;
   valor: number;
+}
+
+/**
+ * Tarefas escolhidas por plano, como o seletor de vários planos gravava no
+ * `dados_origem`. Quem lê hoje só conta as chaves (os planos).
+ */
+export interface TarefasPorPlano {
+  [planoId: string]: {
+    plano?: unknown;
+    tarefas?: unknown[];
+    expanded?: boolean;
+  };
+}
+
+/**
+ * `dados_origem` da programação (a OS copia): JSON livre. O formulário grava o
+ * valor do seletor de origem; o backend (from-anomalia, from-solicitacao,
+ * from-tarefas) e o cron acrescentam chaves próprias. Aqui, só as que a tela lê.
+ */
+export interface DadosOrigem {
+  // Do seletor de origem (OrigemOSValue)
+  tipo?: string;
+  anomaliaId?: string;
+  planoId?: string;
+  solicitacaoServicoId?: string;
+  plantaId?: string;
+  unidadeId?: string;
+  equipamentoId?: string;
+  planosSelecionados?: string[];
+  tarefasSelecionadas?: string[];
+  tarefasPorPlano?: TarefasPorPlano;
+  // Do backend e do cron
+  numero?: string;
+  solicitacao_id?: string;
+  tarefas_ids?: string[];
+  tarefas_nomes?: string[];
+  tarefas_tags?: string[];
+  tarefas_count?: number;
+  unidade_nome?: string;
+  auto_gerada?: boolean;
 }
 
 export interface MaterialProgramacaoOS {
@@ -101,7 +142,7 @@ export interface HistoricoProgramacaoOS {
   observacoes?: string;
   status_anterior?: StatusProgramacao;
   status_novo?: StatusProgramacao;
-  dados_extras?: any;
+  dados_extras?: Record<string, unknown> | null;
 }
 
 // ========================================
@@ -128,7 +169,7 @@ export interface ProgramacaoOS extends BaseEntity {
   equipamento_id?: string;
   anomalia_id?: string;
   plano_manutencao_id?: string;
-  dados_origem?: any;
+  dados_origem?: DadosOrigem | null;
 
   // Planejamento
   data_previsao_inicio?: string; // ISO DateTime string
@@ -229,7 +270,7 @@ export interface CreateProgramacaoDto {
   equipamento_id?: string;
   anomalia_id?: string;
   plano_manutencao_id?: string;
-  dados_origem?: any;
+  dados_origem?: DadosOrigem;
   tempo_estimado: number;
   duracao_estimada: number;
   data_previsao_inicio?: string; // ISO DateTime string
@@ -287,7 +328,7 @@ export interface OrdemServicoFormData {
   condicoes: CondicaoOS;
   tipo: TipoOS;
   prioridade: PrioridadeOS;
-  origem: OrigemOS | any; // Aceita estruturas complexas
+  origem: OrigemOS | DadosOrigem; // Aceita estruturas complexas
   
   // Relacionamentos
   plantaId?: string;
@@ -346,7 +387,7 @@ export interface ProgramacaoOSFormData {
 // ========================================
 
 export interface ViaturaReservadaOS {
-  veiculoId: number;
+  veiculoId: string;
   dataInicio: string;
   dataFim: string;
   horaInicio: string;
@@ -372,11 +413,11 @@ export interface IniciarExecucaoData {
 // ESTADO DO MODAL
 // ========================================
 
-export interface ModalState<T = any> {
+export interface ModalState<T = unknown> {
   isOpen: boolean;
   mode: ModalMode | 'programar';
   entity: T | null;
-  preselectedData?: any;
+  preselectedData?: Record<string, unknown>;
   // Compatibilidade
   ordemServico?: T | null;
 }

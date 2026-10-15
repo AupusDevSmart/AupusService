@@ -27,9 +27,9 @@ export const useProprietarios = () => {
       const proprietariosArray = Array.isArray(data) ? data : [];
       setProprietarios(proprietariosArray);
 
-    } catch (err: any) {
+    } catch (err) {
       console.error('❌ [USE PROPRIETARIOS] Erro:', err);
-      setError(err.message || 'Erro ao carregar proprietários');
+      setError((err instanceof Error && err.message) || 'Erro ao carregar proprietários');
       // Em caso de erro, garantir array vazio
       setProprietarios([]);
     } finally {

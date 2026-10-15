@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { History, Loader2, PackageMinus, ArrowRightLeft } from 'lucide-react';
 import { Combobox } from '@/core/components/ui/combobox';
 import { useAtivosFuncionais } from '../hooks/useAtivosFuncionais';
+import { mensagemDoBackend } from '@/core/features/equipamentos/utils/mensagem-do-backend';
 import { Button } from '@/core/components/ui/button';
 import {
   useVinculoDaPosicao,
@@ -71,8 +72,8 @@ export function HistoricoDaPosicao({
       setMotivo('');
       setPosicao(await buscar(posicaoId));
       onMudou?.();
-    } catch (e: any) {
-      setErro(e?.response?.data?.message ?? 'Nao foi possivel remover');
+    } catch (e) {
+      setErro(mensagemDoBackend(e) ?? 'Nao foi possivel remover');
     } finally {
       setRemovendo(false);
     }
@@ -90,8 +91,8 @@ export function HistoricoDaPosicao({
       setDestino(""); setMotivo("");
       setPosicao(await buscar(posicaoId!));
       onMudou?.();
-    } catch (e: any) {
-      setErro(e?.response?.data?.message ?? "Nao foi possivel transferir");
+    } catch (e) {
+      setErro(mensagemDoBackend(e) ?? "Nao foi possivel transferir");
     } finally {
       setTransferindo(false);
     }

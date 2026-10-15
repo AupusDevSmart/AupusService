@@ -17,7 +17,7 @@ import { useInstrucoesApi } from '../hooks/useInstrucoesApi';
 import { useInstrucoesFilters } from '../hooks/useInstrucoesFilters';
 import { InstrucoesBreadcrumb } from './InstrucoesBreadcrumb';
 import { InstrucoesDashboard } from './InstrucoesDashboard';
-import { InstrucoesModal } from './InstrucoesModal';
+import { InstrucoesModal, type FormularioDaInstrucao } from './InstrucoesModal';
 import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
 import { exportarInstrucoes, lerInstrucoes } from '../utils/planilha';
 
@@ -134,7 +134,7 @@ export function InstrucoesPage() {
     await loadDashboard();
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: FormularioDaInstrucao) => {
     try {
       const readOnlyFields = [
         'id', 'created_at', 'updated_at', 'deleted_at',
@@ -218,7 +218,7 @@ export function InstrucoesPage() {
     const cleanedFilters = { ...newFilters };
     Object.keys(cleanedFilters).forEach(key => {
       if (cleanedFilters[key as keyof typeof cleanedFilters] === 'all') {
-        cleanedFilters[key as keyof typeof cleanedFilters] = undefined as any;
+        cleanedFilters[key as keyof typeof cleanedFilters] = undefined;
       }
     });
     setFilters(prev => ({ ...prev, ...cleanedFilters, page: 1 }));

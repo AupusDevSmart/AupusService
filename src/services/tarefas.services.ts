@@ -362,7 +362,7 @@ export class TarefasApiService {
       const response = await api.post<TarefaApiResponse>(this.baseEndpoint, payload);
       // console.log('✅ TAREFAS API: Tarefa criada com sucesso:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 TAREFAS API: Erro ao criar tarefa:', error);
       // console.error('💥 TAREFAS API: Detalhes do erro:', error.response?.data);
       throw error;
@@ -374,7 +374,7 @@ export class TarefasApiService {
 
     try {
       // Limpar parâmetros undefined/null antes de enviar
-      const cleanParams: any = {
+      const cleanParams: Record<string, unknown> = {
         page: params?.page || 1,
         limit: params?.limit || 10
       };
@@ -409,7 +409,7 @@ export class TarefasApiService {
       });
       console.log('🔵 [FRONTEND] Resposta da API:', response.data.pagination);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('💥 [FRONTEND] Erro ao listar tarefas:', error);
       throw error;
     }
@@ -425,7 +425,7 @@ export class TarefasApiService {
       console.log(`⏱️ [FRONTEND API] Busca concluída em ${tempo.toFixed(2)}ms`);
       console.log('✅ [FRONTEND API] Tarefa encontrada:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('💥 [FRONTEND API] Erro ao buscar tarefa:', error);
       throw error;
     }
@@ -439,7 +439,7 @@ export class TarefasApiService {
       const response = await api.put<TarefaApiResponse>(`${this.baseEndpoint}/${id.trim()}`, payload);
       // console.log('✅ TAREFAS API: Tarefa atualizada:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 TAREFAS API: Erro ao atualizar tarefa:', error);
       throw error;
     }
@@ -451,7 +451,7 @@ export class TarefasApiService {
     try {
       await api.delete(`${this.baseEndpoint}/${id}`);
       // console.log('✅ TAREFAS API: Tarefa excluída com sucesso');
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 TAREFAS API: Erro ao excluir tarefa:', error);
       throw error;
     }
@@ -468,7 +468,7 @@ export class TarefasApiService {
       const response = await api.get<DashboardTarefasDto>(`${this.baseEndpoint}/dashboard`);
       // console.log('✅ TAREFAS API: Dashboard obtido:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 TAREFAS API: Erro ao obter dashboard:', error);
       throw error;
     }
@@ -507,7 +507,7 @@ export class TarefasApiService {
 
       console.log('✅ TAREFAS API: Tarefas do plano encontradas (IDs validados):', response.data.length);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('💥 TAREFAS API: Erro ao buscar tarefas do plano:', error);
       throw error;
     }
@@ -522,7 +522,7 @@ export class TarefasApiService {
       });
       // console.log('✅ TAREFAS API: Tarefas do equipamento encontradas:', response.data.length);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 TAREFAS API: Erro ao buscar tarefas do equipamento:', error);
       throw error;
     }
@@ -537,7 +537,7 @@ export class TarefasApiService {
       });
       console.log('✅ TAREFAS API: Tarefas sem plano encontradas:', response.data.data.length);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('💥 TAREFAS API: Erro ao buscar tarefas sem plano:', error);
       throw error;
     }
@@ -553,7 +553,7 @@ export class TarefasApiService {
       );
       // console.log('✅ TAREFAS API: Status atualizado:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 TAREFAS API: Erro ao atualizar status:', error);
       throw error;
     }
@@ -569,7 +569,7 @@ export class TarefasApiService {
       );
       // console.log('✅ TAREFAS API: Tarefa reordenada:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 TAREFAS API: Erro ao reordenar tarefa:', error);
       throw error;
     }
@@ -588,7 +588,7 @@ export class TarefasApiService {
       );
       // console.log('✅ TAREFAS API: Anexos listados:', response.data.length);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 TAREFAS API: Erro ao listar anexos:', error);
       throw error;
     }
@@ -619,7 +619,7 @@ export class TarefasApiService {
       );
       // console.log('✅ TAREFAS API: Anexo enviado:', response.data);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 TAREFAS API: Erro ao enviar anexo:', error);
       throw error;
     }
@@ -637,7 +637,7 @@ export class TarefasApiService {
       );
       // console.log('✅ TAREFAS API: Download concluído');
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 TAREFAS API: Erro ao fazer download:', error);
       throw error;
     }
@@ -649,7 +649,7 @@ export class TarefasApiService {
     try {
       await api.delete(`${this.baseEndpoint}/${tarefaId}/anexos/${anexoId}`);
       // console.log('✅ TAREFAS API: Anexo excluído com sucesso');
-    } catch (error: any) {
+    } catch (error) {
       // console.error('💥 TAREFAS API: Erro ao excluir anexo:', error);
       throw error;
     }

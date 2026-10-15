@@ -15,10 +15,10 @@ interface UseDocumentosVeiculosReturn {
   error: string | null;
 
   // Ações
-  listarDocumentos: (veiculoId: number) => Promise<void>;
-  uploadDocumento: (veiculoId: number, uploadData: UploadDocumentoDto) => Promise<DocumentoVeiculoResponse>;
-  downloadDocumento: (veiculoId: number, documentoId: string) => Promise<void>;
-  removerDocumento: (veiculoId: number, documentoId: string) => Promise<void>;
+  listarDocumentos: (veiculoId: string) => Promise<void>;
+  uploadDocumento: (veiculoId: string, uploadData: UploadDocumentoDto) => Promise<DocumentoVeiculoResponse>;
+  downloadDocumento: (veiculoId: string, documentoId: string) => Promise<void>;
+  removerDocumento: (veiculoId: string, documentoId: string) => Promise<void>;
 
   // Utilitários
   clearError: () => void;
@@ -44,7 +44,7 @@ export const useDocumentosVeiculos = (): UseDocumentosVeiculosReturn => {
   }, []);
 
   // Listar documentos de um veículo
-  const listarDocumentos = useCallback(async (veiculoId: number) => {
+  const listarDocumentos = useCallback(async (veiculoId: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -55,8 +55,8 @@ export const useDocumentosVeiculos = (): UseDocumentosVeiculosReturn => {
 
       console.log('✅ [useDocumentosVeiculos] Documentos carregados:', documentosCarregados.length);
       setDocumentos(documentosCarregados);
-    } catch (err: any) {
-      const errorMessage = err?.message || 'Erro ao carregar documentos';
+    } catch (err) {
+      const errorMessage = (err instanceof Error && err.message) || 'Erro ao carregar documentos';
       console.error('❌ [useDocumentosVeiculos] Erro ao carregar documentos:', err);
       setError(errorMessage);
       setDocumentos([]);
@@ -67,7 +67,7 @@ export const useDocumentosVeiculos = (): UseDocumentosVeiculosReturn => {
 
   // Upload de documento
   const uploadDocumento = useCallback(async (
-    veiculoId: number,
+    veiculoId: string,
     uploadData: UploadDocumentoDto
   ): Promise<DocumentoVeiculoResponse> => {
     try {
@@ -95,8 +95,8 @@ export const useDocumentosVeiculos = (): UseDocumentosVeiculosReturn => {
       setDocumentos(prev => [novoDocumento, ...prev]);
 
       return novoDocumento;
-    } catch (err: any) {
-      const errorMessage = err?.message || 'Erro ao fazer upload do documento';
+    } catch (err) {
+      const errorMessage = (err instanceof Error && err.message) || 'Erro ao fazer upload do documento';
       console.error('❌ [useDocumentosVeiculos] Erro no upload:', err);
       setError(errorMessage);
       throw err;
@@ -107,7 +107,7 @@ export const useDocumentosVeiculos = (): UseDocumentosVeiculosReturn => {
   }, []);
 
   // Download de documento
-  const downloadDocumento = useCallback(async (veiculoId: number, documentoId: string) => {
+  const downloadDocumento = useCallback(async (veiculoId: string, documentoId: string) => {
     try {
       setError(null);
 
@@ -115,8 +115,8 @@ export const useDocumentosVeiculos = (): UseDocumentosVeiculosReturn => {
       await documentosVeiculosService.downloadDocumento(veiculoId, documentoId);
 
       console.log('✅ [useDocumentosVeiculos] Download concluído');
-    } catch (err: any) {
-      const errorMessage = err?.message || 'Erro ao fazer download do documento';
+    } catch (err) {
+      const errorMessage = (err instanceof Error && err.message) || 'Erro ao fazer download do documento';
       console.error('❌ [useDocumentosVeiculos] Erro no download:', err);
       setError(errorMessage);
       throw err;
@@ -124,7 +124,7 @@ export const useDocumentosVeiculos = (): UseDocumentosVeiculosReturn => {
   }, []);
 
   // Remover documento
-  const removerDocumento = useCallback(async (veiculoId: number, documentoId: string) => {
+  const removerDocumento = useCallback(async (veiculoId: string, documentoId: string) => {
     try {
       setError(null);
 
@@ -135,8 +135,8 @@ export const useDocumentosVeiculos = (): UseDocumentosVeiculosReturn => {
       setDocumentos(prev => prev.filter(doc => doc.id !== documentoId));
 
       console.log('✅ [useDocumentosVeiculos] Documento removido');
-    } catch (err: any) {
-      const errorMessage = err?.message || 'Erro ao remover documento';
+    } catch (err) {
+      const errorMessage = (err instanceof Error && err.message) || 'Erro ao remover documento';
       console.error('❌ [useDocumentosVeiculos] Erro ao remover:', err);
       setError(errorMessage);
       throw err;

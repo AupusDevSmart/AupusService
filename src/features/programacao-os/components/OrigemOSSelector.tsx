@@ -138,11 +138,11 @@ export function OrigemOSSelector({
           setPasso(1);
           return;
         }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- o item e do tipo pedido
-        const item = resultado.item as any;
-        if (preSelecao.tipo === 'ANOMALIA') escolherAnomalia(alvo, item, base);
-        else if (preSelecao.tipo === 'SOLICITACAO_SERVICO') escolherSolicitacao(alvo, item, base);
-        else escolherPlano(alvo, item, base);
+        // O item e do tipo pedido: resolverOrigem devolve o da lista daquela origem
+        const { item } = resultado;
+        if (preSelecao.tipo === 'ANOMALIA') escolherAnomalia(alvo, item as (typeof anomaliasDisponiveis)[number], base);
+        else if (preSelecao.tipo === 'SOLICITACAO_SERVICO') escolherSolicitacao(alvo, item as (typeof solicitacoesDisponiveis)[number], base);
+        else escolherPlano(alvo, item as (typeof planosDisponiveis)[number], base);
       })
       .finally(() => {
         if (vivo) setAbrindoOrigem(false);

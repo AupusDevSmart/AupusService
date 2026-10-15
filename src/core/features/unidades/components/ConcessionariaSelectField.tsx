@@ -11,7 +11,8 @@ import {
 
 interface ConcessionariaSelectFieldProps {
   value?: string;
-  onChange?: (value: string) => void;
+  /** Recebe undefined ao limpar a seleção (a concessionária é opcional). */
+  onChange?: (value: string | undefined) => void;
   disabled?: boolean;
   estado?: string; // Filtrar concessionárias por estado
 }
@@ -67,9 +68,9 @@ export function ConcessionariaSelectField({
             });
           }
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('❌ [ConcessionariaSelect] Erro ao carregar concessionárias:', err);
-        setError(err.message || 'Erro ao carregar concessionárias');
+        setError((err instanceof Error && err.message) || 'Erro ao carregar concessionárias');
         setConcessionarias([]);
       } finally {
         setLoading(false);
@@ -99,7 +100,7 @@ export function ConcessionariaSelectField({
 
     // Permitir limpar o campo (concessionária é opcional)
     if (newValue === '__clear__') {
-      onChange?.(undefined as any); // Enviar undefined para limpar
+      onChange?.(undefined); // Enviar undefined para limpar
       return;
     }
 

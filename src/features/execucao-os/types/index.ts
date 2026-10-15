@@ -1,7 +1,7 @@
 // src/features/execucao-os/types/index.ts - VERSÃO FINAL
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
 import type { InstalacaoDaOrigem } from '@/utils/instalacao';
-import { ProgramacaoResponse, ItemOrcamento } from '../../programacao-os/types';
+import { ProgramacaoResponse, ItemOrcamento, type DadosOrigem } from '../../programacao-os/types';
 
 // ========================================
 // ENUMS E TIPOS BASE (CONFORME SCHEMA)
@@ -91,7 +91,7 @@ export interface TecnicoOS {
 }
 
 export interface TarefaOS {
-  id?: string;
+  id: string;
   os_id: string;
   tarefa_id: string;
   ordem?: number;
@@ -99,10 +99,21 @@ export interface TarefaOS {
   data_conclusao?: string;
   concluida_por?: string;
   observacoes?: string;
+  // O que foi pedido, congelado na OS (não seguir a tarefa viva)
+  nome_snapshot?: string;
+  criticidade_snapshot?: number;
+  frequencia_snapshot?: string;
+  instrucao_tag?: string;
+  instrucao_nome?: string;
+  instrucao_descricao?: string;
+  instrucao_id?: string;
+  plano_id?: string;
+  plano_nome?: string;
+  tarefa?: { id: string; nome: string } | null;
 }
 
 export interface ChecklistAtividadeOS {
-  id?: string;
+  id: string;
   os_id: string;
   atividade: string;
   ordem?: number;
@@ -113,6 +124,20 @@ export interface ChecklistAtividadeOS {
   concluida_em?: string;
   concluida_por?: string;
   concluida_por_id?: string;
+  /** A tarefa da OS a que o item pertence; nulo nos itens genéricos das OS antigas */
+  tarefa_os_id?: string | null;
+}
+
+/** Item no formato antigo de `checklist_atividades`: o backend manda o checklist em `checklist`. */
+export interface ItemDeChecklistLegado {
+  id: string;
+  descricao?: string;
+  obrigatoria?: boolean;
+  concluida?: boolean;
+  data_hora_conclusao?: string;
+  observacoes?: string;
+  concluido_por?: string;
+  ordem?: number;
 }
 
 export interface AnexoOS {
@@ -143,7 +168,8 @@ export interface RegistroTempoOS {
   tempo_total?: number; // em minutos
   atividade: string;
   observacoes?: string;
-  pausas?: any;
+  /** JSON livre do backend */
+  pausas?: unknown;
 }
 
 export interface HistoricoOS {
@@ -156,7 +182,8 @@ export interface HistoricoOS {
   observacoes?: string;
   status_anterior?: StatusExecucaoOS;
   status_novo?: StatusExecucaoOS;
-  dados_extras?: any;
+  /** JSON livre do backend */
+  dados_extras?: unknown;
 }
 
 // ========================================
@@ -193,7 +220,7 @@ export interface OrdemServico extends BaseEntity {
   anomalia_id?: string;
   plano_manutencao_id?: string;
   reserva_id?: string;
-  dados_origem?: any;
+  dados_origem?: DadosOrigem | null;
 
   // Planejamento (da programação)
   tempo_estimado: number;
@@ -250,13 +277,15 @@ export interface OrdemServico extends BaseEntity {
   tecnicos?: TecnicoOS[];
   itens_orcamento?: ItemOrcamento[];
   historico?: HistoricoOS[];
-  checklist_atividades?: ChecklistAtividadeOS[];
+  checklist_atividades?: ItemDeChecklistLegado[];
+  /** O checklist como a API manda hoje (com `tarefa_os_id`); o transform cai no formato antigo */
+  checklist?: Array<ChecklistAtividadeOS | ItemDeChecklistLegado>;
   anexos?: AnexoOS[];
   registros_tempo?: RegistroTempoOS[];
   tarefas_os?: TarefaOS[];
 
-  // Relacionamentos expandidos (opcional)
-  programacao?: ProgramacaoResponse;
+  // Relacionamentos expandidos (opcional). Da programação a API manda só id, código e descrição.
+  programacao?: Pick<ProgramacaoResponse, 'id'> & Partial<Pick<ProgramacaoResponse, 'codigo' | 'descricao'>>;
   planta?: { id: string; nome: string };
   equipamento?: { id: string; nome: string };
   anomalia?: { id: string; descricao: string };
@@ -462,7 +491,7 @@ export interface ExecucaoModalState {
   isOpen: boolean;
   mode: ModalMode;
   execucaoOS: ExecucaoOS | null;
-  preselectedData?: any;
+  preselectedData?: Record<string, unknown>;
 }
 
 // ========================================

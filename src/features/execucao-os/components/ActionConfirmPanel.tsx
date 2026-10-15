@@ -8,6 +8,30 @@ import { AvaliacaoEstrelas } from './AvaliacaoEstrelas';
 
 export type PendingAction = 'iniciar' | 'pausar' | 'retomar' | 'executar' | 'auditar' | 'finalizar' | 'reabrir' | 'cancelar';
 
+/** O que o painel lê da OS aberta: só a reserva (para pedir o km). */
+type OSDoPainel = { reserva_veiculo?: { status?: string } | null } | null | undefined;
+
+/**
+ * O que o painel entrega: só os campos preenchidos da ação, já convertidos
+ * (número, ISO em UTC ou texto aparado). As chaves são as dos campos abaixo.
+ */
+export type DadosDaConfirmacao = {
+  data_hora_inicio_real?: string;
+  km_inicial?: number;
+  km_final?: number;
+  observacoes?: string;
+  motivo_pausa?: string;
+  observacoes_retomada?: string;
+  resultado_servico?: string;
+  problemas_encontrados?: string;
+  recomendacoes?: string;
+  incidentes_seguranca?: string;
+  avaliacao_qualidade?: number;
+  observacoes_qualidade?: string;
+  motivo_cancelamento?: string;
+  tarefas_nao_feitas?: { id: string; motivo: string }[];
+};
+
 interface ActionField {
   key: string;
   label: string;
@@ -20,8 +44,7 @@ interface ActionField {
   defaultNow?: boolean;
   /** Vai para o bloco "Mais detalhes", recolhido */
   detalhe?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- entidade da OS transformada
-  condition?: (entity: any) => boolean;
+  condition?: (entity: OSDoPainel) => boolean;
 }
 
 interface ActionMeta {
@@ -44,8 +67,7 @@ interface ActionMeta {
  * retorno no Executar). Reserva já finalizada ou cancelada não pede km — antes
  * o campo aparecia e o valor era descartado em silêncio.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- entidade da OS transformada
-const temReservaAtiva = (entity: any) => entity?.reserva_veiculo?.status === 'ativa';
+const temReservaAtiva = (entity: OSDoPainel) => entity?.reserva_veiculo?.status === 'ativa';
 
 const actionConfig: Record<PendingAction, ActionMeta> = {
   iniciar: {
@@ -152,10 +174,9 @@ const preenchido = (v: unknown) => v !== undefined && v !== null && String(v).tr
 
 interface ActionConfirmPanelProps {
   action: PendingAction;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- entidade da OS transformada
-  entity?: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload vai direto para a rota da transição
-  onConfirm: (data: Record<string, any>) => Promise<void>;
+  entity?: OSDoPainel;
+  /** O payload vai direto para a rota da transição */
+  onConfirm: (data: DadosDaConfirmacao) => Promise<void>;
   /** Desiste desta ação e volta para a lista de ações */
   onVoltar?: () => void;
   /**
@@ -219,7 +240,8 @@ export function ActionConfirmPanel({
       if (pendentes.length > 0) {
         payload.tarefas_nao_feitas = pendentes.map((t) => ({ id: t.id, motivo: motivos[t.id].trim() }));
       }
-      await onConfirm(payload);
+      // As chaves são as dos campos da ação (actionConfig), com o valor já convertido
+      await onConfirm(payload as DadosDaConfirmacao);
     } finally {
       setSubmitting(false);
     }

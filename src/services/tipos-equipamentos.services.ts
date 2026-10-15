@@ -66,7 +66,7 @@ class TiposEquipamentosApiService {
    */
   async getAll(params?: { categoria_id?: string; ativo?: boolean; search?: string }): Promise<TipoEquipamento[]> {
     try {
-      const response = await api.get<any>(this.baseEndpoint, {
+      const response = await api.get<TipoEquipamento[] | { data?: TipoEquipamento[] }>(this.baseEndpoint, {
         params: {
           categoria_id: params?.categoria_id,
           search: params?.search,
