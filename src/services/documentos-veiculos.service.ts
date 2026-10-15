@@ -158,7 +158,9 @@ class DocumentosVeiculosApiService {
     }
 
     // Verificar se o arquivo é realmente um PDF
-    const contentType = response.headers['content-type'];
+    // O axios 1.20 tipa o cabeçalho como qualquer valor de header (SN-39): só texto conta
+    const cabecalhoDoTipo = response.headers['content-type'];
+    const contentType = typeof cabecalhoDoTipo === 'string' ? cabecalhoDoTipo : '';
 
     // 🔧 FIX: Backend retorna "pdf" mas deveria ser "application/pdf"
     const isActuallyPdf = contentType && (
