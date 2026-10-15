@@ -26,7 +26,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/core/components/ui/t
 import {
   useCategorias,
   useModelos,
-  useSelectionData,
   useHttpClient,
   useEquipamentos,
 } from '@/core/context/hooks';
@@ -46,13 +45,6 @@ interface CampoTecnicoSchema {
   opcoes?: string[];
   obrigatorio?: boolean;
   nome?: string;
-}
-
-interface TipoEquipamentoModal {
-  value: string;
-  label: string;
-  categoria: string;
-  camposTecnicos: CampoTecnicoSchema[];
 }
 
 interface TipoEquipamento {
@@ -160,7 +152,6 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   aoCriarEmLote,
 }) => {
   const httpClient = useHttpClient();
-  const { fetchTiposEquipamentos, getCamposTecnicosPorTipo } = useSelectionData();
   const {
     createEquipamentosLote,
     proximoSequencial,
@@ -198,9 +189,6 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Estados para tipos de equipamentos da API
-  const [tiposEquipamentos, setTiposEquipamentos] = useState<TipoEquipamentoModal[]>([]);
-  const [loadingTipos, setLoadingTipos] = useState(false);
 
   // Estados para seleção hierárquica Categoria -> Modelo
   const [categoriaIdSelecionada, setCategoriaIdSelecionada] = useState<string>('');
@@ -224,47 +212,6 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   const [novoModeloCodigo, setNovoModeloCodigo] = useState('');
   const [novoModeloFabricante, setNovoModeloFabricante] = useState('');
   const [loadingNovoModelo, setLoadingNovoModelo] = useState(false);
-
-  // Helper para buscar tipo de equipamento
-  const getTipoEquipamento = (codigo?: string): TipoEquipamentoModal | undefined => {
-    return tiposEquipamentos.find(t => t.value === codigo);
-  };
-
-  // Carregar tipos de equipamentos via context hook
-  useEffect(() => {
-    const loadTiposEquipamentos = async () => {
-      setLoadingTipos(true);
-      try {
-        const tipos = await fetchTiposEquipamentos();
-        // A lista vem do useSelectionData, no formato DELE: { value, label,
-        // categoria, campos_tecnicos }. Lia-se `codigo`, `nome` e
-        // `propriedadesSchema`, que sao da rota /tipos-equipamentos e nao
-        // existem aqui: todo item saia sem valor, sem nome e sem campos.
-        const tiposFormatados = tipos.map((tipo) => ({
-          value: tipo.value,
-          label: tipo.label,
-          categoria: tipo.categoria,
-          camposTecnicos: (tipo.campos_tecnicos || []).map((campo) => ({
-            campo: campo.label,
-            tipo: campo.type === 'boolean' ? ('select' as const) : campo.type,
-            unidade: campo.unit,
-            opcoes: campo.options || (campo.type === 'boolean' ? ['Sim', 'Não'] : undefined),
-            obrigatorio: campo.required,
-          })),
-        }));
-        setTiposEquipamentos(tiposFormatados);
-      } catch (err) {
-        console.error('[MODAL UAR] Erro ao carregar tipos de equipamentos:', err);
-        avisar('Erro ao carregar tipos de equipamentos');
-      } finally {
-        setLoadingTipos(false);
-      }
-    };
-
-    if (isOpen) {
-      loadTiposEquipamentos();
-    }
-  }, [isOpen, fetchTiposEquipamentos]);
 
   useEffect(() => {
     const initializeFormData = async () => {
@@ -409,19 +356,11 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   };
 
   /**
-   * Os campos tecnicos a exibir: a CATEGORIA define o padrao, o tipo prevalece.
-   *
-   * A secao dependia so do tipo escolhido, e a maioria das categorias nao tem
-   * tipo com `propriedades_schema` — o formulario mostrava "nenhum campo tecnico
-   * definido" e quem cadastrava nao tinha como saber o que preencher.
-   *
-   * Quando o tipo traz schema proprio ele ganha, por ser mais especifico que a
-   * categoria; sem isso, vale o padrao da categoria.
+   * Os campos tecnicos a exibir: os da CATEGORIA (decisao do usuario,
+   * 2026-10-15, SN-42). Havia um caminho em que o modelo prevalecia, lendo uma
+   * lista fixa que nunca casava com os codigos reais — saiu.
    */
   const camposTecnicosVisiveis = (): CampoTecnicoSchema[] => {
-    const tipoEqp = getTipoEquipamento(formData.tipoComponente);
-    if (tipoEqp?.camposTecnicos?.length) return tipoEqp.camposTecnicos;
-
     const categoria = categorias.find(c => c.id?.trim() === categoriaIdSelecionada);
     return camposDaCategoria(categoria?.nome).map(c => ({
       campo: c.campo,
@@ -432,10 +371,8 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     }));
   };
 
-  /** Titulo da secao: o modelo quando houver, senao a categoria. */
+  /** Titulo da secao: a categoria. */
   const rotuloDosCampos = (): string => {
-    const tipoEqp = getTipoEquipamento(formData.tipoComponente);
-    if (tipoEqp?.camposTecnicos?.length) return tipoEqp.label;
     return categorias.find(c => c.id?.trim() === categoriaIdSelecionada)?.nome || "";
   };
 
@@ -555,18 +492,6 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
       setLoadingNovoModelo(false);
     }
   };
-
-  // TEMPORÁRIO: Mostrar TODOS os tipos para testar
-  // TODO: Restaurar filtro após configurar categorias corretas no backend
-  const tiposComponentesUAR = tiposEquipamentos;
-
-  // Filtro original (comentado temporariamente):
-  // const tiposComponentesUAR = tiposEquipamentos.filter(tipo =>
-  //   ['sensor_temperatura', 'sensor_vibracao', 'bomba_oleo', 'filtro_ar', 'valvula_seguranca',
-  //    'rele_protecao', 'disjuntor', 'seccionadora', 'inversor_frequencia', 'clp', 'sensor_pressao',
-  //    'medidor_energia', 'analisador_qualidade', 'controlador_temperatura'].includes(tipo.value) ||
-  //   ['eletronica', 'instrumentacao', 'protecao'].includes(tipo.categoria)
-  // );
 
   const renderCamposTecnicos = () => {
     if (!formData.tipoComponente) {
@@ -893,14 +818,23 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
       // Pelos campos EXIBIDOS, nao pelos do tipo. Quando os campos vem da
       // categoria — o caso da maioria — ler do tipo devolvia lista vazia: a
       // pessoa preenchia a secao inteira e nada era gravado, sem erro nenhum.
-      const dadosTecnicos = camposTecnicosVisiveis()
+      const daCategoria = camposTecnicosVisiveis()
         .filter(campo => formData[campo.campo]) // Apenas campos preenchidos
         .map(campo => ({
           campo: campo.campo,
           valor: String(formData[campo.campo]), // Garantir que é string
           tipo: campo.tipo === 'select' ? 'string' : campo.tipo, // Normalizar tipo
           unidade: campo.unidade
-        })) || [];
+        }));
+      // O gravado que não é da categoria vai junto, como está. A tela não o
+      // mostra, e mandar só os da categoria apagava esses campos a cada salvar,
+      // sem aviso (achado no SN-42).
+      const visiveis = new Set(camposTecnicosVisiveis().map((c) => c.campo));
+      const moldeDosDados = entity && mode !== 'create' ? entity : duplicarDe;
+      const foraDaCategoria = (moldeDosDados?.dadosTecnicos ?? [])
+        .filter((dt) => dt.campo && !visiveis.has(dt.campo) && dt.valor)
+        .map((dt) => ({ campo: dt.campo, valor: String(dt.valor), tipo: dt.tipo || 'string', unidade: dt.unidade }));
+      const dadosTecnicos = [...daCategoria, ...foraDaCategoria];
 
       // Formatar data de instalação para ISO-8601 DateTime se fornecida
       const dataInstalacaoFormatted = formData.dataInstalacao

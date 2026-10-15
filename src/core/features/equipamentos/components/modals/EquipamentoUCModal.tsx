@@ -24,7 +24,7 @@ import { normalizarTipoEquipamento } from '@/core/features/equipamentos/utils/ti
 import { PosicaoSelector } from '@/core/features/equipamentos/components/PosicaoSelector';
 import { HistoricoDaPosicao } from '@/core/features/equipamentos/components/HistoricoDaPosicao';
 import type { AtivoFuncional } from '@/core/features/equipamentos/hooks/useAtivosFuncionais';
-import { camposDaCategoria } from '@/core/features/equipamentos/config/campos-por-categoria';
+import { separarDadosTecnicos } from '@/core/features/equipamentos/utils/dados-tecnicos';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/core/components/ui/tabs';
 import { Checkbox } from '@/core/components/ui/checkbox';
 import { Combobox } from '@/core/components/ui/combobox';
@@ -59,7 +59,7 @@ import { AnexosEquipamentoField } from '../AnexosEquipamentoField';
 import { ItensDoLoteField } from '../ItensDoLoteField';
 import type { EquipamentoDoLote, UseModelosContract } from '@/core/types/contracts';
 import { PontosSection, type PontoFormItem } from '../PontosSection';
-import { useSelectionData, useEquipamentos, useLocationCascade, useCategorias, useModelos, useHttpClient } from '@/core/context/hooks';
+import { useEquipamentos, useLocationCascade, useCategorias, useModelos, useHttpClient } from '@/core/context/hooks';
 
 // Local type definitions (previously from @/services/tipos-equipamentos.services)
 interface CampoTecnicoSchema {
@@ -69,13 +69,6 @@ interface CampoTecnicoSchema {
   opcoes?: string[];
   obrigatorio?: boolean;
   nome?: string;
-}
-
-interface TipoEquipamentoModal {
-  value: string;
-  label: string;
-  categoria: string;
-  camposTecnicos: CampoTecnicoSchema[];
 }
 
 interface TipoEquipamento {
@@ -229,7 +222,6 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   mostrarSupervisorio = false
 }) => {
   const httpClient = useHttpClient();
-  const { fetchTiposEquipamentos } = useSelectionData();
   const duplicandoDeId = duplicarDe?.id?.trim() || null;
 
   const {
@@ -410,8 +402,6 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   const [loadingNovoModelo, setLoadingNovoModelo] = useState(false);
 
   // Estados para tipos de equipamentos da API (manter para compatibilidade)
-  const [tiposEquipamentos, setTiposEquipamentos] = useState<TipoEquipamentoModal[]>([]);
-  const [loadingTipos, setLoadingTipos] = useState(false);
 
   // Hook de seleção cascateada para modo create
   const locationCascade = useLocationCascade();
@@ -472,66 +462,15 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     String(formData.status || '').trim().toLowerCase() === 'inativo' ? 'Inativo' : 'Ativo';
 
   // ============================================================================
-  // CARREGAR TIPOS DE EQUIPAMENTOS DA API
-  // ============================================================================
-  useEffect(() => {
-    const loadTiposEquipamentos = async () => {
-      setLoadingTipos(true);
-      try {
-        const tipos = await fetchTiposEquipamentos();
-
-        // A lista vem do useSelectionData, no formato DELE: { value, label,
-        // categoria, campos_tecnicos }. Lia-se `codigo`, `nome` e
-        // `propriedadesSchema`, que sao da rota /tipos-equipamentos e nao
-        // existem aqui: todo item saia sem valor, sem nome e sem campos.
-        const tiposFormatados = tipos.map((tipo) => {
-          const campos = tipo.campos_tecnicos || [];
-
-          return {
-            value: tipo.value,
-            label: tipo.label,
-            categoria: tipo.categoria,
-            camposTecnicos: campos.map((campo) => ({
-              campo: campo.label,
-              tipo: campo.type === 'boolean' ? ('select' as const) : campo.type,
-              unidade: campo.unit,
-              opcoes: campo.options || (campo.type === 'boolean' ? ['Sim', 'Nao'] : undefined),
-              obrigatorio: campo.required,
-            })),
-          };
-        });
-        setTiposEquipamentos(tiposFormatados);
-      } catch (err) {
-        console.error('[MODAL] Erro ao carregar tipos de equipamentos:', err);
-        avisar('Erro ao carregar tipos de equipamentos');
-      } finally {
-        setLoadingTipos(false);
-      }
-    };
-
-    if (isOpen) {
-      loadTiposEquipamentos();
-    }
-  }, [isOpen, fetchTiposEquipamentos]);
-
-  // Helper para buscar tipo de equipamento
-  const getTipoEquipamento = (codigo?: string): TipoEquipamentoModal | undefined => {
-    return tiposEquipamentos.find(t => t.value === codigo);
-  };
-
-  // ============================================================================
   // INICIALIZAÇÃO
   // ============================================================================
   /**
    * O que já foi inicializado nesta abertura do sheet.
    *
-   * Sem isso o efeito abaixo roda mais de uma vez por abertura: `tiposEquipamentos`
-   * está nas dependências e troca de identidade quando a lista termina de
-   * carregar. A segunda passagem chamava `initializeForCreate` de novo, que
-   * termina em `locationCascade.reset()` — apagando a localização que a cascata
-   * já tinha pré-selecionado. Era por isso que o proprietário aparecia vazio
-   * mesmo com o filtro preenchido: ele chegava a ser selecionado e era limpo
-   * meio segundo depois, quando os tipos respondiam.
+   * Sem isso o efeito abaixo roda mais de uma vez por abertura (as dependências
+   * trocam de identidade). A segunda passagem chamava `initializeForCreate` de
+   * novo, que termina em `locationCascade.reset()` — apagando a localização que
+   * a cascata já tinha pré-selecionado.
    */
   const inicializadoRef = useRef<string | null>(null);
 
@@ -545,10 +484,6 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     }
 
     if (entidadeEfetiva && (modoEfetivo === 'edit' || modoEfetivo === 'view')) {
-      // Edição depende da lista: é dela que sai o código do tipo do
-      // equipamento e a lista de campos técnicos.
-      if (loadingTipos || tiposEquipamentos.length === 0) return;
-
       // A chave carrega o id EFETIVO, entao visitar um equipamento anterior
       // recarrega o formulario pelo mesmo caminho de sempre — sem duplicar a
       // logica de hidratacao so para a visita.
@@ -566,8 +501,6 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       // equipamento, só que sem o que identifica um exemplar — nome, TAG e
       // número de série saem em branco para serem preenchidos.
       if (duplicarDe?.id) {
-        if (loadingTipos || tiposEquipamentos.length === 0) return;
-
         const chave = `duplicar:${duplicarDe.id}`;
         if (inicializadoRef.current === chave) return;
         inicializadoRef.current = chave;
@@ -589,14 +522,10 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       if (inicializadoRef.current === chave) return;
       inicializadoRef.current = chave;
 
-      // Cadastro não depende: a lista só serve aos campos técnicos, que só
-      // aparecem depois de escolher o modelo. Esperar por ela significava que
-      // uma falha na chamada deixava o formulário como objeto vazio — sem
-      // status, sem criticidade, sem nenhum padrão.
       setError(null);
       initializeForCreate();
     }
-  }, [isOpen, entidadeEfetiva, modoEfetivo, loadingTipos, tiposEquipamentos, duplicarDe?.id]);
+  }, [isOpen, entidadeEfetiva, modoEfetivo, duplicarDe?.id]);
 
   /**
    * Preenche a cascata de localização quando o sheet abre em modo create já
@@ -799,37 +728,16 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
 
       // Separar dados técnicos em pré-definidos e personalizados
 
-      if (dadosCompletos.dadosTecnicos && dadosCompletos.dadosTecnicos.length > 0) {
-        const codigoTipo = dadosCompletos.tipoEquipamentoObj?.codigo || dadosCompletos.tipoEquipamento || dadosCompletos.tipo || '';
-        const tipoEqp = getTipoEquipamento(codigoTipo);
-
-        if (tipoEqp) {
-          const camposPredefinidos = tipoEqp.camposTecnicos.map(campo => campo.campo);
-
-          // Inicializar campos predefinidos com valores do banco ou vazios
-          const predefinidosComValores = tipoEqp.camposTecnicos.map(campo => {
-            const dadoExistente = dadosCompletos.dadosTecnicos?.find(d => d.campo === campo.campo);
-            return {
-              campo: campo.campo,
-              valor: dadoExistente?.valor || '',
-              tipo: campo.tipo,
-              unidade: campo.unidade || '',
-              obrigatorio: campo.obrigatorio || false
-            };
-          });
-
-          // Campos personalizados são apenas os que NÃO são predefinidos
-          const personalizados = dadosCompletos.dadosTecnicos.filter(dado =>
-            !camposPredefinidos.includes(dado.campo)
-          );
-
-
-          setDadosTecnicos(predefinidosComValores);
-          setDadosTecnicosPersonalizados(personalizados);
-        } else {
-          setDadosTecnicosPersonalizados(dadosCompletos.dadosTecnicos);
-        }
-      }
+      // Os campos técnicos vêm da categoria (SN-42): os padrão dela preenchidos
+      // com o gravado, e o gravado fora do padrão como personalizado.
+      const categoriaDoTipo = dadosCompletos.tipoEquipamentoObj?.categoria;
+      const nomeDaCategoria =
+        (typeof categoriaDoTipo === 'string' ? categoriaDoTipo : categoriaDoTipo?.nome) ||
+        tipoCompleto?.categoria?.nome ||
+        categorias.find((c) => c.id?.trim() === tipoCompleto?.categoriaId?.trim())?.nome;
+      const { padrao, personalizados } = separarDadosTecnicos(nomeDaCategoria, dadosCompletos.dadosTecnicos ?? []);
+      setDadosTecnicos(padrao);
+      setDadosTecnicosPersonalizados(personalizados);
 
       // Buscar hierarquia completa recursivamente (Unidade → Planta → Proprietário)
       if (mode === 'view' || mode === 'edit') {
@@ -1065,18 +973,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     // vazia e nao havia como saber o que preencher.
     //
     // O mapeamento por categoria nao depende de tipo nenhum existir.
-    const padrao = camposDaCategoria(escolhida?.nome);
-    setDadosTecnicos(
-      padrao.map(c => ({
-        campo: c.campo,
-        rotulo: c.rotulo,
-        valor: "",
-        tipo: c.tipo,
-        unidade: c.unidade || "",
-        opcoes: c.opcoes,
-        obrigatorio: false,
-      })),
-    );
+    setDadosTecnicos(separarDadosTecnicos(escolhida?.nome).padrao);
   };
 
   // Handler para mudança de modelo - preenche fabricante automaticamente
@@ -1095,45 +992,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         tipoEquipamentoId: modelo.id?.trim(),
         fabricante: modelo.fabricante, // Auto-preencher do modelo
       }));
-
-      // Carregar campos técnicos se existirem
-      const tipoFormatado = tiposEquipamentos.find(t => t.value === modelo.codigo);
-      if (tipoFormatado && tipoFormatado.camposTecnicos && tipoFormatado.camposTecnicos.length > 0) {
-        const dadosIniciais = tipoFormatado.camposTecnicos.map(campo => ({
-          campo: campo.campo,
-          valor: '',
-          tipo: campo.tipo,
-          unidade: campo.unidade || '',
-          obrigatorio: campo.obrigatorio || false
-        }));
-        setDadosTecnicos(dadosIniciais);
-      }
-    }
-  };
-
-  const handleTipoEquipamentoChange = (value: string) => {
-    handleInputChange('tipoEquipamento', value);
-
-    // Quando muda o tipo, carregar campos técnicos pré-definidos
-    const tipoEqp = getTipoEquipamento(value);
-
-    if (tipoEqp && tipoEqp.camposTecnicos && tipoEqp.camposTecnicos.length > 0) {
-      const dadosIniciais = tipoEqp.camposTecnicos.map(campo => ({
-        campo: campo.campo,
-        valor: '',
-        tipo: campo.tipo,
-        unidade: campo.unidade || '',
-        obrigatorio: campo.obrigatorio || false
-      }));
-      setDadosTecnicos(dadosIniciais);
-
-      // Remover campos predefinidos dos personalizados para evitar duplicação
-      const camposPredefinidos = tipoEqp.camposTecnicos.map(c => c.campo);
-      setDadosTecnicosPersonalizados(prev =>
-        prev.filter(p => !camposPredefinidos.includes(p.campo))
-      );
-    } else {
-      setDadosTecnicos([]);
+      // Os campos técnicos são os da categoria: escolher o modelo não os troca
     }
   };
 
@@ -2205,7 +2064,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   );
 
   const renderDadosTecnicos = () => {
-    const tipoEqp = getTipoEquipamento(formData.tipoEquipamento);
+    const nomeDaCategoria = categorias.find((c) => c.id?.trim() === categoriaIdSelecionada)?.nome;
     const temDadosPredefinidos = dadosTecnicos.length > 0;
     const temDadosPersonalizados = dadosTecnicosPersonalizados.length > 0;
 
@@ -2231,10 +2090,10 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         {/* Dados Técnicos Pré-definidos por Tipo */}
         {temDadosPredefinidos && (
           <div className="space-y-4">
-            {tipoEqp && (
+            {nomeDaCategoria && (
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="text-xs">
-                  {tipoEqp.label}
+                  {nomeDaCategoria}
                 </Badge>
                 <span className="text-xs text-gray-500">
                   Campos técnicos padrão
@@ -2261,7 +2120,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
                     </div>
                   ) : (
                     <>
-                      {dado.tipo === 'select' && tipoEqp ? (
+                      {dado.tipo === 'select' && dado.opcoes?.length ? (
                         <Select
                           value={dado.valor}
                           onValueChange={(value) => handleDadoTecnicoChange(index, 'valor', value)}
@@ -2270,9 +2129,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
                             <SelectValue placeholder="Selecione..." />
                           </SelectTrigger>
                           <SelectContent>
-                            {tipoEqp.camposTecnicos
-                              .find(c => c.campo === dado.campo)
-                              ?.opcoes?.map(opcao => (
+                            {dado.opcoes.map(opcao => (
                                 <SelectItem key={opcao} value={opcao}>
                                   {opcao}
                                 </SelectItem>

@@ -29,18 +29,6 @@ export interface PlantaSelection extends SelectionOption {
   proprietario_id: string;
 }
 
-/**
- * Item da lista de SELECAO que `getTiposEquipamentos` devolve (dados mockados,
- * abaixo). Nao e o formato da rota /tipos-equipamentos (`codigo`, `nome`,
- * `propriedadesSchema`), que fica em tipos-equipamentos.services.ts.
- */
-export interface TipoEquipamento {
-  value: string;
-  label: string;
-  categoria: 'eletrico' | 'mecanico' | 'hidraulico' | 'pneumatico' | 'eletronica' | 'outro';
-  campos_tecnicos?: CampoTecnico[];
-}
-
 /** Um nivel da hierarquia (area, subarea, linha...) — hoje so os dados mockados abaixo. */
 export interface NivelDaHierarquia {
   id: string;
@@ -64,16 +52,6 @@ interface UsuarioDaApi {
 interface UcDisponivelDaApi {
   id: string | number;
   nome?: string;
-}
-
-export interface CampoTecnico {
-  key: string;
-  label: string;
-  type: 'text' | 'number' | 'select' | 'boolean';
-  unit?: string;
-  required?: boolean;
-  options?: string[];
-  placeholder?: string;
 }
 
 // ============================================================================
@@ -227,66 +205,6 @@ export class SelectionDataService {
       ...item,
       label: item.nome
     }));
-  }
-
-  // ============================================================================
-  // TIPOS DE EQUIPAMENTOS - MOCK (TEMPORÁRIO - AGUARDANDO IMPLEMENTAÇÃO DA API)
-  // ============================================================================
-  async getTiposEquipamentos(): Promise<TipoEquipamento[]> {
-    console.warn('⚠️ [SELECTION] USANDO DADOS MOCKADOS para tipos de equipamentos genéricos. Use a API /tipos-equipamentos para dados reais.');
-
-    return [
-      {
-        value: 'motor_inducao',
-        label: 'Motor de Indução',
-        categoria: 'eletrico',
-        campos_tecnicos: [
-          { key: 'potencia', label: 'Potência', type: 'number', unit: 'kW', required: true },
-          { key: 'tensao_nominal', label: 'Tensão Nominal', type: 'number', unit: 'V', required: true },
-          { key: 'corrente_nominal', label: 'Corrente Nominal', type: 'number', unit: 'A' },
-          { key: 'fator_servico', label: 'Fator de Serviço', type: 'number', placeholder: 'Ex: 1.15' },
-          { key: 'numero_polos', label: 'Número de Polos', type: 'select', options: ['2', '4', '6', '8'] },
-          { key: 'grau_protecao', label: 'Grau de Proteção (IP)', type: 'select', options: ['IP20', 'IP54', 'IP55', 'IP65'] },
-          { key: 'classe_isolamento', label: 'Classe de Isolamento', type: 'select', options: ['A', 'B', 'F', 'H'] },
-          { key: 'tipo_partida', label: 'Tipo de Partida', type: 'select', options: ['Direta', 'Estrela-Triângulo', 'Soft-Starter', 'Inversor'] }
-        ]
-      },
-      {
-        value: 'transformador',
-        label: 'Transformador',
-        categoria: 'eletrico',
-        campos_tecnicos: [
-          { key: 'potencia_nominal', label: 'Potência Nominal', type: 'number', unit: 'kVA', required: true },
-          { key: 'tensao_primaria', label: 'Tensão Primária', type: 'number', unit: 'V', required: true },
-          { key: 'tensao_secundaria', label: 'Tensão Secundária', type: 'number', unit: 'V', required: true },
-          { key: 'grupo_ligacao', label: 'Grupo de Ligação', type: 'text', placeholder: 'Ex: Dyn11' },
-          { key: 'tipo_refrigeracao', label: 'Tipo de Refrigeração', type: 'select', options: ['ONAN', 'ONAF', 'ONAN/ONAF', 'A SECO'] },
-          { key: 'impedancia', label: 'Impedância', type: 'number', unit: '%', placeholder: 'Ex: 4.5' }
-        ]
-      },
-      {
-        value: 'disjuntor',
-        label: 'Disjuntor',
-        categoria: 'eletrico',
-        campos_tecnicos: [
-          { key: 'corrente_nominal', label: 'Corrente Nominal', type: 'number', unit: 'A', required: true },
-          { key: 'tensao_nominal', label: 'Tensão Nominal', type: 'number', unit: 'kV', required: true },
-          { key: 'capacidade_interrupcao', label: 'Capacidade de Interrupção', type: 'number', unit: 'kA' },
-          { key: 'tipo', label: 'Tipo', type: 'select', options: ['Caixa Moldada', 'Aberto', 'A Vácuo', 'SF6'] },
-          { key: 'curva_disparo', label: 'Curva de Disparo', type: 'select', options: ['B', 'C', 'D', 'K'] }
-        ]
-      },
-      {
-        value: 'outro',
-        label: 'Outro',
-        categoria: 'outro',
-        campos_tecnicos: [
-          { key: 'descricao_equipamento', label: 'Descrição do Equipamento', type: 'text', required: true, placeholder: 'Descreva o tipo de equipamento' },
-          { key: 'especificacao_tecnica', label: 'Especificação Técnica', type: 'text', placeholder: 'Dados técnicos relevantes' },
-          { key: 'observacoes_tecnicas', label: 'Observações Técnicas', type: 'text', placeholder: 'Informações adicionais' }
-        ]
-      }
-    ];
   }
 
   // ============================================================================

@@ -23,8 +23,6 @@ import type { PlantaResponse } from '@/services/plantas.services';
 import type {
   PlantaSelection,
   ProprietarioSelection,
-  TipoEquipamento as TipoEquipamentoDaSelecao,
-  CampoTecnico,
 } from '@/services/selection-data.services';
 import type { CategoriaEquipamento, TipoEquipamento } from '@/services/tipos-equipamentos.services';
 import type {
@@ -267,22 +265,17 @@ export interface UseSelectionDataContract {
   loadingProprietarios: boolean;
   loadingPlantas: boolean;
   loadingHierarquia: boolean;
-  loadingTipos: boolean;
   loadingUCs: boolean;
   proprietarios: ProprietarioSelection[];
   plantas: PlantaSelection[];
-  tiposEquipamentos: TipoEquipamentoDaSelecao[];
   equipamentosUC: OpcaoDaSelecao[];
   fetchProprietarios: () => Promise<ProprietarioSelection[]>;
   fetchPlantas: (proprietarioId?: string) => Promise<PlantaSelection[]>;
   /** O formato de cada nivel depende do nivel pedido. */
   fetchHierarquiaNivel: (nivel: string, parentId?: string) => Promise<unknown[]>;
-  fetchTiposEquipamentos: () => Promise<TipoEquipamentoDaSelecao[]>;
   fetchEquipamentosUC: (plantaId?: string) => Promise<OpcaoDaSelecao[]>;
   getProprietarioById: (id: string) => ProprietarioSelection | null;
   getPlantaById: (id: string) => PlantaSelection | null;
-  getTipoEquipamentoById: (id: string) => TipoEquipamentoDaSelecao | null;
-  getCamposTecnicosPorTipo: (tipo: string) => CampoTecnico[];
   error: string | null;
   clearError: () => void;
 }
