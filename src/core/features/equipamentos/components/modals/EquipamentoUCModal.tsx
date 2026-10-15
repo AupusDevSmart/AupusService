@@ -335,6 +335,8 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
    * Ref e nao estado: e lido uma vez no submit e nao deve provocar render.
    */
   const acoesPosCriacaoRef = useRef<Map<string, (equipamentoId: string) => Promise<void>>>(new Map());
+  /** A posicao com que o sheet abriu: o salvar compara para saber se instala, transfere ou remove. */
+  const posicaoOriginalRef = useRef('');
 
   /**
    * A identidade muda junto com o modo, de propósito: quem continua montado se
@@ -726,6 +728,12 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         setModeloSelecionado(tipoCompleto);
       }
 
+      // Duplicar nao leva a posicao: ela tem um ocupante so
+      const posicaoAtual = paraDuplicar
+        ? ''
+        : (dadosCompletos.ativo_funcional_id ?? dadosCompletos.ativoFuncionalId ?? dadosCompletos.ativo_funcional?.id)?.toString().trim() || '';
+      posicaoOriginalRef.current = posicaoAtual;
+
       setFormData({
         // Duplicar copia tudo menos o que identifica o exemplar: dois
         // equipamentos não dividem nome, TAG nem número de série.
@@ -741,9 +749,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         // A posicao onde este equipamento esta. Sem isto o historico nunca
         // aparece em edicao, e o campo de posicao volta em branco num
         // equipamento que ja tem uma.
-        ativoFuncionalId: (dadosCompletos.ativo_funcional_id
-          ?? dadosCompletos.ativoFuncionalId
-          ?? dadosCompletos.ativo_funcional?.id)?.toString().trim() || '',
+        ativoFuncionalId: posicaoAtual,
         plantaId: dadosCompletos.unidade?.plantaId || '',
         unidadeId: dadosCompletos.unidadeId || dadosCompletos.unidade?.id || '',  // ✅ CORRIGIDO: pegar unidade.id se unidadeId não existir
         proprietarioId: dadosCompletos.proprietarioId || '',
@@ -1428,8 +1434,6 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         nome: formData.nome,
         classificacao: 'UC',
         unidade_id: isCreating ? locationCascade.selectedUnidadeId : formData.unidadeId,
-        // A posicao onde este equipamento fica instalado.
-        ativo_funcional_id: formData.ativoFuncionalId || undefined,
         fabricante: formData.fabricante,
         fabricante_custom: formData.fabricanteCustom || undefined, // ✅ NOVO: Fabricante customizado se divergir do modelo
         modelo: formData.modelo,
@@ -1490,6 +1494,19 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
 
       const criado = await onSubmit(submitData);
 
+      // A posicao vai pelas rotas proprias (instalar, transferir, remover): o
+      // equipamento nao aceita ativo_funcional_id, e manda-lo junto dava 400 em
+      // todo salvar de equipamento com posicao (achado no SN-36).
+      const equipamentoId = mode === 'create' ? idDoEquipamentoCriado(criado) : entity?.id ? String(entity.id).trim() : null;
+      let falhaNaPosicao: string | null = null;
+      if (equipamentoId) {
+        try {
+          await gravarPosicao(equipamentoId, posicaoOriginalRef.current, formData.ativoFuncionalId?.trim() || '');
+        } catch (erro) {
+          falhaNaPosicao = formatApiError(erro);
+        }
+      }
+
       // Cadastro em uma visita so: com o id em maos, sobe a foto escolhida
       // antes de existir equipamento e executa o que os slots registraram
       // (vincular plano, enviar anexos). Falha aqui nao invalida o
@@ -1526,6 +1543,8 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
           }
         }
 
+        if (falhaNaPosicao) pendencias.push(`a posição (${falhaNaPosicao})`);
+
         if (pendencias.length > 0) {
           setError(
             `Equipamento criado, mas não foi possível salvar: ${pendencias.join(', ')}. ` +
@@ -1535,12 +1554,18 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         }
       }
 
+      if (mode !== 'create' && falhaNaPosicao) {
+        setError(`Equipamento salvo, mas a posição não mudou: ${falhaNaPosicao}`);
+        return;
+      }
+
       onClose();
     } catch (error) {
       // Volta para Dados técnicos: o erro e os campos que o causaram estão lá,
       // e salvar de outra aba mostraria um alerta sobre algo fora da vista.
       setAbaAtiva('dados');
-      avisar('Erro ao salvar equipamento');
+      // Com o motivo: so "Erro ao salvar" escondia o que o backend recusou
+      avisar('Erro ao salvar equipamento', formatApiError(error));
     } finally {
       setLoading(false);
     }
@@ -1633,6 +1658,23 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
    * modelo, serie e fabricante. Trocar de posicao troca a categoria, e por isso
    * limpa o modelo: um modelo de outra categoria nao serve na posicao nova.
    */
+  /**
+   * Leva a posicao escolhida no sheet ao vinculo, pelas rotas do ativo
+   * funcional: sem posicao antes -> instalar; trocou -> transferir (fecha a
+   * origem e abre o destino numa transacao); tirou -> remover.
+   */
+  const gravarPosicao = async (equipamentoId: string, antes: string, depois: string) => {
+    if (antes === depois) return;
+    if (!antes) {
+      await httpClient.post(`/ativos-funcionais/${depois}/instalar`, { equipamento_id: equipamentoId });
+    } else if (depois) {
+      await httpClient.post(`/ativos-funcionais/equipamentos/${equipamentoId}/transferir`, { ativo_funcional_id: depois });
+    } else {
+      await httpClient.post(`/ativos-funcionais/${antes}/remover`, {});
+    }
+    posicaoOriginalRef.current = depois;
+  };
+
   const handlePosicaoChange = (posicao: AtivoFuncional | null) => {
     setFormData((prev) => ({
       ...prev,
