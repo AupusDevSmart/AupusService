@@ -22,7 +22,9 @@ const tela = () =>
   );
 
 const preencher = async (atual: string, nova: string, confirmar = nova) => {
-  const usuario = userEvent.setup();
+  // Sem esperar um timer a cada tecla: digitando 36 letras com a maquina
+  // ocupada (outra suite rodando junto) o teste passava dos 5 s e falhava
+  const usuario = userEvent.setup({ delay: null });
   await usuario.type(screen.getByLabelText('Senha provisória'), atual);
   await usuario.type(screen.getByLabelText('Nova senha'), nova);
   await usuario.type(screen.getByLabelText('Confirmar nova senha'), confirmar);
