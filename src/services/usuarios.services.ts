@@ -1,6 +1,6 @@
 // src/services/usuarios.services.ts - ENUM CORRIGIDO
-import { isAxiosError } from 'axios';
 import { api } from '@/config/api';
+import { mensagemDoBackend } from '@/utils/api-error';
 
 // ============================================================================
 // TIPOS - CORRIGIDOS BASEADOS NO BACKEND
@@ -338,7 +338,9 @@ export class UsuariosService {
   // ============================================================================
 
   private static handleError(error: unknown, defaultMessage: string): Error {
-    const mensagemDaApi = isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined;
+    // A mensagem do backend vem em error.message (envelope do HttpExceptionFilter);
+    // lendo só data.message, a tela mostrava "Request failed with status code 400"
+    const mensagemDaApi = mensagemDoBackend(error);
     if (mensagemDaApi) {
       return new Error(mensagemDaApi);
     }

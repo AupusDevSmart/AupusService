@@ -411,17 +411,16 @@ export const mapFormDataToCreateDto = (formData: UsuarioFormData) => {
   };
   if (roleName) dto.roleNames = [roleName];
 
-  if (formData.telefone) dto.telefone = formData.telefone;
-  if (formData.instagram) dto.instagram = formData.instagram;
-  if (formData.cpfCnpj) dto.cpfCnpj = formData.cpfCnpj;
-  // O backend espera os nomes de cidade e estado, não os ids do IBGE
-  if (formData.cidade) dto.cidade = formData.cidade;
-  if (formData.estado) dto.estado = formData.estado;
-  if (formData.cep) dto.cep = formData.cep;
-  if (formData.endereco) dto.endereco = formData.endereco;
-  if (formData.concessionariaAtualId) dto.concessionariaAtualId = formData.concessionariaAtualId;
-  if (formData.organizacaoAtualId) dto.organizacaoAtualId = formData.organizacaoAtualId;
-  if (formData.managerId) dto.managerId = formData.managerId;
+  // Campo opcional que o formulário tem: preenchido vai como está, vazio vai
+  // como null (o servidor apaga). Antes o vazio não ia, e apagar o telefone no
+  // sheet não apagava nada (achado no SN-46). Campo ausente do formulário não vai.
+  // O backend espera os nomes de cidade e estado, não os ids do IBGE.
+  const OPCIONAIS = ['telefone', 'instagram', 'cpfCnpj', 'cidade', 'estado', 'cep', 'endereco', 'concessionariaAtualId', 'organizacaoAtualId', 'managerId'] as const;
+  for (const campo of OPCIONAIS) {
+    if (!(campo in formData)) continue;
+    const valor = formData[campo];
+    dto[campo] = typeof valor === 'string' ? valor.trim() || null : valor ?? null;
+  }
 
   if (formData.permissoesAlteradas) {
     dto.permissions = [...new Set(((formData.permissions as unknown[]) ?? []).map((p) => (typeof p === 'string' ? p : (p as { name?: string })?.name)).filter(Boolean))];

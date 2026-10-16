@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { isAxiosError } from 'axios';
 import { api } from '@/config/api';
+import { mensagemDoBackend } from '@/utils/api-error';
 
 export interface ProprietarioOption {
   id: string;
@@ -86,7 +87,7 @@ export function useProprietarios(): UseProprietariosReturn {
           setError(null);
         } else {
           console.error('❌ [useProprietarios] Erro ao buscar proprietários:', err);
-          setError(resposta?.data?.message || 'Erro ao carregar proprietários');
+          setError(mensagemDoBackend(err) || 'Erro ao carregar proprietários');
         }
         setProprietarios([]);
       } finally {

@@ -12,6 +12,8 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { TelefoneInput } from '@/core/components/ui/telefone-input'
+import { telefoneE164 } from '@/core/lib/telefone'
 import { ImagePlus, User, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import {
@@ -47,13 +49,11 @@ const profileFormSchema = z.object({
     .email({
       message: 'Email invalido.',
     }),
+  // Mesma regra da API (SN-46): vazio ou um telefone que vira E.164
   phone: z
     .string()
-    .min(10, {
-      message: 'Telefone invalido.',
-    })
-    .max(15, {
-      message: 'Telefone invalido.',
+    .refine((v) => !v.trim() || telefoneE164(v) !== null, {
+      message: 'Telefone inválido: informe o DDD e o número, como (62) 99999-8888.',
     }),
   password: z
     .string()
@@ -354,7 +354,7 @@ export function AccountForm() {
                       <FormItem>
                         <FormLabel>Telefone</FormLabel>
                         <FormControl>
-                          <Input placeholder='(11) 98765-4321' {...field} />
+                          <TelefoneInput {...field} />
                         </FormControl>
                         <FormDescription>
                           Seu telefone para contato.

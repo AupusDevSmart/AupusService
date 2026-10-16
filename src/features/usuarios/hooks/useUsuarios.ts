@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { api } from '@/config/api';
+import { mensagemDoBackend } from '@/utils/api-error';
 import { 
   Usuario, 
   UsuariosFilters, 
@@ -380,9 +381,10 @@ export function useUsuarios() {
       
       return novoUsuario;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao criar usuário';
+      const errorMessage = mensagemDoBackend(err) ?? (err instanceof Error ? err.message : 'Erro ao criar usuário');
       setError(errorMessage);
-      throw new Error(errorMessage);
+      // O erro original segue (com a resposta da API): quem chama lê o motivo
+      throw err;
     }
   }, [refetch]);
 
@@ -396,9 +398,10 @@ export function useUsuarios() {
       
       return usuarioAtualizado;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar usuário';
+      const errorMessage = mensagemDoBackend(err) ?? (err instanceof Error ? err.message : 'Erro ao atualizar usuário');
       setError(errorMessage);
-      throw new Error(errorMessage);
+      // O erro original segue (com a resposta da API): quem chama lê o motivo
+      throw err;
     }
   }, [refetch]);
 
@@ -410,9 +413,10 @@ export function useUsuarios() {
       // Recarregar lista após exclusão
       await refetch();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao excluir usuário';
+      const errorMessage = mensagemDoBackend(err) ?? (err instanceof Error ? err.message : 'Erro ao excluir usuário');
       setError(errorMessage);
-      throw new Error(errorMessage);
+      // O erro original segue (com a resposta da API): quem chama lê o motivo
+      throw err;
     }
   }, [refetch]);
 
@@ -421,9 +425,10 @@ export function useUsuarios() {
       setError(null);
       return await usuariosService.changePassword(id, data);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao alterar senha';
+      const errorMessage = mensagemDoBackend(err) ?? (err instanceof Error ? err.message : 'Erro ao alterar senha');
       setError(errorMessage);
-      throw new Error(errorMessage);
+      // O erro original segue (com a resposta da API): quem chama lê o motivo
+      throw err;
     }
   }, []);
 
@@ -432,9 +437,10 @@ export function useUsuarios() {
       setError(null);
       return await usuariosService.resetPassword(id, data);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao resetar senha';
+      const errorMessage = mensagemDoBackend(err) ?? (err instanceof Error ? err.message : 'Erro ao resetar senha');
       setError(errorMessage);
-      throw new Error(errorMessage);
+      // O erro original segue (com a resposta da API): quem chama lê o motivo
+      throw err;
     }
   }, []);
 
@@ -458,9 +464,10 @@ export function useUsuarios() {
       setError(null);
       return await usuariosService.findOne(id);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar usuário';
+      const errorMessage = mensagemDoBackend(err) ?? (err instanceof Error ? err.message : 'Erro ao buscar usuário');
       setError(errorMessage);
-      throw new Error(errorMessage);
+      // O erro original segue (com a resposta da API): quem chama lê o motivo
+      throw err;
     }
   }, []);
 
@@ -483,9 +490,10 @@ export function useUsuarios() {
       setError(null);
       return await usuariosService.getUserPermissions(id);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar permissões';
+      const errorMessage = mensagemDoBackend(err) ?? (err instanceof Error ? err.message : 'Erro ao buscar permissões');
       setError(errorMessage);
-      throw new Error(errorMessage);
+      // O erro original segue (com a resposta da API): quem chama lê o motivo
+      throw err;
     }
   }, []);
 
@@ -494,9 +502,10 @@ export function useUsuarios() {
       setError(null);
       return await usuariosService.getUserPermissionsSummary(id);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar resumo de permissões';
+      const errorMessage = mensagemDoBackend(err) ?? (err instanceof Error ? err.message : 'Erro ao buscar resumo de permissões');
       setError(errorMessage);
-      throw new Error(errorMessage);
+      // O erro original segue (com a resposta da API): quem chama lê o motivo
+      throw err;
     }
   }, []);
 
@@ -519,9 +528,10 @@ export function useUsuarios() {
       // Recarregar lista se necessário
       await refetch();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao atribuir role';
+      const errorMessage = mensagemDoBackend(err) ?? (err instanceof Error ? err.message : 'Erro ao atribuir role');
       setError(errorMessage);
-      throw new Error(errorMessage);
+      // O erro original segue (com a resposta da API): quem chama lê o motivo
+      throw err;
     }
   }, [refetch]);
 
@@ -532,9 +542,10 @@ export function useUsuarios() {
       // Invalidar cache de permissões
       userPermissionsService.invalidateUserCache(id);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao sincronizar permissões';
+      const errorMessage = mensagemDoBackend(err) ?? (err instanceof Error ? err.message : 'Erro ao sincronizar permissões');
       setError(errorMessage);
-      throw new Error(errorMessage);
+      // O erro original segue (com a resposta da API): quem chama lê o motivo
+      throw err;
     }
   }, []);
 

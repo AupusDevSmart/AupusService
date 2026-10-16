@@ -1,6 +1,7 @@
 // src/services/veiculos.services.ts
 import { api } from '@/config/api';
 import { PaginatedResponse, BaseFilters } from '@/types/base';
+import { mensagemDoBackend } from '@/utils/api-error';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -435,15 +436,11 @@ export class VeiculosService {
 
   // Private method to handle errors
   private static handleError(error: unknown, defaultMessage: string): Error {
-    // O erro do axios (ou qualquer objeto no mesmo formato), lido sem confiar no tipo
-    const { response, message } = (error ?? {}) as { response?: { data?: { message?: unknown } }; message?: unknown };
-    const mensagemDaApi = response?.data?.message;
-    if (mensagemDaApi) {
-      if (Array.isArray(mensagemDaApi)) {
-        return new Error(mensagemDaApi.join(', '));
-      }
-      return new Error(String(mensagemDaApi));
-    }
+    // A mensagem do backend vem em error.message (envelope do HttpExceptionFilter);
+    // lendo só data.message, a tela mostrava "Request failed with status code 400"
+    const mensagemDaApi = mensagemDoBackend(error);
+    if (mensagemDaApi) return new Error(mensagemDaApi);
+    const { message } = (error ?? {}) as { message?: unknown };
 
     if (message) {
       return new Error(String(message));

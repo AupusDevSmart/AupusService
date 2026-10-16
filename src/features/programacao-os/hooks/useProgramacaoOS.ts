@@ -10,8 +10,7 @@ import {
   type ProgramacaoFiltersDto,
 } from '@/services/programacao-os.service';
 import { api } from '@/config/api';
-import { formatApiError } from '@/utils/api-error';
-import { isAxiosError } from 'axios';
+import { formatApiError, mensagemDoBackend } from '@/utils/api-error';
 
 interface IniciarExecucaoData {
   equipePresente: string[];
@@ -240,7 +239,7 @@ export const useProgramacaoOS = () => {
       };
     } catch (error) {
       console.error('❌ Erro ao iniciar execução:', error);
-      setError((isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined) || 'Erro ao iniciar execução');
+      setError(mensagemDoBackend(error) || 'Erro ao iniciar execução');
       throw error;
     } finally {
       setLoading(false);

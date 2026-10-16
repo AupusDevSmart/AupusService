@@ -1,5 +1,6 @@
 // src/features/usuarios/config/table-config.tsx
 import { TableColumn } from '@/core/types/base';
+import { formatarTelefone } from '@/core/lib/telefone';
 import { Usuario, UsuarioStatus, getUserRoleDisplay } from '../types';
 
 export const usuariosTableColumns: TableColumn<Usuario>[] = [
@@ -68,7 +69,7 @@ export const usuariosTableColumns: TableColumn<Usuario>[] = [
     hideOnMobile: true,
     render: (usuario) => (
       <span className="text-sm text-muted-foreground">
-        {usuario.telefone || '-'}
+        {formatarTelefone(usuario.telefone) || '-'}
       </span>
     )
   }

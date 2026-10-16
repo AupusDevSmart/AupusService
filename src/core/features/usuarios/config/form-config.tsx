@@ -15,6 +15,7 @@ import {
 import { EstadoSelect } from '@/core/components/common/EstadoSelect';
 import { CidadeSelect } from '@/core/components/common/CidadeSelect';
 import { CEPInput } from '@/core/components/common/CEPInput';
+import { TelefoneInput } from '@/core/components/ui/telefone-input';
 import { GerenteSelect } from '@/core/components/common/GerenteSelect';
 import { ConcessionariaSelect } from '@/core/components/common/ConcessionariaSelect';
 import { OrganizacaoSelect } from '@/core/components/common/OrganizacaoSelect';
@@ -475,8 +476,11 @@ export const usuariosFormFields: FormField[] = [
   {
     key: 'telefone',
     label: 'Telefone',
-    type: 'text',
-    placeholder: '(11) 99999-9999',
+    type: 'custom',
+    // Máscara na tela, E.164 no que vai para a API (SN-46)
+    render: ({ value, onChange, disabled }: FormFieldProps) => (
+      <TelefoneInput value={typeof value === 'string' ? value : ''} onChange={onChange} disabled={disabled} />
+    ),
     group: 'informacoes_basicas'
   },
   {

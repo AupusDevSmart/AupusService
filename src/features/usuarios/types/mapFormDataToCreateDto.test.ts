@@ -26,4 +26,20 @@ describe('mapFormDataToCreateDto', () => {
   it('o marcador da tela não vai ao servidor (o backend recusa campo fora do DTO)', () => {
     expect(mapFormDataToCreateDto(base({ permissoesAlteradas: true }))).not.toHaveProperty('permissoesAlteradas');
   });
+
+  // Apagar o campo no sheet não apagava nada: vazio não ia ao servidor, e o
+  // backend mantinha o valor antigo — não dava para tirar o telefone de alguém
+  // (achado no SN-46). Vazio vai como null; campo que o formulário nem tem, não vai.
+  it('campo opcional apagado vai como null, para o servidor apagar', () => {
+    const dto = mapFormDataToCreateDto(base({ telefone: '', instagram: '  ', cidade: '' }));
+
+    expect(dto).toMatchObject({ telefone: null, instagram: null, cidade: null });
+  });
+
+  it('campo opcional preenchido vai como está; ausente do formulário, não vai', () => {
+    const dto = mapFormDataToCreateDto(base({ telefone: '+5562999998888' }));
+
+    expect(dto.telefone).toBe('+5562999998888');
+    expect(dto).not.toHaveProperty('instagram');
+  });
 });

@@ -96,8 +96,8 @@ const campos: Campo<UsuarioDaApi>[] = [
     caminho: 'telefone',
     tipo: 'texto',
     largura: 16,
-    explicacao: 'Com DDD (de 10 a 20 caracteres).',
-    exemplo: '62999998888',
+    explicacao: 'Com DDD. Pode ter máscara ((62) 99999-8888) ou não; é gravado como +5562999998888. Outro país: comece com + e o código do país.',
+    exemplo: '+5562999998888',
     valor: (u) => u.telefone ?? null,
   },
   {
