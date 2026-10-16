@@ -28,7 +28,7 @@ export { FeatureWrapper } from './components/common/FeatureWrapper';
 export { TitleCard } from './components/common/TitleCard';
 
 // UI Components
-export { Combobox } from './components/ui/combobox';
+export { Combobox, type ComboboxOption, type PaginacaoDoCombobox } from './components/ui/combobox';
 
 // Styles - only component classes, NOT theme variables (consumers provide their own theme)
 import './styles/design-minimal-components.css';

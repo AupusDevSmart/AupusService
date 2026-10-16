@@ -225,10 +225,12 @@ export function ExecucaoOSPage() {
             openModal('view', execucaoEncontrada);
           }
 
-          setSearchParams({});
+          // replace: sem ele o Voltar caía de novo em ?execucaoId, reabria a OS e
+          // empilhava outra vez — quem veio do calendário não conseguia voltar
+          setSearchParams({}, { replace: true });
         } catch (error) {
           console.error('Erro ao buscar execução para abrir modal:', error);
-          setSearchParams({});
+          setSearchParams({}, { replace: true });
         }
       };
 

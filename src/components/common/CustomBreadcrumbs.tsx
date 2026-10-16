@@ -104,6 +104,10 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
     },
     // 📅 AGENDA
     {
+      path: '/agenda/calendario',
+      label: 'Calendário',
+    },
+    {
       path: '/agenda/feriados',
       label: 'Agenda',
       isDropdown: true,

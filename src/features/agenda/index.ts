@@ -8,6 +8,7 @@ export { FeriadosPage } from './components/FeriadosPage';
 export { ConfiguracoesDiasUteisPage } from './components/ConfiguracoesDiasUteisPage';
 export { PlantasSelector } from './components/PlantasSelector';
 export { DiasUteisSelector } from './components/DiasUteisSelector';
+export { CalendarioPage } from './calendario/components/CalendarioPage';
 
 // Hooks
 export { useFeriados } from './hooks/useFeriados';

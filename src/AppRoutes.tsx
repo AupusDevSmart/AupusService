@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { FeatureWrapper } from './components/common/FeatureWrapper';
-import { ConfiguracoesDiasUteisPage, FeriadosPage } from './features/agenda';
+import { CalendarioPage, ConfiguracoesDiasUteisPage, FeriadosPage } from './features/agenda';
 // Paginas exclusivas do Service
 import { ExecucaoOSPage } from './features/execucao-os';
 import { FerramentasPage } from './features/ferramentas/components/FerramentasPage';
@@ -278,6 +278,16 @@ export const appRoutes = createBrowserRouter([
       // plano agora e template de categoria e o vinculo com equipamento sai do
       // sheet do proprio equipamento, copiando o template.
       // ✅ NOVA: Rotas para agenda
+      {
+        // Programações, OS e a previsão das preventivas (SN-52). Quem vê
+        // manutenção; OS e programação vêm só para quem tem a permissão delas
+        path: 'agenda/calendario',
+        element: (
+          <FeatureWrapper feature="manutencao.view">
+            <CalendarioPage />
+          </FeatureWrapper>
+        ),
+      },
       {
         path: 'agenda/feriados',
         element: (

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { comentariosApi, type AlvoDoComentario } from '@/services/comentarios.services';
+import { soRepeteFalhaDeRede } from '@/utils/api-error';
 
 const chave = (alvo: AlvoDoComentario, registroId: string) => ['comentarios', alvo, registroId.trim()] as const;
 
@@ -18,7 +19,7 @@ export function useComentarios(alvo: AlvoDoComentario, registroId: string) {
     staleTime: 0,
     refetchOnMount: 'always',
     // 403/404 não melhoram tentando de novo: só falha de rede repete
-    retry: (tentativas, erro) => !(erro as { response?: unknown }).response && tentativas < 2,
+    retry: soRepeteFalhaDeRede,
   });
   const comentar = useMutation({
     mutationFn: (dados: { comentario: string; interno: boolean }) => comentariosApi.comentar(alvo, registroId, dados.comentario, dados.interno),

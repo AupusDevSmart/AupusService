@@ -7,6 +7,7 @@ import {
   Wrench,
   Settings,
   Calendar,
+  CalendarDays,
   FileText,
   Truck,
   Package,
@@ -142,6 +143,25 @@ export const navigationLinks: Array<NavigationLink> = [
         hint: 'Execução OS',
       }
     ]
+  },
+
+  // O que vai acontecer e quando: o calendário da manutenção (SN-52)
+  {
+    key: 'agenda',
+    path: '/agenda',
+    icon: CalendarDays,
+    label: 'Agenda',
+    hint: 'Agenda',
+    links: [
+      {
+        key: 'calendario',
+        featureKey: 'manutencao.view',
+        path: '/agenda/calendario',
+        icon: CalendarDays,
+        label: 'Calendário',
+        hint: 'Calendário de manutenção',
+      },
+    ],
   },
 
   // Tudo que sustenta a operação sem ser a operação em si: quem acessa, o que

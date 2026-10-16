@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { usePlanoDoEquipamento } from './PlanoDoEquipamentoContext';
 import { type ItemHistoricoOS, type SituacaoDaTarefa } from '@/services/historico-equipamento.services';
 import { Expandir } from '@/components/ui/expandir';
+import { ROTULO_FREQUENCIA } from '@/features/planos-manutencao/utils/frequencia';
 
 interface HistoricoDoEquipamentoSectionProps {
   equipamentoId: string;
@@ -85,19 +86,6 @@ const rotuloPrazo = (dias: number | null): string => {
   if (dias < 0) return `atrasada ${Math.abs(dias)} dia${Math.abs(dias) === 1 ? '' : 's'}`;
   if (dias === 0) return 'vence hoje';
   return `em ${dias} dia${dias === 1 ? '' : 's'}`;
-};
-
-/** Frequências do backend, sem acento e em maiúsculas. */
-const ROTULO_FREQUENCIA: Record<string, string> = {
-  DIARIA: 'Diária',
-  SEMANAL: 'Semanal',
-  QUINZENAL: 'Quinzenal',
-  MENSAL: 'Mensal',
-  BIMESTRAL: 'Bimestral',
-  TRIMESTRAL: 'Trimestral',
-  SEMESTRAL: 'Semestral',
-  ANUAL: 'Anual',
-  PERSONALIZADA: 'Personalizada',
 };
 
 const rotuloFrequencia = (frequencia: string | null) =>

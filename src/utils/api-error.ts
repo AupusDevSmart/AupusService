@@ -79,6 +79,15 @@ export function formatApiError(err: unknown): string {
  * todo erro da API. As cópias que liam só o primeiro devolviam sempre
  * undefined, e a tela nunca mostrava o motivo (achado no SN-12).
  */
+/**
+ * Regra de nova tentativa do React Query: só falha de rede (sem resposta)
+ * repete, até duas vezes. Erro com resposta (400, 403, 500) não melhora
+ * tentando, e o interceptor dá um toast a cada tentativa — o padrão do TanStack
+ * repete três vezes: quatro toasts e a tela de erro uns 7 s atrasada.
+ */
+export const soRepeteFalhaDeRede = (tentativas: number, err: unknown): boolean =>
+  !(err as AxiosErrorLike | null | undefined)?.response && tentativas < 2;
+
 export function mensagemDoBackend(err: unknown): string | undefined {
   const data = (err as AxiosErrorLike | null | undefined)?.response?.data;
   return (

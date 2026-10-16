@@ -11,6 +11,7 @@ import { solicitacoesServicoService } from '@/services/solicitacoes-servico.serv
 import { tarefasApi, type TarefaApiResponse } from '@/services/tarefas.services';
 import type { Anomalia } from '@/features/anomalias/types';
 import type { SolicitacaoServico } from '@/features/solicitacoes-servico/types';
+import { ROTULO_FREQUENCIA } from '@/features/planos-manutencao/utils/frequencia';
 import type { DadosOrigem, TarefasPorPlano } from '../types';
 
 /** Instrução na lista: o vínculo (`{ instrucao }`) ou a própria instrução. */
@@ -448,12 +449,6 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
   const renderTarefaDetails = () => {
     if (!dadosOrigem) return null;
 
-    const frequenciaLabels: Record<string, string> = {
-      DIARIA: 'Diária', SEMANAL: 'Semanal', QUINZENAL: 'Quinzenal',
-      MENSAL: 'Mensal', BIMESTRAL: 'Bimestral', TRIMESTRAL: 'Trimestral',
-      SEMESTRAL: 'Semestral', ANUAL: 'Anual', PERSONALIZADA: 'Personalizada',
-    };
-
     /**
      * Uma tarefa por linha, com os dados nas colunas — e não um cartão por
      * tarefa com tudo empilhado dentro. Uma OS de plano traz várias tarefas, e
@@ -482,7 +477,7 @@ export const OrigemOSCard: React.FC<OrigemOSCardProps> = React.memo(({
         </div>
 
         <span className="hidden sm:block w-24 flex-shrink-0 text-[11px] text-muted-foreground truncate">
-          {t.frequencia ? frequenciaLabels[t.frequencia] ?? t.frequencia : '—'}
+          {t.frequencia ? ROTULO_FREQUENCIA[t.frequencia] ?? t.frequencia : '—'}
         </span>
 
         <span className="hidden md:block w-20 flex-shrink-0 text-[11px] text-muted-foreground">
