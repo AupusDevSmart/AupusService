@@ -295,7 +295,11 @@ export function ExecucaoOSPage() {
     }
   };
 
+  const rascunhoDoComentario = useRef(false);
   const handleCloseModal = () => {
+    // Comentário digitado e não enviado não some calado ao fechar (SN-48)
+    if (rascunhoDoComentario.current && !window.confirm('Há um comentário não enviado. Fechar e descartar?')) return;
+    rascunhoDoComentario.current = false;
     setPendingAction(null);
     closeModal();
   };
@@ -476,6 +480,7 @@ export function ExecucaoOSPage() {
                             registroId={modalState.entity!.id}
                             podeComentar={temPermissao('execucao_os.manage', 'execucao_os.executar')}
                             ehCliente={ehCliente}
+                            onRascunho={(tem) => (rascunhoDoComentario.current = tem)}
                           />
                         </div>
                       </div>

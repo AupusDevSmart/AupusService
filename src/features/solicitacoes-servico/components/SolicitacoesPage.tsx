@@ -1,5 +1,5 @@
 // src/features/solicitacoes-servico/components/SolicitacoesPage.tsx
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -274,7 +274,11 @@ export function SolicitacoesPage() {
     }
   };
 
+  const rascunhoDoComentario = useRef(false);
   const handleClose = () => {
+    // Comentário digitado e não enviado não some calado ao fechar (SN-48)
+    if (rascunhoDoComentario.current && !window.confirm('Há um comentário não enviado. Fechar e descartar?')) return;
+    rascunhoDoComentario.current = false;
     closeModal();
     solicitacoesActions.clearPendingAction();
   };
@@ -420,6 +424,7 @@ export function SolicitacoesPage() {
                       registroId={modalState.entity.id}
                       podeComentar={temPermissao('solicitacoes.manage', 'solicitacoes.create')}
                       ehCliente={ehCliente}
+                      onRascunho={(tem) => (rascunhoDoComentario.current = tem)}
                     />
                   </div>
                 )}

@@ -163,6 +163,17 @@ describe('ComentariosDoRegistro', () => {
     }
   });
 
+  it('avisa quem monta o sheet que há rascunho, e quando deixa de haver', async () => {
+    const onRascunho = vi.fn();
+    renderWithProviders(<ComentariosDoRegistro alvo="ordem_servico" registroId="OS1" podeComentar ehCliente={false} onRascunho={onRascunho} />, { withRouter: false });
+    await screen.findByText('Peça chega amanhã');
+
+    fireEvent.change(screen.getByLabelText('Novo comentário'), { target: { value: 'meio escrito' } });
+    expect(onRascunho).toHaveBeenLastCalledWith(true);
+    fireEvent.change(screen.getByLabelText('Novo comentário'), { target: { value: '' } });
+    expect(onRascunho).toHaveBeenLastCalledWith(false);
+  });
+
   it('editar troca o texto e salva', async () => {
     api.listar.mockResolvedValue([comentario({ id: 'MEU', comentario: 'primeira versão', editavel_ate: daqui(10), editavel_por_ms: 10 * 60_000 })]);
     montar();

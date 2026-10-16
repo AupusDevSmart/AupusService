@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2, Lock, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -14,6 +14,8 @@ interface Props {
   podeComentar: boolean;
   /** Cliente não vê nem escreve comentário interno. */
   ehCliente: boolean;
+  /** Avisa quem monta o sheet que há texto não enviado: fechar pergunta antes de descartar. */
+  onRascunho?: (temRascunho: boolean) => void;
 }
 
 const MAXIMO = 5000;
@@ -42,7 +44,7 @@ function TamanhoDoTexto({ tamanho }: { tamanho: number }) {
  * Mora dentro do <form> do sheet: todo botão é type="button", senão comentar
  * enviava o formulário e fechava o sheet.
  */
-export function ComentariosDoRegistro({ alvo, registroId, podeComentar, ehCliente }: Props) {
+export function ComentariosDoRegistro({ alvo, registroId, podeComentar, ehCliente, onRascunho }: Props) {
   const { lista, comentar, editar, excluir } = useComentarios(alvo, registroId);
   const [texto, setTexto] = useState('');
   const [interno, setInterno] = useState(false);
@@ -53,6 +55,15 @@ export function ComentariosDoRegistro({ alvo, registroId, podeComentar, ehClient
     const relogio = setInterval(() => setAgora(Date.now()), 30_000);
     return () => clearInterval(relogio);
   }, []);
+
+  const avisarRascunho = useRef(onRascunho);
+  avisarRascunho.current = onRascunho;
+  const temRascunho = texto.trim().length > 0 || editando !== null;
+  useEffect(() => {
+    avisarRascunho.current?.(temRascunho);
+  }, [temRascunho]);
+  // Saindo da tela (sheet fechado), não há mais rascunho
+  useEffect(() => () => avisarRascunho.current?.(false), []);
 
   const comentarios = lista.data ?? [];
   // O prazo vem como "quanto falta" medido no servidor, contado a partir da hora
