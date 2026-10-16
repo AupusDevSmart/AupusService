@@ -384,6 +384,9 @@ export interface ProgramacaoFiltersDto {
   prioridade?: PrioridadeProgramacao | 'all';
   origem?: OrigemProgramacao | 'all';
   planta_id?: string;
+  /** O equipamento e os componentes dele (SN-55). */
+  equipamento_id?: string;
+  /** AAAA-MM-DD: o período pela data da programação. */
   data_inicio?: string;
   data_fim?: string;
   criado_por_id?: string;
@@ -396,6 +399,17 @@ export interface ProgramacaoFiltersDto {
 // SERVIÇO DE API
 // ============================================================================
 
+/** "Todos" dos filtros de id: a API casaria 'all' como id e não traria nada. */
+const SEM_TODOS = new Set(['planta_id', 'equipamento_id']);
+
+/** O que o filtro não pediu não vai: vazio, e o "todos" dos filtros de id. */
+function semFiltroVazio(filters?: ProgramacaoFiltersDto): ProgramacaoFiltersDto | undefined {
+  if (!filters) return filters;
+  return Object.fromEntries(
+    Object.entries(filters).filter(([chave, valor]) => valor !== '' && valor !== undefined && !(SEM_TODOS.has(chave) && valor === 'all')),
+  ) as ProgramacaoFiltersDto;
+}
+
 export class ProgramacaoOSApiService {
   private readonly baseEndpoint = '/programacao-os';
 
@@ -407,7 +421,7 @@ export class ProgramacaoOSApiService {
     // // console.log('🔍 PROGRAMACAO-OS API: Listando programações com filtros:', filters);
 
     const response = await api.get<ListarProgramacoesResponse>(this.baseEndpoint, {
-      params: filters
+      params: semFiltroVazio(filters)
     });
     // // console.log('✅ PROGRAMACAO-OS API: Programações listadas:', response.data.pagination);
     return response.data;

@@ -1,5 +1,5 @@
 // src/features/execucao-os/hooks/useExecucaoOSApi.ts
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { execucaoOSApi } from '@/services/execucao-os.service';
 import type { TipoAnexoOS } from '@/features/execucao-os/types';
 import {
@@ -41,12 +41,17 @@ export function useExecucaoOSApi() {
   // CRUD BÁSICO
   // ============================================================================
 
+  // Só a resposta do último pedido vale: com filtros trocando rápido, a de um
+  // pedido anterior podia chegar depois e deixar na tabela o que a tela não pede
+  const ultimoPedido = useRef(0);
   const fetchItems = useCallback(async (params: QueryExecucaoOSApiParams = {}) => {
+    const pedido = ++ultimoPedido.current;
     try {
       setLoading(true);
       setError(null);
 
       const response: ExecucaoOSListApiResponse = await execucaoOSApi.findAll(params);
+      if (pedido !== ultimoPedido.current) return response;
 
       // Transformar dados da API para o formato esperado pelo frontend
       const execucoesFormatadas = transformApiArrayToExecucaoOS(response.data || []);

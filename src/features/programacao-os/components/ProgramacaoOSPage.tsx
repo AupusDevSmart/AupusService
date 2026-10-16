@@ -1,5 +1,5 @@
 // src/features/programacao-os/components/ProgramacaoOSPage.tsx - ATUALIZADA COM CARDS
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { formatApiError } from '@/utils/api-error';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -13,6 +13,8 @@ import { Plus, FileText, Calendar, CheckCircle, Clock } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { programacaoOSTableColumns } from '../config/table-config';
 import { programacaoOSFilterConfig } from '../config/filter-config';
+import { filtrosDePlantaEquipamentoPeriodo } from '@/components/common/filtros/filtros-da-lista';
+import { usePlantasDoFiltro } from '@/hooks/usePlantasDoFiltro';
 import { programacaoOSFormFields, programacaoOSFormGroups } from '../config/form-config';
 import { createProgramacaoOSTableActions } from '../config/actions-config';
 import { useProgramacaoOS } from '../hooks/useProgramacaoOS';
@@ -161,7 +163,11 @@ const initialFilters: ProgramacaoFiltersDto = {
   status: 'all',
   tipo: 'all',
   prioridade: 'all',
-  origem: 'all'
+  origem: 'all',
+  planta_id: 'all',
+  equipamento_id: 'all',
+  data_inicio: '',
+  data_fim: '',
 };
 
 export function ProgramacaoOSPage() {
@@ -217,9 +223,14 @@ export function ProgramacaoOSPage() {
   } = useProgramacaoOS();
 
   // Carregar dados
+  // Só a resposta do último pedido vale: com filtros trocando rápido, a de um
+  // pedido anterior podia chegar depois e deixar na tabela o que a tela não pede
+  const ultimoPedido = useRef(0);
   const carregarDados = async () => {
+    const pedido = ++ultimoPedido.current;
     try {
       const response = await listarProgramacoes(filters);
+      if (pedido !== ultimoPedido.current) return;
       setProgramacoes(response.data || []);
       setPagination(response.pagination || {
         page: 1,
@@ -322,9 +333,26 @@ export function ProgramacaoOSPage() {
     setFilters(prev => ({
       ...prev,
       ...filters,
+      // Outra planta: o equipamento escolhido era da anterior
+      ...('planta_id' in filters && filters.planta_id !== prev.planta_id && { equipamento_id: 'all' }),
       page: 1 // Reset para primeira página
     }));
   };
+
+  // Planta, equipamento e período (SN-55), a mesma régua da Execução
+  const plantasDoFiltro = usePlantasDoFiltro();
+  const filtrosDaPagina = useMemo(
+    () => [
+      ...programacaoOSFilterConfig,
+      ...filtrosDePlantaEquipamentoPeriodo({
+        plantas: plantasDoFiltro.opcoes,
+        carregandoPlantas: plantasDoFiltro.carregando,
+        plantaId: filters.planta_id,
+        chaves: { planta: 'planta_id', equipamento: 'equipamento_id', inicio: 'data_inicio', fim: 'data_fim' },
+      }),
+    ],
+    [plantasDoFiltro.opcoes, plantasDoFiltro.carregando, filters.planta_id],
+  );
 
   // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
   // um trecho que nao existe.
@@ -867,7 +895,7 @@ export function ProgramacaoOSPage() {
             <div className="flex-1">
               <BaseFilters 
                 filters={filters}
-                config={programacaoOSFilterConfig}
+                config={filtrosDaPagina}
                 onFilterChange={handleFilterChange}
               />
             </div>

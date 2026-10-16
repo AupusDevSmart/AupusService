@@ -14,7 +14,7 @@ import { mensagemDoBackend } from '@/utils/api-error';
 import { tipoLabels } from '@/features/execucao-os/config/labels';
 import type { TipoDaOS } from '@/services/eventos-da-agenda.services';
 import { ORDEM_DAS_SITUACOES, SITUACOES } from '@/features/agenda/calendario/config/situacoes';
-import { useEquipamentosDoFiltro } from '@/features/agenda/calendario/hooks/useEquipamentosDoFiltro';
+import { useEquipamentosDoFiltro } from '@/hooks/useEquipamentosDoFiltro';
 import { useEventosDaAgenda } from '@/features/agenda/calendario/hooks/useEventosDaAgenda';
 import { agruparPorDia, deslocar, diaParaApi, periodoDaVisao, tituloDoPeriodo, type Visao } from '@/features/agenda/calendario/utils/periodo';
 import { emBrasilia } from '@/utils/brasilia';

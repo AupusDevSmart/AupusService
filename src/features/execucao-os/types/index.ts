@@ -394,9 +394,13 @@ export interface ExecucaoOSFilters extends BaseFiltersType {
   tipo?: TipoOS | 'all';
   prioridade?: PrioridadeOS | 'all';
   responsavel?: string;
-  dataExecucao?: string;
   periodo?: string;
   planta?: string;
+  /** O equipamento e os componentes dele (SN-55). */
+  equipamento?: string;
+  /** AAAA-MM-DD: o período pela data programada da OS. */
+  dataInicio?: string;
+  dataFim?: string;
   data_inicio?: string;
   data_fim?: string;
   programacao_id?: string;

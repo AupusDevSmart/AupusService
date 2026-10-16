@@ -16,7 +16,7 @@ function lerPagina(resposta: EquipamentosListApiResponse) {
 const rotulo = (e: EquipamentoApiResponse) => [e.nome, e.unidade?.nome].filter(Boolean).join(' · ');
 
 /**
- * As UCs para o filtro do calendário (o componente vem junto com a UC): todas,
+ * As UCs para os filtros (calendário, Programação, Execução; o componente vem junto com a UC): todas,
  * por rolagem infinita, com busca no servidor — o cadastro cresce.
  */
 export function useEquipamentosDoFiltro(plantaId: string | undefined, escolhido?: { id: string; rotulo: string }) {

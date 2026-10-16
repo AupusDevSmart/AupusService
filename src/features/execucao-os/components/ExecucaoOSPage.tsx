@@ -47,6 +47,10 @@ const initialFilters: ExecucaoOSFilters = {
   statusExecucao: 'all',
   tipo: 'all',
   prioridade: 'all',
+  planta: 'all',
+  equipamento: 'all',
+  dataInicio: '',
+  dataFim: '',
   page: 1,
   limit: LINHAS_POR_PAGINA_PADRAO,
 };
@@ -246,6 +250,8 @@ export function ExecucaoOSPage() {
     setFilters(prev => ({
       ...prev,
       ...partial,
+      // Outra planta: o equipamento escolhido era da anterior
+      ...('planta' in partial && partial.planta !== prev.planta && { equipamento: 'all' }),
       page: 1,
     }));
   };

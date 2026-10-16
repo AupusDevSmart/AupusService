@@ -4,14 +4,28 @@ import { execucaoOSFilterConfig } from '../config/filter-config';
 import { execucaoOSFormFields, execucaoOSFormGroups } from '../config/form-config';
 import type { ExecucaoOSFilters } from '../types';
 import type { QueryExecucaoOSApiParams } from '@/services/execucao-os.service';
+import { filtrosDePlantaEquipamentoPeriodo } from '@/components/common/filtros/filtros-da-lista';
+import { usePlantasDoFiltro } from '@/hooks/usePlantasDoFiltro';
 
 /**
  * Hook customizado para gerenciar filtros da feature Execução de OS
  * Segue o padrão definido no FEATURE_REFACTORING_GUIDE.md
  */
 export function useExecucaoOSFilters(currentFilters: ExecucaoOSFilters) {
-  // Retorna as configurações de filtros (imutável)
-  const filterConfigs = useMemo(() => execucaoOSFilterConfig, []);
+  // Planta, equipamento e período (SN-55), a mesma régua da Programação
+  const plantasDoFiltro = usePlantasDoFiltro();
+  const filterConfigs = useMemo(
+    () => [
+      ...execucaoOSFilterConfig,
+      ...filtrosDePlantaEquipamentoPeriodo({
+        plantas: plantasDoFiltro.opcoes,
+        carregandoPlantas: plantasDoFiltro.carregando,
+        plantaId: currentFilters.planta,
+        chaves: { planta: 'planta', equipamento: 'equipamento', inicio: 'dataInicio', fim: 'dataFim' },
+      }),
+    ],
+    [plantasDoFiltro.opcoes, plantasDoFiltro.carregando, currentFilters.planta],
+  );
 
   // Retorna os campos do formulário (imutável)
   const formFields = useMemo(() => execucaoOSFormFields, []);
@@ -21,7 +35,7 @@ export function useExecucaoOSFilters(currentFilters: ExecucaoOSFilters) {
 
   // Converte filtros do frontend para parâmetros da API
   const toApiParams = useMemo(() => {
-    const params: QueryExecucaoOSApiParams & { data_execucao?: string } = {
+    const params: QueryExecucaoOSApiParams = {
       page: currentFilters.page || 1,
       limit: currentFilters.limit || 10,
     };
@@ -42,17 +56,22 @@ export function useExecucaoOSFilters(currentFilters: ExecucaoOSFilters) {
       params.prioridade = currentFilters.prioridade;
     }
 
+    // A API filtra o responsável pelo nome (texto); responsavel_id e
+    // data_execucao, que iam antes, ela não declara: davam 400 no primeiro uso
     if (currentFilters.responsavel && currentFilters.responsavel !== 'all') {
-      params.responsavel_id = currentFilters.responsavel;
+      params.responsavel = currentFilters.responsavel;
     }
 
     if (currentFilters.planta && currentFilters.planta !== 'all') {
       params.planta_id = currentFilters.planta;
     }
 
-    if (currentFilters.dataExecucao) {
-      params.data_execucao = currentFilters.dataExecucao;
+    if (currentFilters.equipamento && currentFilters.equipamento !== 'all') {
+      params.equipamento_id = currentFilters.equipamento;
     }
+
+    if (currentFilters.dataInicio) params.data_inicio = currentFilters.dataInicio;
+    if (currentFilters.dataFim) params.data_fim = currentFilters.dataFim;
 
     // Adicionar filtro de OS atrasadas
     if (currentFilters.atrasadas === true) {

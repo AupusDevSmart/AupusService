@@ -440,23 +440,29 @@ export interface DashboardExecucaoOSDto {
 }
 
 // Parâmetros de consulta
+/**
+ * Os parâmetros que GET /execucao-os aceita — só esses: a API recusa (400) o que
+ * não declara. Aqui havia responsavel_id, ordem_servico_id, aprovacao_pendente
+ * e sort_by/sort_order, que dariam 400 no primeiro uso (SN-55).
+ */
 export interface QueryExecucaoOSApiParams {
   search?: string;
   status?: StatusExecucaoOS;
+  /** O equipamento e os componentes dele, pela regra da instalação da OS. */
   equipamento_id?: string;
   planta_id?: string;
-  ordem_servico_id?: string;
   tipo?: TipoOrdemServico;
   prioridade?: PrioridadeExecucao;
-  data_inicio?: string; // ISO DateTime string
-  data_fim?: string; // ISO DateTime string
-  responsavel_id?: string;
-  aprovacao_pendente?: boolean;
+  /** AAAA-MM-DD (dia de Brasília) ou ISO. */
+  data_inicio?: string;
+  data_fim?: string;
+  /** Texto: o nome do responsável contém. */
+  responsavel?: string;
   atrasadas?: boolean;
   page?: number;
   limit?: number;
-  sort_by?: string;
-  sort_order?: 'asc' | 'desc';
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface ExecucaoOSListApiResponse {
