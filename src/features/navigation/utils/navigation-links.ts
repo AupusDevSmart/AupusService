@@ -145,7 +145,8 @@ export const navigationLinks: Array<NavigationLink> = [
     ]
   },
 
-  // O que vai acontecer e quando: o calendário da manutenção (SN-52)
+  // O que vai acontecer e quando: o calendário da manutenção (SN-52) e a
+  // regra de dia útil que ele e o gerador usam (SN-56)
   {
     key: 'agenda',
     path: '/agenda',
@@ -161,11 +162,27 @@ export const navigationLinks: Array<NavigationLink> = [
         label: 'Calendário',
         hint: 'Calendário de manutenção',
       },
+      {
+        key: 'feriados',
+        featureKey: 'agenda.manage',
+        path: '/agenda/feriados',
+        icon: Calendar,
+        label: 'Feriados',
+        hint: 'Feriados',
+      },
+      {
+        key: 'configuracoes-dias-uteis',
+        featureKey: 'agenda.manage',
+        path: '/agenda/configuracoes-dias-uteis',
+        icon: Clock,
+        label: 'Dias úteis',
+        hint: 'Dias úteis das plantas',
+      },
     ],
   },
 
-  // Tudo que sustenta a operação sem ser a operação em si: quem acessa, o que
-  // se reserva, e o calendário que define dia útil.
+  // Tudo que sustenta a operação sem ser a operação em si: quem acessa e o que
+  // se reserva. Feriados e dias úteis foram para a Agenda (SN-56).
   {
     key: 'administracao',
     path: '/administracao',
@@ -207,22 +224,6 @@ export const navigationLinks: Array<NavigationLink> = [
         icon: CheckSquare,
         label: 'Reservas',
         hint: 'Reservas',
-      },
-      {
-        key: 'feriados',
-        featureKey: 'agenda.manage',
-        path: '/agenda/feriados',
-        icon: Calendar,
-        label: 'Feriados',
-        hint: 'Feriados',
-      },
-      {
-        key: 'configuracoes-dias-uteis',
-        featureKey: 'agenda.manage',
-        path: '/agenda/configuracoes-dias-uteis',
-        icon: Clock,
-        label: 'Configurações de Dias Úteis',
-        hint: 'Configurações de Dias Úteis',
       }
     ]
   },

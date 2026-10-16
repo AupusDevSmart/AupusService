@@ -30,6 +30,13 @@ interface BreadcrumbConfigItem {
 
 import React, { useEffect, useRef } from 'react';
 
+/** As páginas do grupo Agenda, no menu suspenso da migalha. */
+const PAGINAS_DA_AGENDA = [
+  { label: 'Calendário', href: '/agenda/calendario' },
+  { label: 'Feriados', href: '/agenda/feriados' },
+  { label: 'Dias úteis', href: '/agenda/configuracoes-dias-uteis' },
+];
+
 export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -103,27 +110,24 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
       label: 'Fornecedores',
     },
     // 📅 AGENDA
+    // A página com o nome dela (antes "Agenda > Agenda"), e as irmãs no menu suspenso
     {
       path: '/agenda/calendario',
       label: 'Calendário',
+      isDropdown: true,
+      dropdownItems: PAGINAS_DA_AGENDA,
     },
     {
       path: '/agenda/feriados',
-      label: 'Agenda',
+      label: 'Feriados',
       isDropdown: true,
-      dropdownItems: [
-        { label: 'Feriados', href: '/agenda/feriados' },
-        { label: 'Configurações de Dias Úteis', href: '/agenda/configuracoes-dias-uteis' },
-      ],
+      dropdownItems: PAGINAS_DA_AGENDA,
     },
     {
       path: '/agenda/configuracoes-dias-uteis',
-      label: 'Agenda',
+      label: 'Dias úteis',
       isDropdown: true,
-      dropdownItems: [
-        { label: 'Feriados', href: '/agenda/feriados' },
-        { label: 'Configurações de Dias Úteis', href: '/agenda/configuracoes-dias-uteis' },
-      ],
+      dropdownItems: PAGINAS_DA_AGENDA,
     },
     // ⚙️ CONFIGURAÇÕES
     {

@@ -37,11 +37,9 @@ export const PlantasSelector: React.FC<PlantasSelectorProps> = ({
       try {
         setLoading(true);
         setError(null);
-        const response = await PlantasService.getAllPlantas({ limit: 100 });
-        setPlantas(response.data);
-        console.log('✅ [PLANTAS SELECTOR] Plantas carregadas:', response.data.length);
+        setPlantas(await PlantasService.listarTodas());
       } catch (err) {
-        console.error('❌ [PLANTAS SELECTOR] Erro ao carregar plantas:', err);
+        console.error('[PLANTAS SELECTOR] Erro ao carregar plantas:', err);
         setError((err instanceof Error && err.message) || 'Erro ao carregar plantas');
         setPlantas([]);
       } finally {
@@ -76,9 +74,9 @@ export const PlantasSelector: React.FC<PlantasSelectorProps> = ({
   if (geral) {
     return (
       <div className="space-y-2">
-        <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <Building2 className="h-4 w-4 text-blue-600" />
-          <span className="text-sm text-blue-800">
+        <div className="flex items-center gap-2 p-3 bg-accent border border-border rounded-lg">
+          <Building2 className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-foreground">
             Aplicado a todas as plantas do sistema
           </span>
         </div>
@@ -102,8 +100,8 @@ export const PlantasSelector: React.FC<PlantasSelectorProps> = ({
   if (error) {
     return (
       <div className="space-y-2">
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-          ⚠️ {error}
+        <div className="p-3 bg-background border border-border rounded-lg text-sm text-red-600 dark:text-red-400">
+          {error}
         </div>
       </div>
     );
@@ -113,7 +111,7 @@ export const PlantasSelector: React.FC<PlantasSelectorProps> = ({
   if (plantas.length === 0) {
     return (
       <div className="space-y-2">
-        <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
+        <div className="p-3 bg-muted border border-border rounded-lg text-sm text-muted-foreground">
           Nenhuma planta encontrada
         </div>
       </div>
@@ -133,16 +131,16 @@ export const PlantasSelector: React.FC<PlantasSelectorProps> = ({
               type="button"
               onClick={handleSelectAll}
               disabled={disabled || value.length === plantas.length}
-              className="text-xs text-blue-600 hover:text-blue-700 disabled:text-gray-400"
+              className="text-xs text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
               Selecionar todas
             </button>
-            <span className="text-xs text-gray-400">|</span>
+            <span className="text-xs text-muted-foreground">|</span>
             <button
               type="button"
               onClick={handleDeselectAll}
               disabled={disabled || value.length === 0}
-              className="text-xs text-red-600 hover:text-red-700 disabled:text-gray-400"
+              className="text-xs text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
               Limpar seleção
             </button>
@@ -151,7 +149,7 @@ export const PlantasSelector: React.FC<PlantasSelectorProps> = ({
       )}
 
       {/* Lista de plantas */}
-      <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg">
+      <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
         {plantas.map((planta) => {
           const isSelected = value.includes(planta.id);
 
@@ -159,23 +157,23 @@ export const PlantasSelector: React.FC<PlantasSelectorProps> = ({
             <div
               key={planta.id}
               className={`
-                flex items-center gap-3 p-3 border-b border-gray-100 last:border-b-0
-                ${!isViewMode ? 'hover:bg-gray-50 cursor-pointer' : ''}
-                ${isSelected ? 'bg-blue-50' : ''}
+                flex items-center gap-3 p-3 border-b border-border last:border-b-0
+                ${!isViewMode ? 'hover:bg-accent cursor-pointer' : ''}
+                ${isSelected ? 'bg-accent' : ''}
               `}
               onClick={() => handlePlantaToggle(planta.id)}
             >
               <div className={`
                 flex items-center justify-center w-4 h-4 border rounded
                 ${isSelected
-                  ? 'bg-blue-600 border-blue-600 text-white'
-                  : 'border-gray-300'
+                  ? 'bg-primary border-primary text-primary-foreground'
+                  : 'border-border'
                 }
               `}>
                 {isSelected && <Check className="h-3 w-3" />}
               </div>
 
-              <Building2 className="h-4 w-4 text-gray-500 flex-shrink-0" />
+              <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -183,7 +181,7 @@ export const PlantasSelector: React.FC<PlantasSelectorProps> = ({
                     {planta.nome}
                   </span>
                 </div>
-                <div className="text-xs text-gray-500 truncate">
+                <div className="text-xs text-muted-foreground truncate">
                   CNPJ: {planta.cnpj} • {planta.endereco.cidade}/{planta.endereco.uf}
                 </div>
               </div>
@@ -195,7 +193,7 @@ export const PlantasSelector: React.FC<PlantasSelectorProps> = ({
       {/* Modo visualização - mostrar plantas selecionadas */}
       {isViewMode && value.length > 0 && (
         <div className="mt-3">
-          <span className="text-sm font-medium text-gray-700">
+          <span className="text-sm font-medium text-foreground">
             Plantas selecionadas:
           </span>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -204,7 +202,7 @@ export const PlantasSelector: React.FC<PlantasSelectorProps> = ({
               return (
                 <div
                   key={plantaId}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-accent text-foreground rounded text-xs"
                 >
                   <Building2 className="h-3 w-3" />
                   <span>{planta?.nome || `ID: ${plantaId}`}</span>
@@ -217,7 +215,7 @@ export const PlantasSelector: React.FC<PlantasSelectorProps> = ({
 
       {/* Debug info em development */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded">
+        <div className="text-xs bg-muted p-2 rounded">
           <div>Debug Plantas Selector:</div>
           <div>Geral: {geral ? 'Sim' : 'Não'}</div>
           <div>Plantas disponíveis: {plantas.length}</div>

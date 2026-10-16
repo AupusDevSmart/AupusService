@@ -1,6 +1,7 @@
 // src/services/plantas.services.ts
 
 import { api } from '@/config/api';
+import { isAxiosError } from 'axios';
 import type { PaginatedResponse } from '@/types/base';
 import { mensagemDoBackend } from '@/utils/api-error';
 
@@ -111,9 +112,31 @@ class PlantasServiceClass {
         pagination,
       };
     } catch (error) {
-      console.error('❌ [PlantasService] Error fetching plantas:', error);
-      throw new Error(mensagemDoBackend(error) || 'Erro ao buscar plantas');
+      console.error('[PlantasService] Error fetching plantas:', error);
+      // A mensagem leva o motivo, e a resposta vai junto: sem ela quem chama
+      // não sabia se foi a rede (repetir) ou a API (403, 500), e o aviso dizia
+      // "a API não respondeu" para um "sem permissão"
+      throw Object.assign(new Error(mensagemDoBackend(error) || 'Erro ao buscar plantas'), {
+        response: isAxiosError(error) ? error.response : undefined,
+      });
     }
+  }
+
+  /**
+   * Todas as plantas que quem pede enxerga, página a página: os filtros e o
+   * seletor de plantas mostram todas (o `limit: 100` sozinho cortava calado a
+   * partir da 101ª).
+   */
+  async listarTodas(): Promise<PlantaResponse[]> {
+    const POR_PAGINA = 100;
+    const PAGINAS_NO_MAXIMO = 50;
+    const plantas: PlantaResponse[] = [];
+    for (let page = 1; page <= PAGINAS_NO_MAXIMO; page++) {
+      const resposta = await this.getAllPlantas({ page, limit: POR_PAGINA });
+      plantas.push(...resposta.data);
+      if (!resposta.pagination || page >= resposta.pagination.totalPages) break;
+    }
+    return plantas;
   }
 
   /**

@@ -1,11 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PlantasService } from '@/services/plantas.services';
-import { soRepeteFalhaDeRede } from '@/utils/api-error';
-
-const POR_PAGINA = 100;
-/** Trava de segurança do laço: mais que isto não cabe num filtro. */
-const PAGINAS_NO_MAXIMO = 50;
+import { formatApiError, soRepeteFalhaDeRede } from '@/utils/api-error';
 
 export const TODAS_AS_PLANTAS = { value: 'all', label: 'Todas as plantas' };
 
@@ -17,19 +13,16 @@ export const TODAS_AS_PLANTAS = { value: 'all', label: 'Todas as plantas' };
 export function usePlantasDoFiltro() {
   const consulta = useQuery({
     queryKey: ['plantas', 'opcoes-do-filtro'],
-    queryFn: async () => {
-      const plantas: { value: string; label: string }[] = [];
-      for (let pagina = 1; pagina <= PAGINAS_NO_MAXIMO; pagina++) {
-        const resposta = await PlantasService.getAllPlantas({ page: pagina, limit: POR_PAGINA });
-        plantas.push(...(resposta.data ?? []).map((p) => ({ value: String(p.id).trim(), label: p.nome })));
-        if (!resposta.pagination || pagina >= resposta.pagination.totalPages) break;
-      }
-      return plantas.sort((a, b) => a.label.localeCompare(b.label));
-    },
+    queryFn: async () =>
+      (await PlantasService.listarTodas())
+        .map((p) => ({ value: String(p.id).trim(), label: p.nome }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
     staleTime: 5 * 60_000,
     retry: soRepeteFalhaDeRede,
   });
 
   const opcoes = useMemo(() => [TODAS_AS_PLANTAS, ...(consulta.data ?? [])], [consulta.data]);
-  return { opcoes, carregando: consulta.isLoading };
+  // O motivo que a API devolveu, para a tela dizer por que o filtro não tem plantas
+  const erro = consulta.isError ? formatApiError(consulta.error) : null;
+  return { opcoes, carregando: consulta.isLoading, erro };
 }

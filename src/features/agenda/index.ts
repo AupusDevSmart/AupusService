@@ -62,7 +62,6 @@ export {
 } from './config/table-config';
 
 export {
-  usePlantas,
   createFeriadosFilterConfig,
   createConfiguracoesDiasUteisFilterConfig,
   feriadosFilterPresets,
