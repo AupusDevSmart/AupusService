@@ -1,5 +1,5 @@
 // src/features/anomalias/components/AnomaliasPage.tsx - REFATORADA
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '@/store/useUserStore';
 import { linkDeProgramacao } from '@/features/programacao-os/utils/link-de-programacao';
@@ -11,6 +11,7 @@ import { BaseFilters } from '@/core';
 import { AnomaliasModal } from './AnomaliasModal';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
+import { useAbrirPelaUrl } from '@/hooks/useAbrirPelaUrl';
 import { Anomalia, AnomaliaFormData, AnomaliasFilters } from '../types';
 import type { IconeDeAcao } from '@/core/types/base';
 import { anomaliasTableColumns } from '../config/table-config';
@@ -19,7 +20,7 @@ import { useAnomaliasApi } from '../hooks/useAnomaliasApi';
 import { useAnomaliasFilters } from '../hooks/useAnomaliasFilters';
 import { useAnomaliasActions } from '../hooks/useAnomaliasActions';
 import { AnomaliasDashboard } from './AnomaliasDashboard';
-import { AnomaliasStats } from '@/services/anomalias.service';
+import { anomaliasService, AnomaliasStats } from '@/services/anomalias.service';
 
 const initialFilters = {
   search: '',
@@ -80,6 +81,13 @@ export function AnomaliasPage() {
     },
     onSuccess: reloadData,
   });
+
+  // A notificação leva para cá com ?anomaliaId= (SN-47)
+  const abrirAnomaliaPorId = useCallback(
+    async (id: string) => openModal('view', await anomaliasService.findOne(id)),
+    [openModal],
+  );
+  useAbrirPelaUrl('anomaliaId', abrirAnomaliaPorId);
 
   const navigate = useNavigate();
   const temPermissao = useUserStore((st) => st.hasPermission);

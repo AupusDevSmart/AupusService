@@ -6,6 +6,16 @@ import { toast } from '@/hooks/use-toast';
 import { AuthService } from '@/services/auth.service';
 import qs from 'qs';
 
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    /**
+     * Requisição de fundo (o contador do sininho, a cada minuto): quem chamou
+     * mostra a falha do seu jeito, e o toast global não se repete a cada rodada.
+     */
+    semAvisoGlobal?: boolean;
+  }
+}
+
 /**
  * Flag para controlar se já está fazendo refresh
  * Evita múltiplas tentativas simultâneas
@@ -179,7 +189,7 @@ api.interceptors.response.use(
       || 'UNKNOWN_ERROR';
 
     // Mostrar toast com o erro (exceto para erros 401 que são tratados acima)
-    if (error.response?.status !== 401) {
+    if (error.response?.status !== 401 && !originalRequest?.semAvisoGlobal) {
       toast({
         variant: 'destructive',
         title: `Erro ${errorCode}`,

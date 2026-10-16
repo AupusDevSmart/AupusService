@@ -205,9 +205,12 @@ export function ExecucaoOSPage() {
   // A ref guarda o id já aberto: o fetchOne alterna `loading` (dependência do
   // efeito) antes de o parâmetro sair da URL, e isso refazia o GET a cada ~2s,
   // recriando o progresso e desfazendo o que a pessoa acabara de marcar.
+  // Sem o parâmetro, a ref zera: o mesmo link clicado de novo (a notificação
+  // da mesma OS) volta a abrir.
   const abertoPelaUrl = useRef<string | null>(null);
   useEffect(() => {
     const execucaoIdParam = searchParams.get('execucaoId');
+    if (!execucaoIdParam) abertoPelaUrl.current = null;
 
     if (execucaoIdParam && abertoPelaUrl.current !== execucaoIdParam) {
       const abrirModalAutomatico = async () => {

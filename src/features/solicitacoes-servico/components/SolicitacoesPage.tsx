@@ -31,6 +31,7 @@ interface PropsDoCampo {
   formData?: { instrucoes_ids?: string[] };
 }
 import { useGenericModal } from '@/hooks/useGenericModal';
+import { useAbrirPelaUrl } from '@/hooks/useAbrirPelaUrl';
 import { SolicitacaoServico, SolicitacaoServicoFormData, SolicitacoesFilters } from '../types';
 import type { IconeDeAcao } from '@/core/types/base';
 import { solicitacoesTableColumns } from '../config/table-config';
@@ -96,6 +97,9 @@ export function SolicitacoesPage() {
     deleteItem: deleteSolicitacao,
     onSuccess: reloadData,
   });
+
+  // A notificação leva para cá com ?solicitacaoId= (SN-47)
+  useAbrirPelaUrl('solicitacaoId', solicitacoesActions.abrirPorId);
 
   const navigate = useNavigate();
   const temPermissao = useUserStore((st) => st.hasPermission);
