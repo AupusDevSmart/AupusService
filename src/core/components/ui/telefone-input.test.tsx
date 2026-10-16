@@ -42,4 +42,32 @@ describe('TelefoneInput', () => {
 
     expect(onChange).toHaveBeenLastCalledWith('');
   });
+
+  // A máscara cortava em 11 dígitos antes de tirar o prefixo: "0 62 99999-8888"
+  // virava "+556299999888" (um dígito a menos, aceito como fixo) sem aviso
+  // (revisão de falha silenciosa).
+  it.each([
+    ['com o 0 da operadora', '062999998888', '(62) 99999-8888', '+5562999998888'],
+    ['com o 55 do país (wa.me)', '5562999998888', '(62) 99999-8888', '+5562999998888'],
+    ['de outro país com 00', '0012025550123', '+12025550123', '+12025550123'],
+  ])('%s: o número fica inteiro', async (_caso, digitado, exibido, entregue) => {
+    const onChange = vi.fn();
+    render(<TelefoneInput value="" onChange={onChange} />);
+
+    await userEvent.setup({ delay: null }).type(screen.getByRole('textbox'), digitado);
+
+    expect(screen.getByRole('textbox')).toHaveValue(exibido);
+    expect(onChange).toHaveBeenLastCalledWith(entregue);
+  });
+
+  it('colar o número com prefixo também fica inteiro', async () => {
+    const onChange = vi.fn();
+    render(<TelefoneInput value="" onChange={onChange} />);
+
+    const usuario = userEvent.setup({ delay: null });
+    await usuario.click(screen.getByRole('textbox'));
+    await usuario.paste('0 62 99999-8888');
+
+    expect(onChange).toHaveBeenLastCalledWith('+5562999998888');
+  });
 });

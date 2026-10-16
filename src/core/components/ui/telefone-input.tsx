@@ -25,6 +25,15 @@ export const TelefoneInput = forwardRef<HTMLInputElement, TelefoneInputProps>(
     }, [value]);
 
     const aoDigitar = (e: React.ChangeEvent<HTMLInputElement>) => {
+      // Primeiro o número inteiro, como veio: a máscara corta em 11 dígitos e,
+      // com o 0 da operadora ou o 55 do país, comia o último dígito e o número
+      // errado continuava "válido" (revisão de falha silenciosa)
+      const completo = telefoneE164(e.target.value);
+      if (completo) {
+        setExibido(formatarTelefone(completo));
+        onChange(completo);
+        return;
+      }
       const mascarado = mascararTelefone(e.target.value);
       setExibido(mascarado);
       onChange(telefoneE164(mascarado) ?? mascarado);

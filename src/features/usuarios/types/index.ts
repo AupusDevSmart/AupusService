@@ -411,11 +411,13 @@ export const mapFormDataToCreateDto = (formData: UsuarioFormData) => {
   };
   if (roleName) dto.roleNames = [roleName];
 
-  // Campo opcional que o formulário tem: preenchido vai como está, vazio vai
-  // como null (o servidor apaga). Antes o vazio não ia, e apagar o telefone no
-  // sheet não apagava nada (achado no SN-46). Campo ausente do formulário não vai.
+  // Só os campos que o sheet edita: preenchido vai como está, vazio vai como
+  // null (o servidor apaga). Antes o vazio não ia, e apagar o telefone no sheet
+  // não apagava nada (achado no SN-46). Instagram, concessionária, organização e
+  // gerente o sheet não mostra: não vão (o servidor mantém) — reenviá-los travava
+  // quem tinha dado antigo fora da regra, sem a pessoa ver o campo.
   // O backend espera os nomes de cidade e estado, não os ids do IBGE.
-  const OPCIONAIS = ['telefone', 'instagram', 'cpfCnpj', 'cidade', 'estado', 'cep', 'endereco', 'concessionariaAtualId', 'organizacaoAtualId', 'managerId'] as const;
+  const OPCIONAIS = ['telefone', 'cpfCnpj', 'cidade', 'estado', 'cep', 'endereco'] as const;
   for (const campo of OPCIONAIS) {
     if (!(campo in formData)) continue;
     const valor = formData[campo];

@@ -31,15 +31,27 @@ describe('mapFormDataToCreateDto', () => {
   // backend mantinha o valor antigo — não dava para tirar o telefone de alguém
   // (achado no SN-46). Vazio vai como null; campo que o formulário nem tem, não vai.
   it('campo opcional apagado vai como null, para o servidor apagar', () => {
-    const dto = mapFormDataToCreateDto(base({ telefone: '', instagram: '  ', cidade: '' }));
+    const dto = mapFormDataToCreateDto(base({ telefone: '', endereco: '  ', cidade: '' }));
 
-    expect(dto).toMatchObject({ telefone: null, instagram: null, cidade: null });
+    expect(dto).toMatchObject({ telefone: null, endereco: null, cidade: null });
   });
 
   it('campo opcional preenchido vai como está; ausente do formulário, não vai', () => {
     const dto = mapFormDataToCreateDto(base({ telefone: '+5562999998888' }));
 
     expect(dto.telefone).toBe('+5562999998888');
+    expect(dto).not.toHaveProperty('endereco');
+  });
+
+  // O sheet não mostra instagram, concessionária, organização nem gerente.
+  // Reenviá-los a cada salvar travava quem tinha gerente com id antigo (o DTO
+  // recusava) sem que a pessoa pudesse ver ou corrigir o campo (revisão do SN-46).
+  it('campo que o sheet não edita não vai, nem preenchido', () => {
+    const dto = mapFormDataToCreateDto(base({ managerId: 'gerente0000000000000000001', instagram: '@ana', concessionariaAtualId: 'c1', organizacaoAtualId: 'o1' } as never));
+
+    expect(dto).not.toHaveProperty('managerId');
     expect(dto).not.toHaveProperty('instagram');
+    expect(dto).not.toHaveProperty('concessionariaAtualId');
+    expect(dto).not.toHaveProperty('organizacaoAtualId');
   });
 });

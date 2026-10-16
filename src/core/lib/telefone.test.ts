@@ -17,7 +17,7 @@ describe('telefoneE164', () => {
     expect(telefoneE164(entrada)).toBe(esperado);
   });
 
-  it.each(['werwe', '9999', '99998888', '62899998888'])('%s não é telefone', (entrada) => {
+  it.each(['werwe', '9999', '99998888', '62899998888', '(62) 9999-9888', '6213334444'])('%s não é telefone', (entrada) => {
     expect(telefoneE164(entrada)).toBeNull();
   });
 });
@@ -41,7 +41,7 @@ describe('mascararTelefone (enquanto digita)', () => {
     ['6299999', '(62) 9999-9'],
     ['6233334444', '(62) 3333-4444'],
     ['62999998888', '(62) 99999-8888'],
-    ['629999988889', '(62) 99999-8888'],
+    ['629999988889', '629999988889'],
     ['+1 415', '+1415'],
   ])('%s vira %s', (digitado, mascarado) => {
     expect(mascararTelefone(digitado)).toBe(mascarado);

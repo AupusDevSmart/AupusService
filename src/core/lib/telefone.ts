@@ -25,7 +25,8 @@ function internacional(digitos: string): string | null {
 }
 
 function brasileiro(nacional: string): string | null {
-  return /^[1-9][1-9](?:\d{8}|9\d{8})$/.test(nacional) ? `+55${nacional}` : null;
+  // Fixo começa de 2 a 5; começando em 9 é celular com um dígito a menos
+  return /^[1-9][1-9](?:[2-5]\d{7}|9\d{8})$/.test(nacional) ? `+55${nacional}` : null;
 }
 
 /** Máscara brasileira de até 11 dígitos: `(62) 99999-8888` ou `(62) 3333-4444`. */
@@ -50,5 +51,8 @@ export function formatarTelefone(valor: string | null | undefined): string {
 export function mascararTelefone(digitado: string): string {
   if (digitado.trim().startsWith('+')) return `+${digitado.replace(/\D/g, '').slice(0, 15)}`;
   const digitos = digitado.replace(/\D/g, '');
+  // Mais de 11 dígitos é número com prefixo (0, 55, 00) ainda incompleto: sem
+  // máscara, para não cortar o que falta digitar
+  if (digitos.length > 11) return digitos.slice(0, 15);
   return digitos ? mascaraNacional(digitos) : '';
 }

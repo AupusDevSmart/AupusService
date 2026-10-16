@@ -202,12 +202,16 @@ export function UsuarioModal({
       if (usuario && (isViewMode || isEditMode)) {
         try {
           // Refetch para garantir all_permissions populado (lista vem com [] otimizado)
-          let usuarioCompleto: Usuario = usuario;
+          let usuarioCompleto: Usuario;
           try {
             usuarioCompleto = await findUsuario(usuario.id);
-          } catch {
-            // Fallback: usa o cacheado se o fetch falhar
-            usuarioCompleto = usuario;
+          } catch (erro) {
+            // Não abre com a linha da lista: ela vem sem as permissões e com o
+            // tipo da coluna antiga, e salvar mandaria isso (revisão do SN-46;
+            // antes era um catch vazio). Como na edição de instrução.
+            toast.error('Não foi possível abrir o usuário', { description: formatApiError(erro) });
+            onClose();
+            return;
           }
           const formData = await usuarioToFormDataAsync(usuarioCompleto);
           setEntityWithIds(formData);
@@ -220,7 +224,7 @@ export function UsuarioModal({
     };
 
     loadUserDataWithIds();
-  }, [usuario, isViewMode, isEditMode, usuarioToFormDataAsync, usuarioToFormData, findUsuario]);
+  }, [usuario, isViewMode, isEditMode, usuarioToFormDataAsync, usuarioToFormData, findUsuario, onClose]);
 
   return (
     <BaseModal
