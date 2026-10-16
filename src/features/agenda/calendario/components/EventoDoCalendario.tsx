@@ -5,7 +5,7 @@ import { ROTULO_FREQUENCIA } from '@/features/planos-manutencao/utils/frequencia
 import type { EventoDaAgenda } from '@/services/eventos-da-agenda.services';
 import { SITUACOES } from '@/features/agenda/calendario/config/situacoes';
 import { horaDoEvento, rotuloCurto } from '@/features/agenda/calendario/utils/evento';
-import { formatarEmBrasilia } from '@/features/agenda/calendario/utils/periodo';
+import { formatarEmBrasilia } from '@/utils/brasilia';
 
 export function PontoDaSituacao({ situacao, className }: { situacao: EventoDaAgenda['situacao']; className?: string }) {
   return <span aria-hidden className={cn('inline-block h-2 w-2 shrink-0 rounded-full', SITUACOES[situacao].ponto, className)} />;

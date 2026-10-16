@@ -1,5 +1,5 @@
 import type { EventoDaAgenda } from '@/services/eventos-da-agenda.services';
-import { formatarEmBrasilia } from '@/features/agenda/calendario/utils/periodo';
+import { formatarEmBrasilia } from '@/utils/brasilia';
 
 /** O que cabe numa célula: o que é o serviço, não o código (o código vai na lista e na dica). */
 export const rotuloCurto = (evento: EventoDaAgenda) => (evento.origem === 'previsao' ? evento.titulo : evento.descricao?.trim() || evento.titulo);

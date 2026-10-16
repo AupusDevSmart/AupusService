@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { agruparPorDia, deslocar, diaDoEvento, diaParaApi, formatarEmBrasilia, periodoDaVisao, tituloDoPeriodo } from './periodo';
+import { formatarEmBrasilia } from '@/utils/brasilia';
+import { agruparPorDia, deslocar, diaDoEvento, diaParaApi, periodoDaVisao, tituloDoPeriodo } from './periodo';
 
 /** As datas são montadas no fuso de quem roda (como no navegador). */
 const dia = (a: number, m: number, d: number) => new Date(a, m - 1, d, 12);

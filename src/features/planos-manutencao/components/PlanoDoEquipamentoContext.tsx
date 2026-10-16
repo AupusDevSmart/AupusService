@@ -59,7 +59,8 @@ interface PlanoDoEquipamentoValue {
   /** Sobe a cada vínculo/troca para a lista de tarefas recarregar. */
   refreshTarefas: number;
   ehUC: boolean;
-  vincular: (planoId: string) => Promise<void>;
+  /** `dataInicio` (AAAA-MM-DD): o dia em que o plano começa a contar (SN-53). */
+  vincular: (planoId: string, dataInicio?: string) => Promise<void>;
   desvincular: () => Promise<void>;
   recarregar: () => Promise<void>;
   /** Chamado pelos consumidores; ignora repetição do mesmo equipamento. */
@@ -244,7 +245,7 @@ export function PlanoDoEquipamentoProvider({ children }: { children: React.React
   }, [previa]);
 
   const vincular = React.useCallback(
-    async (planoId: string) => {
+    async (planoId: string, dataInicio?: string) => {
       if (!planoId) return;
       if (previa?.possui_plano && !confirmarPerda()) return;
 
@@ -253,6 +254,7 @@ export function PlanoDoEquipamentoProvider({ children }: { children: React.React
         const resultado = await planosManutencaoApi.vincular({
           equipamento_id: equipamentoId,
           plano_id: planoId,
+          data_inicio: dataInicio,
         });
 
         toast({

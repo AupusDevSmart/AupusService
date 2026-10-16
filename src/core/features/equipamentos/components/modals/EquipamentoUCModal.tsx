@@ -2908,7 +2908,11 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
                 </TabsList>
               </div>
 
-              <TabsContent value="dados">{renderConteudoDados()}</TabsContent>
+              {/* Montada sempre: o Radix desmonta a aba inativa, e quem ia conferir as
+                  tarefas e voltava perdia o plano e a data de início escolhidos no cadastro */}
+              <TabsContent value="dados" forceMount className="data-[state=inactive]:hidden">
+                {renderConteudoDados()}
+              </TabsContent>
 
               {modoLote && (
                 <TabsContent value="itens">

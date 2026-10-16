@@ -16,7 +16,8 @@ import type { TipoDaOS } from '@/services/eventos-da-agenda.services';
 import { ORDEM_DAS_SITUACOES, SITUACOES } from '@/features/agenda/calendario/config/situacoes';
 import { useEquipamentosDoFiltro } from '@/features/agenda/calendario/hooks/useEquipamentosDoFiltro';
 import { useEventosDaAgenda } from '@/features/agenda/calendario/hooks/useEventosDaAgenda';
-import { agruparPorDia, deslocar, diaParaApi, emBrasilia, periodoDaVisao, tituloDoPeriodo, type Visao } from '@/features/agenda/calendario/utils/periodo';
+import { agruparPorDia, deslocar, diaParaApi, periodoDaVisao, tituloDoPeriodo, type Visao } from '@/features/agenda/calendario/utils/periodo';
+import { emBrasilia } from '@/utils/brasilia';
 import { PontoDaSituacao } from '@/features/agenda/calendario/components/EventoDoCalendario';
 import { VisaoLista, VisaoMes, VisaoSemana } from '@/features/agenda/calendario/components/VisoesDoCalendario';
 

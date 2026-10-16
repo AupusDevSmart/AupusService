@@ -10,6 +10,7 @@ import {
   startOfWeek,
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatarEmBrasilia } from '@/utils/brasilia';
 
 export type Visao = 'mes' | 'semana' | 'lista';
 
@@ -49,22 +50,7 @@ export const diaParaApi = (dia: Date) => format(dia, 'yyyy-MM-dd');
 /** A chave de um dia da grade (a data de calendário dele). */
 export const chaveDoDia = (dia: Date) => format(dia, 'yyyy-MM-dd');
 
-/** Brasília: -03:00 fixo, sem horário de verão desde 2019 (a convenção do backend). */
-const BRASILIA_MIN = -180;
-
-/**
- * O instante com os campos locais iguais aos de Brasília, para o date-fns
- * formatar. Pelo fuso do aparelho, em Cuiabá (-04:00) a OS de 00:30 de domingo
- * caía no sábado — fora da semana que a API mandou, e de todas as outras.
- */
-export function emBrasilia(instante: string | Date): Date {
-  const data = new Date(instante);
-  return new Date(data.getTime() + (data.getTimezoneOffset() + BRASILIA_MIN) * 60_000);
-}
-
-export const formatarEmBrasilia = (instante: string | Date, padrao: string) => format(emBrasilia(instante), padrao, { locale: ptBR });
-
-/** O dia (em Brasília) de um evento. */
+/** O dia (em Brasília) de um evento: o backend lê o período em Brasília. */
 export const diaDoEvento = (instante: string | Date) => formatarEmBrasilia(instante, 'yyyy-MM-dd');
 
 export function agruparPorDia<T extends { data: string }>(eventos: T[]): Map<string, T[]> {

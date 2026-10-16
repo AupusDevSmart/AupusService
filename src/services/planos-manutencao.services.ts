@@ -25,6 +25,32 @@ export type UpdatePlanoManutencaoApiData = Partial<CreatePlanoManutencaoApiData>
 export interface VincularPlanoApiData {
   equipamento_id: string;
   plano_id: string;
+  /** AAAA-MM-DD (Brasília): o dia em que o plano começa a contar; vira a âncora das tarefas (SN-53). */
+  data_inicio?: string;
+}
+
+/** O primeiro vencimento de uma tarefa do template, pela regra do gerador (SN-53). */
+export interface PrimeiroVencimento {
+  tarefa_id: string;
+  tag: string;
+  nome: string;
+  frequencia: string | null;
+  frequencia_personalizada: number | null;
+  /** ISO; null = sem periodicidade (o gerador não a programa). */
+  vence_em: string | null;
+  /** Já nasce vencida: sai na primeira rodada do gerador. */
+  atrasada: boolean;
+  /** O próximo dia útil da planta (ISO); null sem equipamento. */
+  data_programada: string | null;
+  /** A rodada do gerador (3h de Brasília) que cria a programação (ISO). */
+  programacao_a_partir_de: string | null;
+}
+
+export interface PrimeirosVencimentos {
+  ancora: string;
+  /** null sem equipamento (no cadastro). */
+  com_planta: boolean | null;
+  tarefas: PrimeiroVencimento[];
 }
 
 export interface VincularPlanoApiResponse {
@@ -488,6 +514,18 @@ export class PlanosManutencaoApiService {
     const response = await api.post<VincularPlanoApiResponse>(`${this.baseEndpoint}/vincular`, {
       equipamento_id: data.equipamento_id.trim(),
       plano_id: data.plano_id.trim(),
+      // Vazia vai como veio e a API recusa: omitir faria o vínculo contar de agora, calado
+      ...(data.data_inicio !== undefined && { data_inicio: data.data_inicio }),
+    });
+    return response.data;
+  }
+
+  /** Antes de vincular: o primeiro vencimento de cada tarefa se o plano começar no dia dado. */
+  async primeirosVencimentos(planoId: string, filtro: { data_inicio: string; equipamento_id?: string }): Promise<PrimeirosVencimentos> {
+    const response = await api.get<PrimeirosVencimentos>(`${this.baseEndpoint}/${planoId.trim()}/primeiros-vencimentos`, {
+      params: { data_inicio: filtro.data_inicio, ...(filtro.equipamento_id?.trim() && { equipamento_id: filtro.equipamento_id.trim() }) },
+      // A prévia muda a cada data digitada e mostra o motivo no próprio painel
+      semAvisoGlobal: true,
     });
     return response.data;
   }
