@@ -29,6 +29,7 @@ import { getInitials } from "@/lib/getInitials"
 import { getAvatarUrl } from "@/lib/getAvatarUrl"
 import { useTheme } from "@/components/theme-provider"
 import { useLocation, useNavigate } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
 import { COR_ATIVA } from "@/features/navigation/utils/menu-ativo"
 import clsx from "clsx" // Para manipulação condicional de classes
@@ -38,12 +39,16 @@ export function NavUser() {
   const { user, clearUser } = useUserStore()
   const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { pathname } = useLocation()
   // O perfil nao tem item no menu: quem marca a pagina e o proprio rodape.
   const noPerfil = pathname.startsWith("/configuracoes/")
 
+  // O cache sai junto: quem entrar depois na mesma aba não vê, nem por um
+  // instante, o que o anterior abriu (comentário interno, OS de outra planta)
   const logout = () => {
     clearUser();
+    queryClient.clear();
     navigate('/login');
   }
 

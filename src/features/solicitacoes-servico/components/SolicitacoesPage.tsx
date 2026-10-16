@@ -41,6 +41,7 @@ import { useSolicitacoesFilters } from '../hooks/useSolicitacoesFilters';
 import { useSolicitacoesActions } from '../hooks/useSolicitacoesActions';
 import { ActionConfirmPanel } from './ActionConfirmPanel';
 import { AtalhoParaProgramacao } from '@/features/programacao-os/components/AtalhoParaProgramacao';
+import { ComentariosDoRegistro } from '@/features/comentarios/components/ComentariosDoRegistro';
 import { linkDeProgramacao } from '@/features/programacao-os/utils/link-de-programacao';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '@/store/useUserStore';
@@ -103,6 +104,7 @@ export function SolicitacoesPage() {
 
   const navigate = useNavigate();
   const temPermissao = useUserStore((st) => st.hasPermission);
+  const ehCliente = useUserStore((st) => st.getUserRole()) === 'proprietario';
 
   const customActions = useMemo(() => {
     const tableActions = createSolicitacoesTableActions({
@@ -410,6 +412,18 @@ export function SolicitacoesPage() {
                   ) : undefined
                 }
               >
+                {/* Conversa com quem pediu, no fim do sheet; o interno não aparece para o cliente (SN-48) */}
+                {modalState.mode !== 'create' && modalState.entity?.id && (
+                  <div className="mt-6 rounded-md border p-4">
+                    <ComentariosDoRegistro
+                      alvo="solicitacao_servico"
+                      registroId={modalState.entity.id}
+                      podeComentar={temPermissao('solicitacoes.manage', 'solicitacoes.create')}
+                      ehCliente={ehCliente}
+                    />
+                  </div>
+                )}
+
                 {/* Painel de confirmação de ação - aparece no final do form em modo view */}
                 {solicitacoesActions.pendingAction && modalState.mode === 'view' && (
                   <ActionConfirmPanel

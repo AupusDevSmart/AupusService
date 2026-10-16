@@ -91,7 +91,6 @@ export interface SolicitacaoServico extends BaseEntity {
   equipamento?: EquipamentoDaSolicitacao | null;
   usuario?: PessoaDaSolicitacao | null;
   historico?: HistoricoSolicitacao[];
-  comentarios?: ComentarioSolicitacao[];
 
   /** Total da proposta (Decimal: o JSON traz texto). Ausente sem proposta montada. */
   total_geral?: string | number | null;
@@ -140,19 +139,6 @@ export interface HistoricoSolicitacao {
   status_anterior?: StatusSolicitacaoServico;
   status_novo?: StatusSolicitacaoServico;
   dados_extras?: Record<string, unknown> | null;
-}
-
-// Interface para comentários
-export interface ComentarioSolicitacao {
-  id: string;
-  solicitacao_id: string;
-  comentario: string;
-  autor?: string;
-  autor_id?: string;
-  usuario_nome?: string;
-  usuario_id?: string;
-  created_at: string;
-  updated_at?: string;
 }
 
 // Form data para criação/edição
@@ -231,8 +217,3 @@ export type Pagination = {
   totalPages: number;
 };
 
-export interface AdicionarComentarioDto {
-  comentario: string;
-  usuario_nome: string;
-  usuario_id: string;
-}

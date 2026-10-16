@@ -4,8 +4,6 @@ import {
   SolicitacaoServico,
   SolicitacaoServicoFormData,
   SolicitacoesFilters,
-  AdicionarComentarioDto,
-  ComentarioSolicitacao,
   HistoricoSolicitacao,
 } from '@/features/solicitacoes-servico/types';
 
@@ -206,23 +204,6 @@ class SolicitacoesServicoApiService {
     const url = `${this.baseUrl}/stats${params.toString() ? `?${params}` : ''}`;
     const response = await api.get(url);
 
-    return response.data;
-  }
-
-  // ==========================================
-  // 💬 4. COMENTÁRIOS
-  // ==========================================
-
-  async getComentarios(id: string): Promise<ComentarioSolicitacao[]> {
-    const response = await api.get(`${this.baseUrl}/${id}/comentarios`);
-    return response.data;
-  }
-
-  async adicionarComentario(
-    id: string,
-    dto: AdicionarComentarioDto
-  ): Promise<ComentarioSolicitacao> {
-    const response = await api.post(`${this.baseUrl}/${id}/comentarios`, dto);
     return response.data;
   }
 

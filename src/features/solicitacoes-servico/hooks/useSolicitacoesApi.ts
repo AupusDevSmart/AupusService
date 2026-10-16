@@ -8,7 +8,6 @@ import {
 import {
   SolicitacaoServico,
   SolicitacaoServicoFormData,
-  AdicionarComentarioDto,
   SolicitacoesFilters,
 } from '../types';
 
@@ -87,26 +86,6 @@ export function useSolicitacoesApi() {
     }
   }, []);
 
-  const getComentarios = useCallback(async (id: string) => {
-    try {
-      const comentarios = await solicitacoesServicoService.getComentarios(id);
-      return comentarios;
-    } catch (error) {
-      console.error('Erro ao buscar comentários:', error);
-      throw error;
-    }
-  }, []);
-
-  const adicionarComentario = useCallback(async (id: string, dto: AdicionarComentarioDto) => {
-    try {
-      const comentario = await solicitacoesServicoService.adicionarComentario(id, dto);
-      return comentario;
-    } catch (error) {
-      console.error('Erro ao adicionar comentário:', error);
-      throw error;
-    }
-  }, []);
-
   const getHistorico = useCallback(async (id: string) => {
     try {
       const historico = await solicitacoesServicoService.getHistorico(id);
@@ -128,8 +107,6 @@ export function useSolicitacoesApi() {
     updateSolicitacao,
     deleteSolicitacao,
     getStats,
-    getComentarios,
-    adicionarComentario,
     getHistorico,
   };
 }

@@ -20,6 +20,7 @@ import { ActionConfirmPanel, type PendingAction, type DadosDaConfirmacao } from 
 import { AcoesDaOS } from './AcoesDaOS';
 import { OQueFoiFeito } from './OQueFoiFeito';
 import { AnexosDaOS } from './AnexosDaOS';
+import { ComentariosDoRegistro } from '@/features/comentarios/components/ComentariosDoRegistro';
 import {
   montarProgresso,
   tarefasPendentes,
@@ -59,6 +60,7 @@ export function ExecucaoOSPage() {
   }));
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const temPermissao = useUserStore((s) => s.hasPermission);
+  const ehCliente = useUserStore((s) => s.getUserRole()) === 'proprietario';
 
   // Tarefas e checklist da OS aberta, vivos: a seção "O que foi feito" grava
   // item a item, e o painel de Executar precisa saber o que ainda está pendente.
@@ -464,6 +466,16 @@ export function ExecucaoOSPage() {
                             osId={modalState.entity!.id}
                             status={status}
                             podeEditar={temPermissao('execucao_os.manage', 'execucao_os.executar')}
+                          />
+                        </div>
+
+                        {/* Conversa da equipe sobre a OS; o interno não aparece para o cliente (SN-48) */}
+                        <div className="rounded-md border p-4">
+                          <ComentariosDoRegistro
+                            alvo="ordem_servico"
+                            registroId={modalState.entity!.id}
+                            podeComentar={temPermissao('execucao_os.manage', 'execucao_os.executar')}
+                            ehCliente={ehCliente}
                           />
                         </div>
                       </div>
