@@ -15,6 +15,8 @@ interface SubInstrucao {
   tempo_estimado?: number;
   /** SN-58: a leitura pede o valor medido na OS, com unidade e faixa */
   tipo?: TipoDePasso;
+  /** SN-59: o item da OS só é marcado com uma foto dele */
+  exige_foto?: boolean;
   unidade?: string | null;
   valor_minimo?: number | null;
   valor_maximo?: number | null;
@@ -114,9 +116,26 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
       )
     },
     {
+      key: 'exige_foto',
+      header: 'Foto',
+      width: 'w-14',
+      align: 'center',
+      render: (item, index) => (
+        <input
+          type="checkbox"
+          checked={Boolean(item.exige_foto)}
+          onChange={(e) => atualizar(index, 'exige_foto', e.target.checked)}
+          disabled={disabled}
+          className="accent-foreground"
+          aria-label="Exige foto (o item da OS só é marcado com uma foto dele)"
+          title="Exige foto: na OS, o item só é marcado com uma foto dele"
+        />
+      )
+    },
+    {
       key: 'tipo',
       header: 'Leitura',
-      width: 'w-20',
+      width: 'w-16',
       align: 'center',
       render: (item, index) => (
         <input
@@ -133,7 +152,7 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
     {
       key: 'obrigatoria',
       header: 'Obrigatória',
-      width: 'w-28',
+      width: 'w-24',
       align: 'center',
       render: (item, index) => (
         <input

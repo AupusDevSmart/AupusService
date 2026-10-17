@@ -15,9 +15,15 @@ import {
   type TarefaDaExecucao,
 } from '../utils/progresso-da-execucao';
 import { LeituraDoItem } from './LeituraDoItem';
+import { FotosDoItem } from './FotosDoItem';
+import { ehFoto, useAnexosDaOS } from '../hooks/useAnexosDaOS';
+import { tipoSugerido } from '../utils/anexos-da-os';
+import type { AnexoOS } from '../types';
 
 interface OQueFoiFeitoProps {
   osId: string;
+  /** O status da OS, para o tipo da foto (durante, depois) */
+  status?: string;
   progresso: ProgressoDaExecucao;
   /** OS em execução/pausada e usuário pode mexer; senão, só leitura */
   editavel: boolean;
@@ -37,8 +43,14 @@ interface OQueFoiFeitoProps {
  * quando os itens obrigatórios dela estão marcados (D1). A que não der para
  * fazer recebe o motivo ao executar a OS (D2).
  */
-export function OQueFoiFeito({ osId, progresso, editavel, onChange }: OQueFoiFeitoProps) {
+export function OQueFoiFeito({ osId, status, progresso, editavel, onChange }: OQueFoiFeitoProps) {
   const [ocupado, setOcupado] = useState<string | null>(null);
+  // As fotos de cada item e de cada tarefa (SN-59), da mesma consulta da seção de anexos
+  const { data: anexos = [], isLoading: carregandoFotos, isError: erroNasFotos, refetch: buscarFotosDeNovo } = useAnexosDaOS(osId);
+  const doItem = (id: string) => anexos.filter((a) => a.checklist_item_id?.trim() === id);
+  const daTarefa = (id: string) => anexos.filter((a) => !a.checklist_item_id && a.tarefa_os_id?.trim() === id);
+  const semFoto = (item: ItemDoChecklist, fotos: AnexoOS[]) => item.exigeFoto && !fotos.some(ehFoto);
+  const tipoDaFoto = tipoSugerido(status);
 
   const feitas = progresso.tarefas.filter((t) => t.status === 'CONCLUIDA').length;
   const naoFeitas = progresso.tarefas.filter((t) => t.status === 'CANCELADA').length;
@@ -85,25 +97,56 @@ export function OQueFoiFeito({ osId, progresso, editavel, onChange }: OQueFoiFei
     }
   };
 
-  const linhaDeItem = (item: ItemDoChecklist, travado: boolean) =>
-    item.tipo === 'LEITURA' ? (
-      <LeituraDoItem key={item.id} item={item} editavel={editavel && !travado} onGravar={(m) => gravarItem(item, m)} />
-    ) : (
-      <label key={item.id} className="flex items-start gap-2 py-1 text-sm">
-        <input
-          type="checkbox"
-          className="mt-0.5 h-4 w-4 rounded border-border"
-          checked={item.concluida}
-          disabled={!editavel || travado}
-          onChange={(e) => gravarItem(item, { concluida: e.target.checked })}
-          aria-label={item.texto}
-        />
-        <span className={item.concluida ? 'text-muted-foreground line-through' : 'text-foreground'}>
-          {item.texto}
-          {item.obrigatoria && <span className="ml-1 text-xs text-muted-foreground">(obrigatório)</span>}
-        </span>
-      </label>
+  // A câmera ao lado do item e as fotos debaixo dele. O item que exige foto
+  // espera a foto para ser marcado (a API recusa sem); desmarcar fica livre
+  const linhaDeItem = (item: ItemDoChecklist, travado: boolean) => {
+    const fotos = doItem(item.id);
+    // Travado também enquanto as fotos não chegam (a API recusaria sem foto); o
+    // texto diz o porquê de verdade
+    const bloqueio = !semFoto(item, fotos)
+      ? null
+      : carregandoFotos
+        ? 'Carregando as fotos do item'
+        : erroNasFotos
+          ? 'Não foi possível carregar as fotos do item'
+          : 'Tire a foto do item antes de marcá-lo';
+    return (
+      <div key={item.id} className="flex flex-wrap items-start justify-between gap-x-3">
+        <div className="min-w-0 flex-1">
+          {item.tipo === 'LEITURA' ? (
+            <LeituraDoItem item={item} editavel={editavel && !travado} onGravar={(m) => gravarItem(item, m)} bloqueio={bloqueio} />
+          ) : (
+            <label className="flex items-start gap-2 py-1 text-sm" title={!item.concluida ? (bloqueio ?? undefined) : undefined}>
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-border"
+                checked={item.concluida}
+                disabled={!editavel || travado || (!item.concluida && !!bloqueio)}
+                onChange={(e) => gravarItem(item, { concluida: e.target.checked })}
+                aria-label={item.texto}
+              />
+              <span className={item.concluida ? 'text-muted-foreground line-through' : 'text-foreground'}>
+                {item.texto}
+                {item.obrigatoria && <span className="ml-1 text-xs text-muted-foreground">(obrigatório)</span>}
+              </span>
+            </label>
+          )}
+        </div>
+        <div className="py-1">
+          <FotosDoItem
+            osId={osId}
+            destino={{ checklist_item_id: item.id }}
+            fotos={fotos}
+            editavel={editavel && !travado}
+            tipo={tipoDaFoto}
+            rotulo={`o item ${item.texto}`}
+            exigeFoto={item.exigeFoto}
+            carregando={carregandoFotos}
+          />
+        </div>
+      </div>
     );
+  };
 
   return (
     <div className="space-y-3">
@@ -116,6 +159,15 @@ export function OQueFoiFeito({ osId, progresso, editavel, onChange }: OQueFoiFei
           </span>
         )}
       </div>
+
+      {erroNasFotos && (
+        <p className="text-xs text-muted-foreground">
+          Não foi possível carregar as fotos.{' '}
+          <button type="button" className="underline" onClick={() => buscarFotosDeNovo()}>
+            Tentar de novo
+          </button>
+        </p>
+      )}
 
       {progresso.tarefas.map((tarefa) => {
         const pendente = tarefa.status === 'PENDENTE';
@@ -180,6 +232,20 @@ export function OQueFoiFeito({ osId, progresso, editavel, onChange }: OQueFoiFei
             {tarefa.itens.length > 0 && (
               <div className="pl-6">
                 {tarefa.itens.map((item) => linhaDeItem(item, !pendente))}
+              </div>
+            )}
+
+            {(editavel || daTarefa(tarefa.id).length > 0) && (
+              <div className="flex flex-wrap items-center gap-2 pl-6">
+                <span className="text-xs text-muted-foreground">Fotos da tarefa</span>
+                <FotosDoItem
+                  osId={osId}
+                  destino={{ tarefa_os_id: tarefa.id }}
+                  fotos={daTarefa(tarefa.id)}
+                  editavel={editavel}
+                  tipo={tipoDaFoto}
+                  rotulo={`a tarefa ${tarefa.nome}`}
+                />
               </div>
             )}
 

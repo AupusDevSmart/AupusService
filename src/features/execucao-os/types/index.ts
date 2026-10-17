@@ -156,6 +156,15 @@ export interface AnexoOS {
   uploaded_by?: string;
   uploaded_by_id?: string;
   deletado_em?: string;
+  /** SN-59: a tarefa da OS ou o item do checklist que o anexo prova; os dois vazios = geral da OS */
+  tarefa_os_id?: string | null;
+  checklist_item_id?: string | null;
+}
+
+/** Onde o anexo novo prova alguma coisa (SN-59). O item já leva a tarefa dele. */
+export interface DestinoDoAnexo {
+  tarefa_os_id?: string;
+  checklist_item_id?: string;
 }
 
 export interface RegistroTempoOS {

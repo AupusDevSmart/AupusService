@@ -464,6 +464,7 @@ export function ExecucaoOSPage() {
                         {(emExecucao || executada) && temProgresso && (
                           <div className="rounded-md border p-4">
                             <OQueFoiFeito
+                              status={status}
                               osId={modalState.entity!.id}
                               progresso={progresso}
                               editavel={emExecucao && temPermissao('execucao_os.manage', 'execucao_os.executar')}
@@ -477,6 +478,7 @@ export function ExecucaoOSPage() {
                           <AnexosDaOS
                             osId={modalState.entity!.id}
                             status={status}
+                            soGerais={(emExecucao || executada) && temProgresso}
                             podeEditar={temPermissao('execucao_os.manage', 'execucao_os.executar')}
                           />
                         </div>

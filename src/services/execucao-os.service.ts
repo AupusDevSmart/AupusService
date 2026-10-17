@@ -13,6 +13,7 @@ export type StatusTarefaExecucao = 'PENDENTE' | 'EM_EXECUCAO' | 'PAUSADA' | 'FIN
 export type { TipoAnexoOS as TipoAnexoExecucao, AnexoOS as AnexoExecucaoApiResponse } from '@/features/execucao-os/types';
 import type {
   AnexoOS,
+  DestinoDoAnexo,
   TipoAnexoOS,
   ExecucaoOS,
   TarefaOS,
@@ -717,10 +718,13 @@ export class ExecucaoOSApiService {
    * POST /execucao-os/:id/anexos — o tipo vai na query (é o contrato do
    * controller); quem enviou o backend tira do token.
    */
-  async uploadAnexo(id: string, file: File, tipo: TipoAnexoOS, descricao?: string): Promise<AnexoOS> {
+  async uploadAnexo(id: string, file: File, tipo: TipoAnexoOS, descricao?: string, destino: DestinoDoAnexo = {}): Promise<AnexoOS> {
     const formData = new FormData();
     formData.append('file', file);
     if (descricao) formData.append('descricao', descricao);
+    // A foto da tarefa ou do item do checklist (SN-59); sem os dois, anexo geral
+    if (destino.checklist_item_id) formData.append('checklist_item_id', destino.checklist_item_id.trim());
+    else if (destino.tarefa_os_id) formData.append('tarefa_os_id', destino.tarefa_os_id.trim());
 
     const response = await api.post<AnexoOS>(`${this.baseEndpoint}/${id.trim()}/anexos`, formData, {
       params: { tipo },

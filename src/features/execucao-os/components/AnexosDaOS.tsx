@@ -1,13 +1,9 @@
 // src/features/execucao-os/components/AnexosDaOS.tsx
 import { useEffect, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Camera, Download, FileText, Loader2, Paperclip, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { execucaoOSApi } from '@/services/execucao-os.service';
-import { toast } from '@/hooks/use-toast';
-import { formatApiError } from '@/utils/api-error';
 import type { AnexoOS, TipoAnexoOS } from '@/features/execucao-os/types';
 import {
   ARQUIVOS_ACEITOS,
@@ -17,23 +13,30 @@ import {
   podeMexerNosAnexos,
   tipoSugerido,
 } from '@/features/execucao-os/utils/anexos-da-os';
+import { baixarAnexo, ehGeral, useAnexosDaOS, useEnviarAnexos, useExcluirAnexo, useUrlDoArquivo } from '@/features/execucao-os/hooks/useAnexosDaOS';
 
 interface AnexosDaOSProps {
   osId: string;
   status: string | undefined;
   /** Permissão de executar (ou gerenciar) a OS — a mesma das rotas de escrita */
   podeEditar: boolean;
+  /**
+   * Só os anexos gerais, quando o "O que foi feito" está na tela e mostra os
+   * das tarefas e itens. Sem ele (OS cancelada, pendente), todos aparecem
+   * aqui: senão a prova não abria em lugar nenhum.
+   */
+  soGerais?: boolean;
 }
-
-const chaveDosAnexos = (osId: string) => ['execucao-os', osId.trim(), 'anexos'];
 
 /**
  * Fotos e documentos que provam o que foi feito na OS. Quem enviou e quando
  * aparecem em cada um; o arquivo nunca é apagado (excluir só tira da lista) e
  * a OS finalizada ou cancelada fica só leitura.
+ *
+ * Aqui ficam os anexos GERAIS da OS. A foto de uma tarefa ou de um item do
+ * checklist aparece debaixo do que ela prova, no "O que foi feito" (SN-59).
  */
-export function AnexosDaOS({ osId, status, podeEditar }: AnexosDaOSProps) {
-  const queryClient = useQueryClient();
+export function AnexosDaOS({ osId, status, podeEditar, soGerais = true }: AnexosDaOSProps) {
   const [tipo, setTipo] = useState<TipoAnexoOS>(tipoSugerido(status));
   const camera = useRef<HTMLInputElement>(null);
   const arquivo = useRef<HTMLInputElement>(null);
@@ -41,31 +44,16 @@ export function AnexosDaOS({ osId, status, podeEditar }: AnexosDaOSProps) {
 
   useEffect(() => setTipo(tipoSugerido(status)), [status]);
 
-  const { data: anexos = [], isLoading } = useQuery({
-    queryKey: chaveDosAnexos(osId),
-    queryFn: () => execucaoOSApi.getAnexos(osId),
-  });
-
-  const enviar = useMutation({
-    mutationFn: async (arquivos: File[]) => {
-      for (const f of arquivos) await execucaoOSApi.uploadAnexo(osId, f, tipo);
-    },
-    onSuccess: (_, arquivos) =>
-      toast({ title: arquivos.length > 1 ? `${arquivos.length} anexos enviados` : 'Anexo enviado' }),
-    onError: (erro) => toast({ title: 'Não foi possível enviar', description: formatApiError(erro), variant: 'destructive' }),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: chaveDosAnexos(osId) }),
-  });
-
-  const excluir = useMutation({
-    mutationFn: (anexoId: string) => execucaoOSApi.deleteAnexo(osId, anexoId),
-    onError: (erro) => toast({ title: 'Não foi possível excluir', description: formatApiError(erro), variant: 'destructive' }),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: chaveDosAnexos(osId) }),
-  });
+  const { data: todos = [], isLoading, isError, refetch } = useAnexosDaOS(osId);
+  const anexos = soGerais ? todos.filter(ehGeral) : todos;
+  const presos = todos.length - anexos.length;
+  const enviar = useEnviarAnexos(osId);
+  const excluir = useExcluirAnexo(osId);
 
   const aoEscolher = (e: React.ChangeEvent<HTMLInputElement>) => {
     const escolhidos = Array.from(e.target.files ?? []);
     e.target.value = '';
-    if (escolhidos.length > 0) enviar.mutate(escolhidos);
+    if (escolhidos.length > 0) enviar.mutate({ arquivos: escolhidos, tipo });
   };
 
   const grupos = agruparAnexos(anexos);
@@ -103,12 +91,29 @@ export function AnexosDaOS({ osId, status, podeEditar }: AnexosDaOSProps) {
         )}
       </div>
 
+      {presos > 0 && (
+        <p className="text-xs text-muted-foreground">
+          {presos === 1 ? 'Mais 1 foto está' : `Mais ${presos} fotos estão`} em "O que foi feito", debaixo da tarefa ou do item que prova.
+        </p>
+      )}
+
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando anexos...</p>
-      ) : grupos.length === 0 ? (
+      ) : isError ? (
+        // Falha não é "nenhum anexo": a prova existe, só não veio
         <p className="text-sm text-muted-foreground">
-          {editavel ? 'Nenhum anexo ainda. Fotografe antes, durante e depois do serviço.' : 'Nenhum anexo.'}
+          Não foi possível carregar os anexos.{' '}
+          <button type="button" className="underline" onClick={() => refetch()}>
+            Tentar de novo
+          </button>
         </p>
+      ) : grupos.length === 0 ? (
+        // Com fotos nas tarefas, "nenhum anexo" desmentiria a linha de cima
+        presos === 0 && (
+          <p className="text-sm text-muted-foreground">
+            {editavel ? 'Nenhum anexo ainda. Fotografe antes, durante e depois do serviço.' : 'Nenhum anexo.'}
+          </p>
+        )
       ) : (
         grupos.map((g) => (
           <div key={g.titulo} className="space-y-2">
@@ -149,18 +154,7 @@ function ItemDoAnexo({
   const imagem = mostraMiniatura(anexo.mime_type);
   const url = useUrlDoArquivo(osId, anexo, imagem);
 
-  const baixar = async () => {
-    try {
-      const blob = await execucaoOSApi.downloadAnexo(osId, anexo.id!);
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = anexo.nome_original;
-      link.click();
-      URL.revokeObjectURL(link.href);
-    } catch (erro) {
-      toast({ title: 'Não foi possível baixar', description: formatApiError(erro), variant: 'destructive' });
-    }
-  };
+  const baixar = () => baixarAnexo(osId, anexo);
 
   return (
     <li className="flex gap-3 rounded-md border bg-card p-2">
@@ -215,22 +209,4 @@ function ItemDoAnexo({
       </div>
     </li>
   );
-}
-
-/** O arquivo vem pela rota autenticada; vira URL local só enquanto o item está na tela. */
-function useUrlDoArquivo(osId: string, anexo: AnexoOS, carregar: boolean): string | null {
-  const { data: blob } = useQuery({
-    queryKey: [...chaveDosAnexos(osId), anexo.id, 'arquivo'],
-    queryFn: () => execucaoOSApi.downloadAnexo(osId, anexo.id!),
-    enabled: carregar && !!anexo.id,
-    staleTime: Infinity,
-  });
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (!blob) return;
-    const local = URL.createObjectURL(blob);
-    setUrl(local);
-    return () => URL.revokeObjectURL(local);
-  }, [blob]);
-  return url;
 }

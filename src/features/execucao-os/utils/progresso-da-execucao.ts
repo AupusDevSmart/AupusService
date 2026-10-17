@@ -29,6 +29,8 @@ export interface ItemDoChecklist {
   valorLido: number | null;
   observacao: string | null;
   foraDaFaixa: boolean;
+  /** SN-59: só é marcado com uma foto dele (a API recusa sem) */
+  exigeFoto: boolean;
 }
 
 export interface TarefaDaExecucao {
@@ -71,6 +73,7 @@ interface ItemDaApi {
   valor_minimo?: number | string | null;
   valor_maximo?: number | string | null;
   valor_lido?: number | string | null;
+  exige_foto?: boolean | null;
 }
 
 const statusValido = (s?: string | null): StatusDaTarefa =>
@@ -106,6 +109,7 @@ function itemDaApi(c: ItemDaApi, tarefaOsId: string, prefixo: string): ItemDoChe
     valorLido,
     observacao: c.observacoes?.trim() || null,
     foraDaFaixa: tipo === 'LEITURA' && foraDaFaixa(valorLido, { minimo, maximo }),
+    exigeFoto: Boolean(c.exige_foto),
   };
 }
 

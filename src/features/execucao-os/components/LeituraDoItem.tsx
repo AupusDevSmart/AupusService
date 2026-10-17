@@ -12,6 +12,8 @@ interface LeituraDoItemProps {
   editavel: boolean;
   /** Grava na API; a mudança já aparece antes da volta */
   onGravar: (mudanca: MudancaDoItem) => void;
+  /** Por que ainda não dá para digitar (o item exige foto e não tem) */
+  bloqueio?: string | null;
 }
 
 /**
@@ -20,7 +22,7 @@ interface LeituraDoItemProps {
  * continua feito — a medida é a que é —, mas pede a observação, sem a qual a
  * tarefa não fecha.
  */
-export function LeituraDoItem({ item, editavel, onGravar }: LeituraDoItemProps) {
+export function LeituraDoItem({ item, editavel, onGravar, bloqueio }: LeituraDoItemProps) {
   const idDoCampo = useId();
   const [observacao, setObservacao] = useState(item.observacao ?? '');
 
@@ -70,6 +72,8 @@ export function LeituraDoItem({ item, editavel, onGravar }: LeituraDoItemProps) 
             value={item.valorLido}
             onChange={(valorLido) => onGravar({ valorLido })}
             destacar={item.foraDaFaixa}
+            disabled={!!bloqueio && item.valorLido === null}
+            title={bloqueio ?? undefined}
             aria-describedby={faixa ? `${idDoCampo}-faixa` : undefined}
             className="h-8 w-28"
             placeholder="valor lido"

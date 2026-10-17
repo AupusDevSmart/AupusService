@@ -26,6 +26,8 @@ export interface CreateSubInstrucaoApiData {
   tempo_estimado?: number;
   ordem?: number;
   tipo?: TipoDePasso;
+  /** SN-59: o item da OS só é marcado com uma foto dele */
+  exige_foto?: boolean;
   /** Unidade e faixa só na leitura: a API recusa em verificação */
   unidade?: string | null;
   valor_minimo?: number | null;
@@ -96,6 +98,7 @@ export interface SubInstrucaoApiResponse {
   tempo_estimado?: number;
   ordem?: number;
   tipo?: TipoDePasso;
+  exige_foto?: boolean;
   unidade?: string | null;
   valor_minimo?: number | null;
   valor_maximo?: number | null;
@@ -306,6 +309,7 @@ export class InstrucoesApiService {
       tempo_estimado: sub.tempo_estimado,
       ordem: indice + 1,
       tipo: sub.tipo ?? 'VERIFICACAO',
+      exige_foto: Boolean(sub.exige_foto),
       // A API recusa unidade e faixa no passo de verificação: o passo que
       // deixou de ser leitura não leva o que sobrou dos campos escondidos
       ...(sub.tipo === 'LEITURA' && {

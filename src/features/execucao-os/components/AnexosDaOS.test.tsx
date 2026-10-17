@@ -29,10 +29,10 @@ const anexo = (dados: Partial<AnexoOS>): AnexoOS => ({
   ...dados,
 });
 
-const montar = (status: string, podeEditar = true) =>
+const montar = (status: string, podeEditar = true, soGerais = true) =>
   renderWithProviders(
     <TooltipProvider>
-      <AnexosDaOS osId="OS1" status={status} podeEditar={podeEditar} />
+      <AnexosDaOS osId="OS1" status={status} podeEditar={podeEditar} soGerais={soGerais} />
     </TooltipProvider>,
     { withRouter: false },
   );
@@ -42,6 +42,39 @@ const montar = (status: string, podeEditar = true) =>
  * o serviço postava numa rota que não existe e nenhum componente o chamava.
  */
 describe('AnexosDaOS', () => {
+  // SN-59: a foto de tarefa ou item aparece debaixo do que prova, não aqui
+  it('mostra só os anexos gerais e diz onde estão as fotos das tarefas', async () => {
+    api.getAnexos.mockResolvedValue([
+      anexo({ id: 'G1', nome_original: 'laudo-geral.pdf' }),
+      anexo({ id: 'I1', nome_original: 'do-item.jpg', mime_type: 'image/jpeg', checklist_item_id: 'C1', tarefa_os_id: 'V1' }),
+    ]);
+    montar('EM_EXECUCAO');
+
+    expect(await screen.findByText('laudo-geral.pdf')).toBeInTheDocument();
+    expect(screen.queryByText('do-item.jpg')).toBeNull();
+    expect(screen.getByText(/Mais 1 foto está em "O que foi feito"/)).toBeInTheDocument();
+  });
+
+  // OS cancelada (ou pendente): o "O que foi feito" não aparece, e a foto do
+  // item ficava sem lugar nenhum na tela
+  it('sem o "O que foi feito" na tela, mostra também as fotos das tarefas e itens', async () => {
+    api.getAnexos.mockResolvedValue([
+      anexo({ id: 'I1', nome_original: 'do-item.jpg', mime_type: 'image/jpeg', tipo: 'FOTO_DURANTE', checklist_item_id: 'C1', tarefa_os_id: 'V1' }),
+    ]);
+    montar('CANCELADA', false, false);
+
+    expect(await screen.findByText('do-item.jpg')).toBeInTheDocument();
+    expect(screen.queryByText(/Mais 1 foto/)).toBeNull();
+  });
+
+  it('falha ao carregar não diz "nenhum anexo"', async () => {
+    api.getAnexos.mockRejectedValueOnce({ response: { status: 500 } });
+    montar('EM_EXECUCAO');
+
+    expect(await screen.findByText(/Não foi possível carregar os anexos/)).toBeInTheDocument();
+    expect(screen.queryByText(/Nenhum anexo/)).toBeNull();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     api.getAnexos.mockResolvedValue([
@@ -67,7 +100,7 @@ describe('AnexosDaOS', () => {
     const arquivo = new File(['x'], 'mancal.jpg', { type: 'image/jpeg' });
     fireEvent.change(screen.getByTestId('entrada-arquivo'), { target: { files: [arquivo] } });
 
-    await waitFor(() => expect(api.uploadAnexo).toHaveBeenCalledWith('OS1', arquivo, 'FOTO_DURANTE'));
+    await waitFor(() => expect(api.uploadAnexo).toHaveBeenCalledWith('OS1', arquivo, 'FOTO_DURANTE', undefined, undefined));
   });
 
   it('a câmera do celular é a traseira', () => {

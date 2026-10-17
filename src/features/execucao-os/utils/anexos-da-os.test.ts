@@ -59,6 +59,15 @@ describe('podeMexerNosAnexos', () => {
 });
 
 describe('mostraMiniatura', () => {
+  // Revisão do SN-59: o tipo dos anexos antigos veio do cliente; SVG aberto num
+  // blob da própria origem rodava script
+  it('SVG e qualquer tipo fora da lista fechada não abrem na tela', () => {
+    expect(mostraMiniatura('image/svg+xml')).toBe(false);
+    expect(mostraMiniatura('text/html')).toBe(false);
+    expect(mostraMiniatura('IMAGE/PNG')).toBe(true);
+    expect(mostraMiniatura(undefined)).toBe(false);
+  });
+
   it('só imagem que o navegador desenha (a foto HEIC do iPhone vai como arquivo)', () => {
     expect(mostraMiniatura('image/jpeg')).toBe(true);
     expect(mostraMiniatura('image/webp')).toBe(true);

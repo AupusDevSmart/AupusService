@@ -163,6 +163,15 @@ function secoes(refs: Referencia[]): SecaoDaFicha<Instrucao, never>[] {
         exemplo: '620',
         valor: (p) => p.valor_maximo,
       },
+      {
+        titulo: 'EXIGE FOTO',
+        caminho: 'exige_foto',
+        tipo: 'simnao',
+        vazioEhPadrao: true,
+        explicacao: 'SIM se, na OS, o item só pode ser marcado com uma foto dele. Vazio = NÃO.',
+        exemplo: 'SIM',
+        valor: (p) => p.exige_foto,
+      },
     ],
   };
 
@@ -267,7 +276,7 @@ function definicao(referencias: Referencia[]): PlanilhaDeFichas<Instrucao> {
     campos: cabecalho,
     secoes: secoes(referencias),
     resumo,
-    larguras: [26, 50, 14, 12, 14, 18, 16],
+    larguras: [26, 50, 14, 12, 14, 18, 16, 12],
     id: (i) => i.id.trim(),
     nome: (i) => i.nome,
     atualizadoEm: (i) => (i.updated_at ? String(i.updated_at) : null),

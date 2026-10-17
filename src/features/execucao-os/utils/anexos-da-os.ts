@@ -52,7 +52,14 @@ export function podeMexerNosAnexos(status: string | undefined): boolean {
   return !!status && status !== 'FINALIZADA' && status !== 'CANCELADA';
 }
 
-/** HEIC/HEIF (foto do iPhone) o navegador não desenha: aparece como arquivo para baixar. */
-export function mostraMiniatura(mime: string): boolean {
-  return mime.startsWith('image/') && !/hei[cf]/i.test(mime);
+/**
+ * Os tipos que a tela desenha e abre numa aba. Lista fechada (revisão do
+ * SN-59): o tipo dos anexos antigos veio do cliente, e um SVG com script aberto
+ * num `blob:` da própria origem lia a sessão. HEIC/HEIF (foto do iPhone) o
+ * navegador não desenha; esses e o resto baixam como arquivo.
+ */
+const TIPOS_QUE_ABREM = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+
+export function mostraMiniatura(mime: string | null | undefined): boolean {
+  return TIPOS_QUE_ABREM.includes(mime?.toLowerCase() ?? '');
 }

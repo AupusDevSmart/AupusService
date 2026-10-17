@@ -18,7 +18,7 @@ const limpeza = {
   updated_at: '2026-08-20T17:22:01.000Z',
   total_tarefas_derivadas: 5,
   sub_instrucoes: [
-    { id: 's2', descricao: 'Lavar', obrigatoria: false, tempo_estimado: 20, ordem: 2, tipo: 'VERIFICACAO' },
+    { id: 's2', descricao: 'Lavar', obrigatoria: false, tempo_estimado: 20, ordem: 2, tipo: 'VERIFICACAO', exige_foto: true },
     { id: 's1', descricao: 'Desligar o inversor', obrigatoria: true, tempo_estimado: 90, ordem: 1 },
     // SN-58: a leitura leva unidade e faixa (só mínimo, aqui)
     { id: 's3', descricao: 'Tensão CC da string', obrigatoria: true, tempo_estimado: 5, ordem: 3, tipo: 'LEITURA', unidade: 'V', valor_minimo: 580.5, valor_maximo: null },
@@ -57,7 +57,7 @@ describe('planilha de instruções', { timeout: 120_000 }, () => {
     const verificacao = { unidade: null, valor_minimo: null, valor_maximo: null };
     expect(sem(sub_instrucoes)).toEqual([
       { linha: expect.any(Number), descricao: 'Desligar o inversor', obrigatoria: true, tempo_estimado: 90, ...verificacao },
-      { linha: expect.any(Number), descricao: 'Lavar', obrigatoria: false, tempo_estimado: 20, tipo: 'VERIFICACAO', ...verificacao },
+      { linha: expect.any(Number), descricao: 'Lavar', obrigatoria: false, tempo_estimado: 20, tipo: 'VERIFICACAO', exige_foto: true, ...verificacao },
       {
         linha: expect.any(Number),
         descricao: 'Tensão CC da string',
