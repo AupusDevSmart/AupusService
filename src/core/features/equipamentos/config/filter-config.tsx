@@ -1,6 +1,7 @@
 // src/features/equipamentos/config/filter-config.tsx - COM FILTROS DINÂMICOS
 import { FilterConfig } from '@/core/types/base';
 import { FilterOption } from '@/core/types/contracts';
+import { OPCOES_DE_CRITICIDADE } from '@/core/features/equipamentos/config/criticidade';
 
 // Função para criar configuração de filtros com dados dinâmicos
 export const createEquipamentosFilterConfig = (
@@ -50,6 +51,17 @@ export const createEquipamentosFilterConfig = (
     emptyText: 'Nenhuma unidade encontrada',
     options: unidades,
     disabled: loadingUnidades
+  });
+
+  // SN-65: a API e o hook já filtravam por criticidade; faltava o campo na tela
+  baseFilters.push({
+    key: 'criticidade',
+    type: 'combobox',
+    label: 'Criticidade',
+    placeholder: 'Toda criticidade',
+    searchPlaceholder: 'Buscar criticidade...',
+    emptyText: 'Nenhuma criticidade',
+    options: OPCOES_DE_CRITICIDADE,
   });
 
   // Adicionar busca por último

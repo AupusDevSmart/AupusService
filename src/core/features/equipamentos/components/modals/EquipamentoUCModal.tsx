@@ -1,4 +1,5 @@
 // src/features/equipamentos/components/modals/EquipamentoUCModal.tsx - LAYOUT LIMPO
+import { statusDoEquipamento } from '@/core/features/equipamentos/utils/status-do-equipamento';
 import React, { useState, useEffect, useRef } from 'react';
 import { isAxiosError } from 'axios';
 import {
@@ -439,8 +440,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
    * com uma das opções — vazio, 'ativo' minúsculo ou 'Ativo ' com espaço
    * sobrando davam um campo em branco, sem opção nenhuma marcada.
    */
-  const statusAtual =
-    String(formData.status || '').trim().toLowerCase() === 'inativo' ? 'Inativo' : 'Ativo';
+  const statusAtual = statusDoEquipamento(formData.status as string | undefined);
 
   // ============================================================================
   // INICIALIZAÇÃO

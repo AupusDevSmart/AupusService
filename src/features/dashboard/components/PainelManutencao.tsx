@@ -1,4 +1,5 @@
 // src/features/dashboard/components/PainelManutencao.tsx
+import { OPCOES_DE_CRITICIDADE } from '@/core/features/equipamentos/config/criticidade';
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -73,15 +74,8 @@ const PERIODOS: { value: Periodo; label: string }[] = [
   { value: 'ano', label: 'Ano corrente' },
 ];
 
-/** Mesma escala de 1 a 5 do cadastro de equipamentos. */
-const CRITICIDADES = [
-  { value: 'all', label: 'Toda criticidade' },
-  { value: '5', label: '5 · muito alta' },
-  { value: '4', label: '4 · alta' },
-  { value: '3', label: '3 · média' },
-  { value: '2', label: '2 · baixa' },
-  { value: '1', label: '1 · muito baixa' },
-];
+/** Mesma escala de 1 a 5 do cadastro de equipamentos (uma fonte só, SN-65). */
+const CRITICIDADES = OPCOES_DE_CRITICIDADE;
 
 /**
  * Altura das molduras fora do modo "uma tela".
