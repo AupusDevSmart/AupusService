@@ -218,7 +218,6 @@ export function ProgramacaoOSPage() {
     aprovarProgramacao,
     cancelarProgramacao,
     deletarProgramacao,
-    exportarOS,
     buscarProgramacao
   } = useProgramacaoOS();
 
@@ -634,25 +633,6 @@ export function ProgramacaoOSPage() {
       if (await handleDeletar(entity)) closeModal();
     } else if (acao === 'abrir_os') abrirOS(entity);
   };
-
-  const _handleExportar = async () => {
-    try {
-      const blob = await exportarOS(filters);
-
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `programacoes-os-${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      // console.error('Erro ao exportar:', error);
-      alert('Erro ao exportar dados. Tente novamente.');
-    }
-  };
-  void _handleExportar;
 
   // Criar ações da tabela
   const tableActions = createProgramacaoOSTableActions(handleView, acaoDaTabela, temPermissao);

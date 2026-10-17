@@ -8,6 +8,16 @@ export const tipoLabels: Record<string, string> = {
   VISITA_TECNICA: 'Visita Técnica',
 };
 
+export const statusLabels: Record<string, string> = {
+  PENDENTE: 'Pendente',
+  EM_EXECUCAO: 'Em Execução',
+  PAUSADA: 'Pausada',
+  EXECUTADA: 'Executada',
+  AUDITADA: 'Auditada',
+  FINALIZADA: 'Finalizada',
+  CANCELADA: 'Cancelada',
+};
+
 export const prioridadeLabels: Record<string, string> = {
   BAIXA: 'Baixa',
   MEDIA: 'Média',

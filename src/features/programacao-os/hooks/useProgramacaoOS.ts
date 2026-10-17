@@ -199,21 +199,7 @@ export const useProgramacaoOS = () => {
     }
   }, [handleError]);
 
-  // Funções de compatibilidade para transição (simulam execução de OS)
-  const planejarOS = useCallback(async (_id: string, _dados: unknown) => {
-    // console.log('🔧 Planejando OS:', id, dados);
-    // Aqui você chamaria a API de execução de OS quando ela estiver pronta
-    // Por enquanto, simula o comportamento
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // console.log('✅ OS Planejada com sucesso');
-      return { success: true, message: 'OS planejada com sucesso' };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // Inicia a execução pela programação (chama a API de execução)
   const iniciarExecucao = useCallback(async (programacaoId: string, dados: IniciarExecucaoData) => {
     console.log('▶️ Iniciando execução da OS a partir da programação:', programacaoId, dados);
     setLoading(true);
@@ -246,50 +232,6 @@ export const useProgramacaoOS = () => {
     }
   }, []);
 
-  const finalizarOS = useCallback(async (_id: string, _observacoes?: string) => {
-    // console.log('🏁 Finalizando OS:', id, observacoes);
-    setLoading(true);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // console.log('✅ OS Finalizada com sucesso');
-      return { success: true, message: 'OS finalizada com sucesso' };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const cancelarOS = useCallback(async (_id: string, _motivo: string) => {
-    // console.log('🚫 Cancelando OS:', id, 'Motivo:', motivo);
-    setLoading(true);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // console.log('✅ OS Cancelada com sucesso');
-      return { success: true, message: 'OS cancelada com sucesso' };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const exportarOS = useCallback(async (_filters: ProgramacaoFiltersDto) => {
-    // console.log('📄 Exportando OS com filtros:', filters);
-    setLoading(true);
-    
-    try {
-      // Simula geração de CSV
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const csvContent = `OS,Descrição,Status,Data\nOS-001,Manutenção preventiva,FINALIZADA,2024-08-01`;
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      
-      // console.log('✅ Exportação concluída');
-      return blob;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   return {
     loading,
     error,
@@ -307,11 +249,9 @@ export const useProgramacaoOS = () => {
     criarDeTarefas,
     deletarProgramacao,
 
-    // Funções de compatibilidade (simulando execução)
-    planejarOS,
+    // Planejar, finalizar, cancelar e exportar daqui eram simulações (esperavam
+    // e respondiam "sucesso" sem chamar a API) e saíram: as de verdade são as da
+    // execução da OS. A exportação da lista é a do SN-63, na Execução de OS
     iniciarExecucao,
-    finalizarOS,
-    cancelarOS,
-    exportarOS
   };
 };

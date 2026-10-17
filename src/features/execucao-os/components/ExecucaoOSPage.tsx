@@ -8,7 +8,7 @@ import { BaseTable } from '@/core';
 import { BaseFilters } from '@/core';
 import { BaseModal } from '@/core';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Download, Eye, ShieldCheck } from 'lucide-react';
+import { RefreshCw, Eye, ShieldCheck } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 
 // Hooks e configurações da feature
@@ -21,6 +21,7 @@ import { AcoesDaOS } from './AcoesDaOS';
 import { OQueFoiFeito } from './OQueFoiFeito';
 import { AnexosDaOS } from './AnexosDaOS';
 import { BotaoPdfDaOS } from './BotaoPdfDaOS';
+import { BotaoExportarOS } from './BotaoExportarOS';
 import { ConferirCodigo } from './ConferirCodigo';
 import { ComentariosDoRegistro } from '@/features/comentarios/components/ComentariosDoRegistro';
 import {
@@ -400,15 +401,8 @@ export function ExecucaoOSPage() {
                 Conferir código
               </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => alert('Funcionalidade em breve')}
-                className="flex-1 sm:flex-none"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar
-              </Button>
+              {/* Todas as OS do filtro, não só a página (SN-63) */}
+              <BotaoExportarOS filtro={toApiParams} valores={filters as unknown as Record<string, unknown>} filtros={filterConfigs} />
             </div>
           </div>
 
