@@ -4,6 +4,7 @@ import { ExecucaoOS } from '../types';
 import type { OrdemServicoDaApi } from '@/services/execucao-os.service';
 import { duracaoLegivel } from '@/utils/horas';
 import { descreverCustoReal, descreverHorasHomem } from './horas-da-equipe';
+import { codigoAgrupado } from './documento-da-os';
 
 /**
  * Transforma a resposta da API para o formato esperado pelo frontend
@@ -190,7 +191,11 @@ export function transformApiResponseToExecucaoOS(apiData: OrdemServicoDaApi): Ex
     finalizado_por: apiData.finalizado_por,
     finalizado_por_id: apiData.finalizado_por_id,
     finalizadoPor: apiData.finalizado_por,
-    dataFinalizacao: toDatetimeLocal(apiData.data_hora_fim_real),
+    // A data da finalização (SN-62); antes a tela mostrava o fim da execução no lugar
+    dataFinalizacao: toDatetimeLocal(apiData.finalizada_em ?? undefined),
+    finalizada_em: apiData.finalizada_em,
+    codigo_verificacao: apiData.codigo_verificacao,
+    codigoVerificacao: codigoAgrupado(apiData.codigo_verificacao) || undefined,
     aprovado_por: apiData.aprovado_por,
     aprovado_por_id: apiData.aprovado_por_id,
     aprovadoPor: apiData.aprovado_por,

@@ -58,7 +58,12 @@ export function BotaoGerarPdf({ numero, titulo, cliente }: BotaoGerarPdfProps) {
       // Carregada só aqui: a biblioteca é pesada e o bundle já é grande. Quem
       // nunca gera proposta não paga por ela.
       const { gerarPropostaPdf } = await import('@/lib/pdf/proposta');
-      await gerarPropostaPdf({ proposta, numero, titulo, cliente });
+      const faltaram = await gerarPropostaPdf({ proposta, numero, titulo, cliente });
+      if (faltaram.length > 0) {
+        toast.warning('O PDF saiu sem o escopo de parte das instruções', {
+          description: `Não foi possível ler: ${faltaram.join(', ')}. Gere de novo antes de mandar ao cliente.`,
+        });
+      }
     } catch (erro) {
       toast.error('Não foi possível gerar o PDF', { description: formatApiError(erro) });
     } finally {

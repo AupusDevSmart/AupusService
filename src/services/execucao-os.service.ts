@@ -372,6 +372,9 @@ export interface OrdemServicoDaApi {
   hh_real?: number | null;
   hh_estimado?: number;
   tempo_efetivo_minutos?: number | null;
+  /** SN-62: quando foi finalizada e o código impresso no PDF */
+  finalizada_em?: string | null;
+  codigo_verificacao?: string | null;
   avaliacao_qualidade?: number;
   observacoes_qualidade?: string;
   atividades_realizadas?: string;
@@ -492,6 +495,133 @@ export interface ExecucaoOSListApiResponse {
 // ============================================================================
 // SERVIÇO DE API PARA EXECUCAO OS
 // ============================================================================
+
+/**
+ * O conteúdo registrado da OS (SN-62), como a API grava na finalização e o PDF
+ * imprime. Espelha `conteudo-da-os.ts` do backend.
+ */
+export interface ConteudoDaOS {
+  versao: number;
+  os: {
+    numero_os: string;
+    tipo: string;
+    prioridade: string;
+    origem: string;
+    descricao: string | null;
+    local: string | null;
+    ativo: string | null;
+    condicoes: string | null;
+    data_hora_programada: string | null;
+    data_hora_inicio_real: string | null;
+    data_hora_fim_real: string | null;
+    /** Do início ao fim sem as pausas, pela trilha da OS: entra no código */
+    tempo_efetivo_minutos: number | null;
+    responsavel: string | null;
+    resultado_servico: string | null;
+    problemas_encontrados: string | null;
+    recomendacoes: string | null;
+    incidentes_seguranca: string | null;
+    parada_inicio: string | null;
+    parada_fim: string | null;
+    falha_sintoma: string | null;
+    falha_causa: string | null;
+    falha_acao: string | null;
+    custo_real: number | null;
+    avaliacao_qualidade: number | null;
+    observacoes_qualidade: string | null;
+    aprovado_por: string | null;
+    data_aprovacao: string | null;
+    finalizado_por: string | null;
+    finalizada_em: string | null;
+  };
+  tarefas: {
+    id: string;
+    nome: string | null;
+    instrucao_tag: string | null;
+    instrucao_nome: string | null;
+    status: string;
+    data_conclusao: string | null;
+    concluida_por: string | null;
+    observacoes: string | null;
+  }[];
+  checklist: {
+    id: string;
+    tarefa_os_id: string | null;
+    atividade: string;
+    obrigatoria: boolean;
+    concluida: boolean;
+    concluida_em: string | null;
+    concluida_por: string | null;
+    tipo: string;
+    unidade: string | null;
+    valor_minimo: number | null;
+    valor_maximo: number | null;
+    valor_lido: number | null;
+    observacoes: string | null;
+  }[];
+  anexos: {
+    id: string;
+    nome_original: string;
+    tipo: TipoAnexoOS;
+    mime_type: string;
+    tamanho: number;
+    descricao: string | null;
+    tarefa_os_id: string | null;
+    checklist_item_id: string | null;
+    uploaded_at: string | null;
+    uploaded_by: string | null;
+    sha256: string | null;
+  }[];
+  equipe: {
+    id: string;
+    nome: string | null;
+    especialidade: string;
+    horas_estimadas: number;
+    horas_trabalhadas: number | null;
+    presente: boolean;
+  }[];
+  materiais: {
+    id: string;
+    descricao: string;
+    unidade: string;
+    quantidade_planejada: number;
+    quantidade_consumida: number | null;
+    observacoes: string | null;
+  }[];
+  ferramentas: {
+    id: string;
+    descricao: string;
+    quantidade: number;
+    utilizada: boolean;
+    condicao_antes: string | null;
+    condicao_depois: string | null;
+    observacoes: string | null;
+  }[];
+}
+
+/** GET /execucao-os/:id/relatorio (SN-62): o finalizado com o código; antes, a prévia */
+export interface RelatorioDaOS {
+  os_id: string;
+  numero_os: string;
+  status: string;
+  codigo: string | null;
+  finalizada_em: string | null;
+  previa: boolean;
+  conteudo: ConteudoDaOS;
+}
+
+/** GET /execucao-os/conferencia?codigo= (SN-62) */
+export interface ConferenciaDoCodigo {
+  os_id: string;
+  numero_os: string;
+  finalizada_em: string | null;
+  finalizado_por: string | null;
+  confere: boolean;
+  diferencas: string[];
+  /** Os anexos que mudaram, um por um */
+  anexos: string[];
+  conferido_em: string;
+}
 
 /** GET /execucao-os/:id/pessoas (SN-61): sem e-mail nem papel, que a tela não usa */
 export interface PessoasDaOS {
@@ -727,6 +857,19 @@ export class ExecucaoOSApiService {
   // OPERAÇÕES DE ANEXOS
   // ============================================================================
 
+  /** O conteúdo do PDF da OS (SN-62) */
+  async relatorio(id: string): Promise<RelatorioDaOS> {
+    const response = await api.get<RelatorioDaOS>(`${this.baseEndpoint}/${id.trim()}/relatorio`);
+    return response.data;
+  }
+
+  /** Confere o código de verificação de um PDF (SN-62) */
+  async conferir(codigo: string): Promise<ConferenciaDoCodigo> {
+    // O diálogo mostra a recusa ("código não encontrado") no lugar do resultado
+    const response = await api.get<ConferenciaDoCodigo>(`${this.baseEndpoint}/conferencia`, { params: { codigo }, semAvisoGlobal: true });
+    return response.data;
+  }
+
   /** Quem pode registrar horas sem estar escalado (SN-61): a equipe da planta da OS e o apoio, só id e nome */
   async pessoas(id: string): Promise<PessoasDaOS> {
     const response = await api.get<PessoasDaOS>(`${this.baseEndpoint}/${id.trim()}/pessoas`);
@@ -757,9 +900,11 @@ export class ExecucaoOSApiService {
     return response.data;
   }
 
-  async downloadAnexo(id: string, anexoId: string): Promise<Blob> {
+  /** `semAvisoGlobal`: quem chama mostra a falha (o PDF da OS diz qual foto não entrou) */
+  async downloadAnexo(id: string, anexoId: string, opcoes: { semAvisoGlobal?: boolean } = {}): Promise<Blob> {
     const response = await api.get(`${this.baseEndpoint}/${id.trim()}/anexos/${anexoId.trim()}/download`, {
       responseType: 'blob',
+      semAvisoGlobal: opcoes.semAvisoGlobal,
     });
     return response.data;
   }

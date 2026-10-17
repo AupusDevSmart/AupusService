@@ -163,7 +163,8 @@ api.interceptors.response.use(
 
         const currentPath = window.location.pathname;
         if (currentPath !== '/login') {
-          window.location.href = `/login?redirectTo=${currentPath}`;
+          // Com a busca (o ?conferir= do PDF da OS), codificada
+          window.location.href = `/login?redirectTo=${encodeURIComponent(currentPath + window.location.search)}`;
         }
 
         toast({

@@ -43,8 +43,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useUserStore();
 
   if (!user?.id) {
-    const currentPath = window.location.pathname;
-    return <Navigate to={`/login?redirectTo=${currentPath}`} replace />;
+    // Com a busca: o endereço de conferência do PDF da OS (?conferir=) se perdia no login (SN-62)
+    const destino = window.location.pathname + window.location.search;
+    return <Navigate to={`/login?redirectTo=${encodeURIComponent(destino)}`} replace />;
   }
 
   // Senha provisória: antes de qualquer tela, a troca (o backend recusa o resto)

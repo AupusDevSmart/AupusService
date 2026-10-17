@@ -1,7 +1,7 @@
 // src/lib/pdf/proposta.tsx
 import { Text, View } from '@react-pdf/renderer';
 import { moeda, type Proposta } from '@/services/proposta.services';
-import { DocumentoAupus, SecaoPdf, TotalPdf, baixarPdf, estilos } from './documento';
+import { DocumentoAupus, SecaoPdf, TotalPdf, baixarPdf, estilos, textosDoPdf } from './documento';
 
 interface DadosProposta {
   proposta: Proposta;
@@ -143,25 +143,37 @@ function PropostaDocumento({
  *
  * Uma instrução que não carrega é omitida do escopo, e não derruba o PDF: o
  * documento vale pelo preço, e ficar sem uma etapa é melhor do que a pessoa
- * não conseguir gerar a proposta.
+ * não conseguir gerar a proposta. Mas não calada: volta em `faltaram`, e quem
+ * gera é avisado antes de mandar ao cliente (revisão do SN-62). A apagada (404)
+ * não conta: não há escopo a mostrar.
  */
-async function carregarEscopo(proposta: Proposta): Promise<EscopoDaInstrucao[]> {
+async function carregarEscopo(proposta: Proposta): Promise<{ escopo: EscopoDaInstrucao[]; faltaram: string[] }> {
   const ids = [
     ...new Set(
       proposta.itens.map((i) => String(i.instrucao_id ?? '').trim()).filter(Boolean),
     ),
   ];
 
-  if (ids.length === 0) return [];
+  if (ids.length === 0) return { escopo: [], faltaram: [] };
 
   const { instrucoesApi } = await import('@/services/instrucoes.services');
   const { rotuloInstrucao } = await import('@/services/proposta.services');
 
+  const faltaram: string[] = [];
+  const nomeDoItem = (id: string) => proposta.itens.find((i) => String(i.instrucao_id ?? '').trim() === id)?.descricao?.trim() || id;
   const detalhes = await Promise.all(
-    ids.map((id) => instrucoesApi.findOne(id).catch(() => null)),
+    ids.map((id) =>
+      instrucoesApi.findOne(id).catch((erro: { response?: { status?: number } }) => {
+        if (erro?.response?.status !== 404) {
+          console.error(`Escopo da instrução ${id} fora da proposta:`, erro);
+          faltaram.push(nomeDoItem(id));
+        }
+        return null;
+      }),
+    ),
   );
 
-  return detalhes
+  const escopo = detalhes
     .filter((d): d is NonNullable<typeof d> => Boolean(d))
     .map((instrucao) => ({
       id: instrucao.id,
@@ -172,10 +184,15 @@ async function carregarEscopo(proposta: Proposta): Promise<EscopoDaInstrucao[]> 
       })),
     }))
     .filter((i) => i.etapas.length > 0);
+  return { escopo, faltaram };
 }
 
-export async function gerarPropostaPdf(dados: DadosProposta) {
-  const escopo = await carregarEscopo(dados.proposta);
+/** Gera e baixa; devolve o que ficou fora do escopo, para quem gerou ser avisado. */
+export async function gerarPropostaPdf(dados: DadosProposta): Promise<string[]> {
+  const { escopo, faltaram } = await carregarEscopo(dados.proposta);
   const nome = dados.numero ? `proposta-${dados.numero}` : 'proposta';
-  await baixarPdf(<PropostaDocumento {...dados} escopo={escopo} />, nome);
+  // Os textos sem o que a Helvetica não tem (ver `textoDoPdf`)
+  const limpos = textosDoPdf({ ...dados, escopo });
+  await baixarPdf(<PropostaDocumento {...limpos} />, nome);
+  return faltaram;
 }

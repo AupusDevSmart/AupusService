@@ -13,8 +13,10 @@ export function LoginPage() {
   const [searchParams] = useSearchParams();
   const { user } = useUserStore();
 
-  // Pegar redirectTo da URL ou usar /dashboard como padrão
-  const redirectTo = searchParams.get('redirectTo') || '/dashboard';
+  // Pegar redirectTo da URL ou usar /dashboard como padrão. Só caminho do
+  // próprio app: "//outro.site" ou "https://..." levariam para fora depois do login
+  const pedido = searchParams.get('redirectTo');
+  const redirectTo = pedido && pedido.startsWith('/') && !pedido.startsWith('//') ? pedido : '/dashboard';
 
   // Se já estiver logado, redirecionar
   useEffect(() => {

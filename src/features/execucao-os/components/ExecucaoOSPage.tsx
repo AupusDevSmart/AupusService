@@ -8,7 +8,7 @@ import { BaseTable } from '@/core';
 import { BaseFilters } from '@/core';
 import { BaseModal } from '@/core';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Download, Eye } from 'lucide-react';
+import { RefreshCw, Download, Eye, ShieldCheck } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 
 // Hooks e configurações da feature
@@ -20,6 +20,8 @@ import { ActionConfirmPanel, type PendingAction, type DadosDaConfirmacao } from 
 import { AcoesDaOS } from './AcoesDaOS';
 import { OQueFoiFeito } from './OQueFoiFeito';
 import { AnexosDaOS } from './AnexosDaOS';
+import { BotaoPdfDaOS } from './BotaoPdfDaOS';
+import { ConferirCodigo } from './ConferirCodigo';
 import { ComentariosDoRegistro } from '@/features/comentarios/components/ComentariosDoRegistro';
 import {
   montarProgresso,
@@ -63,6 +65,8 @@ export function ExecucaoOSPage() {
     limit: linhasPorPagina,
   }));
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  // SN-62: a conferência do código do PDF, aberta pelo botão ou pelo link impresso (?conferir=)
+  const [conferencia, setConferencia] = useState<{ aberta: boolean; codigo: string | null }>({ aberta: false, codigo: null });
   const temPermissao = useUserStore((s) => s.hasPermission);
   const ehCliente = useUserStore((s) => s.getUserRole()) === 'proprietario';
 
@@ -213,6 +217,17 @@ export function ExecucaoOSPage() {
   // recriando o progresso e desfazendo o que a pessoa acabara de marcar.
   // Sem o parâmetro, a ref zera: o mesmo link clicado de novo (a notificação
   // da mesma OS) volta a abrir.
+  // O link impresso no PDF (?conferir=<código>) abre a conferência já com o código.
+  // O parâmetro sai da URL (replace), como o execucaoId, e o código fica no estado
+  useEffect(() => {
+    const codigo = searchParams.get('conferir');
+    if (!codigo) return;
+    setConferencia({ aberta: true, codigo });
+    const resto = new URLSearchParams(searchParams);
+    resto.delete('conferir');
+    setSearchParams(resto, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const abertoPelaUrl = useRef<string | null>(null);
   useEffect(() => {
     const execucaoIdParam = searchParams.get('execucaoId');
@@ -378,6 +393,16 @@ export function ExecucaoOSPage() {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => setConferencia({ aberta: true, codigo: null })}
+                className="flex-1 sm:flex-none"
+              >
+                <ShieldCheck className="h-4 w-4 mr-2" />
+                Conferir código
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => alert('Funcionalidade em breve')}
                 className="flex-1 sm:flex-none"
               >
@@ -450,12 +475,16 @@ export function ExecucaoOSPage() {
                               tarefasPendentes={tarefasPendentes(progresso).map((t) => ({ id: t.id, nome: t.nome }))}
                             />
                           ) : (
-                            <AcoesDaOS
-                              status={status}
-                              temPermissao={temPermissao}
-                              alteracoesPendentes={alteracoesPendentes}
-                              onAcao={setPendingAction}
-                            />
+                            <div className="space-y-3">
+                              <AcoesDaOS
+                                status={status}
+                                temPermissao={temPermissao}
+                                alteracoesPendentes={alteracoesPendentes}
+                                onAcao={setPendingAction}
+                              />
+                              {/* O PDF da OS (SN-62): prévia antes de finalizar, com o código depois */}
+                              <BotaoPdfDaOS os={modalState.entity!} />
+                            </div>
                           )}
                         </div>
 
@@ -504,6 +533,15 @@ export function ExecucaoOSPage() {
             loading={loading}
           />
         )}
+        <ConferirCodigo
+          aberto={conferencia.aberta}
+          onAbertoChange={(aberta) => setConferencia((atual) => ({ ...atual, aberta }))}
+          codigoInicial={conferencia.codigo}
+          onAbrirOS={(osId) => {
+            setConferencia({ aberta: false, codigo: null });
+            setSearchParams({ execucaoId: osId.trim() });
+          }}
+        />
       </Layout.Main>
     </Layout>
   );

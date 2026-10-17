@@ -611,18 +611,25 @@ export const execucaoOSFormFields: FormField[] = [
     }
   },
   {
+    // SN-62: a coluna existe desde o código de verificação (as finalizadas antes
+    // ganharam a data da trilha). Antes mostrava o fim da execução com este nome
     key: 'dataFinalizacao',
-    // Mostra data_hora_fim_real: nao existe coluna de "finalizado em". Sao
-    // momentos diferentes do fluxo (EXECUTADA -> AUDITADA -> FINALIZADA).
-    label: 'Data de Conclusão da Execução',
+    label: 'Finalizada em',
     type: 'datetime-local',
     disabled: true,
     group: 'auditoria',
     width: 'half',
-    condition: (entity?: ExecucaoOS | null, formData?: Record<string, unknown>) => {
-      const status = formData?.statusExecucao || entity?.statusExecucao;
-      return status === 'FINALIZADA' || status === 'CANCELADA';
-    }
+    condition: exibirSe(['FINALIZADA'], 'dataFinalizacao')
+  },
+  {
+    // O SHA-256 do conteúdo gravado na finalização, o mesmo do PDF (SN-62)
+    key: 'codigoVerificacao',
+    label: 'Código de verificação',
+    type: 'text',
+    disabled: true,
+    group: 'auditoria',
+    colSpan: 2,
+    condition: exibirSe(['FINALIZADA'], 'codigoVerificacao')
   },
   {
     key: 'aprovadoPor',
@@ -744,7 +751,7 @@ export const execucaoOSFormGroups = [
   {
     key: 'auditoria',
     title: 'Informações de Auditoria',
-    fields: ['finalizadoPor', 'dataFinalizacao', 'aprovadoPor', 'dataAprovacao'] // ✅ Campos controlados por condition individual baseada em status
+    fields: ['finalizadoPor', 'dataFinalizacao', 'aprovadoPor', 'dataAprovacao', 'codigoVerificacao'] // ✅ Campos controlados por condition individual baseada em status
     // Removido conditional do grupo - deixar os campos controlarem sua própria visibilidade
   }
 ];
