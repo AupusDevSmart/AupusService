@@ -410,6 +410,64 @@ export const execucaoOSFormFields: FormField[] = [
     condition: exibirSe(DEPOIS_DE_EXECUTAR, 'incidentesSeguranca')
   },
 
+  // SN-60: Dados da falha - GRUPO: falha. Vêm do painel do Executar (obrigatórios
+  // na corretiva); aparecem depois de executar, só com valor
+  {
+    key: 'paradaInicio',
+    disabled: true,
+    label: 'Equipamento parou em',
+    type: 'datetime-local',
+    group: 'falha',
+    width: 'half',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'paradaInicio')
+  },
+  {
+    key: 'paradaFim',
+    disabled: true,
+    label: 'Voltou a funcionar em',
+    type: 'datetime-local',
+    group: 'falha',
+    width: 'half',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'paradaFim')
+  },
+  {
+    key: 'tempoParado',
+    disabled: true,
+    label: 'Tempo parado',
+    type: 'text',
+    group: 'falha',
+    width: 'half',
+    startNewRow: true,
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'tempoParado')
+  },
+  {
+    key: 'falhaSintoma',
+    disabled: true,
+    label: 'Sintoma',
+    type: 'textarea',
+    colSpan: 2,
+    group: 'falha',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'falhaSintoma')
+  },
+  {
+    key: 'falhaCausa',
+    disabled: true,
+    label: 'Causa',
+    type: 'textarea',
+    colSpan: 2,
+    group: 'falha',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'falhaCausa')
+  },
+  {
+    key: 'falhaAcao',
+    disabled: true,
+    label: 'Ação tomada',
+    type: 'textarea',
+    colSpan: 2,
+    group: 'falha',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'falhaAcao')
+  },
+
   // Resultados e Qualidade - GRUPO: resultados
   {
     key: 'resultadoServico',
@@ -633,6 +691,11 @@ export const execucaoOSFormGroups = [
     key: 'seguranca',
     title: 'Segurança e EPIs',
     fields: ['equipamentosSeguranca', 'incidentesSeguranca']
+  },
+  {
+    key: 'falha',
+    title: 'Dados da falha',
+    fields: ['paradaInicio', 'paradaFim', 'tempoParado', 'falhaSintoma', 'falhaCausa', 'falhaAcao'],
   },
   {
     key: 'resultados',

@@ -2,6 +2,7 @@
 
 import { ExecucaoOS } from '../types';
 import type { OrdemServicoDaApi } from '@/services/execucao-os.service';
+import { duracaoLegivel } from '@/utils/horas';
 
 /**
  * Transforma a resposta da API para o formato esperado pelo frontend
@@ -153,9 +154,26 @@ export function transformApiResponseToExecucaoOS(apiData: OrdemServicoDaApi): Ex
     resultadoServico: apiData.resultado_servico,
     problemas_encontrados: apiData.problemas_encontrados,
     problemasEncontrados: apiData.problemas_encontrados,
+    // O painel do Executar lê o que já está na OS (reexecutar depois de reabrir)
+    incidentes_seguranca: apiData.incidentes_seguranca,
     recomendacoes: apiData.recomendacoes,
     proxima_manutencao: apiData.proxima_manutencao,
     proximaManutencao: toDatetimeLocal(apiData.proxima_manutencao),
+
+    // SN-60: dados de falha. O ISO vai para o painel do Executar (que preenche
+    // com o que já está na OS); o local, para a leitura
+    parada_inicio: apiData.parada_inicio,
+    parada_fim: apiData.parada_fim,
+    paradaInicio: toDatetimeLocal(apiData.parada_inicio ?? undefined),
+    paradaFim: toDatetimeLocal(apiData.parada_fim ?? undefined),
+    // Legível: 4320 min não diz nada; "3 d" diz
+    tempoParado: duracaoLegivel(apiData.minutos_parado) || undefined,
+    falha_sintoma: apiData.falha_sintoma,
+    falha_causa: apiData.falha_causa,
+    falha_acao: apiData.falha_acao,
+    falhaSintoma: apiData.falha_sintoma,
+    falhaCausa: apiData.falha_causa,
+    falhaAcao: apiData.falha_acao,
 
     // Qualidade
     avaliacao_qualidade: apiData.avaliacao_qualidade,

@@ -361,6 +361,13 @@ export interface OrdemServicoDaApi {
   problemas_encontrados?: string;
   recomendacoes?: string;
   proxima_manutencao?: string;
+  /** SN-60: dados de falha (ISO em UTC); minutos_parado calculado na API */
+  parada_inicio?: string | null;
+  parada_fim?: string | null;
+  minutos_parado?: number | null;
+  falha_sintoma?: string | null;
+  falha_causa?: string | null;
+  falha_acao?: string | null;
   avaliacao_qualidade?: number;
   observacoes_qualidade?: string;
   atividades_realizadas?: string;
@@ -391,7 +398,8 @@ export interface OrdemServicoDaApi {
   aprovado_por_id?: string;
   data_aprovacao?: string;
   programacao?: { id: string; codigo?: string; descricao?: string };
-  anomalia?: { id: string; descricao: string; prioridade?: string; status?: string };
+  /** `data`: quando a anomalia aconteceu (o início provável da parada, SN-60) */
+  anomalia?: { id: string; descricao: string; prioridade?: string; status?: string; data?: string | null; condicao?: string | null };
   plano_manutencao?: { id: string; nome: string; descricao?: string | null };
   planta?: { id: string; nome: string };
   equipamento?: { id: string; nome: string; tipo_equipamento?: string | null; fabricante?: string | null; modelo?: string | null };

@@ -43,6 +43,12 @@ export interface ExecutarOSDto {
   data_hora_fim_real?: string; // ISO DateTime
   resultado_servico: string;
   problemas_encontrados?: string;
+  /** SN-60: os dados de falha (ISO em UTC). Obrigatórios na corretiva */
+  parada_inicio?: string;
+  parada_fim?: string;
+  falha_sintoma?: string;
+  falha_causa?: string;
+  falha_acao?: string;
   recomendacoes?: string;
   observacoes_execucao?: string;
   materiais_consumidos?: { id: string; quantidade_consumida: number; observacoes?: string }[];

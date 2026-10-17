@@ -20,6 +20,21 @@ export function formatarHoras(horas: number): string {
 }
 
 /**
+ * Uma duração longa em minutos, legível: "3 d 4 h", "1 h 45 min", "45 min".
+ * Para o tempo parado (SN-60): 4320 min não diz nada a quem lê; "3 d" diz.
+ */
+export function duracaoLegivel(minutos: number | null | undefined): string {
+  if (minutos === null || minutos === undefined || minutos < 0) return '';
+  const total = Math.round(minutos);
+  const d = Math.floor(total / 1440);
+  const h = Math.floor((total % 1440) / 60);
+  const min = total % 60;
+  const partes = [d && `${d} d`, h && `${h} h`, (min || (!d && !h)) && `${min} min`].filter(Boolean);
+  // Com dias, os minutos sobram: "3 d 4 h" basta
+  return (d ? partes.slice(0, 2) : partes).join(' ');
+}
+
+/**
  * Quantas diárias uma duração ocupa, e quantas horas isso representa.
  *
  * Uma instrução de 10h não cabe num dia de 8h: ocupa dois, e é por dois dias

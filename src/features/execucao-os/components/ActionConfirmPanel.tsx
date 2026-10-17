@@ -5,11 +5,34 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Play, Pause, RotateCcw, Wrench, ClipboardCheck, CheckCircle, Undo2, Ban, Loader2 } from 'lucide-react';
 import { AvaliacaoEstrelas } from './AvaliacaoEstrelas';
+import { duracaoLegivel } from '@/utils/horas';
 
 export type PendingAction = 'iniciar' | 'pausar' | 'retomar' | 'executar' | 'auditar' | 'finalizar' | 'reabrir' | 'cancelar';
 
-/** O que o painel lê da OS aberta: só a reserva (para pedir o km). */
-type OSDoPainel = { reserva_veiculo?: { status?: string } | null } | null | undefined;
+/**
+ * O que o painel lê da OS aberta: a reserva (para pedir o km), o tipo (a
+ * corretiva exige os dados de falha), a anomalia de origem (a data dela é o
+ * início provável da parada) e os dados de falha que já estão na OS.
+ */
+type OSDoPainel =
+  | {
+      reserva_veiculo?: { status?: string } | null;
+      tipo?: string;
+      anomalia?: { data?: string | null; condicao?: string | null } | null;
+      parada_inicio?: string | null;
+      parada_fim?: string | null;
+      falha_sintoma?: string | null;
+      falha_causa?: string | null;
+      falha_acao?: string | null;
+      problemas_encontrados?: string | null;
+      recomendacoes?: string | null;
+      incidentes_seguranca?: string | null;
+    }
+  | null
+  | undefined;
+
+/** O que já foi digitado no painel (texto, "sim"/"nao" ou número) */
+type ValoresDoPainel = Record<string, unknown>;
 
 /**
  * O que o painel entrega: só os campos preenchidos da ação, já convertidos
@@ -23,9 +46,16 @@ export type DadosDaConfirmacao = {
   motivo_pausa?: string;
   observacoes_retomada?: string;
   resultado_servico?: string;
-  problemas_encontrados?: string;
-  recomendacoes?: string;
-  incidentes_seguranca?: string;
+  // null: o campo veio preenchido da OS e foi apagado (reexecutar depois de reabrir)
+  problemas_encontrados?: string | null;
+  recomendacoes?: string | null;
+  incidentes_seguranca?: string | null;
+  equipamento_parou?: boolean;
+  parada_inicio?: string | null;
+  parada_fim?: string | null;
+  falha_sintoma?: string | null;
+  falha_causa?: string | null;
+  falha_acao?: string | null;
   avaliacao_qualidade?: number;
   observacoes_qualidade?: string;
   motivo_cancelamento?: string;
@@ -35,16 +65,23 @@ export type DadosDaConfirmacao = {
 interface ActionField {
   key: string;
   label: string;
-  type: 'textarea' | 'text' | 'datetime-local' | 'number' | 'estrelas';
+  type: 'textarea' | 'text' | 'datetime-local' | 'number' | 'estrelas' | 'simnao';
   placeholder?: string;
-  required?: boolean;
+  /** Booleano, ou pela OS e pelo que já foi respondido (a parada só se o equipamento parou) */
+  required?: boolean | ((entity: OSDoPainel, valores: ValoresDoPainel) => boolean);
   rows?: number;
   min?: number;
   step?: number;
   defaultNow?: boolean;
-  /** Vai para o bloco "Mais detalhes", recolhido */
-  detalhe?: boolean;
-  condition?: (entity: OSDoPainel) => boolean;
+  /** Vai para o bloco "Mais detalhes", recolhido (ou pela OS) */
+  detalhe?: boolean | ((entity: OSDoPainel) => boolean);
+  /**
+   * O valor inicial a partir da OS (o que já está gravado, a data da
+   * anomalia). Campo com valor inicial que for apagado vai como null: apagar é
+   * apagar, não "manter o antigo calado".
+   */
+  inicial?: (entity: OSDoPainel) => string | null | undefined;
+  condition?: (entity: OSDoPainel, valores: ValoresDoPainel) => boolean;
 }
 
 interface ActionMeta {
@@ -68,6 +105,97 @@ interface ActionMeta {
  * o campo aparecia e o valor era descartado em silêncio.
  */
 const temReservaAtiva = (entity: OSDoPainel) => entity?.reserva_veiculo?.status === 'ativa';
+
+/**
+ * SN-60: os dados de falha. Na corretiva vêm logo abaixo do resultado: o
+ * painel pergunta se o equipamento parou; sintoma, causa e ação são
+ * obrigatórios, e a parada só se parou. Exigir parada de toda corretiva
+ * obrigava a inventar uma (a anomalia nasce "funcionando" e o painel puxava a
+ * data dela). Nos outros tipos, tudo em "Mais detalhes" e opcional.
+ */
+const ehCorretiva = (entity: OSDoPainel) => entity?.tipo === 'CORRETIVA';
+const naoEhCorretiva = (entity: OSDoPainel) => !ehCorretiva(entity);
+const parouNaCorretiva = (entity: OSDoPainel, valores: ValoresDoPainel) => ehCorretiva(entity) && valores.equipamento_parou === 'sim';
+/** Na corretiva, as datas só aparecem depois de responder que parou; nos outros tipos, sempre (recolhidas) */
+const mostraParada = (entity: OSDoPainel, valores: ValoresDoPainel) => !ehCorretiva(entity) || valores.equipamento_parou === 'sim';
+
+/** A resposta que já se sabe: o que a OS gravou, ou a anomalia que disse que parou. Sem isso, a pessoa escolhe. */
+function parouDeAntes(os: OSDoPainel): string {
+  if (os?.parada_inicio) return 'sim';
+  if (os?.falha_sintoma) return 'nao';
+  return os?.anomalia?.condicao === 'PARADO' ? 'sim' : '';
+}
+
+/** ISO em UTC -> o valor do datetime-local, na hora de quem está na tela. */
+function paraDatetimeLocal(iso?: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+const CAMPOS_DA_FALHA: ActionField[] = [
+  {
+    key: 'equipamento_parou',
+    label: 'O equipamento parou?',
+    type: 'simnao',
+    required: true,
+    condition: ehCorretiva,
+    inicial: parouDeAntes,
+  },
+  {
+    key: 'parada_inicio',
+    label: 'O equipamento parou em',
+    type: 'datetime-local',
+    required: parouNaCorretiva,
+    detalhe: naoEhCorretiva,
+    condition: mostraParada,
+    // O que já está na OS; na primeira vez, na corretiva, a data da anomalia que
+    // a originou (fora da corretiva, puxar a anomalia travava o botão por um
+    // campo escondido em "Mais detalhes")
+    inicial: (os) => paraDatetimeLocal(os?.parada_inicio ?? (ehCorretiva(os) ? os?.anomalia?.data : null)),
+  },
+  {
+    key: 'parada_fim',
+    label: 'Voltou a funcionar em',
+    type: 'datetime-local',
+    required: parouNaCorretiva,
+    detalhe: naoEhCorretiva,
+    condition: mostraParada,
+    inicial: (os) => paraDatetimeLocal(os?.parada_fim),
+  },
+  {
+    key: 'falha_sintoma',
+    label: 'Sintoma',
+    type: 'textarea',
+    placeholder: 'O que se viu: alarme, ruído, desligamento',
+    rows: 2,
+    required: ehCorretiva,
+    detalhe: naoEhCorretiva,
+    inicial: (os) => os?.falha_sintoma,
+  },
+  {
+    key: 'falha_causa',
+    label: 'Causa',
+    type: 'textarea',
+    placeholder: 'Por que falhou',
+    rows: 2,
+    required: ehCorretiva,
+    detalhe: naoEhCorretiva,
+    inicial: (os) => os?.falha_causa,
+  },
+  {
+    key: 'falha_acao',
+    label: 'Ação tomada',
+    type: 'textarea',
+    placeholder: 'O que foi feito para o equipamento voltar',
+    rows: 2,
+    required: ehCorretiva,
+    detalhe: naoEhCorretiva,
+    inicial: (os) => os?.falha_acao,
+  },
+];
 
 const actionConfig: Record<PendingAction, ActionMeta> = {
   iniciar: {
@@ -116,7 +244,15 @@ const actionConfig: Record<PendingAction, ActionMeta> = {
         required: true,
         rows: 3,
       },
-      { key: 'problemas_encontrados', label: 'Problemas encontrados', type: 'textarea', placeholder: 'Opcional', rows: 2 },
+      {
+        key: 'problemas_encontrados',
+        label: 'Problemas encontrados',
+        type: 'textarea',
+        placeholder: 'Opcional',
+        rows: 2,
+        inicial: (os) => os?.problemas_encontrados,
+      },
+      ...CAMPOS_DA_FALHA,
       {
         key: 'km_final',
         label: 'KM final do veículo',
@@ -125,8 +261,23 @@ const actionConfig: Record<PendingAction, ActionMeta> = {
         min: 0,
         condition: temReservaAtiva,
       },
-      { key: 'recomendacoes', label: 'Recomendações', type: 'textarea', placeholder: 'Para as próximas manutenções', rows: 2, detalhe: true },
-      { key: 'incidentes_seguranca', label: 'Incidente de segurança', type: 'text', placeholder: 'Se houve, descreva', detalhe: true },
+      {
+        key: 'recomendacoes',
+        label: 'Recomendações',
+        type: 'textarea',
+        placeholder: 'Para as próximas manutenções',
+        rows: 2,
+        detalhe: true,
+        inicial: (os) => os?.recomendacoes,
+      },
+      {
+        key: 'incidentes_seguranca',
+        label: 'Incidente de segurança',
+        type: 'text',
+        placeholder: 'Se houve, descreva',
+        detalhe: true,
+        inicial: (os) => os?.incidentes_seguranca,
+      },
     ],
   },
   auditar: {
@@ -198,25 +349,47 @@ export function ActionConfirmPanel({
   const idBase = useId();
   const pendentes = action === 'executar' ? tarefasPendentes : [];
 
-  const visiveis = config.fields.filter((f) => !f.condition || f.condition(entity));
-  const principais = visiveis.filter((f) => !f.detalhe);
-  const detalhes = visiveis.filter((f) => f.detalhe);
-
-  const [values, setValues] = useState<Record<string, unknown>>(() => {
-    const inicial: Record<string, unknown> = {};
-    for (const field of visiveis) {
-      inicial[field.key] = field.defaultNow && field.type === 'datetime-local' ? nowDatetimeLocal() : '';
+  // Os valores de TODOS os campos (alguns só aparecem conforme a resposta de outro)
+  const [values, setValues] = useState<ValoresDoPainel>(() => {
+    const inicial: ValoresDoPainel = {};
+    for (const field of config.fields) {
+      inicial[field.key] = field.defaultNow && field.type === 'datetime-local' ? nowDatetimeLocal() : (field.inicial?.(entity) ?? '');
     }
     return inicial;
   });
+  const visiveis = config.fields.filter((f) => !f.condition || f.condition(entity, values));
+  const pela = (regra: boolean | ((e: OSDoPainel, v: ValoresDoPainel) => boolean) | undefined) =>
+    typeof regra === 'function' ? regra(entity, values) : Boolean(regra);
+  const principais = visiveis.filter((f) => !pela(f.detalhe));
+  const detalhes = visiveis.filter((f) => pela(f.detalhe));
+  const obrigatorio = (f: ActionField) => pela(f.required);
   const [motivos, setMotivos] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
   const setValue = (key: string, value: unknown) => setValues((prev) => ({ ...prev, [key]: value }));
 
+  // A parada vai inteira e coerente (a API recusa o contrário; aqui o aviso vem antes)
+  const comParada = mostraParada(entity, values);
+  const paradaInicio = comParada && preenchido(values.parada_inicio) ? new Date(String(values.parada_inicio)) : null;
+  const paradaFim = comParada && preenchido(values.parada_fim) ? new Date(String(values.parada_fim)) : null;
+  // A duração à vista: o ano digitado errado aparece como "365 d" antes de gravar
+  const tempoParado =
+    action === 'executar' && paradaInicio && paradaFim && paradaFim >= paradaInicio
+      ? duracaoLegivel((paradaFim.getTime() - paradaInicio.getTime()) / 60_000)
+      : null;
+  const avisoDaParada =
+    action !== 'executar'
+      ? null
+      : !!paradaInicio !== !!paradaFim
+        ? 'Informe quando o equipamento parou e quando voltou a funcionar, os dois.'
+        : paradaInicio && paradaFim && paradaFim < paradaInicio
+          ? 'O equipamento voltou a funcionar antes de parar: confira as duas datas.'
+          : null;
+
   const canConfirm =
-    visiveis.filter((f) => f.required).every((f) => preenchido(values[f.key])) &&
-    pendentes.every((t) => preenchido(motivos[t.id]));
+    visiveis.filter(obrigatorio).every((f) => preenchido(values[f.key])) &&
+    pendentes.every((t) => preenchido(motivos[t.id])) &&
+    !avisoDaParada;
 
   const handleConfirm = async () => {
     if (!canConfirm || submitting) return;
@@ -225,8 +398,14 @@ export function ActionConfirmPanel({
       const payload: Record<string, unknown> = {};
       for (const field of visiveis) {
         const v = values[field.key];
-        if (!preenchido(v)) continue;
-        if (field.type === 'number' || field.type === 'estrelas') {
+        if (!preenchido(v)) {
+          // Veio preenchido da OS e foi apagado: vai null, senão o antigo ficava calado
+          if (field.inicial && preenchido(field.inicial(entity))) payload[field.key] = null;
+          continue;
+        }
+        if (field.type === 'simnao') {
+          payload[field.key] = v === 'sim';
+        } else if (field.type === 'number' || field.type === 'estrelas') {
           payload[field.key] = Number(v);
         } else if (field.type === 'datetime-local') {
           // O input devolve hora local sem fuso ("2026-09-29T09:00"). Enviado
@@ -254,17 +433,41 @@ export function ActionConfirmPanel({
     const rotulo = (
       <label htmlFor={idDe(field.key)} className="mb-1.5 block text-sm text-muted-foreground">
         {field.label}
-        {field.required && <span className="ml-1 text-destructive">*</span>}
+        {obrigatorio(field) && <span className="ml-1 text-destructive">*</span>}
       </label>
     );
 
     switch (field.type) {
+      case 'simnao':
+        return (
+          <fieldset key={field.key}>
+            <legend className="mb-1.5 block text-sm text-muted-foreground">
+              {field.label}
+              {obrigatorio(field) && <span className="ml-1 text-destructive">*</span>}
+            </legend>
+            <div className="flex gap-4 text-sm">
+              {(['sim', 'nao'] as const).map((opcao) => (
+                <label key={opcao} className="flex items-center gap-1.5">
+                  <input
+                    type="radio"
+                    name={idDe(field.key)}
+                    value={opcao}
+                    checked={value === opcao}
+                    onChange={() => setValue(field.key, opcao)}
+                    className="accent-foreground"
+                  />
+                  {opcao === 'sim' ? 'Sim' : 'Não'}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        );
       case 'estrelas':
         return (
           <div key={field.key}>
             <span className="mb-1.5 block text-sm text-muted-foreground">
               {field.label}
-              {field.required && <span className="ml-1 text-destructive">*</span>}
+              {obrigatorio(field) && <span className="ml-1 text-destructive">*</span>}
             </span>
             <AvaliacaoEstrelas valor={Number(value) || null} onChange={(n) => setValue(field.key, n)} />
           </div>
@@ -306,6 +509,12 @@ export function ActionConfirmPanel({
       <h3 className="text-sm font-medium">Confirmar ação</h3>
 
       <div className="space-y-3">{principais.map(campo)}</div>
+
+      {/* Fora do "Mais detalhes": recolhido, o aviso não se via e o botão ficava cinza sem motivo */}
+      {avisoDaParada && (
+        <p role="alert" className="text-xs text-destructive">{avisoDaParada}</p>
+      )}
+      {!avisoDaParada && tempoParado && <p className="text-xs text-muted-foreground">Parado por {tempoParado}</p>}
 
       {pendentes.length > 0 && (
         <div className="space-y-3 rounded-md border p-3">

@@ -265,6 +265,14 @@ export interface OrdemServico extends BaseEntity {
   recomendacoes?: string;
   proxima_manutencao?: string;
 
+  // SN-60: dados de falha (ISO em UTC); minutos_parado vem calculado da API
+  parada_inicio?: string | null;
+  parada_fim?: string | null;
+  minutos_parado?: number | null;
+  falha_sintoma?: string | null;
+  falha_causa?: string | null;
+  falha_acao?: string | null;
+
   // Qualidade
   avaliacao_qualidade?: number;
   observacoes_qualidade?: string;
@@ -297,7 +305,7 @@ export interface OrdemServico extends BaseEntity {
   programacao?: Pick<ProgramacaoResponse, 'id'> & Partial<Pick<ProgramacaoResponse, 'codigo' | 'descricao'>>;
   planta?: { id: string; nome: string };
   equipamento?: { id: string; nome: string };
-  anomalia?: { id: string; descricao: string };
+  anomalia?: { id: string; descricao: string; data?: string | null; condicao?: string | null };
   plano_manutencao?: { id: string; nome: string };
 }
 
