@@ -62,6 +62,9 @@ export interface ExecutarOSDto {
   observacoes_veiculo?: string;
   /** Tarefa pendente ao executar: vira CANCELADA com o motivo e continua devendo */
   tarefas_nao_feitas?: { id: string; motivo: string }[];
+  /** SN-61: horas de cada linha da equipe (obrigatório para todas; 0 = não foi) e quem entrou na hora */
+  horas_dos_tecnicos?: { id: string; horas: number }[];
+  tecnicos_extras?: { tecnico_id: string; horas: number }[];
 }
 
 export interface AuditarOSDto {

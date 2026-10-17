@@ -3,23 +3,12 @@
 import { ExecucaoOS } from '../types';
 import type { OrdemServicoDaApi } from '@/services/execucao-os.service';
 import { duracaoLegivel } from '@/utils/horas';
+import { descreverCustoReal, descreverHorasHomem } from './horas-da-equipe';
 
 /**
  * Transforma a resposta da API para o formato esperado pelo frontend
  */
 export function transformApiResponseToExecucaoOS(apiData: OrdemServicoDaApi): ExecucaoOS {
-  // Calcular tempo total de execução em minutos
-  const calcularTempoExecucao = (): number | undefined => {
-    if (!apiData.data_hora_inicio_real) return undefined;
-
-    const inicio = new Date(apiData.data_hora_inicio_real).getTime();
-    const fim = apiData.data_hora_fim_real
-      ? new Date(apiData.data_hora_fim_real).getTime()
-      : new Date().getTime();
-
-    const diffMs = fim - inicio;
-    return Math.round(diffMs / 60000); // Converter para minutos
-  };
 
   // Separar data e hora de uma string ISO
   const separarDataHora = (isoString?: string): { data: string; hora: string } => {
@@ -175,6 +164,18 @@ export function transformApiResponseToExecucaoOS(apiData: OrdemServicoDaApi): Ex
     falhaCausa: apiData.falha_causa,
     falhaAcao: apiData.falha_acao,
 
+    // SN-61: horas-homem e tempo sem as pausas. Crus para o painel do Executar
+    // (que começa as horas no tempo efetivo); legíveis para a leitura
+    hh_real: apiData.hh_real,
+    hh_estimado: apiData.hh_estimado,
+    tempo_efetivo_minutos: apiData.tempo_efetivo_minutos,
+    // Em execução, o tempo continua correndo depois da leitura: o painel do
+    // Executar soma o que passou (aberto às 8h05, executado ao meio-dia)
+    tempo_efetivo_lido_em: Date.now(),
+    hhReal: descreverHorasHomem(apiData.hh_real, apiData.hh_estimado),
+    tempoEfetivo: duracaoLegivel(apiData.tempo_efetivo_minutos) || undefined,
+    custoReal: descreverCustoReal(apiData.custo_real, apiData.hh_real, apiData.tecnicos),
+
     // Qualidade
     avaliacao_qualidade: apiData.avaliacao_qualidade,
     avaliacaoQualidade: apiData.avaliacao_qualidade,
@@ -257,8 +258,12 @@ export function transformApiResponseToExecucaoOS(apiData: OrdemServicoDaApi): Ex
     custosAdicionais: apiData.custos_adicionais,
 
     // Campos computados
-    tempoTotalExecucao: calcularTempoExecucao(),
-    tempo_execucao_minutos: calcularTempoExecucao(),
+    // O tempo efetivo da API (sem as pausas, SN-61); a conta local é para resposta sem ele
+    // O tempo efetivo da API (sem as pausas, SN-61). A conta local que havia aqui
+    // (fim - início, ou até agora) contava as pausas e, na OS cancelada depois de
+    // iniciada, crescia todo dia — a API manda null de propósito
+    tempoTotalExecucao: apiData.tempo_efetivo_minutos ?? undefined,
+    tempo_execucao_minutos: apiData.tempo_efetivo_minutos ?? undefined,
 
     // Objeto "os" aninhado para compatibilidade com componentes antigos
     os: {

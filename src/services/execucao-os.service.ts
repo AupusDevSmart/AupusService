@@ -368,6 +368,10 @@ export interface OrdemServicoDaApi {
   falha_sintoma?: string | null;
   falha_causa?: string | null;
   falha_acao?: string | null;
+  /** SN-61: HH real (soma das horas registradas; null enquanto ninguém registrou) e tempo sem as pausas */
+  hh_real?: number | null;
+  hh_estimado?: number;
+  tempo_efetivo_minutos?: number | null;
   avaliacao_qualidade?: number;
   observacoes_qualidade?: string;
   atividades_realizadas?: string;
@@ -488,6 +492,12 @@ export interface ExecucaoOSListApiResponse {
 // ============================================================================
 // SERVIÇO DE API PARA EXECUCAO OS
 // ============================================================================
+
+/** GET /execucao-os/:id/pessoas (SN-61): sem e-mail nem papel, que a tela não usa */
+export interface PessoasDaOS {
+  equipe: { id: string; nome: string }[];
+  apoio: { id: string; nome: string }[];
+}
 
 export class ExecucaoOSApiService {
   private readonly baseEndpoint = '/execucao-os';
@@ -716,6 +726,12 @@ export class ExecucaoOSApiService {
   // ============================================================================
   // OPERAÇÕES DE ANEXOS
   // ============================================================================
+
+  /** Quem pode registrar horas sem estar escalado (SN-61): a equipe da planta da OS e o apoio, só id e nome */
+  async pessoas(id: string): Promise<PessoasDaOS> {
+    const response = await api.get<PessoasDaOS>(`${this.baseEndpoint}/${id.trim()}/pessoas`);
+    return response.data;
+  }
 
   async getAnexos(id: string): Promise<AnexoOS[]> {
     const response = await api.get<AnexoOS[]>(`${this.baseEndpoint}/${id.trim()}/anexos`);

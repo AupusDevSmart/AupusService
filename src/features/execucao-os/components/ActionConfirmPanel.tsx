@@ -5,7 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Play, Pause, RotateCcw, Wrench, ClipboardCheck, CheckCircle, Undo2, Ban, Loader2 } from 'lucide-react';
 import { AvaliacaoEstrelas } from './AvaliacaoEstrelas';
+import { HorasDaEquipe } from './HorasDaEquipe';
 import { duracaoLegivel } from '@/utils/horas';
+import {
+  horasDoPedido,
+  linhasIniciais,
+  pendenciaDasHoras,
+  tempoEfetivoAgora,
+  type LinhaDeHoras,
+  type TecnicoDaOS,
+} from '@/features/execucao-os/utils/horas-da-equipe';
 
 export type PendingAction = 'iniciar' | 'pausar' | 'retomar' | 'executar' | 'auditar' | 'finalizar' | 'reabrir' | 'cancelar';
 
@@ -27,6 +36,14 @@ type OSDoPainel =
       problemas_encontrados?: string | null;
       recomendacoes?: string | null;
       incidentes_seguranca?: string | null;
+      // SN-61: a equipe, para as horas trabalhadas, que começam no tempo efetivo
+      id?: string;
+      status?: string;
+      statusExecucao?: string;
+      tecnicos?: TecnicoDaOS[];
+      tempo_efetivo_minutos?: number | null;
+      tempo_efetivo_lido_em?: number;
+      hh_estimado?: number;
     }
   | null
   | undefined;
@@ -60,6 +77,8 @@ export type DadosDaConfirmacao = {
   observacoes_qualidade?: string;
   motivo_cancelamento?: string;
   tarefas_nao_feitas?: { id: string; motivo: string }[];
+  horas_dos_tecnicos?: { id: string; horas: number }[];
+  tecnicos_extras?: { tecnico_id: string; horas: number }[];
 };
 
 interface ActionField {
@@ -364,6 +383,13 @@ export function ActionConfirmPanel({
   const detalhes = visiveis.filter((f) => pela(f.detalhe));
   const obrigatorio = (f: ActionField) => pela(f.required);
   const [motivos, setMotivos] = useState<Record<string, string>>({});
+  // SN-61: as horas de cada pessoa da equipe, e quem entrou na hora. O tempo
+  // efetivo é o de agora, ao escolher Executar, não o de quando o sheet abriu
+  const [tempoEfetivo] = useState(() => (action === 'executar' ? tempoEfetivoAgora(entity) : null));
+  const [horas, setHoras] = useState<LinhaDeHoras[]>(() =>
+    action === 'executar' ? linhasIniciais(entity?.tecnicos, tempoEfetivo) : [],
+  );
+  const pendenciaHoras = action === 'executar' ? pendenciaDasHoras(horas) : null;
   const [submitting, setSubmitting] = useState(false);
 
   const setValue = (key: string, value: unknown) => setValues((prev) => ({ ...prev, [key]: value }));
@@ -389,7 +415,8 @@ export function ActionConfirmPanel({
   const canConfirm =
     visiveis.filter(obrigatorio).every((f) => preenchido(values[f.key])) &&
     pendentes.every((t) => preenchido(motivos[t.id])) &&
-    !avisoDaParada;
+    !avisoDaParada &&
+    !pendenciaHoras;
 
   const handleConfirm = async () => {
     if (!canConfirm || submitting) return;
@@ -419,6 +446,7 @@ export function ActionConfirmPanel({
       if (pendentes.length > 0) {
         payload.tarefas_nao_feitas = pendentes.map((t) => ({ id: t.id, motivo: motivos[t.id].trim() }));
       }
+      if (action === 'executar') Object.assign(payload, horasDoPedido(horas));
       // As chaves são as dos campos da ação (actionConfig), com o valor já convertido
       await onConfirm(payload as DadosDaConfirmacao);
     } finally {
@@ -555,6 +583,20 @@ export function ActionConfirmPanel({
               Usar o mesmo motivo nas outras
             </Button>
           )}
+        </div>
+      )}
+
+      {action === 'executar' && (
+        <div className="space-y-1.5">
+          <HorasDaEquipe
+            osId={entity?.id}
+            linhas={horas}
+            onChange={setHoras}
+            tempoEfetivoMinutos={tempoEfetivo}
+            hhEstimado={entity?.hh_estimado}
+          />
+          {/* O botão fica cinza por isto: o motivo à vista */}
+          {pendenciaHoras && <p className="text-xs text-muted-foreground">{pendenciaHoras}</p>}
         </div>
       )}
 

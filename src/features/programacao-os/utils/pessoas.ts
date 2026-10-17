@@ -1,5 +1,10 @@
 import type { ComboboxOption } from '@/core/components/ui/combobox';
-import type { PessoasDaPlanta } from '@/services/programacao-os.service';
+
+/** Só o que o seletor lê: a rota da OS (SN-61) não manda e-mail nem papel */
+type PessoasPorNome = {
+  equipe: { id: string; nome: string }[];
+  apoio: { id: string; nome: string }[];
+};
 
 export const GRUPO_EQUIPE = 'Equipe da planta';
 export const GRUPO_APOIO = 'Planejamento e gestão';
@@ -12,7 +17,7 @@ export const GRUPO_ANTES = 'Escalado antes';
  * que o backend recusa, com o motivo.
  */
 export function opcoesDePessoas(
-  pessoas: PessoasDaPlanta | undefined,
+  pessoas: PessoasPorNome | undefined,
   atual?: { id?: string | null; nome?: string | null },
 ): ComboboxOption[] {
   const opcoes: ComboboxOption[] = [

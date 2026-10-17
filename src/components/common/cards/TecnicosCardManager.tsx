@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Users, Trash2 } from 'lucide-react';
 import { Combobox, type ComboboxOption } from '@/core/components/ui/combobox';
 import { CardLista, CardLinha, campoCard, selectCard, type ColunaCard } from './card-lista';
+import { formatarHoras } from '@/utils/horas';
 
 export interface TecnicoItem {
   id?: string;
@@ -48,6 +49,15 @@ const especialidadesComuns = [
   'Auxiliar',
   'Outros'
 ];
+
+/**
+ * A lista comum mais a especialidade que a linha já tem. O recurso da
+ * instrução ("Eletricista") e o tipo de quem entrou na execução (SN-61) não
+ * estão na lista, e o select sem a opção mostrava "Selecione..." numa linha
+ * preenchida.
+ */
+const opcoesDeEspecialidade = (atual?: string) =>
+  atual?.trim() && !especialidadesComuns.includes(atual) ? [atual, ...especialidadesComuns] : especialidadesComuns;
 
 const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
   value = [],
@@ -212,7 +222,7 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
                 className={selectCard}
               >
                 <option value="">Selecione...</option>
-                {especialidadesComuns.map(esp => (
+                {opcoesDeEspecialidade(tecnico.especialidade).map(esp => (
                   <option key={esp} value={esp}>{esp}</option>
                 ))}
               </select>
@@ -230,7 +240,7 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
                   type="number"
                   min="0"
                   step="0.5"
-                  value={tecnico.horas_trabalhadas || ''}
+                  value={tecnico.horas_trabalhadas ?? ''}
                   onChange={(e) => atualizarTecnico(index, 'horas_trabalhadas', parseFloat(e.target.value) || 0)}
                   disabled={disabled}
                   className={`${campoCard} text-center`}
@@ -284,7 +294,7 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
       {/* Resumo */}
       {tecnicos.length > 0 && (
         <div className="flex items-center gap-4 text-xs text-muted-foreground text-right justify-end pr-1">
-          <span>Total: {calcularHorasTotal().toFixed(1)}h</span>
+          <span>Total: {formatarHoras(calcularHorasTotal())}</span>
           {showCustos && <span>Custo: R$ {calcularCustoTotal().toFixed(2)}</span>}
         </div>
       )}

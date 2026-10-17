@@ -2,6 +2,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ActionConfirmPanel } from './ActionConfirmPanel';
 
+// As pessoas para quem entrou na hora (SN-61) têm o teste delas em HorasDaEquipe.test
+vi.mock('@/features/execucao-os/hooks/usePessoasDaOS', () => ({ usePessoasDaOS: () => ({ data: undefined, isError: false }) }));
+
 /**
  * Painéis de Executar e Auditar (docs/SPEC-EXECUCAO-DA-OS.md).
  * Executar tinha 11 campos; agora resultado e problemas, o motivo de cada
@@ -216,5 +219,122 @@ describe('ActionConfirmPanel — dados de falha', () => {
     await waitFor(() => expect(onConfirm).toHaveBeenCalled());
     expect(onConfirm.mock.calls[0][0]).toMatchObject({ problemas_encontrados: null });
     expect(onConfirm.mock.calls[0][0]).not.toHaveProperty('recomendacoes');
+  });
+});
+
+describe('ActionConfirmPanel — horas trabalhadas (SN-61)', () => {
+  const equipe = [
+    { id: 'T1', nome: 'Ana Técnica', especialidade: 'Técnico Elétrico', tecnico_id: 'U1', horas_trabalhadas: null },
+    { id: 'T2', nome: null, especialidade: 'Auxiliar', horas_trabalhadas: null },
+  ];
+  const confirmar = () => screen.getByRole('button', { name: /Confirmar Execu/i });
+  const horasDe = (nome: string) => screen.getByLabelText(nome) as HTMLInputElement;
+  const digitar = (campo: HTMLInputElement, texto: string) => {
+    fireEvent.change(campo, { target: { value: texto } });
+    fireEvent.blur(campo);
+  };
+
+  it('cada pessoa começa no tempo efetivo da OS, e as horas vão no payload', async () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ActionConfirmPanel
+        action="executar"
+        entity={{ id: 'OS1', tecnicos: equipe, tempo_efetivo_minutos: 200, hh_estimado: 8 }}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    expect(screen.getByText(/Tempo efetivo da OS: 3 h 20 min/)).toBeInTheDocument();
+    expect(horasDe('Ana Técnica').value).toBe('3h20');
+    expect(horasDe('Auxiliar (sem pessoa)').value).toBe('3h20');
+    expect(screen.getByText('Total: 6h40 de 8h previstas')).toBeInTheDocument();
+
+    digitar(horasDe('Auxiliar (sem pessoa)'), '0');
+    digitar(horasDe('Ana Técnica'), '2,5');
+    expect(horasDe('Ana Técnica').value).toBe('2h30');
+    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'ok' } });
+    fireEvent.click(confirmar());
+
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    expect(onConfirm.mock.calls[0][0]).toMatchObject({
+      horas_dos_tecnicos: [
+        { id: 'T1', horas: 2.5 },
+        { id: 'T2', horas: 0 },
+      ],
+      tecnicos_extras: [],
+    });
+  });
+
+  it('reexecutar: as horas já registradas, não a sugestão, e o aviso de somar o que veio depois', () => {
+    render(
+      <ActionConfirmPanel
+        action="executar"
+        entity={{ id: 'OS1', tecnicos: [{ ...equipe[0], horas_trabalhadas: 2 }], tempo_efetivo_minutos: 200 }}
+        onConfirm={vi.fn()}
+      />,
+    );
+    expect(horasDe('Ana Técnica').value).toBe('2h');
+    expect(screen.getByText('Técnico Elétrico · registradas antes')).toBeInTheDocument();
+    expect(screen.getByText(/some o que cada um trabalhou depois da reabertura/)).toBeInTheDocument();
+  });
+
+  // Revisão do SN-61: o sheet aberto às 8h05 e o Executar ao meio-dia sugeriam 0h05
+  it('a sugestão parte do tempo de agora, não do de quando a OS foi aberta', () => {
+    const quatroHorasAtras = Date.now() - 4 * 3_600_000;
+    render(
+      <ActionConfirmPanel
+        action="executar"
+        entity={{ id: 'OS1', statusExecucao: 'EM_EXECUCAO', tecnicos: [equipe[0]], tempo_efetivo_minutos: 5, tempo_efetivo_lido_em: quatroHorasAtras }}
+        onConfirm={vi.fn()}
+      />,
+    );
+    expect(horasDe('Ana Técnica').value).toBe('4h05');
+    expect(screen.getByText(/Tempo efetivo da OS: 4 h 5 min/)).toBeInTheDocument();
+  });
+
+  it('sem as horas de alguém, ou com texto ilegível, não confirma e diz por quê', () => {
+    render(<ActionConfirmPanel action="executar" entity={{ id: 'OS1', tecnicos: [equipe[0]], tempo_efetivo_minutos: 60 }} onConfirm={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'ok' } });
+    expect(confirmar()).toBeEnabled();
+
+    digitar(horasDe('Ana Técnica'), '');
+    expect(confirmar()).toBeDisabled();
+    expect(screen.getByText('Informe as horas de Ana Técnica (0 se não trabalhou).')).toBeInTheDocument();
+
+    // O texto ilegível ficava na tela e o confirmar mandava o valor de antes, calado
+    digitar(horasDe('Ana Técnica'), '1h');
+    digitar(horasDe('Ana Técnica'), 'uma hora');
+    expect(confirmar()).toBeDisabled();
+    expect(screen.getByText('Corrija as horas de Ana Técnica (ex.: 3h30, 45min ou 3,5).')).toBeInTheDocument();
+
+    digitar(horasDe('Ana Técnica'), '45min');
+    expect(confirmar()).toBeEnabled();
+  });
+
+  it('mais horas que o tempo efetivo: pede conferência, não bloqueia', () => {
+    render(<ActionConfirmPanel action="executar" entity={{ id: 'OS1', tecnicos: [equipe[0]], tempo_efetivo_minutos: 60 }} onConfirm={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'ok' } });
+
+    digitar(horasDe('Ana Técnica'), '3h');
+
+    expect(screen.getByText('Mais que o tempo efetivo da OS: confira.')).toBeInTheDocument();
+    expect(confirmar()).toBeEnabled();
+  });
+
+  it('OS aberta por dias: sem sugestão, pede as horas de cada um', () => {
+    render(<ActionConfirmPanel action="executar" entity={{ id: 'OS1', tecnicos: [equipe[0]], tempo_efetivo_minutos: 276855 }} onConfirm={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'ok' } });
+
+    expect(horasDe('Ana Técnica').value).toBe('');
+    expect(screen.getByText(/A OS ficou aberta mais que uma jornada/)).toBeInTheDocument();
+    expect(confirmar()).toBeDisabled();
+  });
+
+  it('OS sem equipe: confirma sem horas', () => {
+    render(<ActionConfirmPanel action="executar" entity={{ id: 'OS1', tecnicos: [] }} onConfirm={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'ok' } });
+
+    expect(screen.getByText('Ninguém escalado. Se alguém trabalhou, registre abaixo.')).toBeInTheDocument();
+    expect(confirmar()).toBeEnabled();
   });
 });

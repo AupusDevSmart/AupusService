@@ -220,14 +220,36 @@ export const execucaoOSFormFields: FormField[] = [
   },
   {
     // Depois das datas: e um valor derivado delas, nao um dado de entrada.
-    key: 'tempoTotalExecucao',
-    label: 'Tempo Total de Execução (min)',
-    type: 'number',
+    // SN-61: sem as pausas (antes era o fim menos o inicio, com elas dentro),
+    // e legivel ("3 h 20 min", nao "200")
+    key: 'tempoEfetivo',
+    label: 'Tempo efetivo (sem pausas)',
+    type: 'text',
     disabled: true,
     group: 'controle',
     width: 'half',
     startNewRow: true,
-    condition: exibirSe(DEPOIS_DE_INICIAR, 'tempoTotalExecucao')
+    condition: exibirSe(DEPOIS_DE_INICIAR, 'tempoEfetivo')
+  },
+  {
+    // SN-61: a soma das horas de cada pessoa, registradas ao executar
+    key: 'hhReal',
+    label: 'Horas-homem',
+    type: 'text',
+    disabled: true,
+    group: 'controle',
+    width: 'half',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'hhReal')
+  },
+  {
+    // Material consumido mais as horas trabalhadas vezes o custo da hora
+    key: 'custoReal',
+    label: 'Custo real',
+    type: 'text',
+    disabled: true,
+    group: 'controle',
+    width: 'half',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'custoReal')
   },
 
   // Equipe e Responsável - GRUPO: equipe
@@ -660,7 +682,7 @@ export const execucaoOSFormGroups = [
     key: 'controle',
     title: 'Execução',
     columns: 3,
-    fields: ['dataHoraInicioReal', 'dataHoraFimReal', 'tempoTotalExecucao']
+    fields: ['dataHoraInicioReal', 'dataHoraFimReal', 'tempoEfetivo', 'hhReal', 'custoReal']
   },
   {
     key: 'equipe',

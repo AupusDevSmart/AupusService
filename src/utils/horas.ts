@@ -19,6 +19,30 @@ export function formatarHoras(horas: number): string {
   return `${h}h${String(min).padStart(2, '0')}`;
 }
 
+/** Até 999,99 h e 2 casas: a coluna das horas trabalhadas é Decimal(5, 2). */
+const HORAS_MAXIMAS = 999.99;
+
+/**
+ * Horas digitadas (SN-61): "3h30", "3h", "45min", "3:30" ou decimal com vírgula
+ * ("3,5"). Quem está em campo pensa em horas e minutos; o decimal fica para
+ * quem preferir. Vazio é null; o que não dá para ler, undefined (o campo
+ * avisa e não grava). Minutos viram horas com 2 casas (20 min = 0,33 h), a
+ * precisão da coluna — volta para a tela como "0h20".
+ */
+export function lerHorasDigitadas(texto: string): number | null | undefined {
+  const limpo = texto.trim().toLowerCase().replace(/\s/g, '');
+  if (limpo === '') return null;
+
+  const emHoras = (h: number, min: number) => (min >= 60 ? undefined : Math.round((h + min / 60) * 100) / 100);
+  let partes = /^(\d{1,3})h(?:(\d{1,2})(?:min|m)?)?$/.exec(limpo) ?? /^(\d{1,3}):(\d{2})$/.exec(limpo);
+  let horas: number | undefined;
+  if (partes) horas = emHoras(Number(partes[1]), Number(partes[2] ?? 0));
+  else if ((partes = /^(\d{1,5})(?:min|m)$/.exec(limpo))) horas = Math.round((Number(partes[1]) / 60) * 100) / 100;
+  else if (/^\d{1,3}(,\d{1,2})?$/.test(limpo) || /^\d{1,3}(\.\d{1,2})?$/.test(limpo)) horas = Number(limpo.replace(',', '.'));
+
+  return horas === undefined || horas > HORAS_MAXIMAS ? undefined : horas;
+}
+
 /**
  * Uma duração longa em minutos, legível: "3 d 4 h", "1 h 45 min", "45 min".
  * Para o tempo parado (SN-60): 4320 min não diz nada a quem lê; "3 d" diz.
