@@ -5,13 +5,26 @@ import { Input } from '@/components/ui/input';
 import { Clock } from 'lucide-react';
 import { ItensOrdenaveisTable, type ColunaItemOrdenavel } from '@/components/common/ItensOrdenaveisTable';
 import { formatarHoras } from '@/utils/horas';
+import type { TipoDePasso } from '@/services/instrucoes.services';
+import { CampoDeNumero } from '@/components/common/CampoDeNumero';
 
 interface SubInstrucao {
   id?: string;
   descricao: string;
   obrigatoria: boolean;
   tempo_estimado?: number;
+  /** SN-58: a leitura pede o valor medido na OS, com unidade e faixa */
+  tipo?: TipoDePasso;
+  unidade?: string | null;
+  valor_minimo?: number | null;
+  valor_maximo?: number | null;
 }
+
+/** A linha cabe na coluna estreita do sheet */
+const CAMPO_DA_FAIXA = 'h-7 w-16 px-2 text-xs';
+
+const faixaInvertida = (s: SubInstrucao) =>
+  s.valor_minimo != null && s.valor_maximo != null && s.valor_minimo > s.valor_maximo;
 
 export function SubInstrucoesController({ value, onChange, disabled }: FormFieldProps) {
   const [subInstrucoes, setSubInstrucoes] = React.useState<SubInstrucao[]>(
@@ -53,13 +66,67 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
       key: 'descricao',
       header: 'Descrição',
       render: (item, index) => (
-        <Input
-          placeholder="Descrição da sub-instrução..."
-          type="text"
-          value={item.descricao}
-          onChange={(e) => atualizar(index, 'descricao', e.target.value)}
+        <div className="space-y-1.5">
+          <Input
+            placeholder="Descrição da sub-instrução..."
+            type="text"
+            value={item.descricao}
+            onChange={(e) => atualizar(index, 'descricao', e.target.value)}
+            disabled={disabled}
+            className="h-8"
+          />
+          {item.tipo === 'LEITURA' && (
+            <div className="flex flex-wrap items-start gap-1 text-xs text-muted-foreground">
+              <Input
+                aria-label="Unidade da leitura"
+                placeholder="unid."
+                maxLength={20}
+                value={item.unidade ?? ''}
+                onChange={(e) => atualizar(index, 'unidade', e.target.value)}
+                disabled={disabled}
+                className="h-7 w-14 px-2 text-xs"
+              />
+              {/* Texto com vírgula, não type="number": "12,5" num navegador em inglês
+                  voltava "" e a faixa salvava sem o limite, calada */}
+              <CampoDeNumero
+                aria-label="Mínimo aceitável"
+                placeholder="mín."
+                value={item.valor_minimo ?? null}
+                onChange={(v) => atualizar(index, 'valor_minimo', v)}
+                disabled={disabled}
+                avisoCurto
+                className={CAMPO_DA_FAIXA}
+              />
+              <span className="pt-1.5">a</span>
+              <CampoDeNumero
+                aria-label="Máximo aceitável"
+                placeholder="máx."
+                value={item.valor_maximo ?? null}
+                onChange={(v) => atualizar(index, 'valor_maximo', v)}
+                disabled={disabled}
+                avisoCurto
+                className={CAMPO_DA_FAIXA}
+              />
+              {faixaInvertida(item) && <span className="pt-1.5 text-destructive">o mínimo passa do máximo</span>}
+            </div>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'tipo',
+      header: 'Leitura',
+      width: 'w-20',
+      align: 'center',
+      render: (item, index) => (
+        <input
+          type="checkbox"
+          checked={item.tipo === 'LEITURA'}
+          onChange={(e) => atualizar(index, 'tipo', e.target.checked ? 'LEITURA' : 'VERIFICACAO')}
           disabled={disabled}
-          className="h-8"
+          className="accent-foreground"
+          aria-label="Passo de leitura (a equipe digita o valor medido)"
+          title="Leitura: a equipe digita o valor medido, com unidade e faixa"
         />
       )
     },

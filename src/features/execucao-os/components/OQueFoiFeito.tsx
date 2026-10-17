@@ -1,5 +1,5 @@
 // src/features/execucao-os/components/OQueFoiFeito.tsx
-import { useState } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import { Check, CircleDashed, Loader2, Undo2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,16 +10,19 @@ import {
   aplicarItem,
   aplicarStatusDaTarefa,
   type ItemDoChecklist,
+  type MudancaDoItem,
   type ProgressoDaExecucao,
   type TarefaDaExecucao,
 } from '../utils/progresso-da-execucao';
+import { LeituraDoItem } from './LeituraDoItem';
 
 interface OQueFoiFeitoProps {
   osId: string;
   progresso: ProgressoDaExecucao;
   /** OS em execução/pausada e usuário pode mexer; senão, só leitura */
   editavel: boolean;
-  onChange: (progresso: ProgressoDaExecucao) => void;
+  /** Com função de atualização: cada gravação mexe só no item dela, mesmo com outra no ar */
+  onChange: Dispatch<SetStateAction<ProgressoDaExecucao>>;
 }
 
 /**
@@ -40,13 +43,27 @@ export function OQueFoiFeito({ osId, progresso, editavel, onChange }: OQueFoiFei
   const feitas = progresso.tarefas.filter((t) => t.status === 'CONCLUIDA').length;
   const naoFeitas = progresso.tarefas.filter((t) => t.status === 'CANCELADA').length;
 
-  const marcarItem = async (item: ItemDoChecklist, concluida: boolean) => {
-    const antes = progresso;
-    onChange(aplicarItem(progresso, item.id, concluida));
+  // Verificação manda se foi feito; leitura manda o valor (e a observação), e a
+  // API marca pelo valor — a mesma conta do aplicarItem (SN-58)
+  const gravarItem = async (item: ItemDoChecklist, mudanca: MudancaDoItem) => {
+    // Só os campos que este pedido muda voltam no erro: desfazer o progresso
+    // inteiro apagava da tela o que outro pedido, já salvo, tinha mudado
+    const antes = Object.fromEntries(
+      (Object.keys(mudanca) as Array<keyof MudancaDoItem>).map((campo) => [campo, item[campo]]),
+    ) as MudancaDoItem;
+    onChange((p) => aplicarItem(p, item.id, mudanca));
+    const pedido =
+      item.tipo === 'LEITURA'
+        ? {
+            id: item.id,
+            ...(mudanca.valorLido !== undefined && { valor_lido: mudanca.valorLido }),
+            ...(mudanca.observacao !== undefined && { observacoes: mudanca.observacao }),
+          }
+        : { id: item.id, concluida: Boolean(mudanca.concluida) };
     try {
-      await execucaoOSApi.atualizarChecklist(osId, [{ id: item.id, concluida }]);
+      await execucaoOSApi.atualizarChecklist(osId, [pedido]);
     } catch (error) {
-      onChange(antes);
+      onChange((p) => aplicarItem(p, item.id, antes));
       toast({ title: 'Não foi possível salvar o item', description: formatApiError(error), variant: 'destructive' });
     }
   };
@@ -56,10 +73,10 @@ export function OQueFoiFeito({ osId, progresso, editavel, onChange }: OQueFoiFei
     try {
       if (acao === 'concluir') {
         await execucaoOSApi.concluirTarefa(osId, tarefa.id);
-        onChange(aplicarStatusDaTarefa(progresso, tarefa.id, 'CONCLUIDA'));
+        onChange((p) => aplicarStatusDaTarefa(p, tarefa.id, 'CONCLUIDA'));
       } else {
         await execucaoOSApi.reabrirTarefa(osId, tarefa.id);
-        onChange(aplicarStatusDaTarefa(progresso, tarefa.id, 'PENDENTE'));
+        onChange((p) => aplicarStatusDaTarefa(p, tarefa.id, 'PENDENTE'));
       }
     } catch (error) {
       toast({ title: 'Não foi possível atualizar a tarefa', description: formatApiError(error), variant: 'destructive' });
@@ -68,22 +85,25 @@ export function OQueFoiFeito({ osId, progresso, editavel, onChange }: OQueFoiFei
     }
   };
 
-  const linhaDeItem = (item: ItemDoChecklist, travado: boolean) => (
-    <label key={item.id} className="flex items-start gap-2 py-1 text-sm">
-      <input
-        type="checkbox"
-        className="mt-0.5 h-4 w-4 rounded border-border"
-        checked={item.concluida}
-        disabled={!editavel || travado}
-        onChange={(e) => marcarItem(item, e.target.checked)}
-        aria-label={item.texto}
-      />
-      <span className={item.concluida ? 'text-muted-foreground line-through' : 'text-foreground'}>
-        {item.texto}
-        {item.obrigatoria && <span className="ml-1 text-xs text-muted-foreground">(obrigatório)</span>}
-      </span>
-    </label>
-  );
+  const linhaDeItem = (item: ItemDoChecklist, travado: boolean) =>
+    item.tipo === 'LEITURA' ? (
+      <LeituraDoItem key={item.id} item={item} editavel={editavel && !travado} onGravar={(m) => gravarItem(item, m)} />
+    ) : (
+      <label key={item.id} className="flex items-start gap-2 py-1 text-sm">
+        <input
+          type="checkbox"
+          className="mt-0.5 h-4 w-4 rounded border-border"
+          checked={item.concluida}
+          disabled={!editavel || travado}
+          onChange={(e) => gravarItem(item, { concluida: e.target.checked })}
+          aria-label={item.texto}
+        />
+        <span className={item.concluida ? 'text-muted-foreground line-through' : 'text-foreground'}>
+          {item.texto}
+          {item.obrigatoria && <span className="ml-1 text-xs text-muted-foreground">(obrigatório)</span>}
+        </span>
+      </label>
+    );
 
   return (
     <div className="space-y-3">
@@ -121,13 +141,15 @@ export function OQueFoiFeito({ osId, progresso, editavel, onChange }: OQueFoiFei
                   <Button
                     type="button"
                     size="sm"
-                    disabled={tarefa.obrigatoriosPendentes > 0 || ocupado === tarefa.id}
+                    disabled={tarefa.obrigatoriosPendentes > 0 || tarefa.leiturasSemExplicacao > 0 || ocupado === tarefa.id}
                     onClick={() => mudarTarefa(tarefa, 'concluir')}
                     aria-label={`Marcar "${tarefa.nome}" como feita`}
                     title={
                       tarefa.obrigatoriosPendentes > 0
                         ? 'Marque os itens obrigatórios antes'
-                        : 'Marcar a tarefa como feita'
+                        : tarefa.leiturasSemExplicacao > 0
+                          ? 'Explique a leitura fora da faixa antes'
+                          : 'Marcar a tarefa como feita'
                     }
                   >
                     {ocupado === tarefa.id ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Check className="h-4 w-4 mr-1.5" />}
@@ -165,6 +187,11 @@ export function OQueFoiFeito({ osId, progresso, editavel, onChange }: OQueFoiFei
               <p className="pl-6 text-xs text-muted-foreground">
                 Falta{tarefa.obrigatoriosPendentes === 1 ? '' : 'm'} {tarefa.obrigatoriosPendentes} item
                 {tarefa.obrigatoriosPendentes === 1 ? '' : 's'} obrigatório{tarefa.obrigatoriosPendentes === 1 ? '' : 's'}.
+              </p>
+            )}
+            {editavel && pendente && tarefa.obrigatoriosPendentes === 0 && tarefa.leiturasSemExplicacao > 0 && (
+              <p className="pl-6 text-xs text-muted-foreground">
+                Explique na observação a leitura fora da faixa para concluir a tarefa.
               </p>
             )}
           </div>

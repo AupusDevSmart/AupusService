@@ -62,7 +62,7 @@ describe('montarProgresso', () => {
 
 describe('aplicarItem / aplicarStatusDaTarefa / tarefasPendentes', () => {
   it('marcar o último obrigatório zera os pendentes da tarefa', () => {
-    const p = aplicarItem(montarProgresso(tarefasOs, checklist), 'C1', true);
+    const p = aplicarItem(montarProgresso(tarefasOs, checklist), 'C1', { concluida: true });
 
     expect(p.tarefas[0].obrigatoriosPendentes).toBe(0);
   });
@@ -75,6 +75,47 @@ describe('aplicarItem / aplicarStatusDaTarefa / tarefasPendentes', () => {
 
   it('pendentes são só as que não foram feitas nem marcadas como não feitas', () => {
     expect(tarefasPendentes(montarProgresso(tarefasOs, checklist)).map((t) => t.id)).toEqual(['V1']);
+  });
+});
+
+/** SN-58: o passo de leitura, com a mesma regra da API */
+describe('leituras', () => {
+  const medicao = [{ id: 'V1', nome_snapshot: 'Medir', status: 'PENDENTE', ordem: 1 }];
+  // A faixa pode chegar como texto (Decimal) e a leitura sem valor
+  const itens = [
+    { id: 'L1', atividade: 'Medir: Tensão', obrigatoria: true, concluida: false, tarefa_os_id: 'V1', ordem: 1, tipo: 'LEITURA', unidade: 'V', valor_minimo: '580.0000', valor_maximo: 620, valor_lido: null },
+    { id: 'L2', atividade: 'Medir: Temperatura', obrigatoria: false, concluida: true, tarefa_os_id: 'V1', ordem: 2, tipo: 'LEITURA', unidade: '°C', valor_minimo: null, valor_maximo: 70.5, valor_lido: 82, observacoes: null },
+  ];
+
+  it('lê tipo, unidade, faixa e valor; marca o fora da faixa', () => {
+    const [tensao, temperatura] = montarProgresso(medicao, itens).tarefas[0].itens;
+
+    expect(tensao).toMatchObject({ tipo: 'LEITURA', unidade: 'V', minimo: 580, maximo: 620, valorLido: null, concluida: false, foraDaFaixa: false });
+    expect(temperatura).toMatchObject({ valorLido: 82, foraDaFaixa: true });
+  });
+
+  it('a leitura fora da faixa sem observação segura a tarefa; a observação libera', () => {
+    let p = montarProgresso(medicao, itens);
+    expect(p.tarefas[0]).toMatchObject({ obrigatoriosPendentes: 1, leiturasSemExplicacao: 1 });
+
+    p = aplicarItem(p, 'L1', { valorLido: 600 });
+    p = aplicarItem(p, 'L2', { observacao: 'Ventilador travado' });
+    expect(p.tarefas[0]).toMatchObject({ obrigatoriosPendentes: 0, leiturasSemExplicacao: 0 });
+  });
+
+  it('digitar o valor marca; apagar (null) desmarca; o fora da faixa segue o valor novo', () => {
+    let p = aplicarItem(montarProgresso(medicao, itens), 'L1', { valorLido: 650 });
+    expect(p.tarefas[0].itens[0]).toMatchObject({ concluida: true, foraDaFaixa: true });
+
+    p = aplicarItem(p, 'L1', { valorLido: 620 });
+    expect(p.tarefas[0].itens[0]).toMatchObject({ concluida: true, foraDaFaixa: false });
+
+    p = aplicarItem(p, 'L1', { valorLido: null });
+    expect(p.tarefas[0].itens[0]).toMatchObject({ concluida: false, foraDaFaixa: false });
+  });
+
+  it('item sem tipo (OS de antes do SN-58) é verificação', () => {
+    expect(montarProgresso(tarefasOs, checklist).tarefas[0].itens[0].tipo).toBe('VERIFICACAO');
   });
 });
 

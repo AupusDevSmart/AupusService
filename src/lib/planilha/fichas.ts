@@ -311,7 +311,21 @@ function lerFicha<T>(
               .map((campo) => ({ campo, coluna: porTitulo.get(chave(campo.titulo)) ?? -1 }))
               .filter((x) => x.coluna > 0),
       };
-      if (!secao.somenteLeitura) secoes[secao.titulo] = [];
+      if (!secao.somenteLeitura) {
+        secoes[secao.titulo] = [];
+        // A lista da seção é trocada inteira: coluna que falta (arquivo de antes
+        // da coluna existir, ou apagada) apagaria o dado dela calada. Antes era
+        // descartada sem aviso — as leituras do SN-58 virariam verificação
+        for (const campo of secao.colunas.filter((c) => !ehCalculado(c) && !c.identificador)) {
+          if (!porTitulo.has(chave(campo.titulo))) {
+            erros.push({
+              aba,
+              linha: r,
+              mensagem: `A seção ${secao.titulo} está sem a coluna ${campo.titulo}. Sem ela, o que está gravado nessa coluna se perderia: exporte de novo ou copie o cabeçalho da seção da aba MODELO.`,
+            });
+          }
+        }
+      }
       continue;
     }
 

@@ -38,6 +38,11 @@ const STATUS: Record<string, string> = {
   ARQUIVADA: 'Arquivada',
 };
 
+const TIPO_DO_PASSO: Record<string, string> = {
+  VERIFICACAO: 'Verificação',
+  LEITURA: 'Leitura',
+};
+
 const ROTULO_DA_CATEGORIA = Object.fromEntries(CATEGORIAS_RECURSO.map((c) => [c.value, c.label]));
 
 /** Minutos no banco, horas na tela: 90 → 1,5. Quatro casas voltam ao minuto exato. */
@@ -120,6 +125,43 @@ function secoes(refs: Referencia[]): SecaoDaFicha<Instrucao, never>[] {
         explicacao: 'Quanto o passo leva, em horas (0,5 = 30 minutos).',
         exemplo: '1,5',
         valor: (p) => emHoras(p.tempo_estimado),
+      },
+      {
+        titulo: 'TIPO',
+        caminho: 'tipo',
+        tipo: 'opcao',
+        rotulos: TIPO_DO_PASSO,
+        vazioEhPadrao: true,
+        explicacao:
+          'Verificação: a equipe marca feito. Leitura: a equipe digita o valor medido, e o valor fora da faixa pede explicação. Vazio = Verificação.',
+        exemplo: 'Leitura',
+        valor: (p) => p.tipo,
+      },
+      {
+        titulo: 'UNIDADE',
+        caminho: 'unidade',
+        tipo: 'texto',
+        explicacao: 'Só na leitura: a unidade do valor (até 20 caracteres). Na verificação, deixe vazio.',
+        exemplo: 'V',
+        valor: (p) => p.unidade,
+      },
+      {
+        titulo: 'MÍNIMO',
+        caminho: 'valor_minimo',
+        tipo: 'numero',
+        explicacao:
+          'Só na leitura: o menor valor aceito (ele mesmo é aceito). Vazio = sem mínimo. Até 4 casas decimais, entre -9.999.999.999 e 9.999.999.999, e não pode passar do MÁXIMO.',
+        exemplo: '580',
+        valor: (p) => p.valor_minimo,
+      },
+      {
+        titulo: 'MÁXIMO',
+        caminho: 'valor_maximo',
+        tipo: 'numero',
+        explicacao:
+          'Só na leitura: o maior valor aceito (ele mesmo é aceito). Vazio = sem máximo. Até 4 casas decimais, entre -9.999.999.999 e 9.999.999.999.',
+        exemplo: '620',
+        valor: (p) => p.valor_maximo,
       },
     ],
   };

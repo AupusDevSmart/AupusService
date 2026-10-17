@@ -803,7 +803,14 @@ export class ExecucaoOSApiService {
   }
 
   /** Marca/desmarca itens do checklist (grava na hora; OS em execução ou pausada) */
-  async atualizarChecklist(id: string, atividades: { id: string; concluida: boolean }[]): Promise<void> {
+  /**
+   * Verificação manda `concluida`; leitura manda `valor_lido` (null apaga) e a
+   * API marca pelo valor (SN-58). `observacoes` explica a leitura fora da faixa.
+   */
+  async atualizarChecklist(
+    id: string,
+    atividades: { id: string; concluida?: boolean; valor_lido?: number | null; observacoes?: string | null }[],
+  ): Promise<void> {
     await api.patch(`${this.baseEndpoint}/${id}/checklist`, { atividades });
   }
 

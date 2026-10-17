@@ -4,6 +4,14 @@ import { FileText, ChevronRight, X, Clock, Wrench, ListChecks, AlertCircle, Squa
 import { Button } from '@/components/ui/button';
 import { Expandir } from '@/components/ui/expandir';
 import { instrucoesApi, InstrucaoApiResponse, SubInstrucaoApiResponse, RecursoInstrucaoApiResponse } from '@/services/instrucoes.services';
+import { descreverFaixa, numeroOuNulo } from '@/utils/leitura';
+
+/** "leitura 580 a 620 V", "leitura em V", "leitura" (SN-58) */
+function rotuloDaLeitura(sub: SubInstrucaoApiResponse) {
+  const faixa = descreverFaixa({ minimo: numeroOuNulo(sub.valor_minimo), maximo: numeroOuNulo(sub.valor_maximo), unidade: sub.unidade });
+  if (faixa) return `leitura ${faixa}`;
+  return sub.unidade ? `leitura em ${sub.unidade}` : 'leitura';
+}
 
 interface InstrucaoExpandableCardProps {
   id: string;
@@ -220,6 +228,11 @@ export function InstrucaoExpandableCard({
                           {sub.ordem || idx + 1}.
                         </span>
                         <span className="flex-1">{sub.descricao}</span>
+                        {sub.tipo === 'LEITURA' && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
+                            {rotuloDaLeitura(sub)}
+                          </span>
+                        )}
                         {sub.obrigatoria && (
                           <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
                             obrigatoria

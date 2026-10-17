@@ -17,11 +17,19 @@ export type TipoAnexo = 'MANUAL' | 'PROCEDIMENTO' | 'MODELO_RELATORIO' | 'OUTROS
 // TIPOS DA API PARA INSTRUCOES
 // ============================================================================
 
+/** VERIFICACAO = marcar feito; LEITURA = digitar o valor medido (SN-58) */
+export type TipoDePasso = 'VERIFICACAO' | 'LEITURA';
+
 export interface CreateSubInstrucaoApiData {
   descricao: string;
   obrigatoria?: boolean;
   tempo_estimado?: number;
   ordem?: number;
+  tipo?: TipoDePasso;
+  /** Unidade e faixa só na leitura: a API recusa em verificação */
+  unidade?: string | null;
+  valor_minimo?: number | null;
+  valor_maximo?: number | null;
 }
 
 export interface CreateRecursoInstrucaoApiData {
@@ -87,6 +95,10 @@ export interface SubInstrucaoApiResponse {
   obrigatoria: boolean;
   tempo_estimado?: number;
   ordem?: number;
+  tipo?: TipoDePasso;
+  unidade?: string | null;
+  valor_minimo?: number | null;
+  valor_maximo?: number | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -293,6 +305,14 @@ export class InstrucoesApiService {
       obrigatoria: sub.obrigatoria,
       tempo_estimado: sub.tempo_estimado,
       ordem: indice + 1,
+      tipo: sub.tipo ?? 'VERIFICACAO',
+      // A API recusa unidade e faixa no passo de verificação: o passo que
+      // deixou de ser leitura não leva o que sobrou dos campos escondidos
+      ...(sub.tipo === 'LEITURA' && {
+        unidade: sub.unidade?.trim() || null,
+        valor_minimo: sub.valor_minimo ?? null,
+        valor_maximo: sub.valor_maximo ?? null,
+      }),
     }));
   }
 
