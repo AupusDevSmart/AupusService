@@ -25,6 +25,8 @@ import { normalizarTipoEquipamento } from '@/core/features/equipamentos/utils/ti
 import { PosicaoSelector } from '@/core/features/equipamentos/components/PosicaoSelector';
 import { HistoricoDaPosicao } from '@/core/features/equipamentos/components/HistoricoDaPosicao';
 import { InstalacaoEGarantia } from '@/core/features/equipamentos/components/InstalacaoEGarantia';
+import { CriticidadePelaMatriz } from '@/core/features/equipamentos/components/CriticidadePelaMatriz';
+import { avaliacaoDaApi, avaliacaoParaApi, problemaDaCriticidade, soAAvaliacao } from '@/core/features/equipamentos/utils/criticidade-pela-matriz';
 import type { AtivoFuncional } from '@/core/features/equipamentos/hooks/useAtivosFuncionais';
 import { separarDadosTecnicos } from '@/core/features/equipamentos/utils/dados-tecnicos';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/core/components/ui/tabs';
@@ -102,6 +104,10 @@ interface FormularioDoUC {
   numeroSerie?: string;
   tag?: string;
   criticidade?: string;
+  /** SN-64: a avaliação pela matriz */
+  criticidadeImpacto?: number | null;
+  criticidadeProbabilidade?: number | null;
+  criticidadeMotivo?: string | null;
   /** O CODIGO do tipo escolhido. */
   tipoEquipamento?: string;
   tipoEquipamentoId?: string;
@@ -660,6 +666,12 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         numeroSerie: paraDuplicar ? '' : dadosCompletos.numeroSerie || '',
         tag: paraDuplicar ? '' : dadosCompletos.tag || '',
         criticidade: dadosCompletos.criticidade || '3',
+        // Duplicar leva a avaliação, como a criticidade: é da função, não do exemplar
+        ...avaliacaoDaApi({
+          criticidade_impacto: dadosCompletos.criticidadeImpacto,
+          criticidade_probabilidade: dadosCompletos.criticidadeProbabilidade,
+          criticidade_motivo: dadosCompletos.criticidadeMotivo,
+        }),
         tipoEquipamento: codigoTipo?.trim() || '',
         tipoEquipamentoId: tipoCompleto?.id?.trim() || '',
         // A posicao onde este equipamento esta. Sem isto o historico nunca
@@ -1229,6 +1241,13 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         }
       }
 
+      // SN-64: a mesma conferência da API, antes de mandar
+      const problemaNaCriticidade = problemaDaCriticidade(formData);
+      if (problemaNaCriticidade) {
+        avisar(problemaNaCriticidade);
+        return;
+      }
+
       // Validar MQTT: se habilitado, tópico é obrigatório
       if (formData.mqttHabilitado && !formData.topicoMqtt?.trim()) {
         avisar('Tópico MQTT é obrigatório quando MQTT está habilitado');
@@ -1290,6 +1309,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         numero_serie: formData.numeroSerie,
         tag: formData.tag,
         criticidade: formData.criticidade,
+        ...avaliacaoParaApi(formData),
         tipo_equipamento: formData.tipoEquipamento,  // Código (compatibilidade)
         tipo_equipamento_id: tipoEqpId,  // ID do tipo (correto)
         status: statusAtual,
@@ -1873,33 +1893,10 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
           </div>
         )}
 
-        {/* Criticidade */}
-        <div className="space-y-2">
-          <div className="linha-rotulo">
-            <label className="text-sm font-medium">
-              Criticidade <span className="text-red-500">*</span>
-            </label>
-          </div>
-          <Select
-            value={formData.criticidade || '3'}
-            onValueChange={(value) => handleInputChange('criticidade', value)}
-            disabled={isReadonly}
-          >
-            <SelectTrigger className="rounded">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">1 (Muito Baixa)</SelectItem>
-              <SelectItem value="2">2 (Baixa)</SelectItem>
-              <SelectItem value="3">3 (Média)</SelectItem>
-              <SelectItem value="4">4 (Alta)</SelectItem>
-              <SelectItem value="5">5 (Muito Alta)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* A criticidade saiu daqui para a seção própria, com a matriz (SN-64). */}
 
         {/* Campo do consumidor (o plano de manutenção, no AupusService). Ocupa
-            uma coluna como os demais, caindo ao lado da criticidade.
+            uma coluna como os demais.
             Em create não há equipamento ainda, então nada que dependa do id
             pode ser renderizado. */}
         {/* O plano não é replicado: vinculá-lo cria uma cópia própria dele, com
@@ -2540,6 +2537,10 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         fabricante: data.fabricante,
         numeroSerie: data.numero_serie,
         criticidade: data.criticidade,
+        // SN-64: sem estes, o componente criado aqui perdia a avaliação ao salvar o lote
+        criticidadeImpacto: data.criticidade_impacto,
+        criticidadeProbabilidade: data.criticidade_probabilidade,
+        criticidadeMotivo: data.criticidade_motivo,
         dataInstalacao: data.data_instalacao,
         // Sem estes, o componente criado aqui perdia o fornecedor ao salvar o lote
         garantiaAte: data.garantia_ate,
@@ -2575,6 +2576,15 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         return {
           ...uar,
           ...data,
+          // O sheet devolve snake_case e quem reabre o componente le o
+          // camelCase: sem isto, reabrir antes de salvar o lote mostrava a
+          // data, a garantia e a avaliacao antigas (o lote gravava o certo)
+          dataInstalacao: data.data_instalacao?.slice(0, 10) ?? null,
+          garantiaAte: data.garantia_ate?.slice(0, 10) ?? null,
+          centroCusto: data.centro_custo ?? null,
+          criticidadeImpacto: data.criticidade_impacto ?? null,
+          criticidadeProbabilidade: data.criticidade_probabilidade ?? null,
+          criticidadeMotivo: data.criticidade_motivo ?? null,
           id: uar.id, // o sheet nao muda a identidade do item na lista
           // Enquanto nao foi salvo, o componente carrega o CODIGO do tipo: e o
           // que o backend aceita nos dois formatos e o que permite reabrir o
@@ -2747,6 +2757,15 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   const renderConteudoDados = () => (
     <div className="space-y-6">
       {renderDadosBasicos()}
+
+      <Separator />
+
+      {/* No lote vale para todos os equipamentos, como a criticidade valia */}
+      <CriticidadePelaMatriz
+        valores={soAAvaliacao(formData)}
+        onChange={(avaliacao) => setFormData((prev) => ({ ...prev, ...avaliacao }))}
+        somenteLeitura={isReadonly}
+      />
 
       <Separator />
 

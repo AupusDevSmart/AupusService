@@ -1,4 +1,5 @@
 import type { Equipamento } from '@/core/features/equipamentos/types';
+import { avaliacaoParaApi } from '@/core/features/equipamentos/utils/criticidade-pela-matriz';
 
 export type DadoTecnicoDoPayload = { campo: string; valor: string; tipo: string; unidade?: string };
 
@@ -15,6 +16,10 @@ export type DadosDoComponenteUAR = {
   modelo?: string;
   numero_serie?: string;
   criticidade?: Equipamento['criticidade'];
+  /** SN-64: a avaliação pela matriz */
+  criticidade_impacto?: number | null;
+  criticidade_probabilidade?: number | null;
+  criticidade_motivo?: string | null;
   /** O CODIGO do tipo (compatibilidade); o id vai em `tipo_equipamento_id`. */
   tipo_equipamento?: string;
   tipo_equipamento_id?: string;
@@ -41,6 +46,9 @@ export type FormularioDoUAR = {
   tag?: string;
   classificacao?: 'UC' | 'UAR';
   criticidade?: Equipamento['criticidade'];
+  criticidadeImpacto?: number | null;
+  criticidadeProbabilidade?: number | null;
+  criticidadeMotivo?: string | null;
   numeroSerie?: string;
   localizacaoEspecifica?: string;
   /** O CODIGO do tipo escolhido. */
@@ -90,6 +98,7 @@ export function payloadDoComponente(
     modelo: formData.modelo,
     numero_serie: formData.numeroSerie,
     criticidade: formData.criticidade,
+    ...avaliacaoParaApi(formData),
     tipo_equipamento: formData.tipoComponente, // Codigo (compatibilidade)
     tipo_equipamento_id: tipoEquipamentoId, // ID do tipo (correto)
     // As datas do input sao de calendario: meia-noite UTC. Vazio vai null —

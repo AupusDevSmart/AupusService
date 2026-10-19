@@ -37,6 +37,8 @@ import { mensagemDoBackend } from '@/utils/api-error';
 import { payloadDoComponente, type DadosDoComponenteUAR, type FormularioDoUAR } from '@/core/features/equipamentos/utils/payload-do-componente';
 import { rodarAcoesPosCriacao, useAcoesPosCriacao } from '@/core/features/equipamentos/utils/acoes-pos-criacao';
 import { InstalacaoEGarantia } from '@/core/features/equipamentos/components/InstalacaoEGarantia';
+import { CriticidadePelaMatriz } from '@/core/features/equipamentos/components/CriticidadePelaMatriz';
+import { problemaDaCriticidade, soAAvaliacao } from '@/core/features/equipamentos/utils/criticidade-pela-matriz';
 
 type AbaUAR = 'dados' | 'itens' | 'anexos';
 
@@ -522,6 +524,10 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     if (!formData.tipoEquipamentoId) {
       errors.push('Modelo é obrigatório');
     }
+
+    // SN-64: a mesma conferência da API
+    const problemaNaCriticidade = problemaDaCriticidade(formData);
+    if (problemaNaCriticidade) errors.push(problemaNaCriticidade);
 
     // Validar campos técnicos obrigatórios — os exibidos, pela mesma razao da
     // coleta no submit.
@@ -1158,21 +1164,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
 
               {/* Coluna 2 */}
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Criticidade</label>
-                  <Select value={formData.criticidade || ''} onValueChange={(value) => handleFieldChange('criticidade', value)} disabled={isReadOnly}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="1 a 5" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 (Muito Baixa)</SelectItem>
-                      <SelectItem value="2">2 (Baixa)</SelectItem>
-                      <SelectItem value="3">3 (Média)</SelectItem>
-                      <SelectItem value="4">4 (Alta)</SelectItem>
-                      <SelectItem value="5">5 (Muito Alta)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* A criticidade tem seção própria, com a matriz (SN-64) */}
                 {!modoLote && (
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium">Localização Específica</label>
@@ -1188,6 +1180,15 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
               </div>
             </div>
           </div>
+
+          <CriticidadePelaMatriz
+            valores={soAAvaliacao(formData)}
+            // A escala só produz 1 a 5; valor antigo que ninguém tocou volta como veio
+            onChange={(avaliacao) =>
+              setFormData((prev) => ({ ...prev, ...avaliacao, criticidade: avaliacao.criticidade as FormularioDoUAR['criticidade'] }))
+            }
+            somenteLeitura={isReadOnly}
+          />
 
           {/* Data de instalação e fornecedor estavam soltos nas colunas acima; a
               seção é a mesma do sheet da UC, com a garantia e o centro de custo (SN-66) */}

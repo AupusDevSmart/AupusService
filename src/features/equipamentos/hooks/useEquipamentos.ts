@@ -12,7 +12,8 @@ import {
   type ComponentesGerenciamentoData,
 } from '@/services/equipamentos.services';
 import { formatApiError } from '@/utils/api-error';
-import { 
+import { avaliacaoDaApi } from '@/core/features/equipamentos/utils/criticidade-pela-matriz';
+import {
   Equipamento,
   EquipamentosFilters 
 } from '../types';
@@ -69,6 +70,8 @@ export const transformApiToFrontend = (apiEquipamento: EquipamentoApiResponse): 
     dataImobilizacao: safeDateFormat(apiEquipamento.data_imobilizacao),
     dataInstalacao: safeDateFormat(apiEquipamento.data_instalacao),
     garantiaAte: safeDateFormat(apiEquipamento.garantia_ate ?? undefined),
+    // SN-64
+    ...avaliacaoDaApi(apiEquipamento),
     
     // Valores financeiros
     valorImobilizado: apiEquipamento.valor_imobilizado,
@@ -227,6 +230,9 @@ export type EquipamentoParaApi = Partial<CreateEquipamentoApiData> & {
   dataImobilizacao?: string;
   dataInstalacao?: string | null;
   garantiaAte?: string | null;
+  criticidadeImpacto?: number | null;
+  criticidadeProbabilidade?: number | null;
+  criticidadeMotivo?: string | null;
   valorImobilizado?: number;
   valorDepreciacao?: number;
   valorContabil?: number;
@@ -289,6 +295,11 @@ export const transformFrontendToApi = (equipamento: EquipamentoParaApi): Payload
     data_instalacao: equipamento.data_instalacao || equipamento.dataInstalacao,
     // SN-66: null é "apagar", e não pode virar "não mexe" no ||
     garantia_ate: equipamento.garantia_ate !== undefined ? equipamento.garantia_ate : equipamento.garantiaAte,
+    // SN-64: idem (null apaga a avaliação)
+    criticidade_impacto: equipamento.criticidade_impacto !== undefined ? equipamento.criticidade_impacto : equipamento.criticidadeImpacto,
+    criticidade_probabilidade:
+      equipamento.criticidade_probabilidade !== undefined ? equipamento.criticidade_probabilidade : equipamento.criticidadeProbabilidade,
+    criticidade_motivo: equipamento.criticidade_motivo !== undefined ? equipamento.criticidade_motivo : equipamento.criticidadeMotivo,
     
     // Valores financeiros
     valor_imobilizado: equipamento.valor_imobilizado || equipamento.valorImobilizado,

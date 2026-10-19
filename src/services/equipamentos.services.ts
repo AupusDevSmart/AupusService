@@ -27,6 +27,10 @@ export interface CreateEquipamentoApiData {
   /** null apaga a data (SN-66) */
   data_instalacao?: string | null;
   garantia_ate?: string | null;
+  /** SN-64: a avaliação pela matriz */
+  criticidade_impacto?: number | null;
+  criticidade_probabilidade?: number | null;
+  criticidade_motivo?: string | null;
   valor_imobilizado?: number;
   valor_depreciacao?: number;
   valor_contabil?: number;
@@ -80,6 +84,10 @@ export interface EquipamentoApiResponse {
   data_instalacao?: Date;
   /** SN-66: até quando está em garantia */
   garantia_ate?: Date | string | null;
+  /** SN-64: a avaliação pela matriz */
+  criticidade_impacto?: number | null;
+  criticidade_probabilidade?: number | null;
+  criticidade_motivo?: string | null;
   valor_imobilizado?: number;
   valor_depreciacao?: number;
   valor_contabil?: number;

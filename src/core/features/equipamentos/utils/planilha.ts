@@ -9,6 +9,7 @@ import { referencia, type Referencia } from '@/lib/planilha/referencias';
 import { emParalelo, todasAsPaginas } from '@/lib/planilha/todas-as-paginas';
 import { equipamentosApi, type EquipamentosQueryParams } from '@/services/equipamentos.services';
 import { planosManutencaoApi } from '@/services/planos-manutencao.services';
+import { IMPACTOS, PROBABILIDADES, type NotaDaEscala } from '@/core/features/equipamentos/utils/criticidade-pela-matriz';
 import { tarefasApi } from '@/services/tarefas.services';
 
 /**
@@ -30,6 +31,9 @@ type ComponenteDaApi = {
   data_instalacao?: string | null;
   garantia_ate?: string | null;
   criticidade?: string | null;
+  criticidade_impacto?: number | null;
+  criticidade_probabilidade?: number | null;
+  criticidade_motivo?: string | null;
   localizacao_especifica?: string | null;
   fornecedor?: string | null;
   centro_custo?: string | null;
@@ -58,6 +62,10 @@ type EquipamentoDaApi = {
   status?: string | null;
   em_operacao?: string | null;
   criticidade?: string | null;
+  // SN-64
+  criticidade_impacto?: number | null;
+  criticidade_probabilidade?: number | null;
+  criticidade_motivo?: string | null;
   numero_serie?: string | null;
   localizacao?: string | null;
   valor_contabil?: string | number | null;
@@ -124,6 +132,42 @@ const numero = (v: unknown) => (v === null || v === undefined || v === '' ? null
 const rotuloDaCriticidade = (v?: string | null) => (v ? (CRITICIDADES[v] ?? v) : null);
 const LISTA_DE_CRITICIDADES = `"${Object.values(CRITICIDADES).join(',')}"`;
 
+/**
+ * As três colunas da avaliação pela matriz (SN-64), iguais na UC e no
+ * componente. As escalas vêm de onde a tela as tira: um lugar só.
+ */
+const escala = (notas: readonly NotaDaEscala[]) => notas.map((n) => `${n.nota} ${n.rotulo} (${n.descricao.toLowerCase()})`).join('; ');
+const EXPLICACAO_DA_CRITICIDADE =
+  'De Muito Baixa a Muito Alta. Com IMPACTO e PROBABILIDADE, a matriz sugere o nível (o impacto pesa o dobro: ' +
+  '(2 × impacto + probabilidade) ÷ 3, arredondado); outro nível exige o MOTIVO DA CRITICIDADE.';
+function colunasDaAvaliacao<T extends { criticidade_impacto?: number | null; criticidade_probabilidade?: number | null; criticidade_motivo?: string | null }>(): Campo<T>[] {
+  return [
+    {
+      titulo: 'IMPACTO DA FALHA',
+      caminho: 'criticidade_impacto',
+      tipo: 'inteiro',
+      lista: '"1,2,3,4,5"',
+      explicacao: `De 1 a 5: ${escala(IMPACTOS)}. Vai junto com a PROBABILIDADE; as duas vazias = sem avaliação.`,
+      valor: (e) => e.criticidade_impacto ?? null,
+    },
+    {
+      titulo: 'PROBABILIDADE DE FALHA',
+      caminho: 'criticidade_probabilidade',
+      tipo: 'inteiro',
+      lista: '"1,2,3,4,5"',
+      explicacao: `De 1 a 5: ${escala(PROBABILIDADES)}.`,
+      valor: (e) => e.criticidade_probabilidade ?? null,
+    },
+    {
+      titulo: 'MOTIVO DA CRITICIDADE',
+      caminho: 'criticidade_motivo',
+      tipo: 'texto',
+      explicacao: 'Por que a criticidade difere da sugerida pela matriz. Obrigatório só nesse caso; sem a diferença, não é guardado.',
+      valor: (e) => e.criticidade_motivo ?? null,
+    },
+  ];
+}
+
 function cabecalho(refs: Referencia[]): Campo<Equipamento>[] {
   const texto = (titulo: string, caminho: string, valor: (e: Equipamento) => unknown, explicacao: string, extra: Partial<Campo<Equipamento>> = {}): Campo<Equipamento> => ({
     titulo,
@@ -158,11 +202,12 @@ function cabecalho(refs: Referencia[]): Campo<Equipamento>[] {
     informativo('CATEGORIA', (e) => e.tipo_equipamento_rel?.categoria?.nome ?? null, 'Vem do modelo (ou da posição).'),
     informativo('FABRICANTE', (e) => e.fabricante ?? null, 'Vem do modelo.'),
     informativo('POSIÇÃO', (e) => e.ativo_funcional?.nome ?? null, 'A posição (ativo funcional) se define na tela.'),
-    texto('CRITICIDADE', 'criticidade', (e) => rotuloDaCriticidade(e.criticidade), 'De Muito Baixa a Muito Alta.', {
+    texto('CRITICIDADE', 'criticidade', (e) => rotuloDaCriticidade(e.criticidade), EXPLICACAO_DA_CRITICIDADE, {
       obrigatorio: 'Sim',
       lista: LISTA_DE_CRITICIDADES,
       exemplo: 'Média',
     }),
+    ...colunasDaAvaliacao<Equipamento>(),
     texto('Nº DE SÉRIE', 'numero_serie', (e) => e.numero_serie ?? null, 'Número de série do fabricante.'),
     texto('LOCALIZAÇÃO', 'localizacao', (e) => e.localizacao ?? null, 'Onde fica, dentro da unidade.'),
     {
@@ -262,9 +307,10 @@ function secoes(refs: Referencia[]) {
         tipo: 'texto',
         lista: LISTA_DE_CRITICIDADES,
         vazioEhPadrao: true,
-        explicacao: 'De Muito Baixa a Muito Alta. Vazio = mantém (Média no novo).',
+        explicacao: `${EXPLICACAO_DA_CRITICIDADE} Vazio = mantém o gravado; no novo, o sugerido pela matriz (Média sem as notas).`,
         valor: (c) => rotuloDaCriticidade(c.criticidade),
       },
+      ...colunasDaAvaliacao<ComponenteDaApi & { modelo: string | null }>(),
       { titulo: 'LOCALIZAÇÃO ESPECÍFICA', caminho: 'localizacao_especifica', tipo: 'texto', explicacao: 'Onde fica na UC.', valor: (c) => c.localizacao_especifica ?? null },
       { titulo: 'FORNECEDOR', caminho: 'fornecedor', tipo: 'texto', explicacao: 'Texto livre.', valor: (c) => c.fornecedor ?? null },
       { titulo: 'CENTRO DE CUSTO', caminho: 'centro_custo', tipo: 'texto', explicacao: 'Texto livre (ex.: CC-001).', valor: (c) => c.centro_custo ?? null },

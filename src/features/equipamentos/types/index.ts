@@ -113,6 +113,10 @@ export interface Equipamento extends BaseEntity {
   dataInstalacao?: string | null;
   /** SN-66: até quando está em garantia (AAAA-MM-DD) */
   garantiaAte?: string | null;
+  /** SN-64: a avaliação pela matriz (impacto e probabilidade de 1 a 5; motivo só quando o nível difere) */
+  criticidadeImpacto?: number | null;
+  criticidadeProbabilidade?: number | null;
+  criticidadeMotivo?: string | null;
   
   // Valores financeiros
   valorImobilizado?: number;

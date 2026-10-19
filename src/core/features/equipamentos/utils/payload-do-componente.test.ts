@@ -40,6 +40,18 @@ describe('payloadDoComponente', () => {
     });
   });
 
+  // SN-64: o motivo só vai quando o nível difere da matriz
+  it('leva a avaliação pela matriz', () => {
+    expect(
+      payloadDoComponente({ ...formulario, criticidade: '5', criticidadeImpacto: 5, criticidadeProbabilidade: 1, criticidadeMotivo: ' Único ' }, 'tipo1', []),
+    ).toMatchObject({ criticidade: '5', criticidade_impacto: 5, criticidade_probabilidade: 1, criticidade_motivo: 'Único' });
+    expect(payloadDoComponente(formulario, 'tipo1', [])).toMatchObject({
+      criticidade_impacto: null,
+      criticidade_probabilidade: null,
+      criticidade_motivo: null,
+    });
+  });
+
   // SN-66: undefined era "não mexe", e a data apagada na tela continuava gravada
   it('garantia e centro de custo vão; o que foi apagado vai null', () => {
     expect(payloadDoComponente({ ...formulario, garantiaAte: '2028-10-01', centroCusto: ' CC-1 ' }, 'tipo1', [])).toMatchObject({
