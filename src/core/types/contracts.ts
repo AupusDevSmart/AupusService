@@ -4,7 +4,6 @@ import type {
   ComponentesGerenciamento,
   Equipamento,
   EquipamentosFilters,
-  EstatisticasPlanta,
 } from '@/core/features/equipamentos/types';
 import type {
   Usuario,
@@ -180,10 +179,6 @@ export interface UseEquipamentosContract {
   deleteEquipamento: (id: string) => Promise<void>;
   getEquipamento: (id: string) => Promise<Equipamento>;
   fetchEquipamentos: (params?: EquipamentosFilters) => Promise<Equipamento[]>;
-  fetchEquipamentosByPlanta: (plantaId: string, params?: EquipamentosFilters) => Promise<{
-    equipamentos: Equipamento[];
-    planta: { id: string; nome: string; localizacao: string };
-  }>;
   fetchComponentesByEquipamento: (equipamentoId: string) => Promise<Equipamento[]>;
   fetchEquipamentosUCDisponiveis: () => Promise<EquipamentoUCDisponivel[]>;
   fetchComponentesParaGerenciar: (ucId: string) => Promise<ComponentesGerenciamento>;
@@ -191,7 +186,6 @@ export interface UseEquipamentosContract {
     message: string;
     componentes: Equipamento[];
   }>;
-  getEstatisticasPlanta: (plantaId: string) => Promise<EstatisticasPlanta>;
   uploadFoto: (id: string, file: File) => Promise<{ fotoUrl: string }>;
   removeFoto: (id: string) => Promise<{ fotoUrl: null }>;
   /**

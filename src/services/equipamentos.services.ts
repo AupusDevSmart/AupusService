@@ -240,35 +240,6 @@ export interface EquipamentosListApiResponse {
   meta?: Record<string, unknown>;
 }
 
-export interface PlantaEquipamentosResponse {
-  data: {
-    data: EquipamentoApiResponse[];
-    pagination: EquipamentosPaginationMeta;
-    planta: {
-      id: string;
-      nome: string;
-      localizacao: string;
-    };
-  };
-}
-
-export interface EstatisticasPlantaResponse {
-  planta: {
-    id: string;
-    nome: string;
-    localizacao: string;
-  };
-  totais: {
-    equipamentos: number;
-    equipamentosUC: number;
-    componentesUAR: number;
-  };
-  porCriticidade: Record<string, number>;
-  financeiro: {
-    valorTotalContabil: number;
-  };
-}
-
 export interface ComponentesGerenciamentoData {
   equipamentoUC: {
     id: string;
@@ -496,25 +467,6 @@ export class EquipamentosApiService {
     const response = await api.put(`${this.baseEndpoint}/${ucId}/componentes/batch`, {
       componentes
     });
-    return response.data;
-  }
-
-  // ============================================================================
-  // OPERAÇÕES POR PLANTA
-  // ============================================================================
-
-  async findByPlanta(plantaId: string, params?: EquipamentosQueryParams): Promise<PlantaEquipamentosResponse> {
-    const response = await api.get<PlantaEquipamentosResponse>(
-      `${this.baseEndpoint}/planta/${plantaId}/equipamentos`,
-      { params }
-    );
-    return response.data;
-  }
-
-  async getEstatisticasPlanta(plantaId: string): Promise<EstatisticasPlantaResponse> {
-    const response = await api.get<EstatisticasPlantaResponse>(
-      `${this.baseEndpoint}/plantas/${plantaId}/estatisticas`
-    );
     return response.data;
   }
 

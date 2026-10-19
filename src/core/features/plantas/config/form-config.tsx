@@ -299,12 +299,13 @@ const GestaoEquipamentosButton = ({ entity, mode }: { entity?: { id?: string; no
 
   const handleOpenEquipamentos = () => {
     if (entity && entity.id && (mode === 'view' || mode === 'edit')) {
-      const plantaId = entity.id;
-      const plantaNome = encodeURIComponent(entity.nome || `Planta ${plantaId}`);
-      
-      navigate(`/equipamentos?plantaId=${plantaId}&plantaNome=${plantaNome}`);
+      const plantaId = entity.id.trim();
+      const plantaNome = entity.nome || `Planta ${plantaId}`;
+
+      // A rota é /cadastros/equipamentos: /equipamentos não existe (achado do SN-67)
+      navigate(`/cadastros/equipamentos?${new URLSearchParams({ plantaId, plantaNome })}`);
     } else {
-      navigate('/equipamentos');
+      navigate('/cadastros/equipamentos');
     }
   };
 

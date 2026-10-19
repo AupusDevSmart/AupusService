@@ -24,6 +24,9 @@ import type { DadosDoFormulario } from '@/core/types/base';
 import { formatApiError } from '@/utils/api-error';
 import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
 import { exportarEquipamentos, lerEquipamentos } from '../utils/planilha';
+import { EtiquetasDosEquipamentos } from './EtiquetasDosEquipamentos';
+import { equipamentosParaEtiqueta } from '../utils/equipamentos-para-etiqueta';
+import { useEquipamentoDaUrl } from '../hooks/useEquipamentoDaUrl';
 
 /**
  * O filtro da tela em parâmetros da exportação, com a mesma hierarquia da
@@ -123,7 +126,6 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
     updateEquipamento,
     deleteEquipamento,
     fetchEquipamentos,
-    fetchEquipamentosByPlanta,
     salvarComponentesUARLote,
     getEquipamento
   } = useEquipamentos();
@@ -192,21 +194,17 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
   // ============================================================================
   // CARREGAR DADOS INICIAIS
   // ============================================================================
+  // A planta da URL entra pelo filtro (filtrosDaUrl), como a unidade; o nome,
+  // só no título. Era `findByPlanta`, numa rota que o backend não tem: o link
+  // "ver equipamentos" do cadastro de plantas dava 404 (achado do SN-67).
   const loadEquipamentos = useCallback(async (currentFilters: EquipamentosFilters) => {
     const urlParams = new URLSearchParams(location.search);
-    const plantaId = urlParams.get('plantaId');
+    const plantaId = urlParams.get('plantaId')?.trim();
     const plantaNome = urlParams.get('plantaNome');
 
-    if (plantaId && plantaNome) {
-      // Carregar equipamentos de uma planta específica
-      const result = await fetchEquipamentosByPlanta(plantaId, currentFilters); // PLANTAID JÁ É STRING
-      setPlantaInfo(result.planta);
-    } else {
-      // Carregar todos os equipamentos
-      await fetchEquipamentos(currentFilters);
-      setPlantaInfo(null);
-    }
-  }, [location.search, fetchEquipamentos, fetchEquipamentosByPlanta]);
+    await fetchEquipamentos(currentFilters);
+    setPlantaInfo(plantaId && plantaNome ? { id: plantaId, nome: plantaNome, localizacao: '' } : null);
+  }, [location.search, fetchEquipamentos]);
 
   // Carregar dados quando filtros mudam
   useEffect(() => {
@@ -408,6 +406,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
 
   const closeUCModal = () => {
     setModalUC({ isOpen: false, mode: 'create', entity: null });
+    limparDaUrl();
     // Sem isso, o "Novo Equipamento" seguinte abriria preenchido com o que foi
     // duplicado antes.
     setDuplicarDe(null);
@@ -443,6 +442,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
 
   const closeUARModal = () => {
     setModalUAR({ isOpen: false, mode: 'create', entity: null, equipamentoPai: null });
+    limparDaUrl();
     // Sem isto, o proximo "novo componente" abriria preenchido com o que foi
     // duplicado antes.
     setDuplicarDe(null);
@@ -502,6 +502,9 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
     }
   };
 
+  // SN-67: `?equipamento=<id>` (o QR da etiqueta) abre o sheet daquele equipamento
+  const { limparDaUrl } = useEquipamentoDaUrl(handleView);
+
   const handleEdit = (equipamento: Equipamento) => {
     if (equipamento.classificacao === 'UC') {
       openUCModal('edit', equipamento);
@@ -556,13 +559,14 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
   // ============================================================================
   // NAVEGAÇÃO
   // ============================================================================
+  // As rotas são as de /cadastros: /plantas e /equipamentos não existem (achado do SN-67)
   const handleBackToPlantas = () => {
-    navigate('/plantas');
+    navigate('/cadastros/plantas');
   };
 
   // Tirar o filtro de planta nao e esquecer quantas linhas o usuario quer ver.
   const handleClearPlantaFilter = () => {
-    navigate('/equipamentos');
+    navigate('/cadastros/equipamentos');
     setFilters({ ...initialFilters, limit: linhasPorPagina });
   };
 
@@ -689,6 +693,12 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
 
               {/* Botões de Ação */}
               <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                <EtiquetasDosEquipamentos
+                  carregar={() => equipamentosParaEtiqueta(filtrosDaExportacao(filters))}
+                  nomeDoArquivo="etiquetas-equipamentos"
+                  rotulo="Etiquetas"
+                  className="btn-minimal-outline w-full whitespace-nowrap lg:w-auto"
+                />
                 <PlanilhaDoCadastro
                   cadastro="equipamentos"
                   titulo="Equipamentos"

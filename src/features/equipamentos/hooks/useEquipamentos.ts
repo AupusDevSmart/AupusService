@@ -6,7 +6,6 @@ import {
   CreateEquipamentoApiData, 
   UpdateEquipamentoApiData,
   EquipamentosQueryParams,
-  EstatisticasPlantaResponse,
   ItemDoLoteApi,
   type CategoriaDoTipoApi,
   type ComponentesGerenciamentoData,
@@ -384,10 +383,6 @@ export interface UseEquipamentosReturn {
   
   // Operações de listagem
   fetchEquipamentos: (params?: EquipamentosFilters) => Promise<Equipamento[]>;
-  fetchEquipamentosByPlanta: (plantaId: string, params?: EquipamentosFilters) => Promise<{
-    equipamentos: Equipamento[];
-    planta: { id: string; nome: string; localizacao: string };
-  }>;
   
   // Operações específicas para componentes
   fetchComponentesByEquipamento: (equipamentoId: string) => Promise<Equipamento[]>;
@@ -411,7 +406,6 @@ export interface UseEquipamentosReturn {
   }>;
   
   // Estatísticas
-  getEstatisticasPlanta: (plantaId: string) => Promise<EstatisticasPlantaResponse>;
   uploadFoto: (id: string, file: File) => Promise<{ fotoUrl: string }>;
   removeFoto: (id: string) => Promise<{ fotoUrl: null }>;
   
@@ -694,49 +688,6 @@ export function useEquipamentos(): UseEquipamentosReturn {
     }
   }, [handleError]);
 
-  const fetchEquipamentosByPlanta = useCallback(async (plantaId: string, filters?: EquipamentosFilters) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const params: EquipamentosQueryParams = {
-        page: filters?.page || 1,
-        limit: filters?.limit || 10,
-        search: filters?.search || undefined,
-        classificacao: (filters?.classificacao !== 'all' ? filters?.classificacao : undefined) as 'UC' | 'UAR' | undefined,
-        criticidade: (filters?.criticidade !== 'all' ? filters?.criticidade : undefined) as '1' | '2' | '3' | '4' | '5' | undefined,
-        // Esconder PONTO e BARRAMENTO e trabalho da consulta, nao da tela.
-        ocultarVirtuais: true,
-      };
-      
-      const response = await equipamentosApi.findByPlanta(plantaId, params);
-
-      // A API retorna: { success: true, data: { data: [], pagination: {}, planta: {} }, meta: {} }
-      const equipamentosFiltrados = response.data.data.map(transformApiToFrontend);
-
-      setEquipamentos(equipamentosFiltrados);
-      setTotalPages(response.data.pagination.pages);
-      setCurrentPage(response.data.pagination.page);
-      // O total e o do BACKEND: usar o tamanho da pagina filtrada limitava a
-      // contagem a 10 e tirava o sentido da paginacao.
-      setTotal(response.data.pagination.total ?? equipamentosFiltrados.length);
-
-      return {
-        equipamentos: equipamentosFiltrados,
-        planta: response.data.planta
-      };
-      
-    } catch (err) {
-      handleError(err, 'fetchEquipamentosByPlanta');
-      return {
-        equipamentos: [],
-        planta: { id: '', nome: '', localizacao: '' }
-      };
-    } finally {
-      setLoading(false);
-    }
-  }, [handleError]);
-
   // ============================================================================
   // OPERAÇÕES ESPECÍFICAS PARA COMPONENTES
   // ============================================================================
@@ -836,21 +787,6 @@ export function useEquipamentos(): UseEquipamentosReturn {
     }
   }, [handleError]);
 
-  const getEstatisticasPlanta = useCallback(async (plantaId: string): Promise<EstatisticasPlantaResponse> => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      return await equipamentosApi.getEstatisticasPlanta(plantaId);
-
-    } catch (err) {
-      handleError(err, 'getEstatisticasPlanta');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [handleError]);
-
   const uploadFoto = useCallback(async (id: string, file: File): Promise<{ fotoUrl: string }> => {
     try {
       setError(null);
@@ -903,8 +839,6 @@ export function useEquipamentos(): UseEquipamentosReturn {
     
     // Operações de listagem
     fetchEquipamentos,
-    fetchEquipamentosByPlanta,
-    
     // Operações específicas para componentes
     fetchComponentesByEquipamento,
     fetchEquipamentosUCDisponiveis,
@@ -914,8 +848,6 @@ export function useEquipamentos(): UseEquipamentosReturn {
     salvarComponentesUARLote,
     
     // Estatísticas
-    getEstatisticasPlanta,
-
     // Foto
     uploadFoto,
     removeFoto,

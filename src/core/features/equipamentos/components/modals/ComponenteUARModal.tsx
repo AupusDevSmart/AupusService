@@ -38,6 +38,8 @@ import { payloadDoComponente, type DadosDoComponenteUAR, type FormularioDoUAR } 
 import { rodarAcoesPosCriacao, useAcoesPosCriacao } from '@/core/features/equipamentos/utils/acoes-pos-criacao';
 import { InstalacaoEGarantia } from '@/core/features/equipamentos/components/InstalacaoEGarantia';
 import { CriticidadePelaMatriz } from '@/core/features/equipamentos/components/CriticidadePelaMatriz';
+import { EtiquetasDosEquipamentos } from '@/core/features/equipamentos/components/EtiquetasDosEquipamentos';
+import { dadosDoEquipamento } from '@/core/features/equipamentos/utils/etiqueta';
 import { problemaDaCriticidade, soAAvaliacao } from '@/core/features/equipamentos/utils/criticidade-pela-matriz';
 
 type AbaUAR = 'dados' | 'itens' | 'anexos';
@@ -845,6 +847,16 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
              mode === 'edit' ? 'Editar Componente UAR' :
              'Visualizar Componente UAR'}
           </SheetTitle>
+          {/* SN-67: a etiqueta com o QR que abre este cadastro */}
+          {mode === 'view' && entity?.id && (
+            <div className="flex flex-wrap gap-2">
+              <EtiquetasDosEquipamentos
+                carregar={async () => [dadosDoEquipamento(entity, equipamentoPai)]}
+                nomeDoArquivo={`etiqueta-${(entity.tag || entity.nome || 'componente').trim()}`}
+                className="btn-minimal-outline h-9 whitespace-nowrap text-sm sm:h-8"
+              />
+            </div>
+          )}
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">

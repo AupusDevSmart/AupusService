@@ -26,6 +26,8 @@ import { PosicaoSelector } from '@/core/features/equipamentos/components/Posicao
 import { HistoricoDaPosicao } from '@/core/features/equipamentos/components/HistoricoDaPosicao';
 import { InstalacaoEGarantia } from '@/core/features/equipamentos/components/InstalacaoEGarantia';
 import { CriticidadePelaMatriz } from '@/core/features/equipamentos/components/CriticidadePelaMatriz';
+import { EtiquetasDosEquipamentos } from '@/core/features/equipamentos/components/EtiquetasDosEquipamentos';
+import { dadosDoEquipamento } from '@/core/features/equipamentos/utils/etiqueta';
 import { avaliacaoDaApi, avaliacaoParaApi, problemaDaCriticidade, soAAvaliacao } from '@/core/features/equipamentos/utils/criticidade-pela-matriz';
 import type { AtivoFuncional } from '@/core/features/equipamentos/hooks/useAtivosFuncionais';
 import { separarDadosTecnicos } from '@/core/features/equipamentos/utils/dados-tecnicos';
@@ -1468,6 +1470,17 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
             </Badge>
           )}
         </SheetTitle>
+
+        {/* SN-67: a etiqueta com o QR que abre este cadastro */}
+        {modoEfetivo === 'view' && !visitando && entidadeEfetiva?.id && (
+          <div className="flex flex-wrap gap-2">
+            <EtiquetasDosEquipamentos
+              carregar={async () => [dadosDoEquipamento(entidadeEfetiva)]}
+              nomeDoArquivo={`etiqueta-${(entidadeEfetiva.tag || entidadeEfetiva.nome || 'equipamento').trim()}`}
+              className="btn-minimal-outline h-9 whitespace-nowrap text-sm sm:h-8"
+            />
+          </div>
+        )}
 
         {/* Visitando um equipamento ANTERIOR da posicao.
             A faixa existe porque sem ela o sheet fica indistinguivel do sheet

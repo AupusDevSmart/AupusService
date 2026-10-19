@@ -322,31 +322,6 @@ export interface EquipamentosListResponse {
   };
 }
 
-export interface PlantaEquipamentosResponse extends EquipamentosListResponse {
-  planta: {
-    id: string;
-    nome: string;
-    localizacao: string;
-  };
-}
-
-export interface EstatisticasPlanta {
-  planta: {
-    id: string;
-    nome: string;
-    localizacao: string;
-  };
-  totais: {
-    equipamentos: number;
-    equipamentosUC: number;
-    componentesUAR: number;
-  };
-  porCriticidade: Record<string, number>;
-  financeiro: {
-    valorTotalContabil: number;
-  };
-}
-
 export interface ComponentesGerenciamento {
   /** Nulo quando a consulta falhou (o hook devolve a lista vazia e o erro). */
   equipamentoUC: {
