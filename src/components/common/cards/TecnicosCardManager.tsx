@@ -193,7 +193,7 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
 
       {/* Lista */}
       {tecnicos.length > 0 && (
-        <CardLista colunas={colunas} larguraMinima="46rem">
+        <CardLista colunas={colunas}>
           {tecnicos.map((tecnico, index) => (
             <CardLinha key={tecnico.id || index} colunas={colunas}>
               {opcoesDoTecnico ? (

@@ -885,9 +885,9 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
                 onEscolher={escolherFoto}
                 onRemover={removerFoto}
               />
-              {/* min-w-0 deixa a fita encolher; sem isso ela força a largura do
-                  sheet e a linha estoura no celular. */}
-              <TabsList className="gap-1 w-full sm:w-auto sm:ml-auto min-w-0 max-w-full overflow-x-auto scrollbar-minimal">
+              {/* min-w-0 deixa a fita encolher; e ela quebra em linhas em vez de rolar
+                  para o lado no celular (SN-68). h-auto: a TabsList tem altura fixa. */}
+              <TabsList className="gap-1 w-full sm:w-auto sm:ml-auto min-w-0 max-w-full h-auto flex-wrap justify-start">
                 <TabsTrigger value="dados">Dados técnicos</TabsTrigger>
                 {modoLote && <TabsTrigger value="itens">Componentes ({quantidade})</TabsTrigger>}
                 <TabsTrigger value="anexos">Anexos</TabsTrigger>

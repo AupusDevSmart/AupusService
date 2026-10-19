@@ -95,7 +95,7 @@ const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
 
       {/* Lista de itens */}
       {itens.length > 0 && (
-        <CardLista colunas={colunas} larguraMinima="28rem">
+        <CardLista colunas={colunas}>
           {itens.map((item, index) => (
             <CardLinha key={item.id || index} colunas={colunas}>
               <Input

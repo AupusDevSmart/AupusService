@@ -249,19 +249,20 @@ export const DocumentosUpload = ({
           {documentosExistentes.map((documento) => (
             <div
               key={documento.id}
-              className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border"
+              className="flex items-center justify-between gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border"
             >
-              <div className="flex items-center gap-3">
+              {/* min-w-0: sem ele o nome do arquivo empurrava a linha para fora do sheet (SN-68) */}
+              <div className="flex min-w-0 flex-1 items-center gap-3">
                 {getIconeCategoria(documento.categoria)}
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100" title={documento.nome_original}>
                     {documento.nome_original}
                   </p>
                   <p className="text-xs text-gray-500">
                     {CATEGORIAS_DOCUMENTOS[documento.categoria]} • {formatarTamanhoArquivo(documento.tamanho)} • {documento.tipo.toUpperCase()}
                   </p>
                   {documento.descricao && (
-                    <p className="text-xs text-gray-600 mt-1">{documento.descricao}</p>
+                    <p className="mt-1 break-words text-xs text-gray-600">{documento.descricao}</p>
                   )}
                 </div>
               </div>
@@ -421,7 +422,7 @@ export const DocumentosUpload = ({
                       {CATEGORIAS_DOCUMENTOS[documento.categoria]} • {formatarTamanhoArquivo(documento.file.size)}
                     </p>
                     {documento.descricao && (
-                      <p className="text-xs text-gray-600 mt-1">{documento.descricao}</p>
+                      <p className="mt-1 break-words text-xs text-gray-600">{documento.descricao}</p>
                     )}
                     {documento.dataVencimento && (
                       <p className="text-xs text-gray-600 mt-1">Vencimento: {new Date(documento.dataVencimento).toLocaleDateString('pt-BR')}</p>
@@ -453,19 +454,19 @@ export const DocumentosUpload = ({
             {documentosExistentes.map((documento) => (
               <div
                 key={documento.id}
-                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   {getIconeCategoria(documento.categoria)}
-                  <div>
-                    <p className="text-sm font-medium truncate max-w-64" title={documento.nome_original}>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate" title={documento.nome_original}>
                       {documento.nome_original}
                     </p>
                     <p className="text-xs text-gray-500">
                       {CATEGORIAS_DOCUMENTOS[documento.categoria]} • {formatarTamanhoArquivo(documento.tamanho)} • {documento.tipo.toUpperCase()}
                     </p>
                     {documento.descricao && (
-                      <p className="text-xs text-gray-600 mt-1">{documento.descricao}</p>
+                      <p className="mt-1 break-words text-xs text-gray-600">{documento.descricao}</p>
                     )}
                   </div>
                 </div>

@@ -1418,11 +1418,12 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
 
     return (
       <SheetHeader className="space-y-3">
-        <SheetTitle className="flex items-center gap-2 text-lg">
+        {/* flex-wrap: no celular o nome ia espremido ao lado do título, uma letra por linha (SN-68) */}
+        <SheetTitle className="flex flex-wrap items-center gap-2 pr-8 text-lg">
           {icons[modoEfetivo]}
           {titles[modoEfetivo]}
           {modoEfetivo === 'view' && formData.nome && (
-            <Badge variant="outline" className="ml-2">
+            <Badge variant="outline" className="whitespace-nowrap">
               {formData.nome}
             </Badge>
           )}
@@ -2897,9 +2898,9 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
                   retrato ela nao cabe e virava arrasto lateral. */}
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 {renderFoto()}
-                {/* min-w-0 deixa a fita encolher; sem isso ela força a largura
-                    do sheet e a linha inteira estoura no celular. */}
-                <TabsList className="gap-1 w-full sm:w-auto sm:ml-auto min-w-0 max-w-full overflow-x-auto scrollbar-minimal">
+                {/* min-w-0 deixa a fita encolher; e ela quebra em linhas em vez de rolar
+                    para o lado no celular (SN-68). h-auto: a TabsList tem altura fixa. */}
+                <TabsList className="gap-1 w-full sm:w-auto sm:ml-auto min-w-0 max-w-full h-auto flex-wrap justify-start">
                   <TabsTrigger value="dados">Dados técnicos</TabsTrigger>
                   {modoLote && <TabsTrigger value="itens">Equipamentos ({quantidade})</TabsTrigger>}
                   {temAbaTarefas && <TabsTrigger value="tarefas">Tarefas</TabsTrigger>}

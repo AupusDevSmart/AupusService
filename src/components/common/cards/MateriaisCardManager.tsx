@@ -135,7 +135,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
 
       {/* Lista */}
       {materiais.length > 0 && (
-        <CardLista colunas={colunas} larguraMinima="40rem">
+        <CardLista colunas={colunas}>
           {materiais.map((material, index) => (
             <CardLinha key={material.id || index} colunas={colunas}>
               <Input

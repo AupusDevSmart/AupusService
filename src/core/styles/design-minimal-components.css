@@ -359,10 +359,13 @@
 /* ========================================
    GRID COM COLUNAS IGUAIS
    ======================================== */
-/* Forçar colunas de largura igual (não usar minmax) */
+/* Colunas de largura igual de fato: minmax(0, 1fr). O `1fr` sozinho é
+   minmax(auto, 1fr), e conteúdo largo (a lista dos técnicos, uma tabela)
+   alargava a coluna e empurrava o sheet para além da tela — no celular, a OS
+   só se lia arrastando para o lado (SN-68). */
 .grid-equal-cols-2 {
   display: grid !important;
-  grid-template-columns: 1fr !important;
+  grid-template-columns: minmax(0, 1fr) !important;
 }
 
 /* Duas colunas só a partir do sm. Abaixo disso o sheet ocupa a tela inteira e
@@ -370,7 +373,7 @@
    ilegível. */
 @media (min-width: 640px) {
   .grid-equal-cols-2 {
-    grid-template-columns: 1fr 1fr !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
 
@@ -379,12 +382,12 @@
    empilha no celular, onde três dariam uns 110px cada. */
 .grid-equal-cols-3 {
   display: grid !important;
-  grid-template-columns: 1fr !important;
+  grid-template-columns: minmax(0, 1fr) !important;
 }
 
 @media (min-width: 640px) {
   .grid-equal-cols-3 {
-    grid-template-columns: 1fr 1fr 1fr !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 }
 

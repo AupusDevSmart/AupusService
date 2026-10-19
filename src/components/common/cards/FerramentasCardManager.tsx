@@ -120,7 +120,7 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
 
       {/* Lista */}
       {ferramentas.length > 0 && (
-        <CardLista colunas={colunas} larguraMinima="30rem">
+        <CardLista colunas={colunas}>
           {ferramentas.map((ferramenta, index) => (
             <CardLinha key={ferramenta.id || index} colunas={colunas}>
               <Input

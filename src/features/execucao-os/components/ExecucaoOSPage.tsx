@@ -379,7 +379,8 @@ export function ExecucaoOSPage() {
               />
             </div>
 
-            <div className="flex gap-2 w-full sm:w-auto">
+            {/* Quebra a linha no celular: os três botões não cabem lado a lado em 360px (SN-68) */}
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
