@@ -28,6 +28,7 @@ type OSDoPainel =
       reserva_veiculo?: { status?: string } | null;
       tipo?: string;
       anomalia?: { data?: string | null; condicao?: string | null } | null;
+      equipamento_parou?: boolean | null;
       parada_inicio?: string | null;
       parada_fim?: string | null;
       falha_sintoma?: string | null;
@@ -128,20 +129,21 @@ const temReservaAtiva = (entity: OSDoPainel) => entity?.reserva_veiculo?.status 
 /**
  * SN-60: os dados de falha. Na corretiva vêm logo abaixo do resultado: o
  * painel pergunta se o equipamento parou; sintoma, causa e ação são
- * obrigatórios, e a parada só se parou. Exigir parada de toda corretiva
+ * obrigatórios, e a parada só aparece se parou. Exigir parada de toda corretiva
  * obrigava a inventar uma (a anomalia nasce "funcionando" e o painel puxava a
- * data dela). Nos outros tipos, tudo em "Mais detalhes" e opcional.
+ * data dela). Quando parou e voltou são opcionais (19/out/2026: o técnico nem
+ * sempre sabe a hora), mas vão os dois juntos. Nos outros tipos, tudo em "Mais
+ * detalhes" e opcional.
  */
 const ehCorretiva = (entity: OSDoPainel) => entity?.tipo === 'CORRETIVA';
 const naoEhCorretiva = (entity: OSDoPainel) => !ehCorretiva(entity);
-const parouNaCorretiva = (entity: OSDoPainel, valores: ValoresDoPainel) => ehCorretiva(entity) && valores.equipamento_parou === 'sim';
 /** Na corretiva, as datas só aparecem depois de responder que parou; nos outros tipos, sempre (recolhidas) */
 const mostraParada = (entity: OSDoPainel, valores: ValoresDoPainel) => !ehCorretiva(entity) || valores.equipamento_parou === 'sim';
 
 /** A resposta que já se sabe: o que a OS gravou, ou a anomalia que disse que parou. Sem isso, a pessoa escolhe. */
 function parouDeAntes(os: OSDoPainel): string {
-  if (os?.parada_inicio) return 'sim';
-  if (os?.falha_sintoma) return 'nao';
+  if (os?.equipamento_parou === true || os?.parada_inicio) return 'sim';
+  if (os?.equipamento_parou === false || os?.falha_sintoma) return 'nao';
   return os?.anomalia?.condicao === 'PARADO' ? 'sim' : '';
 }
 
@@ -167,7 +169,6 @@ const CAMPOS_DA_FALHA: ActionField[] = [
     key: 'parada_inicio',
     label: 'O equipamento parou em',
     type: 'datetime-local',
-    required: parouNaCorretiva,
     detalhe: naoEhCorretiva,
     condition: mostraParada,
     // O que já está na OS; na primeira vez, na corretiva, a data da anomalia que
@@ -179,7 +180,6 @@ const CAMPOS_DA_FALHA: ActionField[] = [
     key: 'parada_fim',
     label: 'Voltou a funcionar em',
     type: 'datetime-local',
-    required: parouNaCorretiva,
     detalhe: naoEhCorretiva,
     condition: mostraParada,
     inicial: (os) => paraDatetimeLocal(os?.parada_fim),
@@ -407,7 +407,7 @@ export function ActionConfirmPanel({
     action !== 'executar'
       ? null
       : !!paradaInicio !== !!paradaFim
-        ? 'Informe quando o equipamento parou e quando voltou a funcionar, os dois.'
+        ? 'Informe quando o equipamento parou e quando voltou a funcionar, os dois — ou deixe os dois em branco.'
         : paradaInicio && paradaFim && paradaFim < paradaInicio
           ? 'O equipamento voltou a funcionar antes de parar: confira as duas datas.'
           : null;

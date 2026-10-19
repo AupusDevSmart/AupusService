@@ -433,7 +433,16 @@ export const execucaoOSFormFields: FormField[] = [
   },
 
   // SN-60: Dados da falha - GRUPO: falha. Vêm do painel do Executar (obrigatórios
-  // na corretiva); aparecem depois de executar, só com valor
+  // na corretiva, menos o horário da parada); aparecem depois de executar, só com valor
+  {
+    key: 'equipamentoParou',
+    disabled: true,
+    label: 'O equipamento parou?',
+    type: 'text',
+    group: 'falha',
+    width: 'half',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'equipamentoParou')
+  },
   {
     key: 'paradaInicio',
     disabled: true,
@@ -724,7 +733,7 @@ export const execucaoOSFormGroups = [
   {
     key: 'falha',
     title: 'Dados da falha',
-    fields: ['paradaInicio', 'paradaFim', 'tempoParado', 'falhaSintoma', 'falhaCausa', 'falhaAcao'],
+    fields: ['equipamentoParou', 'paradaInicio', 'paradaFim', 'tempoParado', 'falhaSintoma', 'falhaCausa', 'falhaAcao'],
   },
   {
     key: 'resultados',

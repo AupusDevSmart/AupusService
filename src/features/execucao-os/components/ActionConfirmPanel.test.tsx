@@ -139,6 +139,31 @@ describe('ActionConfirmPanel — dados de falha', () => {
     });
   });
 
+  // Decisão do usuário (19/out/2026): o técnico nem sempre sabe a hora
+  it('parou sem saber a hora: confirma sem as datas, e o "sim" vai', async () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(<ActionConfirmPanel action="executar" entity={{ tipo: 'CORRETIVA' }} onConfirm={onConfirm} />);
+
+    preencher(/Resultado do serviço/, 'Inversor religado');
+    fireEvent.click(screen.getByRole('radio', { name: 'Sim' }));
+    preencher(/Sintoma/, 'Alarme de sobretemperatura');
+    preencher(/Causa/, 'Ventilador travado');
+    preencher(/Ação tomada/, 'Ventilador limpo');
+
+    // As datas à vista, sem asterisco: quem souber, informa
+    expect(screen.getByLabelText(/O equipamento parou em/)).toHaveValue('');
+    fireEvent.click(confirmar());
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    const payload = onConfirm.mock.calls[0][0];
+    expect(payload).toMatchObject({ equipamento_parou: true });
+    expect(payload).not.toHaveProperty('parada_inicio');
+  });
+
+  it('a resposta gravada na OS vem marcada, também sem datas', () => {
+    render(<ActionConfirmPanel action="executar" entity={{ tipo: 'CORRETIVA', equipamento_parou: true }} onConfirm={vi.fn()} />);
+    expect(screen.getByRole('radio', { name: 'Sim' })).toBeChecked();
+  });
+
   // A anomalia nasce "funcionando": exigir parada obrigava a inventar uma
   it('não parou: sem datas, só sintoma, causa e ação', async () => {
     const onConfirm = vi.fn().mockResolvedValue(undefined);

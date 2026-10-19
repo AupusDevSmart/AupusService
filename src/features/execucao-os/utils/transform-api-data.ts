@@ -5,6 +5,7 @@ import type { OrdemServicoDaApi } from '@/services/execucao-os.service';
 import { duracaoLegivel } from '@/utils/horas';
 import { descreverCustoReal, descreverHorasHomem } from './horas-da-equipe';
 import { codigoAgrupado } from './documento-da-os';
+import { rotuloDoParou } from '@/features/execucao-os/utils/equipamento-parou';
 
 /**
  * Transforma a resposta da API para o formato esperado pelo frontend
@@ -152,6 +153,8 @@ export function transformApiResponseToExecucaoOS(apiData: OrdemServicoDaApi): Ex
 
     // SN-60: dados de falha. O ISO vai para o painel do Executar (que preenche
     // com o que já está na OS); o local, para a leitura
+    equipamento_parou: apiData.equipamento_parou,
+    equipamentoParou: rotuloDoParou(apiData) ?? undefined,
     parada_inicio: apiData.parada_inicio,
     parada_fim: apiData.parada_fim,
     paradaInicio: toDatetimeLocal(apiData.parada_inicio ?? undefined),

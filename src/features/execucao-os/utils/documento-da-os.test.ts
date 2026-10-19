@@ -109,6 +109,14 @@ describe('documento da OS (PDF)', () => {
     expect(d.textos.map((t) => t.titulo)).toEqual(['Resultado do serviço', 'Recomendações']);
   });
 
+  // SN-60 (19/out/2026): o horário da parada é opcional; o "sim" sem ele aparece
+  it('parou sem o horário: o PDF diz que parou, sem as datas nem o tempo parado', () => {
+    const c = conteudo();
+    const d = montar(relatorio({ conteudo: { ...c, os: { ...c.os, equipamento_parou: true, parada_inicio: null, parada_fim: null } } }));
+    expect(d.falha).toEqual(expect.arrayContaining([['Equipamento parou', 'Sim, sem o horário da parada']]));
+    expect(d.falha.map(([rotulo]) => rotulo)).not.toContain('Tempo parado');
+  });
+
   it('tarefa não feita com o motivo; checklist por tarefa, leitura fora da faixa, obrigatório não feito, itens gerais', () => {
     const d = montar();
 

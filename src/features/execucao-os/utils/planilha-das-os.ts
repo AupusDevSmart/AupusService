@@ -5,6 +5,7 @@ import { prioridadeLabels, statusLabels, tipoLabels } from '@/features/execucao-
 import { origemLabels } from '@/features/programacao-os/config/labels';
 import { FUSO_DO_DOCUMENTO } from '@/features/execucao-os/utils/documento-da-os';
 import { rotuloDaInstalacao } from '@/utils/instalacao';
+import { equipamentoParou } from '@/features/execucao-os/utils/equipamento-parou';
 import { bordaFina, cabecalho, moeda, novoLivro } from '@/lib/planilha/estilo';
 
 /**
@@ -91,10 +92,10 @@ export function dataNaCelula(iso?: string | null): Date | null {
 const horas = (minutos?: number | null) => (minutos === null || minutos === undefined ? null : Math.round((minutos / 60) * 100) / 100);
 const texto = (v?: string | null) => v?.trim() || null;
 
-/** Se o equipamento parou, como a corretiva registra (SN-60): com parada, sim; com a falha e sem parada, não */
+/** Se o equipamento parou (SN-60): a resposta gravada; sem horário, a coluna "Parou em" fica vazia */
 function parou(os: OrdemServicoDaApi): string | null {
-  if (os.parada_inicio) return 'Sim';
-  return os.falha_sintoma ? 'Não' : null;
+  const resposta = equipamentoParou(os);
+  return resposta === null ? null : resposta ? 'Sim' : 'Não';
 }
 
 type Valor = string | number | Date | null;

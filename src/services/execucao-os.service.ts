@@ -361,7 +361,8 @@ export interface OrdemServicoDaApi {
   problemas_encontrados?: string;
   recomendacoes?: string;
   proxima_manutencao?: string;
-  /** SN-60: dados de falha (ISO em UTC); minutos_parado calculado na API */
+  /** SN-60: dados de falha (ISO em UTC); minutos_parado calculado na API. Parou: null = não respondido */
+  equipamento_parou?: boolean | null;
   parada_inicio?: string | null;
   parada_fim?: string | null;
   minutos_parado?: number | null;
@@ -521,6 +522,8 @@ export interface ConteudoDaOS {
     problemas_encontrados: string | null;
     recomendacoes: string | null;
     incidentes_seguranca: string | null;
+    /** Ausente = não respondido (o conteúdo das OS sem resposta não muda) */
+    equipamento_parou?: boolean;
     parada_inicio: string | null;
     parada_fim: string | null;
     falha_sintoma: string | null;

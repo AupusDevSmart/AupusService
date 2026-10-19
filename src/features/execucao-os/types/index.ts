@@ -266,6 +266,7 @@ export interface OrdemServico extends BaseEntity {
   proxima_manutencao?: string;
 
   // SN-60: dados de falha (ISO em UTC); minutos_parado vem calculado da API
+  equipamento_parou?: boolean | null;
   parada_inicio?: string | null;
   parada_fim?: string | null;
   minutos_parado?: number | null;

@@ -6,6 +6,7 @@ import { descreverFaixa, foraDaFaixa, formatarLeitura } from '@/utils/leitura';
 import { duracaoLegivel, formatarHoras } from '@/utils/horas';
 import { formatCurrency } from '@/lib/utils';
 import { rotuloDaInstalacao, type InstalacaoDaOrigem } from '@/utils/instalacao';
+import { rotuloDoParou } from '@/features/execucao-os/utils/equipamento-parou';
 
 /**
  * O PDF da OS (SN-62), já em texto: o desenho (`src/lib/pdf/ordem-de-servico.tsx`)
@@ -160,6 +161,7 @@ export function documentoDaOS(
       { titulo: 'Incidente de segurança', texto: os.incidentes_seguranca ?? '' },
     ].filter((t) => t.texto.trim()),
     falha: pares([
+      ['Equipamento parou', rotuloDoParou(os)],
       ['Parou em', quando(os.parada_inicio)],
       ['Voltou em', quando(os.parada_fim)],
       [

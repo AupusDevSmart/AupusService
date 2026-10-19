@@ -102,6 +102,8 @@ describe('a planilha das OS', { timeout: 120_000 }, () => {
           os(1),
           os(2, { tipo: 'PREVENTIVA', parada_inicio: null, parada_fim: null, falha_sintoma: null, minutos_parado: null, custo_real: undefined }),
           os(3, { custo_real: 0 }),
+          // SN-60: parou sem o horário (opcional desde 19/out/2026)
+          os(4, { equipamento_parou: true, parada_inicio: null, parada_fim: null, minutos_parado: null }),
         ],
         [],
       ),
@@ -130,6 +132,8 @@ describe('a planilha das OS', { timeout: 120_000 }, () => {
     expect(valor(3, 'Custo real')).toBeNull();
     // Custo 0 é R$ 0,00, não vazio (a média do Excel pularia a linha)
     expect(valor(4, 'Custo real')).toBe(0);
+    expect(valor(5, 'Equipamento parou')).toBe('Sim');
+    expect(valor(5, 'Parou em')).toBeNull();
   });
 
   it('a aba FILTRO diz o que foi pedido, a ordem, e avisa quando a lista mudou na leitura', async () => {
