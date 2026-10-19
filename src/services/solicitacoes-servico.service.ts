@@ -112,8 +112,9 @@ class SolicitacoesServicoApiService {
     return response.data;
   }
 
-  async findOne(id: string): Promise<SolicitacaoServico> {
-    const response = await api.get(`${this.baseUrl}/${id}`);
+  /** `semAvisoGlobal`: quem chama trata a falha (a origem excluída da OS é contexto, não erro) */
+  async findOne(id: string, opcoes: { semAvisoGlobal?: boolean } = {}): Promise<SolicitacaoServico> {
+    const response = await api.get(`${this.baseUrl}/${id}`, { semAvisoGlobal: opcoes.semAvisoGlobal });
     return response.data;
   }
 

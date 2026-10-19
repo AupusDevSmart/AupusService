@@ -3,6 +3,13 @@ import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { InstrucaoExpandableCard } from '@/components/common/InstrucaoExpandableCard';
 
+/**
+ * A origem é contexto: a anomalia ou a solicitação excluída (a programação
+ * cancelada devolve a origem, que pode ser excluída) não pode dar o toast de
+ * erro ao abrir a OS. A falha fica no console e a seção some.
+ */
+const SEM_AVISO = { semAvisoGlobal: true };
+
 type TipoDeOrigem = 'ANOMALIA' | 'PLANO_MANUTENCAO' | 'SOLICITACAO_SERVICO' | string;
 
 interface InstrucoesDaOrigemProps {
@@ -76,7 +83,7 @@ export function InstrucoesDaOrigem({
     const buscar = async (): Promise<InstrucaoResumida[]> => {
       if (tipo === 'ANOMALIA' && anomaliaId) {
         const { anomaliasService } = await import('@/services/anomalias.service');
-        const anomalia = await anomaliasService.findOne(anomaliaId.trim());
+        const anomalia = await anomaliasService.findOne(anomaliaId.trim(), SEM_AVISO);
         const vinculos = (anomalia as { anomalias_instrucoes?: Array<{ instrucao?: InstrucaoResumida }> })
           .anomalias_instrucoes;
         return distintas((vinculos ?? []).map((v) => v.instrucao));
@@ -84,7 +91,7 @@ export function InstrucoesDaOrigem({
 
       if (tipo === 'SOLICITACAO_SERVICO' && solicitacaoId) {
         const { solicitacoesServicoService } = await import('@/services/solicitacoes-servico.service');
-        const solicitacao = await solicitacoesServicoService.findOne(solicitacaoId.trim());
+        const solicitacao = await solicitacoesServicoService.findOne(solicitacaoId.trim(), SEM_AVISO);
         const lista = (solicitacao as { instrucoes?: InstrucaoResumida[] }).instrucoes;
         return distintas(lista ?? []);
       }

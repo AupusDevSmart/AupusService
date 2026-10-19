@@ -83,10 +83,9 @@ class AnomaliasApiService {
     return response.data;
   }
 
-  async findOne(id: string): Promise<Anomalia> {
-    // // console.log('🔍 [AnomaliasService] Buscando anomalia:', id);
-    
-    const response = await api.get(`${this.baseUrl}/${id}`);
+  /** `semAvisoGlobal`: quem chama trata a falha (a origem excluída da OS é contexto, não erro) */
+  async findOne(id: string, opcoes: { semAvisoGlobal?: boolean } = {}): Promise<Anomalia> {
+    const response = await api.get(`${this.baseUrl}/${id}`, { semAvisoGlobal: opcoes.semAvisoGlobal });
     // // console.log('📨 [AnomaliasService] Anomalia encontrada:', response.data);
     
     return response.data;
