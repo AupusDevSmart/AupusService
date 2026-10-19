@@ -3,6 +3,8 @@ import { api } from '@/config/api';
 import {
   DocumentoVeiculoResponse,
   UploadDocumentoDto,
+  documentoDaApi,
+  type DocumentacaoDaApi,
   validarTipoArquivo,
   validarTamanhoArquivo,
   TAMANHO_MAXIMO_DOCUMENTO,
@@ -10,7 +12,7 @@ import {
 } from '@/features/veiculos/types/documentos';
 
 export interface DocumentosListResponse {
-  data: DocumentoVeiculoResponse[];
+  data: DocumentacaoDaApi[];
 }
 
 class DocumentosVeiculosApiService {
@@ -90,10 +92,10 @@ class DocumentosVeiculosApiService {
 
     // console.log('✅ [DocumentosVeiculosService] Upload concluído:', uploadResponse.data);
     return {
-      ...documentacaoResponse.data,
+      ...documentoDaApi(documentacaoResponse.data),
       nome_original: uploadData.file.name,
       nome_arquivo: uploadData.file.name,
-      tipo: uploadData.file.type,
+      tipo: uploadData.file.name.split('.').pop() ?? '',
       tamanho: uploadData.file.size
     };
   }
@@ -110,7 +112,8 @@ class DocumentosVeiculosApiService {
       // console.log('📋 [DocumentosVeiculosService] Documentos encontrados:', response.data.data?.length || 0);
 
       // API pode retornar array direto ou dentro de 'data'
-      return Array.isArray(response.data) ? response.data : response.data.data || [];
+      const lista = Array.isArray(response.data) ? response.data : response.data.data || [];
+      return lista.map(documentoDaApi);
     } catch (error) {
       // console.error('❌ [DocumentosVeiculosService] Erro ao listar documentos:', error);
       return []; // Retornar array vazio em caso de erro

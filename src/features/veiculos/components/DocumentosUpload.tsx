@@ -18,8 +18,10 @@ import { useDocumentosVeiculos } from '../hooks/useDocumentosVeiculos';
 import {
   TipoDocumento,
   CATEGORIAS_DOCUMENTOS,
-  formatarTamanhoArquivo
+  formatarTamanhoArquivo,
+  resumoDoDocumento
 } from '../types/documentos';
+import { formatarDiaDeCalendario } from '@/utils/dia-de-calendario';
 
 interface DocumentosUploadProps extends FormFieldProps {
   veiculoId?: string;
@@ -259,9 +261,9 @@ export const DocumentosUpload = ({
                     {documento.nome_original}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {CATEGORIAS_DOCUMENTOS[documento.categoria]} • {formatarTamanhoArquivo(documento.tamanho)} • {documento.tipo.toUpperCase()}
+                    {resumoDoDocumento(documento)}
                   </p>
-                  {documento.descricao && (
+                  {documento.descricao && documento.descricao !== documento.nome_original && (
                     <p className="mt-1 break-words text-xs text-gray-600">{documento.descricao}</p>
                   )}
                 </div>
@@ -425,7 +427,7 @@ export const DocumentosUpload = ({
                       <p className="mt-1 break-words text-xs text-gray-600">{documento.descricao}</p>
                     )}
                     {documento.dataVencimento && (
-                      <p className="text-xs text-gray-600 mt-1">Vencimento: {new Date(documento.dataVencimento).toLocaleDateString('pt-BR')}</p>
+                      <p className="text-xs text-gray-600 mt-1">Vencimento: {formatarDiaDeCalendario(documento.dataVencimento)}</p>
                     )}
                   </div>
                 </div>
@@ -463,9 +465,9 @@ export const DocumentosUpload = ({
                       {documento.nome_original}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {CATEGORIAS_DOCUMENTOS[documento.categoria]} • {formatarTamanhoArquivo(documento.tamanho)} • {documento.tipo.toUpperCase()}
+                      {resumoDoDocumento(documento)}
                     </p>
-                    {documento.descricao && (
+                    {documento.descricao && documento.descricao !== documento.nome_original && (
                       <p className="mt-1 break-words text-xs text-gray-600">{documento.descricao}</p>
                     )}
                   </div>
