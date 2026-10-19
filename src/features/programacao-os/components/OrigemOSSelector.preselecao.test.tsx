@@ -69,6 +69,14 @@ describe('OrigemOSSelector — pré-seleção do atalho', () => {
     hook.planosDisponiveis = [];
   });
 
+  // SN-69: toda OS tem origem — não há "manual" para escolher
+  it('oferece só anomalia, plano e solicitação', () => {
+    renderWithProviders(<ComEstado inicial={{ tipo: 'ANOMALIA' }} onValor={vi.fn()} onLocal={vi.fn()} />);
+
+    for (const rotulo of ['Anomalia', 'Plano', 'Solicitação']) expect(screen.getAllByRole('button', { name: new RegExp(`^${rotulo}`) }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /Manual/i })).toBeNull();
+  });
+
   it('anomalia pré-selecionada é escolhida como no clique: planta, unidade, local e ativo', async () => {
     hook.resolverOrigem.mockImplementation(async () => {
       hook.anomaliasDisponiveis = [anomalia];
