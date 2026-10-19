@@ -24,13 +24,15 @@ export interface CreateEquipamentoApiData {
   em_operacao?: 'sim' | 'nao';
   tipo_depreciacao?: 'linear' | 'uso';
   data_imobilizacao?: string;
-  data_instalacao?: string;
+  /** null apaga a data (SN-66) */
+  data_instalacao?: string | null;
+  garantia_ate?: string | null;
   valor_imobilizado?: number;
   valor_depreciacao?: number;
   valor_contabil?: number;
   vida_util?: number;
-  fornecedor?: string;
-  centro_custo?: string;
+  fornecedor?: string | null;
+  centro_custo?: string | null;
   plano_manutencao?: string;
   localizacao?: string;
   localizacao_especifica?: string;
@@ -76,6 +78,8 @@ export interface EquipamentoApiResponse {
   tipo_depreciacao?: string;
   data_imobilizacao?: Date;
   data_instalacao?: Date;
+  /** SN-66: até quando está em garantia */
+  garantia_ate?: Date | string | null;
   valor_imobilizado?: number;
   valor_depreciacao?: number;
   valor_contabil?: number;

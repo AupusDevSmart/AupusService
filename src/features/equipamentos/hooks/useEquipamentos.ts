@@ -68,6 +68,7 @@ export const transformApiToFrontend = (apiEquipamento: EquipamentoApiResponse): 
     // Datas
     dataImobilizacao: safeDateFormat(apiEquipamento.data_imobilizacao),
     dataInstalacao: safeDateFormat(apiEquipamento.data_instalacao),
+    garantiaAte: safeDateFormat(apiEquipamento.garantia_ate ?? undefined),
     
     // Valores financeiros
     valorImobilizado: apiEquipamento.valor_imobilizado,
@@ -224,12 +225,13 @@ export type EquipamentoParaApi = Partial<CreateEquipamentoApiData> & {
   emOperacao?: CreateEquipamentoApiData['em_operacao'];
   tipoDepreciacao?: CreateEquipamentoApiData['tipo_depreciacao'];
   dataImobilizacao?: string;
-  dataInstalacao?: string;
+  dataInstalacao?: string | null;
+  garantiaAte?: string | null;
   valorImobilizado?: number;
   valorDepreciacao?: number;
   valorContabil?: number;
   vidaUtil?: number;
-  centroCusto?: string;
+  centroCusto?: string | null;
   planoManutencao?: string;
   localizacaoEspecifica?: string;
   mqttHabilitado?: boolean;
@@ -285,6 +287,8 @@ export const transformFrontendToApi = (equipamento: EquipamentoParaApi): Payload
     // Datas
     data_imobilizacao: equipamento.data_imobilizacao || equipamento.dataImobilizacao,
     data_instalacao: equipamento.data_instalacao || equipamento.dataInstalacao,
+    // SN-66: null é "apagar", e não pode virar "não mexe" no ||
+    garantia_ate: equipamento.garantia_ate !== undefined ? equipamento.garantia_ate : equipamento.garantiaAte,
     
     // Valores financeiros
     valor_imobilizado: equipamento.valor_imobilizado || equipamento.valorImobilizado,

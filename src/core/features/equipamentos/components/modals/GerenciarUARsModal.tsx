@@ -22,6 +22,7 @@ import {
 import { Equipamento } from '../../types';
 import { ComponenteUARModal, type DadosDoComponenteUAR } from './ComponenteUARModal';
 import { useEquipamentos } from '@/core/context/hooks';
+import { formatarDiaDeCalendario } from '@/utils/dia-de-calendario';
 
 interface GerenciarUARsModalProps {
   isOpen: boolean;
@@ -285,7 +286,7 @@ export const GerenciarUARsModal: React.FC<GerenciarUARsModalProps> = ({
                       {uar.dataInstalacao && (
                         <div className="flex items-center gap-1.5">
                           <span className="text-muted-foreground/60">Instalação:</span>
-                          <span className="font-medium">{new Date(uar.dataInstalacao).toLocaleDateString('pt-BR')}</span>
+                          <span className="font-medium">{formatarDiaDeCalendario(uar.dataInstalacao)}</span>
                         </div>
                       )}
 

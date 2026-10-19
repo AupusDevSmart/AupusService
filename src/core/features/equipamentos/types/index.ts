@@ -131,7 +131,10 @@ export interface Equipamento extends BaseEntity {
 
   // Datas
   dataImobilizacao?: string;
-  dataInstalacao?: string;
+  /** null = apagada na tela (vai null para a API) */
+  dataInstalacao?: string | null;
+  /** SN-66: até quando está em garantia (AAAA-MM-DD) */
+  garantiaAte?: string | null;
 
   // Valores financeiros
   valorImobilizado?: number;
@@ -140,8 +143,8 @@ export interface Equipamento extends BaseEntity {
   vidaUtil?: number;
 
   // Administrativo
-  fornecedor?: string;
-  centroCusto?: string;
+  fornecedor?: string | null;
+  centroCusto?: string | null;
   planoManutencao?: string;
 
   // Localização
@@ -248,6 +251,7 @@ export interface EquipamentoFormData {
   tipoDepreciacao?: 'linear' | 'uso';
   dataImobilizacao?: string;
   dataInstalacao?: string;
+  garantiaAte?: string;
   valorImobilizado?: number;
   valorDepreciacao?: number;
   valorContabil?: number;

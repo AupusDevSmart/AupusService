@@ -36,6 +36,7 @@ import type { EquipamentoDoLote, UseModelosContract } from '@/core/types/contrac
 import { mensagemDoBackend } from '@/utils/api-error';
 import { payloadDoComponente, type DadosDoComponenteUAR, type FormularioDoUAR } from '@/core/features/equipamentos/utils/payload-do-componente';
 import { rodarAcoesPosCriacao, useAcoesPosCriacao } from '@/core/features/equipamentos/utils/acoes-pos-criacao';
+import { InstalacaoEGarantia } from '@/core/features/equipamentos/components/InstalacaoEGarantia';
 
 type AbaUAR = 'dados' | 'itens' | 'anexos';
 
@@ -224,7 +225,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
           // O que identifica um exemplar nao se copia: sai em branco para ser
           // preenchido, e a TAG o backend gera se ficar assim.
           ...(duplicando
-            ? { id: undefined, nome: '', tag: '', numeroSerie: '', fotoUrl: undefined }
+            ? { id: undefined, nome: '', tag: '', numeroSerie: '', fotoUrl: undefined, dataInstalacao: '', garantiaAte: '' }
             : {}),
           equipamentoPaiId: equipamentoPai?.id ?? entity.equipamentoPaiId,
         });
@@ -1158,16 +1159,6 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
               {/* Coluna 2 */}
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Data de Instalação</label>
-                  <input
-                    className="input-minimal"
-                    type="date"
-                    value={formData.dataInstalacao || ''}
-                    onChange={(e) => handleFieldChange('dataInstalacao', e.target.value)}
-                    disabled={isReadOnly}
-                  />
-                </div>
-                <div className="space-y-1.5">
                   <label className="text-sm font-medium">Criticidade</label>
                   <Select value={formData.criticidade || ''} onValueChange={(value) => handleFieldChange('criticidade', value)} disabled={isReadOnly}>
                     <SelectTrigger>
@@ -1194,19 +1185,17 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
                     />
                   </div>
                 )}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Fornecedor</label>
-                  <input
-                    className="input-minimal"
-                    value={formData.fornecedor || ''}
-                    onChange={(e) => handleFieldChange('fornecedor', e.target.value)}
-                    disabled={isReadOnly}
-                    placeholder="Fornecedor do componente"
-                  />
-                </div>
               </div>
             </div>
           </div>
+
+          {/* Data de instalação e fornecedor estavam soltos nas colunas acima; a
+              seção é a mesma do sheet da UC, com a garantia e o centro de custo (SN-66) */}
+          <InstalacaoEGarantia
+            valores={formData}
+            onChange={(campo, valor) => handleFieldChange(campo, valor)}
+            somenteLeitura={isReadOnly}
+          />
 
           {/* ============================================================================ */}
           {/* DADOS TÉCNICOS DINÂMICOS DO COMPONENTE */}

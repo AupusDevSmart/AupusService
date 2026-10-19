@@ -28,9 +28,11 @@ type ComponenteDaApi = {
   tipo_equipamento_id?: string | null;
   numero_serie?: string | null;
   data_instalacao?: string | null;
+  garantia_ate?: string | null;
   criticidade?: string | null;
   localizacao_especifica?: string | null;
   fornecedor?: string | null;
+  centro_custo?: string | null;
   valor_imobilizado?: string | number | null;
   valor_depreciacao?: string | number | null;
   valor_contabil?: string | number | null;
@@ -60,6 +62,11 @@ type EquipamentoDaApi = {
   localizacao?: string | null;
   valor_contabil?: string | number | null;
   data_imobilizacao?: string | null;
+  // SN-66
+  data_instalacao?: string | null;
+  garantia_ate?: string | null;
+  fornecedor?: string | null;
+  centro_custo?: string | null;
   mcpse?: boolean | null;
   tuc?: string | null;
   a1?: string | null;
@@ -172,6 +179,10 @@ function cabecalho(refs: Referencia[]): Campo<Equipamento>[] {
       explicacao: 'Data em que entrou no patrimônio.',
       valor: (e) => dia(e.data_imobilizacao),
     },
+    { titulo: 'DATA DE INSTALAÇÃO', caminho: 'data_instalacao', tipo: 'data', explicacao: 'Quando foi instalado.', valor: (e) => dia(e.data_instalacao) },
+    { titulo: 'GARANTIA ATÉ', caminho: 'garantia_ate', tipo: 'data', explicacao: 'Último dia da garantia.', valor: (e) => dia(e.garantia_ate) },
+    texto('FORNECEDOR', 'fornecedor', (e) => e.fornecedor ?? null, 'Texto livre.'),
+    texto('CENTRO DE CUSTO', 'centro_custo', (e) => e.centro_custo ?? null, 'Texto livre (ex.: CC-001).'),
     texto('STATUS', 'status', (e) => e.status ?? null, 'Ativo ou Inativo. Inativo tira de uso sem apagar. Vazio = mantém.', {
       lista: '"Ativo,Inativo"',
       vazioEhPadrao: true,
@@ -244,6 +255,7 @@ function secoes(refs: Referencia[]) {
       { titulo: 'MODELO', caminho: 'modelo', tipo: 'texto', lista: referencia(refs, 'modelos'), vazioEhPadrao: true, explicacao: 'O modelo, pelo nome ou código. Vazio = mantém.', valor: (c) => c.modelo },
       { titulo: 'Nº DE SÉRIE', caminho: 'numero_serie', tipo: 'texto', explicacao: 'Número de série.', valor: (c) => c.numero_serie ?? null },
       { titulo: 'DATA DE INSTALAÇÃO', caminho: 'data_instalacao', tipo: 'data', explicacao: 'Quando foi instalado.', valor: (c) => dia(c.data_instalacao) },
+      { titulo: 'GARANTIA ATÉ', caminho: 'garantia_ate', tipo: 'data', explicacao: 'Último dia da garantia.', valor: (c) => dia(c.garantia_ate) },
       {
         titulo: 'CRITICIDADE',
         caminho: 'criticidade',
@@ -255,6 +267,7 @@ function secoes(refs: Referencia[]) {
       },
       { titulo: 'LOCALIZAÇÃO ESPECÍFICA', caminho: 'localizacao_especifica', tipo: 'texto', explicacao: 'Onde fica na UC.', valor: (c) => c.localizacao_especifica ?? null },
       { titulo: 'FORNECEDOR', caminho: 'fornecedor', tipo: 'texto', explicacao: 'Texto livre.', valor: (c) => c.fornecedor ?? null },
+      { titulo: 'CENTRO DE CUSTO', caminho: 'centro_custo', tipo: 'texto', explicacao: 'Texto livre (ex.: CC-001).', valor: (c) => c.centro_custo ?? null },
       { titulo: 'VALOR IMOBILIZADO', caminho: 'valor_imobilizado', tipo: 'moeda', explicacao: 'Em reais.', valor: (c) => numero(c.valor_imobilizado) },
       { titulo: 'VALOR DE DEPRECIAÇÃO', caminho: 'valor_depreciacao', tipo: 'moeda', explicacao: 'Em reais.', valor: (c) => numero(c.valor_depreciacao) },
       { titulo: 'VALOR CONTÁBIL', caminho: 'valor_contabil', tipo: 'moeda', explicacao: 'Em reais.', valor: (c) => numero(c.valor_contabil) },

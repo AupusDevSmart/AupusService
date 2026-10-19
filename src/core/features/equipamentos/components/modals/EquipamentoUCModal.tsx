@@ -24,6 +24,7 @@ import { Separator } from '@/core/components/ui/separator';
 import { normalizarTipoEquipamento } from '@/core/features/equipamentos/utils/tipo-equipamento';
 import { PosicaoSelector } from '@/core/features/equipamentos/components/PosicaoSelector';
 import { HistoricoDaPosicao } from '@/core/features/equipamentos/components/HistoricoDaPosicao';
+import { InstalacaoEGarantia } from '@/core/features/equipamentos/components/InstalacaoEGarantia';
 import type { AtivoFuncional } from '@/core/features/equipamentos/hooks/useAtivosFuncionais';
 import { separarDadosTecnicos } from '@/core/features/equipamentos/utils/dados-tecnicos';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/core/components/ui/tabs';
@@ -113,6 +114,11 @@ interface FormularioDoUC {
   localizacaoEspecifica?: string;
   valorContabil?: number | string;
   dataImobilizacao?: string;
+  /** SN-66: instalação (a data), garantia, fornecedor e centro de custo */
+  dataInstalacao?: string;
+  garantiaAte?: string;
+  fornecedor?: string;
+  centroCusto?: string;
   status?: string;
   emOperacao?: string;
   mqttHabilitado?: Marcado;
@@ -666,6 +672,11 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         localizacao: dadosCompletos.localizacao || '',
         valorContabil: dadosCompletos.valorContabil || '',
         dataImobilizacao: dadosCompletos.dataImobilizacao || '',
+        // A instalação e a garantia são da máquina: duplicar não as leva (como o número de série)
+        dataInstalacao: paraDuplicar ? '' : dadosCompletos.dataInstalacao || '',
+        garantiaAte: paraDuplicar ? '' : dadosCompletos.garantiaAte || '',
+        fornecedor: dadosCompletos.fornecedor || '',
+        centroCusto: dadosCompletos.centroCusto || '',
         status: dadosCompletos.status || 'Ativo',
         emOperacao: dadosCompletos.emOperacao || '',
         // Campos MQTT
@@ -802,6 +813,10 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       localizacao: '',
       valorContabil: '',
       dataImobilizacao: '',
+      dataInstalacao: '',
+      garantiaAte: '',
+      fornecedor: '',
+      centroCusto: '',
       status: 'Ativo',
       emOperacao: 'sim',
       // Campos MQTT
@@ -1280,6 +1295,11 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         status: statusAtual,
         em_operacao: formData.emOperacao,
         data_imobilizacao: dataImobilizacaoFormatted,
+        // SN-66: vazio vai null (apagar é apagar). A API aceita AAAA-MM-DD (@DiaDeCalendario)
+        data_instalacao: formData.dataInstalacao || null,
+        garantia_ate: formData.garantiaAte || null,
+        fornecedor: formData.fornecedor?.trim() || null,
+        centro_custo: formData.centroCusto?.trim() || null,
         valor_contabil: formData.valorContabil ? parseFloat(String(formData.valorContabil)) : undefined,
         localizacao: formData.localizacao,
         // Campos MQTT
@@ -2521,6 +2541,10 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         numeroSerie: data.numero_serie,
         criticidade: data.criticidade,
         dataInstalacao: data.data_instalacao,
+        // Sem estes, o componente criado aqui perdia o fornecedor ao salvar o lote
+        garantiaAte: data.garantia_ate,
+        fornecedor: data.fornecedor,
+        centroCusto: data.centro_custo,
         localizacaoEspecifica: data.localizacao_especifica,
         dadosTecnicos: data.dados_tecnicos,
         equipamentoPaiId: entity!.id,
@@ -2735,6 +2759,12 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       <Separator />
 
       {renderInformacoesComplementares()}
+
+      <InstalacaoEGarantia
+        valores={formData}
+        onChange={(campo, valor) => handleInputChange(campo, valor)}
+        somenteLeitura={isReadonly}
+      />
 
       <Separator />
 

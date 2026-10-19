@@ -18,9 +18,12 @@ export type DadosDoComponenteUAR = {
   /** O CODIGO do tipo (compatibilidade); o id vai em `tipo_equipamento_id`. */
   tipo_equipamento?: string;
   tipo_equipamento_id?: string;
-  data_instalacao?: string;
+  /** null apaga (SN-66) */
+  data_instalacao?: string | null;
+  garantia_ate?: string | null;
   localizacao_especifica?: string;
-  fornecedor?: string;
+  fornecedor?: string | null;
+  centro_custo?: string | null;
   valor_imobilizado?: number;
   valor_depreciacao?: number;
   valor_contabil?: number;
@@ -46,14 +49,16 @@ export type FormularioDoUAR = {
   fabricante?: string;
   fabricanteCustom?: string;
   modelo?: string;
-  dataInstalacao?: string;
+  dataInstalacao?: string | null;
+  garantiaAte?: string | null;
   equipamentoPaiId?: string;
   /** So para exibir: o componente herda a planta do UC pela unidade. */
   plantaId?: string;
   unidadeId?: string;
   /** So para exibir, como a planta. */
   proprietarioId?: string;
-  fornecedor?: string;
+  fornecedor?: string | null;
+  centroCusto?: string | null;
   valorImobilizado?: number | string;
   valorDepreciacao?: number | string;
   valorContabil?: number | string;
@@ -62,6 +67,7 @@ export type FormularioDoUAR = {
 } & { [campoTecnico: string]: unknown };
 
 const valor = (v: number | string | undefined) => (v ? parseFloat(String(v)) : undefined);
+const diaDoInput = (dia?: string | null) => (dia ? `${dia.slice(0, 10)}T00:00:00.000Z` : null);
 
 /**
  * O componente no formato da API. Sem `planta_id` nem `proprietario_id`: o
@@ -86,10 +92,13 @@ export function payloadDoComponente(
     criticidade: formData.criticidade,
     tipo_equipamento: formData.tipoComponente, // Codigo (compatibilidade)
     tipo_equipamento_id: tipoEquipamentoId, // ID do tipo (correto)
-    // A data do input e de calendario: meia-noite UTC
-    data_instalacao: formData.dataInstalacao ? new Date(formData.dataInstalacao + 'T00:00:00.000Z').toISOString() : undefined,
+    // As datas do input sao de calendario: meia-noite UTC. Vazio vai null —
+    // undefined era "nao mexe", e a data apagada na tela continuava gravada (SN-66)
+    data_instalacao: diaDoInput(formData.dataInstalacao),
+    garantia_ate: diaDoInput(formData.garantiaAte),
     localizacao_especifica: formData.localizacaoEspecifica,
-    fornecedor: formData.fornecedor,
+    fornecedor: formData.fornecedor?.trim() || null,
+    centro_custo: formData.centroCusto?.trim() || null,
     valor_imobilizado: valor(formData.valorImobilizado),
     valor_depreciacao: valor(formData.valorDepreciacao),
     valor_contabil: valor(formData.valorContabil),

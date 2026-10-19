@@ -39,4 +39,18 @@ describe('payloadDoComponente', () => {
       data_instalacao: '2026-10-01T00:00:00.000Z',
     });
   });
+
+  // SN-66: undefined era "não mexe", e a data apagada na tela continuava gravada
+  it('garantia e centro de custo vão; o que foi apagado vai null', () => {
+    expect(payloadDoComponente({ ...formulario, garantiaAte: '2028-10-01', centroCusto: ' CC-1 ' }, 'tipo1', [])).toMatchObject({
+      garantia_ate: '2028-10-01T00:00:00.000Z',
+      centro_custo: 'CC-1',
+    });
+    expect(payloadDoComponente({ ...formulario, dataInstalacao: '', garantiaAte: '', fornecedor: '  ', centroCusto: '' }, 'tipo1', [])).toMatchObject({
+      data_instalacao: null,
+      garantia_ate: null,
+      fornecedor: null,
+      centro_custo: null,
+    });
+  });
 });
