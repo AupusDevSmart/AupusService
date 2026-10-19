@@ -761,16 +761,17 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
             setUarsLista([]);
             // Falhar calado aqui produz o pior sintoma possivel: a secao diz
             // "Componentes UAR (0)" e o equipamento parece nao ter nenhum,
-            // quando na verdade a consulta nem completou. O 403 vem do escopo:
-            // equipamento de planta fora do acesso de quem abriu.
+            // quando na verdade a consulta nem completou. Desde o SN-57 o
+            // escopo responde 404 (planta fora do acesso = "não existe"); o
+            // 403 é a permissão que falta.
             const status = isAxiosError(err) ? err.response?.status : undefined;
             avisar(
               status === 403
                 ? 'Sem permissão para ver os componentes deste equipamento'
-                : 'Não foi possível carregar os componentes',
-              status === 403
-                ? 'Este equipamento é de uma planta fora do seu acesso.'
-                : undefined,
+                : status === 404
+                  ? 'Componentes não encontrados'
+                  : 'Não foi possível carregar os componentes',
+              status === 404 ? 'O equipamento não existe ou não está nas suas plantas.' : undefined,
             );
           } finally {
             setLoadingUARs(false);
