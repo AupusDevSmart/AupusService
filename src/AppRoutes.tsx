@@ -26,6 +26,7 @@ import { EsqueciSenhaPage } from './pages/esqueci-senha/EsqueciSenhaPage';
 import { RedefinirSenhaPage } from './pages/redefinir-senha/RedefinirSenhaPage';
 import { TrocarSenhaPage } from './pages/trocar-senha/TrocarSenhaPage';
 import { useUserStore } from './store/useUserStore';
+import { useSessaoAtualizada } from '@/hooks/useSessaoAtualizada';
 
 // Paginas do nucleo (src/core, antes o pacote @aupus/shared-pages)
 import {
@@ -41,6 +42,8 @@ import {
  */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useUserStore();
+  // As permissões do login ficam no navegador: relidas a cada carga da página
+  useSessaoAtualizada(Boolean(user?.id));
 
   if (!user?.id) {
     // Com a busca: o endereço de conferência do PDF da OS (?conferir=) se perdia no login (SN-62)
