@@ -2,6 +2,7 @@
 import { api } from '@/config/api';
 import { PaginatedResponse, BaseFilters } from '@/types/base';
 import { mensagemDoBackend } from '@/utils/api-error';
+import { hojeNaTela } from '@/utils/dia-de-calendario';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -380,7 +381,7 @@ export const reservasUtils = {
     try {
       // Função para extrair apenas a parte da data (YYYY-MM-DD) de strings ISO
       const extractDate = (dateStr: string): string => {
-        if (!dateStr) return new Date().toISOString().split('T')[0];
+        if (!dateStr) return hojeNaTela();
         
         // Se já está no formato ISO, extrair apenas a parte da data
         if (dateStr.includes('T')) {

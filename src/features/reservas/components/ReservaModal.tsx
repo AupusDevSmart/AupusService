@@ -4,13 +4,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { VeiculoSelector } from './VeiculoSelector';
 import { Car, X } from 'lucide-react';
 import { ReservaVeiculo, ReservaFormData, CreateReservaRequest } from '../types';
-import {
-  formatDateForInput,
-  formatDateForAPI,
-  getCurrentDate,
-  isDateInPast,
-  isEndDateAfterStartDate
-} from '../utils/date-utils';
+import { isDateInPast, isEndDateAfterStartDate } from '../utils/date-utils';
+import { diaDeCalendario, hojeNaTela } from '@/utils/dia-de-calendario';
 
 interface ReservaModalProps {
   isOpen: boolean;
@@ -40,8 +35,9 @@ export function ReservaModal({
       if (mode === 'create') {
         const initialData = {
           tipoSolicitante: 'manual' as const,
-          dataInicio: getCurrentDate(),
-          dataFim: getCurrentDate(),
+          // Hoje na tela de quem reserva (o dia UTC, depois das 21h, já era amanhã)
+          dataInicio: hojeNaTela(),
+          dataFim: hojeNaTela(),
           horaInicio: '08:00',
           horaFim: '18:00'
         };
@@ -53,8 +49,8 @@ export function ReservaModal({
           solicitanteId: entity.solicitanteId,
           responsavel: entity.responsavel,
           finalidade: entity.finalidade,
-          dataInicio: formatDateForInput(entity.dataInicio),
-          dataFim: formatDateForInput(entity.dataFim),
+          dataInicio: diaDeCalendario(entity.dataInicio),
+          dataFim: diaDeCalendario(entity.dataFim),
           horaInicio: entity.horaInicio || '08:00',
           horaFim: entity.horaFim || '18:00',
           observacoes: entity.observacoes
@@ -145,8 +141,8 @@ export function ReservaModal({
       const dadosCompletos = {
         ...formData as ReservaFormData,
         veiculoId: veiculoSelecionado!,
-        dataInicio: formatDateForAPI(formData.dataInicio!, false),
-        dataFim: formatDateForAPI(formData.dataFim!, false),
+        dataInicio: formData.dataInicio!,
+        dataFim: formData.dataFim!,
       };
 
       await onSubmit(dadosCompletos);

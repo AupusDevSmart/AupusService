@@ -129,7 +129,10 @@ export const DocumentosUpload = ({
       await uploadDocumento(veiculoId, {
         file: documento.file,
         categoria: documento.categoria,
-        descricao: documento.descricao
+        descricao: documento.descricao,
+        // Sem ela, o documento anexado na edição ganhava o padrão "daqui a um
+        // ano" no lugar da data digitada (SN-78)
+        dataVencimento: documento.dataVencimento
       });
       await listarDocumentos(veiculoId);
     } catch (error) {

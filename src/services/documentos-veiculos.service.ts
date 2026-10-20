@@ -1,5 +1,6 @@
 // src/services/documentos-veiculos.service.ts
 import { api } from '@/config/api';
+import { diaDaquiA } from '@/utils/dia-de-calendario';
 import {
   DocumentoVeiculoResponse,
   UploadDocumentoDto,
@@ -56,7 +57,8 @@ class DocumentosVeiculosApiService {
     const documentacaoData = {
       tipo: uploadData.categoria,
       descricao: uploadData.descricao || `${uploadData.file.name}`,
-      dataVencimento: uploadData.dataVencimento || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0], // Default: 1 ano
+      // Padrão: daqui a um ano, no fuso de quem está na tela (o dia UTC, depois das 21h, já era o seguinte)
+      dataVencimento: uploadData.dataVencimento || diaDaquiA({ anos: 1 }),
       numeroDocumento: '',
       orgaoEmissor: '',
       observacoes: ''

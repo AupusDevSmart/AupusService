@@ -8,6 +8,7 @@ import {
   TipoSolicitante,
   ViaturaReservada
 } from '../types';
+import { hojeNaTela } from '@/utils/dia-de-calendario';
 // Mock data removed - using API now
 
 /** O que este hook le de cada viatura (a lista local ficou vazia quando os mocks sairam). */
@@ -234,7 +235,7 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
         veiculoId: dados.veiculoId, // TypeScript agora sabe que não é undefined por causa da validação acima
         status: 'ativa',
         criadoPor: 'Usuário Atual', // Em produção, viria do contexto de auth
-        dataReserva: new Date().toISOString().split('T')[0]
+        dataReserva: hojeNaTela()
       };
 
       setReservasState(prev => [...prev, novaReserva]);
@@ -331,7 +332,7 @@ export const useReservasVeiculos = (): UseReservasVeiculosReturn => {
         ...reserva,
         status: 'cancelada' as const,
         motivoCancelamento: motivo,
-        dataCancelamento: new Date().toISOString().split('T')[0]
+        dataCancelamento: hojeNaTela()
       };
 
       setReservasState(prev => 

@@ -80,7 +80,11 @@ export interface VeiculoResponse extends BaseVeiculo {
 // Create/Update interfaces
 export type CreateVeiculoRequest = BaseVeiculo;
 
-export type UpdateVeiculoRequest = Partial<BaseVeiculo>;
+/** Os opcionais que o editar apaga: vazio vai como null (SN-78; sem o campo, a API não apagava) */
+export type CampoApagavelDoVeiculo = 'cor' | 'proximaRevisao' | 'responsavel' | 'observacoes' | 'chassi' | 'renavam' | 'seguradora' | 'vencimentoSeguro';
+export type UpdateVeiculoRequest = Omit<Partial<BaseVeiculo>, CampoApagavelDoVeiculo> & {
+  [K in CampoApagavelDoVeiculo]?: string | null;
+};
 
 // Query parameters
 export interface QueryVeiculosParams extends BaseFilters {
