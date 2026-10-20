@@ -30,6 +30,8 @@ import {
 } from '@/services/dashboard-manutencao.services';
 import { CartaoIndicador, LegendaDasFormulas, Quadro, SemDado } from './PainelPrimitivos';
 import { DADOS_DEMO, PAINEL_USA_DADOS_DE_EXEMPLO } from './dadosDemo';
+import { BotaoExportarPainel } from './BotaoExportarPainel';
+import { useUserStore } from '@/store/useUserStore';
 
 /**
  * Painel de gestão de manutenção e serviços.
@@ -136,6 +138,7 @@ export function PainelManutencao() {
   const navigate = useNavigate();
   const [parametrosUrl] = useSearchParams();
   const [filtros, setFiltros] = useState<FiltrosDashboard>({ periodo: '12meses' });
+  const temPermissao = useUserStore((s) => s.hasPermission);
 
   /**
    * Dados de exemplo no lugar da resposta da API, para avaliar o desenho da
@@ -260,6 +263,17 @@ export function PainelManutencao() {
   const pctBase = (n: number) => (a.identificadas > 0 ? Math.round((n / a.identificadas) * 100) : 0);
   /** A fórmula e a base do gráfico, para o ícone de informação dele */
   const explicacaoDe = (id: string) => data.graficos?.find((g) => g.id === id);
+  const graficosAVista = (data.graficos ?? []).filter((g) => GRAFICOS_A_VISTA.includes(g.id));
+  // O filtro como a tela o mostra, para a aba FILTRO da exportação
+  const nomeDe = (lista: { id: string; nome: string }[], id?: string) =>
+    id && id !== 'all' ? (lista.find((x) => x.id.trim() === id.trim())?.nome ?? id) : 'Todas';
+  const filtrosEmPalavras: [string, string][] = [
+    ['Período', PERIODOS.find((p) => p.value === filtros.periodo)?.label ?? 'Últimos 12 meses'],
+    ['Planta', nomeDe(data.opcoes.plantas, filtros.plantaId)],
+    ['Instalação', nomeDe(data.opcoes.unidades, filtros.unidadeId)],
+    ['Criticidade', CRITICIDADES.find((c) => c.value === (filtros.criticidade ?? 'all'))?.label ?? String(filtros.criticidade)],
+    ['Equipe', filtros.equipe && filtros.equipe !== 'all' ? filtros.equipe : 'Todas'],
+  ];
 
   return (
     <Layout>
@@ -350,10 +364,16 @@ export function PainelManutencao() {
             )}
 
             {/* A legenda das fórmulas: todos os números num painel lateral, sem ocupar a tela */}
-            <LegendaDasFormulas
-              indicadores={data.kpis}
-              graficos={(data.graficos ?? []).filter((g) => GRAFICOS_A_VISTA.includes(g.id))}
-            />
+            <LegendaDasFormulas indicadores={data.kpis} graficos={graficosAVista} />
+            {/* A planilha leva OS por OS, com custo: a permissão de ver OS (a mesma da rota) */}
+            {temPermissao('execucao_os.view') && (
+              <BotaoExportarPainel
+                filtros={filtros}
+                filtrosEmPalavras={filtrosEmPalavras}
+                graficosAVista={GRAFICOS_A_VISTA}
+                desabilitado={demo}
+              />
+            )}
 
             {/* O aviso ocupa o lugar do horário: não faz sentido dizer
                 "atualizado às 14h" sobre número inventado.

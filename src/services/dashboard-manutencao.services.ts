@@ -103,6 +103,38 @@ export interface DashboardManutencaoApi {
   graficos?: ExplicacaoApi[];
 }
 
+/** Uma OS que entrou em alguma conta do painel: a aba OS da exportação (SN-82) */
+export interface OrdemDaContaApi {
+  id: string;
+  numero: string;
+  tipo: string;
+  origem: string;
+  status: string;
+  planta: string | null;
+  equipamentos: string[];
+  criada_em: string;
+  programada_para: string | null;
+  iniciada_em: string | null;
+  terminou_em: string | null;
+  aberta: boolean;
+  concluida_no_periodo: boolean;
+  criada_no_periodo: boolean;
+  programada_no_periodo: boolean;
+  parada_no_periodo: boolean;
+  corretiva_do_periodo: boolean;
+  horas_estimadas: number;
+  sem_estimativa: boolean;
+  custo: { mao_de_obra: number; material: number; adicionais: number; total: number } | null;
+  equipamento_parou: boolean | null;
+  parada_inicio: string | null;
+  parada_fim: string | null;
+}
+
+export interface OrdensDaContaApi {
+  periodo: { desde: string; ate: string };
+  ordens: OrdemDaContaApi[];
+}
+
 export interface FiltrosDashboard {
   periodo?: '12meses' | 'mes' | 'trimestre' | 'ano';
   plantaId?: string;
@@ -114,22 +146,34 @@ export interface FiltrosDashboard {
 class DashboardManutencaoApiService {
   private readonly endpoint = '/dashboard/manutencao';
 
-  async carregar(filtros: FiltrosDashboard = {}): Promise<DashboardManutencaoApi> {
-    // 'all' é como os comboboxes representam "sem filtro"; mandar isso adiante
-    // viraria um id inexistente e o painel voltaria vazio.
-    const params = Object.fromEntries(
-      Object.entries(filtros).filter(([, v]) => v && v !== 'all'),
-    );
+  // 'all' é como os comboboxes representam "sem filtro"; mandar isso adiante
+  // viraria um id inexistente e o painel voltaria vazio.
+  private params(filtros: FiltrosDashboard) {
+    return Object.fromEntries(Object.entries(filtros).filter(([, v]) => v && v !== 'all'));
+  }
 
+  async carregar(filtros: FiltrosDashboard = {}): Promise<DashboardManutencaoApi> {
     // O interceptor pode desembrulhar { success, data }; às vezes sobra uma
     // camada. O painel aceita as duas formas em vez de apostar numa delas.
     const response = await api.get<DashboardManutencaoApi | { data: DashboardManutencaoApi }>(
       this.endpoint,
-      { params },
+      { params: this.params(filtros) },
     );
 
     const corpo = response.data;
     return corpo && 'data' in corpo ? corpo.data : corpo;
+  }
+
+  /** As OS que entraram nas contas do painel, com os mesmos filtros (SN-82) */
+  async ordensDaConta(filtros: FiltrosDashboard = {}): Promise<OrdensDaContaApi> {
+    const response = await api.get<OrdensDaContaApi | { data: OrdensDaContaApi }>(`${this.endpoint}/ordens`, {
+      params: this.params(filtros),
+    });
+    const corpo = response.data;
+    const resposta = corpo && 'data' in corpo ? corpo.data : corpo;
+    // Sem a lista, a planilha sairia sem a aba de conferência dizendo que não há OS
+    if (!Array.isArray(resposta?.ordens)) throw new Error('A lista das OS do painel veio num formato inesperado.');
+    return resposta;
   }
 }
 
