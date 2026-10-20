@@ -18,7 +18,8 @@ import {
   Layers,
   LayoutDashboard,
   Clock,
-  FilePenLine
+  FilePenLine,
+  Construction
 } from 'lucide-react';
 
 
@@ -208,6 +209,15 @@ export const navigationLinks: Array<NavigationLink> = [
         // Ferramentas e fornecedores nao tem item proprio no menu, mas as rotas
         // seguem abertas: marcam o cadastro de recursos, o mais proximo delas.
         ativoEm: ['/ferramentas', '/fornecedores'],
+      },
+      {
+        // SN-84: o cadastro do AupusProject, com a permissão do de recursos
+        key: 'maquinarios',
+        featureKey: 'recursos.manage',
+        path: '/maquinarios',
+        icon: Construction,
+        label: 'Maquinários',
+        hint: 'Maquinários',
       },
       {
         key: 'veiculos',

@@ -15,6 +15,7 @@ import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
 import { InstrucoesPage } from './features/instrucoes/components/InstrucoesPage';
 import { RecursosPage } from './features/recursos/components/RecursosPage';
+import { MaquinariosPage } from './features/maquinarios/components/MaquinariosPage';
 import { VeiculosPage } from './features/veiculos/components/VeiculosPage';
 import { AppTemplate } from './pages/AppTemplate';
 import { AnomaliaPage } from './pages/anomalias';
@@ -243,6 +244,14 @@ export const appRoutes = createBrowserRouter([
         element: (
           <FeatureWrapper feature="recursos.manage">
             <RecursosPage />
+          </FeatureWrapper>
+        ),
+      },
+      {
+        path: 'maquinarios',
+        element: (
+          <FeatureWrapper feature="recursos.manage">
+            <MaquinariosPage />
           </FeatureWrapper>
         ),
       },
