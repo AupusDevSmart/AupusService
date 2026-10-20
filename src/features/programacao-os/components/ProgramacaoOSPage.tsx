@@ -369,6 +369,18 @@ export function ProgramacaoOSPage() {
     try {
       console.log('🔄 Dados recebidos do modal:', data);
       
+      // A tela só mostra a duração: o tempo a acompanha. Ele ia sempre com o 4
+      // do valor inicial, escondido, e o painel somava esse 4 no HH (SN-81).
+      // Sem duração, nada vai: o servidor põe o padrão, que o painel conta à
+      // parte — o 6 de antes era estimativa que ninguém fez.
+      const lida = parseFloat(String(data.duracao_estimada || data.duracaoEstimada));
+      const duracao = Number.isFinite(lida) && lida > 0 ? lida : undefined;
+      // Na edição, o tempo só acompanha quando a duração mudou: editar o
+      // responsável de uma programação do cron tirava a OS do "sem estimativa"
+      const original = modalState.mode === 'edit' ? modalState.entity : null;
+      const tempo =
+        original && Number(original.duracao_estimada) === duracao ? Number(original.tempo_estimado) : duracao;
+
       // ✅ UNIFICADO: Mesma preparação de dados para create e update
       const preparedData = {
         // Campos básicos
@@ -394,8 +406,8 @@ export function ProgramacaoOSPage() {
         })).filter((item) => item.descricao),
 
         // Planejamento - campos atualizados para snake_case
-        tempo_estimado: parseFloat(String(data.tempo_estimado || data.tempoEstimado)) || 4,
-        duracao_estimada: parseFloat(String(data.duracao_estimada || data.duracaoEstimada)) || 6,
+        tempo_estimado: tempo,
+        duracao_estimada: duracao,
         data_previsao_inicio: data.data_previsao_inicio || data.dataPrevisaoInicio ?
           new Date(String(data.data_previsao_inicio || data.dataPrevisaoInicio)).toISOString() : null,
         data_previsao_fim: data.data_previsao_fim || data.dataPrevisaoFim ?
@@ -662,9 +674,7 @@ export function ProgramacaoOSPage() {
           dados: {},
           tarefasSelecionadas: []
         },
-        // Usar snake_case para compatibilidade com form-config
-        tempo_estimado: 4,
-        duracao_estimada: 6,
+        // Sem estimativa inventada: a duração é obrigatória e o planejador a digita (SN-81)
         necessita_veiculo: false,
         assentos_necessarios: null,
         carga_necessaria: null,

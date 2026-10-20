@@ -28,7 +28,7 @@ import {
   dashboardManutencaoApi,
   type FiltrosDashboard,
 } from '@/services/dashboard-manutencao.services';
-import { CartaoIndicador, ComoSeCalcula, Quadro, SemDado } from './PainelPrimitivos';
+import { CartaoIndicador, LegendaDasFormulas, Quadro, SemDado } from './PainelPrimitivos';
 import { DADOS_DEMO, PAINEL_USA_DADOS_DE_EXEMPLO } from './dadosDemo';
 
 /**
@@ -84,6 +84,9 @@ const CRITICIDADES = OPCOES_DE_CRITICIDADE;
  * altura vem da grade (`2xl:h-auto`), que é quem sabe quanto sobrou.
  */
 const ALTURA_PADRAO = 'h-[180px] 2xl:h-auto';
+
+/** Os gráficos que a tela mostra: a legenda lista só estes (mix, finalidade e a linha 4 estão desligados) */
+const GRAFICOS_A_VISTA = ['execucaoPlano', 'planejadaVsNao', 'origemOS', 'custo', 'custoPorOS', 'anomalias', 'hh'];
 
 const moedaMil = (v: number) => `R$ ${v.toLocaleString('pt-BR')}k`;
 
@@ -197,7 +200,7 @@ export function PainelManutencao() {
       mes,
       maoObra: data.custo.maoObra[i] ?? 0,
       material: data.custo.material[i] ?? 0,
-      terceiros: data.custo.terceiros[i] ?? 0,
+      adicionais: data.custo.adicionais[i] ?? 0,
       orcado: data.custo.orcado[i] ?? 0,
       corretiva: data.custoPorOS.corretiva[i] ?? 0,
       preventiva: data.custoPorOS.preventiva[i] ?? 0,
@@ -255,6 +258,8 @@ export function PainelManutencao() {
   const pctPlano = ep.programadas > 0 ? Math.round((ep.executadas / ep.programadas) * 100) : 0;
   const a = data.anomalias;
   const pctBase = (n: number) => (a.identificadas > 0 ? Math.round((n / a.identificadas) * 100) : 0);
+  /** A fórmula e a base do gráfico, para o ícone de informação dele */
+  const explicacaoDe = (id: string) => data.graficos?.find((g) => g.id === id);
 
   return (
     <Layout>
@@ -344,6 +349,12 @@ export function PainelManutencao() {
               </Button>
             )}
 
+            {/* A legenda das fórmulas: todos os números num painel lateral, sem ocupar a tela */}
+            <LegendaDasFormulas
+              indicadores={data.kpis}
+              graficos={(data.graficos ?? []).filter((g) => GRAFICOS_A_VISTA.includes(g.id))}
+            />
+
             {/* O aviso ocupa o lugar do horário: não faz sentido dizer
                 "atualizado às 14h" sobre número inventado.
 
@@ -379,6 +390,7 @@ export function PainelManutencao() {
             {/* linha 1 — aderência ao plano */}
             <Quadro
               titulo="Execução do plano"
+              explicacao={explicacaoDe('execucaoPlano')}
               subtitulo={`meta ${ep.meta}%`}
               className={`${ALTURA_PADRAO} 2xl:col-span-4`}
             >
@@ -426,6 +438,7 @@ export function PainelManutencao() {
 
             <Quadro
               titulo="Planejada vs. não planejada"
+              explicacao={explicacaoDe('planejadaVsNao')}
               subtitulo="ref. 80/20"
               className={`${ALTURA_PADRAO} 2xl:col-span-4`}
               legenda={[
@@ -473,7 +486,7 @@ export function PainelManutencao() {
               </div>
             </Quadro>
 
-            <Quadro titulo="Origem da OS" className={`${ALTURA_PADRAO} 2xl:col-span-4`}>
+            <Quadro titulo="Origem da OS" explicacao={explicacaoDe('origemOS')} className={`${ALTURA_PADRAO} 2xl:col-span-4`}>
               <div className="flex h-full items-center justify-center gap-3">
                 <div className="aspect-square h-full shrink-0">
                   <Grafico>
@@ -564,12 +577,12 @@ export function PainelManutencao() {
               titulo="Custo de manutenção"
               subtitulo="tracejado = orçado"
               className={`${ALTURA_PADRAO} 2xl:col-span-8`}
-              simulado={data.custo.simulado}
               pendencia={data.custo.pendencia}
+              explicacao={explicacaoDe('custo')}
               legenda={[
                 { rotulo: 'Mão de obra', cor: COR.azul },
                 { rotulo: 'Material', cor: COR.laranja },
-                { rotulo: 'Terceiros', cor: COR.verde },
+                { rotulo: 'Adicionais', cor: COR.verde },
               ]}
             >
               <Grafico>
@@ -587,8 +600,8 @@ export function PainelManutencao() {
                   <Bar dataKey="maoObra" name="Mão de obra" stackId="c" fill={COR.azul} maxBarSize={24} />
                   <Bar dataKey="material" name="Material" stackId="c" fill={COR.laranja} maxBarSize={24} />
                   <Bar
-                    dataKey="terceiros"
-                    name="Terceiros"
+                    dataKey="adicionais"
+                    name="Adicionais"
                     stackId="c"
                     fill={COR.verde}
                     maxBarSize={24}
@@ -608,6 +621,7 @@ export function PainelManutencao() {
 
             <Quadro
               titulo="Custo médio por OS"
+              explicacao={explicacaoDe('custoPorOS')}
               className={`${ALTURA_PADRAO} 2xl:col-span-4`}
               pendencia={data.custoPorOS.pendencia}
               legenda={
@@ -681,6 +695,7 @@ export function PainelManutencao() {
             <Quadro
               titulo="Anomalias"
               subtitulo="por mês de registro, não de fechamento"
+              explicacao={explicacaoDe('anomalias')}
               className={`${ALTURA_PADRAO} md:col-span-2 xl:col-span-3 2xl:col-span-8`}
               legenda={[
                 { rotulo: 'Resolvida', cor: COR.verde },
@@ -749,6 +764,7 @@ export function PainelManutencao() {
             <Quadro
               titulo="HH planejado vs. apontado"
               className={`${ALTURA_PADRAO} 2xl:col-span-4`}
+              explicacao={explicacaoDe('hh')}
               legenda={[
                 { rotulo: 'Planejado', cor: COR.azulPalido },
                 { rotulo: 'Apontado', cor: COR.azul },
@@ -864,9 +880,6 @@ export function PainelManutencao() {
           </div>
           */}
 
-          {/* ---------- 7 · COMO SE CALCULA (SN-80) ---------- */}
-          {/* Só os cartões à vista: a faixa de alertas está desligada */}
-          <ComoSeCalcula indicadores={data.kpis} />
         </div>
       </Layout.Main>
     </Layout>

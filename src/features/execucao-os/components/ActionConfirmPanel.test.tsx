@@ -11,18 +11,39 @@ vi.mock('@/features/execucao-os/hooks/usePessoasDaOS', () => ({ usePessoasDaOS: 
  * tarefa não feita e o resto recolhido. Auditar deixa o select por estrelas.
  */
 describe('ActionConfirmPanel — executar', () => {
-  it('pede só resultado e problemas; recomendações e incidente ficam em "Mais detalhes"', () => {
+  it('pede só resultado e problemas; recomendações, incidente e custos adicionais ficam em "Mais detalhes"', () => {
     render(<ActionConfirmPanel action="executar" entity={{}} onConfirm={vi.fn()} />);
 
     expect(screen.getByText('Resultado do serviço')).toBeInTheDocument();
     expect(screen.getByText('Problemas encontrados')).toBeInTheDocument();
-    for (const saiu of ['Atividades realizadas', 'Procedimentos seguidos', 'EPIs utilizados', 'Custos adicionais (R$)', 'Próxima manutenção']) {
+    for (const saiu of ['Atividades realizadas', 'Procedimentos seguidos', 'EPIs utilizados', 'Próxima manutenção']) {
       expect(screen.queryByText(saiu)).toBeNull();
     }
     const detalhes = screen.getByText('Mais detalhes').closest('details')!;
     expect(detalhes).not.toHaveAttribute('open');
     expect(detalhes).toHaveTextContent('Recomendações');
     expect(detalhes).toHaveTextContent('Incidente de segurança');
+    // SN-81: a terceira natureza do custo do painel; sem o campo, a série ficava sempre em zero
+    expect(detalhes).toHaveTextContent('Custos adicionais (R$)');
+  });
+
+  it('os custos adicionais vão como número; apagar o que veio da OS manda null', async () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    const { unmount } = render(<ActionConfirmPanel action="executar" entity={{}} onConfirm={onConfirm} />);
+    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'Trocado' } });
+    fireEvent.change(screen.getByLabelText(/Custos adicionais/), { target: { value: '150.5' } });
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar Execu/i }));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    expect(onConfirm.mock.calls[0][0]).toMatchObject({ custos_adicionais: 150.5 });
+    unmount();
+
+    const reexecutar = vi.fn().mockResolvedValue(undefined);
+    render(<ActionConfirmPanel action="executar" entity={{ custos_adicionais: 80 }} onConfirm={reexecutar} />);
+    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'Trocado' } });
+    fireEvent.change(screen.getByLabelText(/Custos adicionais/), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar Execu/i }));
+    await waitFor(() => expect(reexecutar).toHaveBeenCalled());
+    expect(reexecutar.mock.calls[0][0]).toMatchObject({ custos_adicionais: null });
   });
 
   it('com tarefa pendente, exige o motivo de cada uma e manda no payload', async () => {

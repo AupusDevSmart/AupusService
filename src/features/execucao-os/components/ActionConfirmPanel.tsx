@@ -37,6 +37,7 @@ type OSDoPainel =
       problemas_encontrados?: string | null;
       recomendacoes?: string | null;
       incidentes_seguranca?: string | null;
+      custos_adicionais?: number | string | null;
       // SN-61: a equipe, para as horas trabalhadas, que começam no tempo efetivo
       id?: string;
       status?: string;
@@ -117,7 +118,9 @@ interface ActionMeta {
  * Executar pedia 11 campos, vários redundantes com o checklist. Ficaram o
  * resultado, os problemas, o motivo de cada tarefa não feita e o KM (só com
  * veículo); recomendações e incidente de segurança vão recolhidos. Saíram
- * atividades, procedimentos, EPIs, custos adicionais e próxima manutenção (D3).
+ * atividades, procedimentos, EPIs e próxima manutenção (D3). Os custos
+ * adicionais voltaram recolhidos (SN-81): são a terceira natureza do custo no
+ * painel, e sem o campo a série ficava sempre em zero.
  */
 /**
  * Reserva de viatura ainda ativa: é ela que recebe o km (saída no Iniciar,
@@ -296,6 +299,16 @@ const actionConfig: Record<PendingAction, ActionMeta> = {
         placeholder: 'Se houve, descreva',
         detalhe: true,
         inicial: (os) => os?.incidentes_seguranca,
+      },
+      {
+        key: 'custos_adicionais',
+        label: 'Custos adicionais (R$)',
+        type: 'number',
+        placeholder: 'Terceiros, frete, aluguel de equipamento',
+        min: 0,
+        step: 0.01,
+        detalhe: true,
+        inicial: (os) => (os?.custos_adicionais == null ? null : String(os.custos_adicionais)),
       },
     ],
   },

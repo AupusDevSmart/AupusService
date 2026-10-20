@@ -69,8 +69,8 @@ function montar(): DashboardManutencaoApi {
 
   const maoObra = serie(62, 14, r);
   const material = serie(41, 16, r);
-  const terceiros = serie(23, 11, r);
-  const total = maoObra.map((v, i) => v + material[i] + terceiros[i]);
+  const adicionais = serie(23, 11, r);
+  const total = maoObra.map((v, i) => v + material[i] + adicionais[i]);
   // O orçado é uma reta com degrau no meio do ano, como costuma ser um
   // orçamento revisado — não o próprio realizado com ruído.
   const orcado = total.map((_, i) => (i < 6 ? 132 : 145));
@@ -218,7 +218,7 @@ function montar(): DashboardManutencaoApi {
     origemOS: { plano: 61, anomalia: 27, solicitacao: 12 },
     mixTipo: { preventiva: 52, preditiva: 19, corretiva: 21, melhoria: 8 },
 
-    custo: { maoObra, material, terceiros, orcado, total },
+    custo: { maoObra, material, adicionais, orcado, total },
     custoPorOS: {
       corretiva: serie(2450, 520, r),
       preventiva: serie(890, 180, r),

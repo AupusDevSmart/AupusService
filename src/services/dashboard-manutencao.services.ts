@@ -24,6 +24,15 @@ export interface IndicadorApi {
   base?: string;
 }
 
+/** Como um gráfico sai: a legenda das fórmulas (SN-80/81), no ícone dele e em "Como se calcula" */
+export interface ExplicacaoApi {
+  /** O bloco do painel (execucaoPlano, custo, hh...) */
+  id: string;
+  rotulo: string;
+  formula: string;
+  base?: string;
+}
+
 /**
  * O que preencher nos combos. Vem na mesma resposta do painel porque são as
  * plantas que o escopo do usuário autoriza — buscar de outro endpoint abriria
@@ -49,13 +58,13 @@ export interface DashboardManutencaoApi {
   origemOS: { plano: number; anomalia: number; solicitacao: number };
   mixTipo: { preventiva: number; preditiva: number; corretiva: number; melhoria: number };
 
+  /** Por natureza, em R$ mil: mão de obra e material pelas linhas da OS, adicionais da OS (SN-81) */
   custo: {
     maoObra: number[];
     material: number[];
-    terceiros: number[];
+    adicionais: number[];
     orcado: number[];
     total: number[];
-    simulado?: boolean;
     pendencia?: string;
   };
   custoPorOS: {
@@ -90,6 +99,8 @@ export interface DashboardManutencaoApi {
   metaPrazo: number;
   prazoPendencia?: string;
   hh: { planejado: number[]; apontado: number[] };
+  /** A fórmula e a base de cada gráfico (o demo não tem) */
+  graficos?: ExplicacaoApi[];
 }
 
 export interface FiltrosDashboard {

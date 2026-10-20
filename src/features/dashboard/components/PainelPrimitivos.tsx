@@ -1,7 +1,9 @@
 // src/features/dashboard/components/PainelPrimitivos.tsx
 import * as Icones from 'lucide-react';
-import { Info } from 'lucide-react';
+import { Calculator, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import type { IndicadorApi } from '@/services/dashboard-manutencao.services';
 
 /**
@@ -38,18 +40,45 @@ const COR_STATUS: Record<string, string> = {
   bad: 'text-destructive',
 };
 
+/** O que explica um número: a fórmula, a base e a pendência */
+type Explicacao = Pick<IndicadorApi, 'formula' | 'base' | 'pendencia'>;
+
+/** O que a legenda lista: um cartão ou um gráfico */
+type NumeroExplicado = Pick<IndicadorApi, 'id' | 'rotulo'> & Explicacao;
+
 /**
  * Como o número sai: a fórmula, a base (em quantos registros ele se apoia) e o
  * que falta para deixar de ser simulado. Na dica do cartão e na seção "Como
  * cada número é calculado" (SN-80).
  */
-function ExplicacaoDoIndicador({ indicador }: { indicador: IndicadorApi }) {
+function ExplicacaoDoIndicador({ indicador }: { indicador: Explicacao }) {
   return (
     <div className="space-y-1">
       {indicador.formula && <p>{indicador.formula}</p>}
       {indicador.base && <p className="text-muted-foreground">{indicador.base}</p>}
       {indicador.pendencia && <p className="text-muted-foreground">{indicador.pendencia}</p>}
     </div>
+  );
+}
+
+/** O ícone de informação que abre a explicação. Popover, não dica: a dica do Radix não abre por toque e fecha no clique */
+function BotaoDaExplicacao({ rotulo, explicacao }: { rotulo: string; explicacao: Explicacao }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center rounded-sm text-muted-foreground hover:text-foreground"
+          aria-label={`Como se calcula: ${rotulo}`}
+          title="Como se calcula"
+        >
+          <Info className="h-3 w-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-3 text-xs">
+        <ExplicacaoDoIndicador indicador={explicacao} />
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -70,24 +99,7 @@ export function CartaoIndicador({ indicador }: { indicador: IndicadorApi }) {
           {indicador.simulado && (
             <span className="rounded-sm border border-border px-1 text-[9px] uppercase leading-[14px] tracking-wide">sim</span>
           )}
-          {/* Popover, não dica: a dica do Radix não abre por toque e fecha no clique */}
-          {temExplicacao && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="rounded-sm hover:text-foreground"
-                  aria-label={`Como se calcula: ${indicador.rotulo}`}
-                  title="Como se calcula"
-                >
-                  <Info className="h-3 w-3" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72 p-3 text-xs">
-                <ExplicacaoDoIndicador indicador={indicador} />
-              </PopoverContent>
-            </Popover>
-          )}
+          {temExplicacao && <BotaoDaExplicacao rotulo={indicador.rotulo} explicacao={indicador} />}
         </span>
       </div>
 
@@ -130,6 +142,7 @@ export function Quadro({
   subtitulo,
   children,
   pendencia,
+  explicacao,
   simulado,
   legenda,
   acao,
@@ -139,6 +152,8 @@ export function Quadro({
   subtitulo?: string;
   children: React.ReactNode;
   pendencia?: string;
+  /** A fórmula e a base do gráfico (SN-81): abrem no ícone de informação, como no cartão */
+  explicacao?: Pick<IndicadorApi, 'formula' | 'base'>;
   simulado?: boolean;
   legenda?: { rotulo: string; cor: string }[];
   acao?: React.ReactNode;
@@ -162,10 +177,14 @@ export function Quadro({
               simulado
             </span>
           )}
-          {pendencia && (
-            <span title={pendencia} className="flex items-center">
-              <Info className="h-3 w-3 text-muted-foreground" />
-            </span>
+          {explicacao?.formula || explicacao?.base ? (
+            <BotaoDaExplicacao rotulo={titulo} explicacao={{ ...explicacao, pendencia }} />
+          ) : (
+            pendencia && (
+              <span title={pendencia} className="flex items-center">
+                <Info className="h-3 w-3 text-muted-foreground" />
+              </span>
+            )
           )}
           {acao}
         </div>
@@ -207,27 +226,58 @@ export function Legenda({
 }
 
 /**
- * Todas as fórmulas à vista, numa seção que se abre (SN-80): a dica do cartão
- * some ao tirar o mouse, e quem confere o painel quer ler as contas juntas.
+ * A legenda das fórmulas (SN-80/81): cada cartão e cada gráfico, com a fórmula
+ * e em quantos registros o número se baseia. Atrás de um botão discreto no
+ * cabeçalho, num painel lateral — a tela fica limpa, e quem quer saber de onde
+ * sai um número acha tudo num lugar só. Cada cartão e gráfico também tem o
+ * ícone de informação com a sua.
  */
-export function ComoSeCalcula({ indicadores }: { indicadores: IndicadorApi[] }) {
-  const comFormula = indicadores.filter((i) => i.formula);
-  if (comFormula.length === 0) return null;
+export function LegendaDasFormulas({
+  indicadores,
+  graficos,
+}: {
+  indicadores: NumeroExplicado[];
+  graficos: NumeroExplicado[];
+}) {
+  const secoes = [
+    { titulo: 'Indicadores', itens: indicadores.filter((i) => i.formula) },
+    { titulo: 'Gráficos', itens: graficos.filter((i) => i.formula) },
+  ].filter((secao) => secao.itens.length > 0);
+  if (secoes.length === 0) return null;
 
   return (
-    <details className="shrink-0 rounded border border-border bg-card px-3 py-2 text-xs">
-      <summary className="cursor-pointer select-none font-medium text-foreground">Como cada número é calculado</summary>
-      {/* Com rolagem própria: no 2xl o painel cabe numa tela e a seção aberta espremia os gráficos */}
-      <dl className="mt-2 grid max-h-64 gap-x-6 gap-y-2 overflow-y-auto overscroll-contain md:grid-cols-2">
-        {comFormula.map((indicador) => (
-          <div key={indicador.id} className="min-w-0">
-            <dt className="font-medium text-foreground">{indicador.rotulo}</dt>
-            <dd className="text-muted-foreground">
-              <ExplicacaoDoIndicador indicador={indicador} />
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </details>
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 px-2 text-muted-foreground" title="Como cada número é calculado">
+          <Calculator className="mr-1 h-3.5 w-3.5" />
+          Como se calcula
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="right" className="flex w-full max-w-md flex-col gap-0 p-0">
+        <div className="border-b px-5 py-4 pr-12">
+          <SheetTitle className="text-base">Como se calcula</SheetTitle>
+          <SheetDescription className="text-xs">
+            A fórmula de cada número do painel e em quantos registros ele se baseia, com os filtros escolhidos.
+          </SheetDescription>
+        </div>
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 py-4 text-xs">
+          {secoes.map((secao) => (
+            <section key={secao.titulo}>
+              <h3 className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{secao.titulo}</h3>
+              <dl className="space-y-3">
+                {secao.itens.map((item) => (
+                  <div key={item.id} className="min-w-0">
+                    <dt className="font-medium text-foreground">{item.rotulo}</dt>
+                    <dd className="mt-0.5 text-muted-foreground">
+                      <ExplicacaoDoIndicador indicador={item} />
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
