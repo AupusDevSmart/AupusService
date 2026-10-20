@@ -30,7 +30,8 @@ type Props = {
   titulo: string;
   /** Gera e baixa a planilha com o que a tela está filtrando. */
   exportar: () => Promise<void>;
-  ler: (livro: Workbook) => LeituraDaPlanilha;
+  /** Pode ser assíncrona: a planilha de outro sistema busca os registros daqui para casar pelo nome */
+  ler: (livro: Workbook) => LeituraDaPlanilha | Promise<LeituraDaPlanilha>;
   /** Depois de gravar: recarregar a lista da tela. */
   aoImportar: () => void;
   /** Quem só vê a página exporta, mas não importa. */
@@ -44,6 +45,8 @@ type Previa = {
   registros: RegistroDaPlanilha[];
   resultado: ResultadoDaImportacao | null;
   erros: ProblemaDaPlanilha[];
+  /** O que a própria leitura avisa (os do servidor vêm no resultado) */
+  avisosDaLeitura: ProblemaDaPlanilha[];
 };
 
 /** Quantos problemas listar antes de resumir em "e mais N". */
@@ -93,13 +96,15 @@ export function PlanilhaDoCadastro({
     setPrevia(null);
 
     try {
-      let leitura: LeituraDaPlanilha;
+      let livro: Workbook;
       try {
-        leitura = ler(await abrirLivro(arquivo));
+        livro = await abrirLivro(arquivo);
       } catch {
         toast.error('Não foi possível abrir o arquivo. Envie a planilha em .xlsx.');
         return;
       }
+      // Fora do catch de cima: a leitura pode buscar registros na API, e o erro dela não é "arquivo inválido"
+      const leitura = await ler(livro);
 
       const resultado = leitura.registros.length
         ? await ImportacaoService.importar(cadastro, leitura.registros, false)
@@ -110,6 +115,7 @@ export function PlanilhaDoCadastro({
         registros: leitura.registros,
         resultado,
         erros: [...leitura.erros, ...apontarLinhas(resultado?.erros ?? [], leitura.registros)],
+        avisosDaLeitura: leitura.avisos ?? [],
       });
     } catch (erro) {
       toast.error(`Não foi possível conferir a planilha: ${formatApiError(erro)}`);
@@ -247,7 +253,7 @@ export function PlanilhaDoCadastro({
                     tom="erro"
                   />
 
-                  <ListaDeProblemas titulo="Avisos" problemas={resultado?.avisos ?? []} tom="aviso" />
+                  <ListaDeProblemas titulo="Avisos" problemas={[...previa.avisosDaLeitura, ...(resultado?.avisos ?? [])]} tom="aviso" />
 
                   {resultado && aGravar > 0 && (
                     <div className="space-y-1">

@@ -1,6 +1,6 @@
 // src/features/recursos/config/table-config.tsx
 import type { TableColumn } from '@/types/base';
-import { rotuloCategoria, type RecursoApiResponse } from '@/services/recursos.services';
+import { ROTULO_DA_BASE, rotuloCategoria, sufixoDaBase, type RecursoApiResponse } from '@/services/recursos.services';
 
 /** Preço vazio é preço desconhecido — e a tabela precisa dizer isso, não somar zero. */
 export const formatarPreco = (valor?: string | number | null) => {
@@ -29,18 +29,19 @@ export const recursosTableColumns: TableColumn<RecursoApiResponse>[] = [
     ),
   },
   {
-    key: 'unidade',
-    label: 'Unidade',
+    key: 'base_calculo',
+    label: 'Cobrança',
     hideOnMobile: true,
     render: (recurso) => (
-      <span className="text-sm text-muted-foreground">{recurso.unidade || '—'}</span>
+      <span className="text-sm text-muted-foreground">{ROTULO_DA_BASE[recurso.base_calculo] ?? '—'}</span>
     ),
   },
   {
-    key: 'preco_medio',
-    label: 'Custo médio',
+    // O preço de uma unidade da cobrança, como a conta usa: no instrumento, pela amortização
+    key: 'preco_base',
+    label: 'Custo apurado',
     render: (recurso) => {
-      const preco = formatarPreco(recurso.preco_medio);
+      const preco = formatarPreco(recurso.preco_base);
 
       if (!preco) {
         return <span className="text-sm text-muted-foreground">Sem preço</span>;
@@ -49,9 +50,7 @@ export const recursosTableColumns: TableColumn<RecursoApiResponse>[] = [
       return (
         <span className="text-sm text-foreground">
           {preco}
-          {recurso.unidade && (
-            <span className="text-muted-foreground"> / {recurso.unidade}</span>
-          )}
+          <span className="text-muted-foreground">{sufixoDaBase(recurso)}</span>
         </span>
       );
     },

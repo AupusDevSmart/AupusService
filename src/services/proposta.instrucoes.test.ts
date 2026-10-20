@@ -17,7 +17,8 @@ interface InstrucaoDoTeste {
   id: string;
   tag: string | null;
   nome: string;
-  recursos: { descricao: string; quantidade: number; recurso: { preco_medio: number } }[];
+  // O custo de cada linha vem pronto do servidor (subtotal, SN-83)
+  recursos: { descricao: string; quantidade: number; recurso: { preco_base: number }; subtotal: number | null }[];
 }
 
 const instrucoes: Record<string, InstrucaoDoTeste> = {
@@ -26,15 +27,15 @@ const instrucoes: Record<string, InstrucaoDoTeste> = {
     tag: 'INST-001',
     nome: 'Troca de rolamento',
     recursos: [
-      { descricao: 'Rolamento', quantidade: 2, recurso: { preco_medio: 150 } },
-      { descricao: 'Graxa', quantidade: 1, recurso: { preco_medio: 40 } },
+      { descricao: 'Rolamento', quantidade: 2, recurso: { preco_base: 150 }, subtotal: 300 },
+      { descricao: 'Graxa', quantidade: 1, recurso: { preco_base: 40 }, subtotal: 40 },
     ],
   },
   B: {
     id: 'B',
     tag: null,
     nome: 'Inspeção visual',
-    recursos: [{ descricao: 'Técnico', quantidade: 1, recurso: { preco_medio: 200 } }],
+    recursos: [{ descricao: 'Técnico', quantidade: 1, recurso: { preco_base: 200 }, subtotal: 200 }],
   },
   SEM: { id: 'SEM', tag: 'INST-009', nome: 'Sem recursos', recursos: [] },
 };

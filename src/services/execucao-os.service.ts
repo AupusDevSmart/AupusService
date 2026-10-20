@@ -31,6 +31,7 @@ import type {
 } from '@/features/execucao-os/types';
 import type { DadosOrigem, ItemOrcamento } from '@/features/programacao-os/types';
 import type { InstalacaoDaOrigem } from '@/utils/instalacao';
+import type { CategoriaRecurso } from '@/services/recursos.services';
 
 // ============================================================================
 // TIPOS DA API PARA EXECUCAO OS
@@ -225,7 +226,7 @@ export interface SubTarefaExecucaoApiResponse {
 export interface RecursoTarefaExecucaoApiResponse {
   id: string;
   tarefa_execucao_id: string;
-  tipo: 'INSTRUMENTO' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
+  tipo: CategoriaRecurso;
   descricao: string;
   quantidade_prevista?: number;
   quantidade_utilizada?: number;

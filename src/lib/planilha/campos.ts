@@ -184,6 +184,12 @@ export function daPlanilha<T>(campo: Campo<T>, celula: Cell): LeituraDoCampo {
  * fica com o servidor, que sabe se o registro é novo.
  */
 export function lerCampo<T>(campo: Campo<T>, celula: Cell): LeituraDoCampo {
+  // A fórmula sem o resultado guardado (arquivo montado por script, nunca aberto
+  // no Excel) era lida como vazia e limpava o campo calada
+  const valor = celula.value as { formula?: unknown; sharedFormula?: unknown; result?: unknown } | null;
+  if (valor && typeof valor === 'object' && ('formula' in valor || 'sharedFormula' in valor) && valor.result === undefined) {
+    return { valor: null, erro: `${campo.titulo}: a célula tem uma fórmula sem o valor calculado. Cole o valor (Colar especial > Valores).` };
+  }
   const lido = daPlanilha(campo, celula);
   if (!lido.erro && lido.valor === null && campo.obrigatorio === 'Sim') {
     return { valor: null, erro: `${campo.titulo}: obrigatório.` };

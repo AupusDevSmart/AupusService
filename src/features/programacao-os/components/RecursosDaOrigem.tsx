@@ -23,14 +23,15 @@ const vazio = (): RecursosSeparados => ({ materiais: [], ferramentas: [], tecnic
 /**
  * Reparte os recursos das instruções nos três campos da programação.
  *
- * O `TipoRecurso` da instrução tem cinco valores e a programação tem três
- * campos, então o mapa não é um-para-um:
+ * As 6 categorias do recurso (SN-83) e os três campos da programação, então o
+ * mapa não é um-para-um:
  *
  *   MATERIAL                -> materiais
- *   FERRAMENTA, INSTRUMENTO -> ferramentas
- *   TECNICO                 -> tecnicos
- *   VIATURA                 -> nenhum: veículo se resolve pela reserva, que tem
+ *   INSTRUMENTO             -> ferramentas
+ *   MAO_DE_OBRA             -> tecnicos
+ *   VEICULO                 -> nenhum: veículo se resolve pela reserva, que tem
  *                              período e disponibilidade próprios
+ *   TERCEIRO, DESPESA_CAMPO -> nenhum aqui (vão para o orçamento, SN-86)
  *
  * O técnico da instrução descreve um PERFIL ("Eletricista"), não uma pessoa —
  * por isso vai para `especialidade` e deixa `nome` vazio, para ser preenchido
@@ -64,14 +65,14 @@ export function separarRecursos(recursos: RecursoDaInstrucao[]): RecursosSeparad
       continue;
     }
 
-    if (tipo === 'FERRAMENTA' || tipo === 'INSTRUMENTO') {
+    if (tipo === 'INSTRUMENTO') {
       const existente = saida.ferramentas.find((f) => f.descricao === descricao);
       if (existente) existente.quantidade += quantidade;
       else saida.ferramentas.push({ descricao, quantidade, unidade: unidade || undefined });
       continue;
     }
 
-    if (tipo === 'TECNICO') {
+    if (tipo === 'MAO_DE_OBRA') {
       const existente = saida.tecnicos.find((t) => t.especialidade === descricao);
       // A quantidade do técnico é tempo: a instrução guarda em horas.
       if (existente) existente.horas_estimadas += quantidade;

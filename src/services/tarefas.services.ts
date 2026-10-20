@@ -1,5 +1,6 @@
 // src/services/tarefas.services.ts
 import { api } from '@/config/api';
+import type { CategoriaRecurso } from '@/services/recursos.services';
 
 // ============================================================================
 // ENUMS E TIPOS BASE
@@ -24,7 +25,7 @@ export interface CreateSubTarefaApiData {
 }
 
 export interface CreateRecursoTarefaApiData {
-  tipo: 'INSTRUMENTO' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
+  tipo: CategoriaRecurso;
   descricao: string;
   quantidade?: number;
   unidade?: string;
@@ -107,7 +108,7 @@ export interface SubTarefaApiResponse {
 
 export interface RecursoTarefaApiResponse {
   id: string;
-  tipo: 'INSTRUMENTO' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
+  tipo: CategoriaRecurso;
   descricao: string;
   quantidade?: number;
   unidade?: string;

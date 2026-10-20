@@ -290,14 +290,14 @@ export async function montarDeInstrucoes(
       continue;
     }
 
-    // `recurso` (o do catalogo, com preco) so existe nas linhas vinculadas;
-    // as antigas, digitadas antes do catalogo, vem sem preco.
-    const soma = (instrucao.recursos ?? []).reduce((total, recurso) => {
-      const doCatalogo = (recurso as { recurso?: { preco_medio?: number | string } }).recurso;
-      const preco = Number(doCatalogo?.preco_medio ?? 0) || 0;
-      const quantidade = Number(recurso.quantidade ?? 1) || 1;
-      return total + preco * quantidade;
-    }, 0);
+    // O custo de cada linha vem pronto do servidor (`subtotal`, SN-83): a mesma
+    // conta da proposta do backend, com a linha em horas de um recurso por
+    // diária virando diárias. A linha antiga, digitada antes do catálogo, vem
+    // sem preço
+    const soma = (instrucao.recursos ?? []).reduce(
+      (total, recurso) => total + (Number((recurso as { subtotal?: number | null }).subtotal ?? 0) || 0),
+      0,
+    );
 
     const valor = Math.round(soma * 100) / 100;
 

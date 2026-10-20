@@ -81,11 +81,14 @@ export function linkPara(aba: string) {
   return `#'${aba}'!A1`;
 }
 
+/** O autor gravado no livro: é por ele que a importação reconhece a planilha de outro sistema */
+export const CRIADOR_DO_LIVRO = 'Aupus Service';
+
 /** Cria o livro. A biblioteca só carrega aqui — fora do pacote inicial. */
 export async function novoLivro(): Promise<Workbook> {
   const { default: ExcelJS } = await import('exceljs');
   const livro = new ExcelJS.Workbook();
-  livro.creator = 'Aupus Service';
+  livro.creator = CRIADOR_DO_LIVRO;
   livro.created = new Date();
   return livro;
 }

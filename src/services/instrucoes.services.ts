@@ -1,6 +1,7 @@
 // src/services/instrucoes.services.ts
 import { api } from '@/config/api';
 import type { TarefaApiResponse } from './tarefas.services';
+import type { CategoriaRecurso } from '@/services/recursos.services';
 
 // ============================================================================
 // ENUMS E TIPOS BASE
@@ -37,7 +38,7 @@ export interface CreateSubInstrucaoApiData {
 export interface CreateRecursoInstrucaoApiData {
   /** Aponta para o catalogo de recursos. Vazio so nas linhas antigas. */
   recurso_id?: string | null;
-  tipo: 'INSTRUMENTO' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
+  tipo: CategoriaRecurso;
   descricao: string;
   quantidade?: number;
   unidade?: string;
@@ -108,7 +109,7 @@ export interface SubInstrucaoApiResponse {
 
 export interface RecursoInstrucaoApiResponse {
   id: string;
-  tipo: 'INSTRUMENTO' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
+  tipo: CategoriaRecurso;
   descricao: string;
   quantidade?: number;
   unidade?: string;

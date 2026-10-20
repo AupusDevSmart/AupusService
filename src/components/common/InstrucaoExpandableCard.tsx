@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Expandir } from '@/components/ui/expandir';
 import { instrucoesApi, InstrucaoApiResponse, SubInstrucaoApiResponse, RecursoInstrucaoApiResponse } from '@/services/instrucoes.services';
 import { descreverFaixa, numeroOuNulo } from '@/utils/leitura';
+import { rotuloCategoria } from '@/services/recursos.services';
 
 /** "leitura 580 a 620 V", "leitura em V", "leitura" (SN-58) */
 function rotuloDaLeitura(sub: SubInstrucaoApiResponse) {
@@ -30,13 +31,6 @@ interface InstrucaoExpandableCardProps {
   valorEditavel?: boolean;
 }
 
-const tipoRecursoLabels: Record<string, string> = {
-  INSTRUMENTO: 'Instrumento',
-  MATERIAL: 'Material',
-  FERRAMENTA: 'Ferramenta',
-  TECNICO: 'Tecnico',
-  VIATURA: 'Viatura',
-};
 
 const categoriaLabels: Record<string, string> = {
   MECANICA: 'Mecanica',
@@ -262,7 +256,7 @@ export function InstrucaoExpandableCard({
                     {details.recursos.map((rec: RecursoInstrucaoApiResponse) => (
                       <div key={rec.id} className="flex items-center gap-2 text-sm pl-1">
                         <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
-                          {tipoRecursoLabels[rec.tipo] || rec.tipo}
+                          {rotuloCategoria(rec.tipo)}
                         </span>
                         <span className="flex-1">{rec.descricao}</span>
                         {rec.quantidade ? (

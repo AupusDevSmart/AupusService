@@ -85,7 +85,7 @@ export function RecursosPage() {
         <div className="flex flex-col w-full sm:h-full">
           <TitleCard
             title="Recursos"
-            description="Peças, materiais, ferramentas, técnicos e viaturas usados nas instruções, com o custo médio de cada um"
+            description="Mão de obra, materiais, instrumentos, veículos, terceiros e despesas de campo usados nas instruções, com o custo de cada um"
           />
 
           <div className="flex flex-col lg:flex-row gap-3 md:gap-4 mb-4 md:mb-6 lg:items-start">

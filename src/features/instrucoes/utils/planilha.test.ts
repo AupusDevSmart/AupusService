@@ -25,7 +25,7 @@ const limpeza = {
   ],
   recursos: [
     {
-      tipo: 'TECNICO',
+      tipo: 'MAO_DE_OBRA',
       descricao: 'Eletricista',
       quantidade: '2.000',
       obrigatorio: true,
@@ -70,7 +70,7 @@ describe('planilha de instruções', { timeout: 120_000 }, () => {
       },
     ]);
     expect(sem(recursos)).toEqual([
-      { linha: expect.any(Number), tipo: 'TECNICO', recurso: 'Eletricista', quantidade: 2, obrigatorio: true, recurso_ref: 'r1' },
+      { linha: expect.any(Number), tipo: 'MAO_DE_OBRA', recurso: 'Eletricista', quantidade: 2, obrigatorio: true, recurso_ref: 'r1' },
     ]);
   });
 

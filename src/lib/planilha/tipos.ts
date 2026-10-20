@@ -27,6 +27,8 @@ export type LeituraDaPlanilha = {
   registros: RegistroDaPlanilha[];
   /** O que não deu para entender no próprio arquivo, antes de ir ao servidor. */
   erros: ProblemaDaPlanilha[];
+  /** O que a leitura fez e a prévia tem de dizer (ex.: a planilha de outro sistema, casada pelo nome) */
+  avisos?: ProblemaDaPlanilha[];
 };
 
 export type AcaoDaImportacao = 'novo' | 'alterado' | 'inalterado';
@@ -50,6 +52,7 @@ export type CadastroImportavel =
   | 'instrucoes'
   | 'planos-manutencao'
   | 'recursos'
+  | 'maquinarios'
   | 'veiculos'
   | 'feriados';
 

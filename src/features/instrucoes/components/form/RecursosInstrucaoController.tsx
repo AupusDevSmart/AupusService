@@ -19,6 +19,7 @@ import {
   type CategoriaRecurso,
   type RecursoApiResponse,
 } from '@/services/recursos.services';
+import { quantidadeNaBase } from '@/features/instrucoes/utils/custo-da-linha';
 
 // Mesmo raio e borda do Input padrao para o select nao destoar da linha.
 const selectClassName =
@@ -28,7 +29,7 @@ interface Recurso {
   id?: string;
   /** Aponta para o catálogo. Vazio nas linhas antigas, digitadas antes dele existir. */
   recurso_id?: string | null;
-  tipo: 'INSTRUMENTO' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
+  tipo: CategoriaRecurso;
   descricao: string;
   quantidade?: string | number;
   unidade?: string;
@@ -332,7 +333,7 @@ export function RecursosInstrucaoController({
         categoria,
         nome,
         unidade: novaUnidade || null,
-        preco_medio: precoDigitado,
+        preco_unitario: precoDigitado,
       });
 
       // Entra no catálogo em memória para o combobox enxergar sem recarregar a
@@ -377,9 +378,11 @@ export function RecursosInstrucaoController({
 
   const subtotal = (item: Recurso): number | null => {
     const doCatalogo = item.recurso_id ? porId.get(item.recurso_id.trim()) : undefined;
-    const preco = numero(doCatalogo?.preco_medio);
+    // O preço de uma unidade da cobrança, como o servidor apura (o instrumento pela
+    // amortização), vezes as unidades: a linha em horas de um recurso por diária vira diárias
+    const preco = numero(doCatalogo?.preco_base);
     if (preco === null) return null;
-    return preco * (numero(item.quantidade) ?? 1);
+    return preco * quantidadeNaBase(doCatalogo, item);
   };
 
   const total = recursos.reduce((soma, item) => soma + (subtotal(item) ?? 0), 0);
