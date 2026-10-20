@@ -34,6 +34,8 @@ export interface OpcoesFiltro {
 export interface DashboardManutencaoApi {
   atualizadoEm: string;
   meses: string[];
+  /** Os limites do período escolhido, [desde, ate) — os meses acompanham (SN-79) */
+  periodo?: { desde: string; ate: string };
   opcoes: OpcoesFiltro;
   kpis: IndicadorApi[];
   alertas: IndicadorApi[];
