@@ -28,7 +28,7 @@ import {
   dashboardManutencaoApi,
   type FiltrosDashboard,
 } from '@/services/dashboard-manutencao.services';
-import { CartaoIndicador, Quadro, SemDado } from './PainelPrimitivos';
+import { CartaoIndicador, ComoSeCalcula, Quadro, SemDado } from './PainelPrimitivos';
 import { DADOS_DEMO, PAINEL_USA_DADOS_DE_EXEMPLO } from './dadosDemo';
 
 /**
@@ -863,6 +863,10 @@ export function PainelManutencao() {
             ))}
           </div>
           */}
+
+          {/* ---------- 7 · COMO SE CALCULA (SN-80) ---------- */}
+          {/* Só os cartões à vista: a faixa de alertas está desligada */}
+          <ComoSeCalcula indicadores={data.kpis} />
         </div>
       </Layout.Main>
     </Layout>

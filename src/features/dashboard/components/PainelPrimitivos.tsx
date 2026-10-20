@@ -1,6 +1,7 @@
 // src/features/dashboard/components/PainelPrimitivos.tsx
 import * as Icones from 'lucide-react';
 import { Info } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { IndicadorApi } from '@/services/dashboard-manutencao.services';
 
 /**
@@ -37,26 +38,57 @@ const COR_STATUS: Record<string, string> = {
   bad: 'text-destructive',
 };
 
+/**
+ * Como o número sai: a fórmula, a base (em quantos registros ele se apoia) e o
+ * que falta para deixar de ser simulado. Na dica do cartão e na seção "Como
+ * cada número é calculado" (SN-80).
+ */
+function ExplicacaoDoIndicador({ indicador }: { indicador: IndicadorApi }) {
+  return (
+    <div className="space-y-1">
+      {indicador.formula && <p>{indicador.formula}</p>}
+      {indicador.base && <p className="text-muted-foreground">{indicador.base}</p>}
+      {indicador.pendencia && <p className="text-muted-foreground">{indicador.pendencia}</p>}
+    </div>
+  );
+}
+
 export function CartaoIndicador({ indicador }: { indicador: IndicadorApi }) {
   const Icone = ICONES[indicador.icone] ?? Icones.Circle;
   const semDado = indicador.valor === '—';
+  const temExplicacao = Boolean(indicador.formula || indicador.base || indicador.pendencia);
 
   return (
-    <div
-      className="flex min-w-0 flex-col justify-center rounded border border-border bg-card px-2.5 py-2"
-      title={indicador.pendencia}
-    >
+    <div className="flex min-w-0 flex-col justify-center rounded border border-border bg-card px-2.5 py-2">
       <div className="flex items-center gap-1 text-[11px] leading-none text-muted-foreground">
         <Icone className="h-3 w-3 shrink-0" />
         <span className="truncate">{indicador.rotulo}</span>
 
-        {/* O aviso de simulado fica no card, não numa legenda de rodapé: quem
-            lê o número precisa saber na hora que ele não é real. */}
-        {indicador.simulado && (
-          <span className="ml-auto shrink-0 rounded-sm border border-border px-1 text-[9px] uppercase leading-[14px] tracking-wide">
-            sim
-          </span>
-        )}
+        <span className="ml-auto flex shrink-0 items-center gap-1">
+          {/* O aviso de simulado fica no card, não numa legenda de rodapé: quem
+              lê o número precisa saber na hora que ele não é real. */}
+          {indicador.simulado && (
+            <span className="rounded-sm border border-border px-1 text-[9px] uppercase leading-[14px] tracking-wide">sim</span>
+          )}
+          {/* Popover, não dica: a dica do Radix não abre por toque e fecha no clique */}
+          {temExplicacao && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="rounded-sm hover:text-foreground"
+                  aria-label={`Como se calcula: ${indicador.rotulo}`}
+                  title="Como se calcula"
+                >
+                  <Info className="h-3 w-3" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-3 text-xs">
+                <ExplicacaoDoIndicador indicador={indicador} />
+              </PopoverContent>
+            </Popover>
+          )}
+        </span>
       </div>
 
       <div className="mt-1 flex items-baseline gap-1">
@@ -171,5 +203,31 @@ export function Legenda({
         </span>
       ))}
     </div>
+  );
+}
+
+/**
+ * Todas as fórmulas à vista, numa seção que se abre (SN-80): a dica do cartão
+ * some ao tirar o mouse, e quem confere o painel quer ler as contas juntas.
+ */
+export function ComoSeCalcula({ indicadores }: { indicadores: IndicadorApi[] }) {
+  const comFormula = indicadores.filter((i) => i.formula);
+  if (comFormula.length === 0) return null;
+
+  return (
+    <details className="shrink-0 rounded border border-border bg-card px-3 py-2 text-xs">
+      <summary className="cursor-pointer select-none font-medium text-foreground">Como cada número é calculado</summary>
+      {/* Com rolagem própria: no 2xl o painel cabe numa tela e a seção aberta espremia os gráficos */}
+      <dl className="mt-2 grid max-h-64 gap-x-6 gap-y-2 overflow-y-auto overscroll-contain md:grid-cols-2">
+        {comFormula.map((indicador) => (
+          <div key={indicador.id} className="min-w-0">
+            <dt className="font-medium text-foreground">{indicador.rotulo}</dt>
+            <dd className="text-muted-foreground">
+              <ExplicacaoDoIndicador indicador={indicador} />
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </details>
   );
 }

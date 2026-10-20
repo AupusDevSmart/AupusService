@@ -18,6 +18,10 @@ export interface IndicadorApi {
   status: null | 'ok' | 'warn' | 'bad';
   simulado?: boolean;
   pendencia?: string;
+  /** Como o número sai (SN-80: a fórmula visível na tela) */
+  formula?: string;
+  /** Em quantos registros o número se baseia, e o que ficou de fora */
+  base?: string;
 }
 
 /**
