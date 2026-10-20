@@ -1,5 +1,6 @@
 // src/services/anomalias.service.ts
 import { api } from '@/config/api';
+import { instanteParaApi } from '@/utils/instante';
 import { 
   Anomalia, 
   AnomaliaFormData, 
@@ -35,6 +36,8 @@ export interface CreateAnomaliaDto {
   origem: string;
   prioridade: string;
   observacoes?: string;
+  /** Até quando precisa estar resolvida: ISO com fuso; null apaga */
+  prazo?: string | null;
   instrucoes_ids?: string[];
 }
 
@@ -110,6 +113,8 @@ class AnomaliasApiService {
       origem: data.origem,
       prioridade: data.prioridade,
       observacoes: data.observacoes,
+      // O campo existia no formulário e nunca era enviado: nenhum prazo gravava
+      prazo: instanteParaApi(data.prazo) ?? undefined,
       instrucoes_ids: data.instrucoes_ids,
     };
 
@@ -172,6 +177,9 @@ class AnomaliasApiService {
       observacoes: data.observacoes,
       instrucoes_ids: data.instrucoes_ids,
     };
+    // Só quando veio no formulário: apagar o campo manda null, e um update
+    // parcial sem o prazo não pode apagá-lo
+    if (data.prazo !== undefined) updateDto.prazo = instanteParaApi(data.prazo);
     
     // Se há dados de localização, estruturar corretamente. A página manda a
     // localização aninhada (como no create); sem ler `localizacao`, trocar o

@@ -1,6 +1,7 @@
 // src/features/anomalias/components/AnomaliasPage.tsx - REFATORADA
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useUserStore } from '@/store/useUserStore';
 import { linkDeProgramacao } from '@/features/programacao-os/utils/link-de-programacao';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
@@ -172,6 +173,8 @@ export function AnomaliasPage() {
         origem: data.origem,
         prioridade: data.prioridade,
         observacoes: data.observacoes || '',
+        // Vazio apaga (null); o service converte para ISO com o fuso
+        prazo: data.prazo ?? null,
         localizacao: {
           local: local.trim(),
           ativo: ativo.trim(),
@@ -203,6 +206,11 @@ export function AnomaliasPage() {
       await reloadData();
     } catch (error) {
       console.error('Erro ao salvar anomalia:', error);
+      // O erro da API o interceptor já mostrou; o daqui ("Local é obrigatório",
+      // data inválida) o BaseModal só registrava no console, e o salvar parecia não fazer nada
+      if (!(error as { isAxiosError?: boolean } | null)?.isAxiosError) {
+        toast.error('Não foi possível salvar a anomalia', { description: error instanceof Error ? error.message : undefined });
+      }
       throw error;
     }
   };

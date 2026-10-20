@@ -115,6 +115,8 @@ export interface AnomaliaFormData {
   origem: OrigemAnomalia;
   prioridade: PrioridadeAnomalia;
   observacoes?: string;
+  /** O datetime-local ("2026-10-20T18:00", hora local) ou o ISO que veio da API */
+  prazo?: string | null;
   plantaId?: number | string;
   unidadeId?: number | string; // NOVO: Equipamentos agora pertencem a Unidades
   equipamentoId?: number | string;

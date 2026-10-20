@@ -66,7 +66,11 @@ export function PrazoDaOrigem({
 
     void buscar()
       // Prazo é contexto: falhar em buscá-lo não pode travar a programação.
-      .catch(() => null)
+      // Sem o log, a falha (e o aviso de prazo que some) não ficava em lugar nenhum
+      .catch((erro) => {
+        console.error('[PrazoDaOrigem] não foi possível buscar o prazo da origem', erro);
+        return null;
+      })
       .then((achado) => {
         if (!cancelado) setPrazo(achado);
       });
