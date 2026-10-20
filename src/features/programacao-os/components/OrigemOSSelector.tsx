@@ -4,7 +4,7 @@ import { AlertTriangle, ExternalLink, FilePenLine, Info, Settings } from 'lucide
 import { Button } from '@/components/ui/button';
 import { AssistentePassos, type PassoDoAssistente } from '@/components/common/AssistentePassos';
 import { DetalheDaOrigemSheet, type OrigemAberta } from './DetalheDaOrigemSheet';
-import { useOrigemDados } from '../hooks/useOrigemDados';
+import { useOrigemDados, type AnomaliaDisponivel, type PlanoDisponivel, type SolicitacaoDisponivel } from '../hooks/useOrigemDados';
 
 import {
   TarefasSelector,
@@ -58,17 +58,11 @@ export function OrigemOSSelector({
   const solicitacaoId = value.solicitacaoServicoId?.toString().trim() || '';
   const tarefasSelecionadas = value.tarefasSelecionadas || [];
 
-  const {
-    resolverOrigem,
-    anomaliasDisponiveis,
-    planosDisponiveis,
-    solicitacoesDisponiveis,
-    carregarAnomalias,
-    carregarPlanos,
-    carregarSolicitacoes,
-    gerarTarefasDoPlano,
-    loading,
-  } = useOrigemDados();
+  // Só a lista do tipo escolhido busca (SN-77: todas, por rolagem e busca no servidor)
+  const { resolverOrigem, guardar, anomalias, planos, solicitacoes, gerarTarefasDoPlano } = useOrigemDados(tipo);
+  const anomaliasDisponiveis = anomalias.itens;
+  const planosDisponiveis = planos.itens;
+  const solicitacoesDisponiveis = solicitacoes.itens;
 
   const [tarefasDoPlano, setTarefasDoPlano] = useState<TarefaDisponivel[]>([]);
   const [carregandoTarefas, setCarregandoTarefas] = useState(false);
@@ -89,13 +83,6 @@ export function OrigemOSSelector({
 
   // O registro de origem aberto em leitura, por cima de tudo.
   const [detalhe, setDetalhe] = useState<OrigemAberta | null>(null);
-
-  useEffect(() => {
-    if (tipo === 'ANOMALIA') carregarAnomalias();
-    if (tipo === 'SOLICITACAO_SERVICO') carregarSolicitacoes();
-    if (tipo === 'PLANO_MANUTENCAO') carregarPlanos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tipo]);
 
   useEffect(() => {
     if (tipo !== 'PLANO_MANUTENCAO' || !planoId) {
@@ -138,11 +125,11 @@ export function OrigemOSSelector({
           setPasso(1);
           return;
         }
-        // O item e do tipo pedido: resolverOrigem devolve o da lista daquela origem
+        // O item e do tipo pedido: resolverOrigem busca pelo id naquela origem
         const { item } = resultado;
-        if (preSelecao.tipo === 'ANOMALIA') escolherAnomalia(alvo, item as (typeof anomaliasDisponiveis)[number], base);
-        else if (preSelecao.tipo === 'SOLICITACAO_SERVICO') escolherSolicitacao(alvo, item as (typeof solicitacoesDisponiveis)[number], base);
-        else escolherPlano(alvo, item as (typeof planosDisponiveis)[number], base);
+        if (preSelecao.tipo === 'ANOMALIA') escolherAnomalia(alvo, item as AnomaliaDisponivel, base);
+        else if (preSelecao.tipo === 'SOLICITACAO_SERVICO') escolherSolicitacao(alvo, item as SolicitacaoDisponivel, base);
+        else escolherPlano(alvo, item as PlanoDisponivel, base);
       })
       .finally(() => {
         if (vivo) setAbrindoOrigem(false);
@@ -173,8 +160,10 @@ export function OrigemOSSelector({
 
   // `item` e `base`: a pre-selecao do atalho escolhe antes de a lista do
   // estado atualizar, e a partir de um valor sem o campo `preSelecao`.
-  const escolherAnomalia = (id: string, item?: (typeof anomaliasDisponiveis)[number], base: OrigemOSValue = value) => {
+  const escolherAnomalia = (id: string, item?: AnomaliaDisponivel, base: OrigemOSValue = value) => {
     const anomalia = item ?? anomaliasDisponiveis.find((a) => String(a.id).trim() === id);
+    // Fica no resumo mesmo que a busca ou a página a tirem da lista
+    if (anomalia) guardar('ANOMALIA', anomalia);
 
     onChange({
       ...base,
@@ -191,8 +180,9 @@ export function OrigemOSSelector({
     if (id) setEscolhendo(false);
   };
 
-  const escolherSolicitacao = (id: string, item?: (typeof solicitacoesDisponiveis)[number], base: OrigemOSValue = value) => {
+  const escolherSolicitacao = (id: string, item?: SolicitacaoDisponivel, base: OrigemOSValue = value) => {
     const solicitacao = item ?? solicitacoesDisponiveis.find((s) => String(s.id).trim() === id);
+    if (solicitacao) guardar('SOLICITACAO_SERVICO', solicitacao);
 
     onChange({
       ...base,
@@ -206,8 +196,9 @@ export function OrigemOSSelector({
     if (id) setEscolhendo(false);
   };
 
-  const escolherPlano = (id: string, item?: (typeof planosDisponiveis)[number], base: OrigemOSValue = value) => {
+  const escolherPlano = (id: string, item?: PlanoDisponivel, base: OrigemOSValue = value) => {
     const plano = item ?? planosDisponiveis.find((p) => String(p.id).trim() === id);
+    if (plano) guardar('PLANO_MANUTENCAO', plano);
 
     onChange({
       ...base,
@@ -447,7 +438,9 @@ export function OrigemOSSelector({
           onChange={escolherAnomalia}
           placeholder="Buscar por descrição, local, ativo, planta ou unidade..."
           vazio="Nenhuma anomalia registrada disponível."
-          loading={loading}
+          loading={anomalias.carregando}
+          erro={anomalias.erro}
+          paginacao={anomalias.paginacao}
           disabled={disabled}
         />
       ),
@@ -466,7 +459,9 @@ export function OrigemOSSelector({
           onChange={escolherSolicitacao}
           placeholder="Buscar por número, título, local ou solicitante..."
           vazio="Nenhuma solicitação disponível."
-          loading={loading}
+          loading={solicitacoes.carregando}
+          erro={solicitacoes.erro}
+          paginacao={solicitacoes.paginacao}
           disabled={disabled}
         />
       ),
@@ -486,7 +481,9 @@ export function OrigemOSSelector({
             onChange={escolherPlano}
             placeholder="Buscar por plano, equipamento, instalação ou planta..."
             vazio="Nenhum plano disponível."
-            loading={loading}
+            loading={planos.carregando}
+            erro={planos.erro}
+            paginacao={planos.paginacao}
             disabled={disabled}
           />
         ),

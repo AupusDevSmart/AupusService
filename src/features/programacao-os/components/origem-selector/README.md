@@ -29,6 +29,27 @@ Dois problemas concretos:
    `ListaSelecionavel`, que recebe `OpcaoDaLista[]` e filtra por tudo que a
    linha mostra.
 
+## Todas as origens, por pagina (SN-77)
+
+Ate out/2026 o `useOrigemDados` carregava 100 de cada tipo e a lista filtrava
+no navegador: a 101a anomalia (ou solicitacao, ou plano) nunca aparecia, e nada
+avisava. Hoje cada lista e um `useBuscaPaginada` (`src/hooks/useBuscaPaginada.ts`,
+50 por pagina, `staleTime: 0`): a `ListaSelecionavel` recebe `paginacao` (o
+`PaginacaoDoCombobox` do combobox), manda a busca para o servidor e pede a
+proxima pagina ao rolar ate o fim. So a lista do tipo escolhido busca
+(`useOrigemDados(tipo)`).
+
+- **A busca de cada API alcanca o que a linha mostra** — plano: nome, equipamento
+  (e a posicao), instalacao, planta; anomalia: descricao, local, ativo, planta,
+  instalacao (a do UC pai no componente); solicitacao: numero, titulo, local,
+  solicitante, planta, instalacao. Campo novo na linha = campo novo na busca do
+  backend (spec `busca-das-origens.spec.ts` da API).
+- **O escolhido fica guardado** (`guardar`): a busca ou a pagina podem tira-lo
+  das opcoes, e o resumo some se nao o achar.
+- **A pre-selecao do atalho busca pelo id** (`resolverOrigem`), fora das paginas.
+- O campo de busca nao sai da tela enquanto carrega: no lugar do "Carregando",
+  ele perdia o foco a cada letra.
+
 `PlantaSelector` e `UnidadeSelector` sairam porque planta e unidade nao sao mais
 perguntadas: elas vem da propria anomalia ou solicitacao escolhida. O
 `TipoOrigemSelector` virou o primeiro passo do assistente, e o

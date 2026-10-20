@@ -10,19 +10,28 @@ import type { OrigemOSValue } from './origem-selector';
  * do clique — é ela que preenche planta, unidade, local e ativo —, e origem que
  * não pode ser usada tem de dizer por quê.
  */
+const lista = () => ({
+  itens: [] as unknown[],
+  paginacao: { onBuscar: vi.fn(), carregarMais: vi.fn(), temMais: false, carregando: false },
+  carregando: false,
+  erro: false,
+});
 const hook = {
-  loading: false,
-  anomaliasDisponiveis: [] as unknown[],
-  planosDisponiveis: [] as unknown[],
-  solicitacoesDisponiveis: [] as unknown[],
-  carregarAnomalias: vi.fn().mockResolvedValue([]),
-  carregarPlanos: vi.fn().mockResolvedValue([]),
-  carregarSolicitacoes: vi.fn().mockResolvedValue([]),
+  anomalias: lista(),
+  planos: lista(),
+  solicitacoes: lista(),
+  guardar: vi.fn(),
   gerarTarefasDoPlano: vi.fn().mockResolvedValue([]),
   resolverOrigem: vi.fn(),
 };
+const usado = vi.fn();
 
-vi.mock('../hooks/useOrigemDados', () => ({ useOrigemDados: () => hook }));
+vi.mock('../hooks/useOrigemDados', () => ({
+  useOrigemDados: (tipo: string) => {
+    usado(tipo);
+    return hook;
+  },
+}));
 
 // importado depois do mock
 const { OrigemOSSelector } = await import('./OrigemOSSelector');
@@ -65,8 +74,9 @@ function ComEstado({ inicial, onValor, onLocal }: {
 describe('OrigemOSSelector — pré-seleção do atalho', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    hook.anomaliasDisponiveis = [];
-    hook.planosDisponiveis = [];
+    hook.anomalias = lista();
+    hook.planos = lista();
+    hook.solicitacoes = lista();
   });
 
   // SN-69: toda OS tem origem — não há "manual" para escolher
@@ -79,7 +89,7 @@ describe('OrigemOSSelector — pré-seleção do atalho', () => {
 
   it('anomalia pré-selecionada é escolhida como no clique: planta, unidade, local e ativo', async () => {
     hook.resolverOrigem.mockImplementation(async () => {
-      hook.anomaliasDisponiveis = [anomalia];
+      hook.anomalias.itens = [anomalia];
       return { item: anomalia };
     });
     const onValor = vi.fn();
@@ -104,6 +114,10 @@ describe('OrigemOSSelector — pré-seleção do atalho', () => {
     expect(ultimo.preSelecao).toBeUndefined();
     expect(onLocal).toHaveBeenCalledWith('Casa de máquinas', 'Motor 3');
     expect(hook.resolverOrigem).toHaveBeenCalledWith('ANOMALIA', anomalia.id);
+    // Fica guardada para o resumo, mesmo fora das páginas carregadas (SN-77)
+    expect(hook.guardar).toHaveBeenCalledWith('ANOMALIA', anomalia);
+    // Só a lista do tipo escolhido busca
+    expect(usado).toHaveBeenLastCalledWith('ANOMALIA');
   });
 
   it('origem que não pode ser usada mostra o motivo e não seleciona nada', async () => {
@@ -126,7 +140,7 @@ describe('OrigemOSSelector — pré-seleção do atalho', () => {
 
   it('plano pré-selecionado abre direto na escolha das tarefas', async () => {
     hook.resolverOrigem.mockImplementation(async () => {
-      hook.planosDisponiveis = [plano];
+      hook.planos.itens = [plano];
       return { item: plano };
     });
     const onValor = vi.fn();
