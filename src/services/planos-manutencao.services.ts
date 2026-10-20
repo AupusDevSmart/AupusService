@@ -119,6 +119,12 @@ export interface EquipamentoResumoDto {
       nome: string;
     };
   };
+  /** O componente (UAR) é da instalação do UC pai: a lista dos vinculados traz o pai (SN-77) */
+  equipamento_pai?: {
+    id: string;
+    nome: string;
+    unidade?: { id: string; nome: string; planta?: { id: string; nome: string } };
+  } | null;
 }
 
 export interface UsuarioResumoDto {

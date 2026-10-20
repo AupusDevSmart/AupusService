@@ -6,9 +6,11 @@ import { describe, expect, it } from 'vitest';
 import { server } from '@/test-mocks/server';
 import { useOrigemDados } from './useOrigemDados';
 
-const comQueryClient = ({ children }: { children: ReactNode }) => (
-  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{children}</QueryClientProvider>
-);
+// Os padrões do App.tsx: sem refetch ao montar e 15 min de dado fresco — a lista tem de buscar mesmo assim
+const clienteDoApp = () =>
+  new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnMount: false, refetchOnWindowFocus: false, staleTime: 15 * 60_000 } } });
+const com = (cliente: QueryClient) => ({ children }: { children: ReactNode }) => <QueryClientProvider client={cliente}>{children}</QueryClientProvider>;
+const comQueryClient = ({ children }: { children: ReactNode }) => com(clienteDoApp())({ children });
 
 const anomalia = (n: number, status = 'REGISTRADA') => ({
   id: `ANOM${String(n).padStart(22, '0')}`,
@@ -94,12 +96,84 @@ describe('useOrigemDados', () => {
       resolvida = await result.current.resolverOrigem('ANOMALIA', ` ${anomalia(500).id} `);
     });
     expect(resolvida).toMatchObject({ item: { id: anomalia(500).id, descricao: 'Anomalia 500' } });
-    // Guardada no começo da lista: o resumo a acha mesmo fora das páginas carregadas
-    expect(result.current.anomalias.itens.map((a) => a.descricao)).toEqual(['Anomalia 500', 'Anomalia 1']);
+    // Guardada à parte: o resumo a acha pelo id, e a lista continua a do servidor
+    expect(result.current.anomalias.porId(anomalia(500).id)?.descricao).toBe('Anomalia 500');
+    expect(result.current.anomalias.itens.map((a) => a.descricao)).toEqual(['Anomalia 1']);
 
     await act(async () => {
       resolvida = await result.current.resolverOrigem('ANOMALIA', anomalia(600).id);
     });
     expect(resolvida).toEqual({ motivo: 'A anomalia está programada e não pode ser programada agora.' });
+  });
+
+  // A anomalia programada há pouco não pode continuar oferecida ao reabrir
+  it('reabrir o seletor busca a lista de novo, mesmo com o cache do app', async () => {
+    let pedidos = 0;
+    server.use(
+      http.get('*/anomalias', () => {
+        pedidos++;
+        return HttpResponse.json({ success: true, data: { data: [anomalia(1)], pagination: { page: 1, limit: 50, total: 1, totalPages: 1 } } });
+      }),
+    );
+    const cliente = clienteDoApp();
+
+    const primeira = renderHook(() => useOrigemDados('ANOMALIA'), { wrapper: com(cliente) });
+    await waitFor(() => expect(primeira.result.current.anomalias.itens).toHaveLength(1));
+    primeira.unmount();
+
+    renderHook(() => useOrigemDados('ANOMALIA'), { wrapper: com(cliente) });
+    await waitFor(() => expect(pedidos).toBe(2));
+  });
+
+  it('a página que repete um item não o duplica na lista', async () => {
+    server.use(
+      http.get('*/anomalias', ({ request }) => {
+        const pagina = Number(new URL(request.url).searchParams.get('page'));
+        const data = pagina === 1 ? [anomalia(1), anomalia(2)] : [anomalia(2), anomalia(3)];
+        return HttpResponse.json({ success: true, data: { data, pagination: { page: pagina, limit: 50, total: 4, totalPages: 2 } } });
+      }),
+    );
+    const { result } = renderHook(() => useOrigemDados('ANOMALIA'), { wrapper: comQueryClient });
+    await waitFor(() => expect(result.current.anomalias.itens).toHaveLength(2));
+
+    act(() => result.current.anomalias.paginacao.carregarMais());
+    await waitFor(() => expect(result.current.anomalias.itens.map((a) => a.descricao)).toEqual(['Anomalia 1', 'Anomalia 2', 'Anomalia 3']));
+  });
+
+  // 500 ou rede não é "não existe": a pessoa concluía que a origem sumiu
+  it('a pré-seleção que falha por erro da API diz que não carregou', async () => {
+    server.use(
+      http.get('*/anomalias', () => HttpResponse.json({ success: true, data: { data: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 0 } } })),
+      http.get('*/anomalias/:id', ({ params }) =>
+        params.id === 'sumiu'
+          ? HttpResponse.json({ success: false, error: { message: 'Anomalia não encontrada' } }, { status: 404 })
+          : HttpResponse.json({ success: false, error: { message: 'Erro interno' } }, { status: 500 }),
+      ),
+    );
+    const { result } = renderHook(() => useOrigemDados('ANOMALIA'), { wrapper: comQueryClient });
+
+    let motivo: unknown;
+    await act(async () => {
+      motivo = await result.current.resolverOrigem('ANOMALIA', 'sumiu');
+    });
+    expect(motivo).toEqual({ motivo: 'A anomalia não foi encontrada ou está fora do seu escopo.' });
+    await act(async () => {
+      motivo = await result.current.resolverOrigem('ANOMALIA', 'quebrou');
+    });
+    expect(motivo).toEqual({ motivo: 'Não foi possível carregar a anomalia agora. Tente de novo.' });
+  });
+
+  it('o plano do componente mostra a instalação do UC pai', async () => {
+    server.use(
+      http.get('*/planos-manutencao', () =>
+        HttpResponse.json({
+          success: true,
+          data: { data: [{ id: 'PL2', nome: 'Plano da ventoinha', total_tarefas: 1, equipamento: { id: 'E2', nome: 'Ventoinha', unidade: null, equipamento_pai: { id: 'E1', nome: 'Inversor', unidade: { id: 'U1', nome: 'UFV Norte', planta: { id: 'P1', nome: 'Usina A' } } } } }], total: 1, page: 1, limit: 50, totalPages: 1 },
+        }),
+      ),
+    );
+    const { result } = renderHook(() => useOrigemDados('PLANO_MANUTENCAO'), { wrapper: comQueryClient });
+    await waitFor(() => expect(result.current.planos.itens).toHaveLength(1));
+    expect(result.current.planos.itens[0]).toMatchObject({ unidadeNome: 'UFV Norte', plantaNome: 'Usina A', plantaId: 'P1' });
   });
 });

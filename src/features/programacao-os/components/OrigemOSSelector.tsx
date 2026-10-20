@@ -33,6 +33,42 @@ const TIPOS: Array<{
   { tipo: 'SOLICITACAO_SERVICO', rotulo: 'Solicitação', descricao: 'Requisição', Icone: FilePenLine },
 ];
 
+const alerta = (prioridade: string) => prioridade === 'CRITICA' || prioridade === 'ALTA';
+
+function opcaoDaAnomalia(a: AnomaliaDisponivel): OpcaoDaLista {
+  return {
+    id: String(a.id).trim(),
+    titulo: a.descricao,
+    subtitulo: [a.local, a.ativo, a.plantaNome, a.unidadeNome].filter(Boolean).join(' · '),
+    etiquetas: [{ texto: a.prioridade, alerta: alerta(a.prioridade) }, { texto: a.status }],
+  };
+}
+
+function opcaoDaSolicitacao(s: SolicitacaoDisponivel): OpcaoDaLista {
+  return {
+    id: String(s.id).trim(),
+    titulo: s.titulo,
+    subtitulo: [s.local, s.tipo, s.plantaNome, s.unidadeNome, s.solicitanteNome].filter(Boolean).join(' · '),
+    etiquetas: [{ texto: s.numero }, { texto: s.prioridade, alerta: alerta(s.prioridade) }],
+  };
+}
+
+function opcaoDoPlano(p: PlanoDisponivel): OpcaoDaLista {
+  return {
+    id: String(p.id).trim(),
+    titulo: p.nome,
+    // Equipamento e instalacao no subtitulo, que e o texto legivel; a planta
+    // desce para as etiquetas, em corpo menor. Duas plantas raramente
+    // convivem numa mesma decisao — o que separa dois planos parecidos e o
+    // ativo e onde ele esta.
+    subtitulo: [p.equipamentoNome, p.unidadeNome, `${p.totalTarefas} ${p.totalTarefas === 1 ? 'tarefa' : 'tarefas'}`]
+      .filter(Boolean)
+      .join(' · '),
+    // A busca do servidor alcança a categoria e a planta (SN-77), mesmo em corpo menor
+    etiquetas: [{ texto: p.categoria }, ...(p.plantaNome ? [{ texto: p.plantaNome }] : [])],
+  };
+}
+
 /**
  * A origem da ordem de serviço, escolhida um passo por vez.
  *
@@ -161,7 +197,7 @@ export function OrigemOSSelector({
   // `item` e `base`: a pre-selecao do atalho escolhe antes de a lista do
   // estado atualizar, e a partir de um valor sem o campo `preSelecao`.
   const escolherAnomalia = (id: string, item?: AnomaliaDisponivel, base: OrigemOSValue = value) => {
-    const anomalia = item ?? anomaliasDisponiveis.find((a) => String(a.id).trim() === id);
+    const anomalia = item ?? anomalias.porId(id);
     // Fica no resumo mesmo que a busca ou a página a tirem da lista
     if (anomalia) guardar('ANOMALIA', anomalia);
 
@@ -181,7 +217,7 @@ export function OrigemOSSelector({
   };
 
   const escolherSolicitacao = (id: string, item?: SolicitacaoDisponivel, base: OrigemOSValue = value) => {
-    const solicitacao = item ?? solicitacoesDisponiveis.find((s) => String(s.id).trim() === id);
+    const solicitacao = item ?? solicitacoes.porId(id);
     if (solicitacao) guardar('SOLICITACAO_SERVICO', solicitacao);
 
     onChange({
@@ -197,7 +233,7 @@ export function OrigemOSSelector({
   };
 
   const escolherPlano = (id: string, item?: PlanoDisponivel, base: OrigemOSValue = value) => {
-    const plano = item ?? planosDisponiveis.find((p) => String(p.id).trim() === id);
+    const plano = item ?? planos.porId(id);
     if (plano) guardar('PLANO_MANUTENCAO', plano);
 
     onChange({
@@ -236,71 +272,22 @@ export function OrigemOSSelector({
 
   // ==================== OPÇÕES ====================
 
-  const opcoesAnomalia: OpcaoDaLista[] = useMemo(
-    () =>
-      anomaliasDisponiveis.map((a) => ({
-        id: String(a.id).trim(),
-        titulo: a.descricao,
-        subtitulo: [a.local, a.ativo, a.plantaNome, a.unidadeNome].filter(Boolean).join(' · '),
-        etiquetas: [
-          { texto: a.prioridade, alerta: a.prioridade === 'CRITICA' || a.prioridade === 'ALTA' },
-          { texto: a.status },
-        ],
-      })),
-    [anomaliasDisponiveis],
-  );
-
-  const opcoesSolicitacao: OpcaoDaLista[] = useMemo(
-    () =>
-      solicitacoesDisponiveis.map((s) => ({
-        id: String(s.id).trim(),
-        titulo: s.titulo,
-        subtitulo: [s.local, s.tipo, s.plantaNome, s.unidadeNome, s.solicitanteNome]
-          .filter(Boolean)
-          .join(' · '),
-        etiquetas: [
-          { texto: s.numero },
-          { texto: s.prioridade, alerta: s.prioridade === 'CRITICA' || s.prioridade === 'ALTA' },
-        ],
-      })),
-    [solicitacoesDisponiveis],
-  );
-
-  const opcoesPlano: OpcaoDaLista[] = useMemo(
-    () =>
-      planosDisponiveis.map((p) => ({
-        id: String(p.id).trim(),
-        titulo: p.nome,
-        // Equipamento e instalacao no subtitulo, que e o texto legivel; a planta
-        // desce para as etiquetas, em corpo menor. Duas plantas raramente
-        // convivem numa mesma decisao — o que separa dois planos parecidos e o
-        // ativo e onde ele esta.
-        subtitulo: [
-          p.equipamentoNome,
-          p.unidadeNome,
-          `${p.totalTarefas} ${p.totalTarefas === 1 ? 'tarefa' : 'tarefas'}`,
-        ]
-          .filter(Boolean)
-          .join(' · '),
-        // A busca varre titulo, subtitulo E etiquetas, entao a planta continua
-        // pesquisavel mesmo em corpo menor.
-        etiquetas: [{ texto: p.categoria }, ...(p.plantaNome ? [{ texto: p.plantaNome }] : [])],
-      })),
-    [planosDisponiveis],
-  );
+  const opcoesAnomalia = useMemo(() => anomaliasDisponiveis.map(opcaoDaAnomalia), [anomaliasDisponiveis]);
+  const opcoesSolicitacao = useMemo(() => solicitacoesDisponiveis.map(opcaoDaSolicitacao), [solicitacoesDisponiveis]);
+  const opcoesPlano = useMemo(() => planosDisponiveis.map(opcaoDoPlano), [planosDisponiveis]);
 
   // ==================== RESUMO ====================
 
-  const escolhido = useMemo(() => {
-    if (tipo === 'ANOMALIA' && anomaliaId) {
-      return opcoesAnomalia.find((o) => o.id === anomaliaId) ?? null;
-    }
-    if (tipo === 'SOLICITACAO_SERVICO' && solicitacaoId) {
-      return opcoesSolicitacao.find((o) => o.id === solicitacaoId) ?? null;
-    }
-    if (tipo === 'PLANO_MANUTENCAO' && planoId && tarefasSelecionadas.length > 0) {
-      const plano = opcoesPlano.find((o) => o.id === planoId);
-      if (!plano) return null;
+  // Pelo id, e não pelas opções: a busca ou a página podem ter tirado o escolhido da lista
+  const anomaliaEscolhida = anomaliaId ? anomalias.porId(anomaliaId) : undefined;
+  const solicitacaoEscolhida = solicitacaoId ? solicitacoes.porId(solicitacaoId) : undefined;
+  const planoEscolhido = planoId ? planos.porId(planoId) : undefined;
+
+  const escolhido = useMemo((): OpcaoDaLista | null => {
+    if (tipo === 'ANOMALIA') return anomaliaEscolhida ? opcaoDaAnomalia(anomaliaEscolhida) : null;
+    if (tipo === 'SOLICITACAO_SERVICO') return solicitacaoEscolhida ? opcaoDaSolicitacao(solicitacaoEscolhida) : null;
+    if (tipo === 'PLANO_MANUTENCAO' && planoEscolhido && tarefasSelecionadas.length > 0) {
+      const plano = opcaoDoPlano(planoEscolhido);
       return {
         ...plano,
         subtitulo: [
@@ -312,16 +299,7 @@ export function OrigemOSSelector({
       };
     }
     return null;
-  }, [
-    tipo,
-    anomaliaId,
-    solicitacaoId,
-    planoId,
-    tarefasSelecionadas.length,
-    opcoesAnomalia,
-    opcoesSolicitacao,
-    opcoesPlano,
-  ]);
+  }, [tipo, anomaliaEscolhida, solicitacaoEscolhida, planoEscolhido, tarefasSelecionadas.length]);
 
   const rotuloDoTipo = TIPOS.find((t) => t.tipo === tipo)?.rotulo ?? 'Origem';
 

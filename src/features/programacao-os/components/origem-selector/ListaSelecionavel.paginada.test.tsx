@@ -26,18 +26,36 @@ describe('ListaSelecionavel com paginação', () => {
   });
 
   it('rolar até perto do fim pede a próxima página; sem mais páginas, não', () => {
-    const pag = paginacao();
-    const { rerender } = render(<ListaSelecionavel opcoes={opcoes} onChange={vi.fn()} placeholder="Buscar" vazio="Nada" paginacao={pag} />);
+    const semMais = paginacao({ temMais: false });
+    const { rerender } = render(<ListaSelecionavel opcoes={opcoes} onChange={vi.fn()} placeholder="Buscar" vazio="Nada" paginacao={semMais} />);
     const lista = screen.getByTestId('lista-de-origem');
-    Object.defineProperties(lista, { scrollHeight: { value: 1000 }, clientHeight: { value: 288 }, scrollTop: { value: 700, writable: true } });
+    Object.defineProperties(lista, { scrollHeight: { value: 1000 }, clientHeight: { value: 288 }, scrollTop: { value: 0, writable: true } });
+    fireEvent.scroll(lista, { target: { scrollTop: 700 } });
+    expect(semMais.carregarMais).not.toHaveBeenCalled();
 
+    // Longe do fim: não pede; perto: pede
+    lista.scrollTop = 0;
+    const pag = paginacao();
+    rerender(<ListaSelecionavel opcoes={opcoes} onChange={vi.fn()} placeholder="Buscar" vazio="Nada" paginacao={pag} />);
+    expect(pag.carregarMais).not.toHaveBeenCalled();
+    lista.scrollTop = 700;
     fireEvent.scroll(lista);
     expect(pag.carregarMais).toHaveBeenCalledTimes(1);
+  });
 
-    const semMais = paginacao({ temMais: false });
-    rerender(<ListaSelecionavel opcoes={opcoes} onChange={vi.fn()} placeholder="Buscar" vazio="Nada" paginacao={semMais} />);
-    fireEvent.scroll(lista);
-    expect(semMais.carregarMais).not.toHaveBeenCalled();
+  // Sem rolagem não há evento de rolagem: a página que não enche a lista pedia a seguinte nunca
+  it('lista curta, que não rola, pede a próxima página sozinha', () => {
+    const pag = paginacao();
+    render(<ListaSelecionavel opcoes={opcoes} onChange={vi.fn()} placeholder="Buscar" vazio="Nada" paginacao={pag} />);
+    expect(pag.carregarMais).toHaveBeenCalledTimes(1);
+  });
+
+  it('enquanto a próxima página vem, não pede de novo', () => {
+    const pag = paginacao({ carregando: true });
+    render(<ListaSelecionavel opcoes={opcoes} onChange={vi.fn()} placeholder="Buscar" vazio="Nada" paginacao={pag} />);
+    fireEvent.scroll(screen.getByTestId('lista-de-origem'));
+    expect(pag.carregarMais).not.toHaveBeenCalled();
+    expect(screen.getByText('Carregando mais...')).toBeInTheDocument();
   });
 
   // Antes o carregando tomava o lugar do campo: a cada letra ele sumia e perdia o foco

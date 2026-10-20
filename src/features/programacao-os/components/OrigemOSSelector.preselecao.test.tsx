@@ -10,12 +10,16 @@ import type { OrigemOSValue } from './origem-selector';
  * do clique — é ela que preenche planta, unidade, local e ativo —, e origem que
  * não pode ser usada tem de dizer por quê.
  */
-const lista = () => ({
-  itens: [] as unknown[],
-  paginacao: { onBuscar: vi.fn(), carregarMais: vi.fn(), temMais: false, carregando: false },
-  carregando: false,
-  erro: false,
-});
+const lista = () => {
+  const l = {
+    itens: [] as Array<{ id: string }>,
+    paginacao: { onBuscar: vi.fn(), carregarMais: vi.fn(), temMais: false, carregando: false },
+    carregando: false,
+    erro: false,
+    porId: (id: string) => l.itens.find((i) => i.id === id),
+  };
+  return l;
+};
 const hook = {
   anomalias: lista(),
   planos: lista(),

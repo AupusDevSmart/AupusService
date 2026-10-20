@@ -1,5 +1,6 @@
 // src/features/programacao-os/hooks/useOrigemDados.ts
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { isAxiosError } from 'axios';
 import { anomaliasService } from '@/services/anomalias.service';
 import { solicitacoesServicoService } from '@/services/solicitacoes-servico.service';
 import { planosManutencaoApi, type PlanoManutencaoApiResponse } from '@/services/planos-manutencao.services';
@@ -96,16 +97,20 @@ function paraSolicitacaoDisponivel(solicitacao: SolicitacaoServico): Solicitacao
 }
 
 function paraPlanoDisponivel(plano: PlanoManutencaoApiResponse): PlanoDisponivel {
+  const equipamento = plano.equipamento;
+  // O componente está na instalação do UC pai; o equipamento antigo, só na coluna da planta
+  const unidade = equipamento?.unidade ?? equipamento?.equipamento_pai?.unidade;
+  const planta = unidade?.planta ?? equipamento?.planta;
   return {
     id: String(plano.id).trim(),
     nome: plano.nome,
-    categoria: plano.equipamento?.tipo_equipamento || 'GERAL',
+    categoria: equipamento?.tipo_equipamento || 'GERAL',
     totalTarefas: plano.total_tarefas || plano.tarefas?.length || 0,
-    plantaId: plano.equipamento?.unidade?.planta?.id || plano.equipamento?.planta?.id,
-    equipamentoId: plano.equipamento?.id,
-    equipamentoNome: plano.equipamento?.nome,
-    plantaNome: plano.equipamento?.unidade?.planta?.nome || plano.equipamento?.planta?.nome,
-    unidadeNome: plano.equipamento?.unidade?.nome,
+    plantaId: planta?.id,
+    equipamentoId: equipamento?.id,
+    equipamentoNome: equipamento?.nome,
+    plantaNome: planta?.nome,
+    unidadeNome: unidade?.nome,
   };
 }
 
@@ -119,12 +124,17 @@ export type OrigemResolvida =
   | { item: AnomaliaDisponivel | SolicitacaoDisponivel | PlanoDisponivel }
   | { motivo: string };
 
-const somar = <T extends { id: string }>(lista: T[], item: T): T[] => [item, ...lista.filter((i) => i.id !== item.id)];
-
-/** O escolhido fica na lista mesmo que a busca ou a página o tire de vista. */
-function comOsEscolhidos<T extends { id: string }>(escolhidos: T[], itens: T[]): T[] {
-  const ids = new Set(itens.map((i) => i.id));
-  return [...escolhidos.filter((e) => !ids.has(e.id)), ...itens];
+/**
+ * Buscar a origem pelo id: 404 é "não existe ou é de outra planta" (SN-57);
+ * outra falha (500, rede) não pode virar esse motivo — a pessoa concluía que a
+ * origem sumiu. O interceptor já mostrou o erro.
+ */
+async function buscarPeloId<T>(busca: Promise<T>, naoEncontrada: string, naoCarregou: string): Promise<{ achado: T } | { motivo: string }> {
+  try {
+    return { achado: await busca };
+  } catch (erro) {
+    return { motivo: isAxiosError(erro) && erro.response?.status === 404 ? naoEncontrada : naoCarregou };
+  }
 }
 
 /**
@@ -167,16 +177,19 @@ export const useOrigemDados = (tipoAtivo?: TipoDeOrigemResolvivel | string) => {
     },
   });
 
-  // A origem que o atalho abriu ou que a pessoa escolheu, para não sumir do resumo
-  const [anomaliasEscolhidas, setAnomaliasEscolhidas] = useState<AnomaliaDisponivel[]>([]);
-  const [solicitacoesEscolhidas, setSolicitacoesEscolhidas] = useState<SolicitacaoDisponivel[]>([]);
-  const [planosEscolhidos, setPlanosEscolhidos] = useState<PlanoDisponivel[]>([]);
+  /**
+   * A origem que o atalho abriu ou que a pessoa escolheu, guardada à parte da
+   * lista: a busca ou a página podem tirá-la das opções, e o resumo a acha
+   * aqui. Não entra na lista — fixada no topo, aparecia em busca que não a
+   * acha e escondia o "Nada encontrado".
+   */
+  const [guardadas, setGuardadas] = useState<Record<string, AnomaliaDisponivel | SolicitacaoDisponivel | PlanoDisponivel>>({});
 
   const guardar = useCallback((tipo: TipoDeOrigemResolvivel, item: AnomaliaDisponivel | SolicitacaoDisponivel | PlanoDisponivel) => {
-    if (tipo === 'ANOMALIA') setAnomaliasEscolhidas((lista) => somar(lista, item as AnomaliaDisponivel));
-    else if (tipo === 'SOLICITACAO_SERVICO') setSolicitacoesEscolhidas((lista) => somar(lista, item as SolicitacaoDisponivel));
-    else setPlanosEscolhidos((lista) => somar(lista, item as PlanoDisponivel));
+    setGuardadas((atual) => ({ ...atual, [`${tipo}:${item.id}`]: item }));
   }, []);
+
+  const guardada = (tipo: TipoDeOrigemResolvivel, id: string) => guardadas[`${tipo}:${id.trim()}`];
 
   /**
    * A origem que o atalho pediu (`?origem=&id=`), pronta para ser escolhida:
@@ -189,32 +202,46 @@ export const useOrigemDados = (tipoAtivo?: TipoDeOrigemResolvivel | string) => {
       const alvo = id.trim();
 
       if (tipo === 'ANOMALIA') {
-        const anomalia = await anomaliasService.findOne(alvo).catch(() => null);
-        if (!anomalia) return { motivo: 'A anomalia não foi encontrada ou está fora do seu escopo.' };
-        if (anomalia.status !== 'REGISTRADA') {
-          return { motivo: `A anomalia está ${String(anomalia.status).toLowerCase()} e não pode ser programada agora.` };
+        const busca = await buscarPeloId(
+          anomaliasService.findOne(alvo),
+          'A anomalia não foi encontrada ou está fora do seu escopo.',
+          'Não foi possível carregar a anomalia agora. Tente de novo.',
+        );
+        if ('motivo' in busca) return busca;
+        if (busca.achado.status !== 'REGISTRADA') {
+          return { motivo: `A anomalia está ${String(busca.achado.status).toLowerCase()} e não pode ser programada agora.` };
         }
-        const item = paraAnomaliaDisponivel(anomalia);
+        const item = paraAnomaliaDisponivel(busca.achado);
         guardar(tipo, item);
         return { item };
       }
 
       if (tipo === 'SOLICITACAO_SERVICO') {
-        const solicitacao = await solicitacoesServicoService.findOne(alvo).catch(() => null);
-        if (!solicitacao) return { motivo: 'A solicitação não foi encontrada ou está fora do seu escopo.' };
-        if (solicitacao.status !== 'REGISTRADA') {
-          return { motivo: `A solicitação está ${String(solicitacao.status).toLowerCase()} e não pode ser programada agora.` };
+        const busca = await buscarPeloId(
+          solicitacoesServicoService.findOne(alvo),
+          'A solicitação não foi encontrada ou está fora do seu escopo.',
+          'Não foi possível carregar a solicitação agora. Tente de novo.',
+        );
+        if ('motivo' in busca) return busca;
+        if (busca.achado.status !== 'REGISTRADA') {
+          return { motivo: `A solicitação está ${String(busca.achado.status).toLowerCase()} e não pode ser programada agora.` };
         }
-        const item = paraSolicitacaoDisponivel(solicitacao);
+        const item = paraSolicitacaoDisponivel(busca.achado);
         guardar(tipo, item);
         return { item };
       }
 
-      const plano = await planosManutencaoApi.findOne(alvo).catch(() => null);
-      if (!plano?.equipamento_id) {
+      // Com as tarefas: sem elas, o resumo do plano dizia "0 tarefas"
+      const busca = await buscarPeloId(
+        planosManutencaoApi.findOne(alvo, true),
+        'O plano não está entre os planos vinculados a equipamentos que você pode programar.',
+        'Não foi possível carregar o plano agora. Tente de novo.',
+      );
+      if ('motivo' in busca) return busca;
+      if (!busca.achado.equipamento_id) {
         return { motivo: 'O plano não está entre os planos vinculados a equipamentos que você pode programar.' };
       }
-      const item = paraPlanoDisponivel(plano);
+      const item = paraPlanoDisponivel(busca.achado);
       guardar(tipo, item);
       return { item };
     },
@@ -239,14 +266,19 @@ export const useOrigemDados = (tipoAtivo?: TipoDeOrigemResolvivel | string) => {
     }));
   }, []);
 
-  const anomaliasDisponiveis = useMemo(() => comOsEscolhidos(anomaliasEscolhidas, anomalias.itens), [anomaliasEscolhidas, anomalias.itens]);
-  const solicitacoesDisponiveis = useMemo(() => comOsEscolhidos(solicitacoesEscolhidas, solicitacoes.itens), [solicitacoesEscolhidas, solicitacoes.itens]);
-  const planosDisponiveis = useMemo(() => comOsEscolhidos(planosEscolhidos, planos.itens), [planosEscolhidos, planos.itens]);
-
   return {
-    anomalias: { itens: anomaliasDisponiveis, paginacao: anomalias.paginacao, carregando: anomalias.carregando, erro: anomalias.erro },
-    solicitacoes: { itens: solicitacoesDisponiveis, paginacao: solicitacoes.paginacao, carregando: solicitacoes.carregando, erro: solicitacoes.erro },
-    planos: { itens: planosDisponiveis, paginacao: planos.paginacao, carregando: planos.carregando, erro: planos.erro },
+    anomalias: {
+      ...anomalias,
+      porId: (id: string) => (guardada('ANOMALIA', id) as AnomaliaDisponivel | undefined) ?? anomalias.itens.find((i) => i.id === id.trim()),
+    },
+    solicitacoes: {
+      ...solicitacoes,
+      porId: (id: string) => (guardada('SOLICITACAO_SERVICO', id) as SolicitacaoDisponivel | undefined) ?? solicitacoes.itens.find((i) => i.id === id.trim()),
+    },
+    planos: {
+      ...planos,
+      porId: (id: string) => (guardada('PLANO_MANUTENCAO', id) as PlanoDisponivel | undefined) ?? planos.itens.find((i) => i.id === id.trim()),
+    },
     guardar,
     resolverOrigem,
     gerarTarefasDoPlano,

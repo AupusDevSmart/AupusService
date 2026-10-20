@@ -44,8 +44,19 @@ proxima pagina ao rolar ate o fim. So a lista do tipo escolhido busca
   instalacao (a do UC pai no componente); solicitacao: numero, titulo, local,
   solicitante, planta, instalacao. Campo novo na linha = campo novo na busca do
   backend (spec `busca-das-origens.spec.ts` da API).
-- **O escolhido fica guardado** (`guardar`): a busca ou a pagina podem tira-lo
-  das opcoes, e o resumo some se nao o achar.
+- **O escolhido fica guardado** (`guardar`, lido por `porId`): a busca ou a
+  pagina podem tira-lo das opcoes, e o resumo some se nao o achar. Ele NAO entra
+  na lista: fixado no topo, aparecia em busca que nao o acha.
+- **Sempre busca ao abrir** (`refetchOnMount: 'always'`): o QueryClient do app
+  desliga o refetch ao montar, e a origem programada ha pouco continuaria
+  oferecida ate o 409 do salvar.
+- **A ordem tem desempate pelo id** no backend (as copias de um plano herdam o
+  nome do template; por OFFSET, nome empatado repetia e perdia plano entre as
+  paginas), e o hook junta as paginas sem repetir o id.
+- **A lista confere o fim depois de cada pagina**: a lista curta nao rola, e sem
+  rolagem a proxima pagina nunca era pedida.
+- **Pre-selecao que falha**: 404 e "nao encontrada"; 500/rede e "nao foi possivel
+  carregar", para a pessoa nao concluir que a origem sumiu.
 - **A pre-selecao do atalho busca pelo id** (`resolverOrigem`), fora das paginas.
 - O campo de busca nao sai da tela enquanto carrega: no lugar do "Carregando",
   ele perdia o foco a cada letra.

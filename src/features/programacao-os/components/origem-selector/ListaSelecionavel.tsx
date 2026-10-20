@@ -66,11 +66,21 @@ export function ListaSelecionavel({
     paginacao?.onBuscar(texto);
   };
 
-  const aoRolar = (e: UIEvent<HTMLDivElement>) => {
-    if (!paginacao?.temMais || paginacao.carregando) return;
-    const lista = e.currentTarget;
+  const pedirMaisSePertoDoFim = (lista: HTMLDivElement | null) => {
+    if (!lista || !paginacao?.temMais || paginacao.carregando) return;
     if (lista.scrollHeight - lista.scrollTop - lista.clientHeight < PERTO_DO_FIM) paginacao.carregarMais();
   };
+
+  const aoRolar = (e: UIEvent<HTMLDivElement>) => pedirMaisSePertoDoFim(e.currentTarget);
+
+  // Depois de cada página, de novo: a lista curta não rola (e a página que
+  // chegou com a pessoa já no fim não dispara rolagem nenhuma)
+  const listaRef = useRef<HTMLDivElement>(null);
+  const pedirMais = useRef(pedirMaisSePertoDoFim);
+  pedirMais.current = pedirMaisSePertoDoFim;
+  useEffect(() => {
+    pedirMais.current(listaRef.current);
+  }, [opcoes.length, paginacao?.temMais, paginacao?.carregando]);
 
   const semResultado = busca.trim() ? `Nada encontrado para "${busca.trim()}".` : vazio;
 
@@ -87,7 +97,7 @@ export function ListaSelecionavel({
         />
       </div>
 
-      <div className="max-h-72 space-y-1 overflow-y-auto overscroll-contain" onScroll={aoRolar} data-testid="lista-de-origem">
+      <div ref={listaRef} className="max-h-72 space-y-1 overflow-y-auto overscroll-contain" onScroll={aoRolar} data-testid="lista-de-origem">
         {loading && filtradas.length === 0 && (
           <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />

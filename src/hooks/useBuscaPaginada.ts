@@ -24,10 +24,12 @@ interface Opcoes<T> {
  * busca no servidor (SN-77; a regra da casa para seletor de registro). Carregar
  * 100 e filtrar no navegador escondia o 101º sem aviso.
  *
- * Sem cache entre aberturas (`staleTime: 0`): a origem programada há pouco
- * deixa de ser programável e não pode continuar na lista.
+ * Sempre busca de novo ao abrir (`refetchOnMount: 'always'`): o app desliga o
+ * refetch ao montar, e a origem programada há pouco continuaria oferecida — a
+ * pessoa só descobria no 409 do salvar. As páginas juntam sem repetir o id: o
+ * backend desempata a ordem, e isto é a defesa se um dia não desempatar.
  */
-export function useBuscaPaginada<T>({ chave, buscarPagina, ativa }: Opcoes<T>) {
+export function useBuscaPaginada<T extends { id: string }>({ chave, buscarPagina, ativa }: Opcoes<T>) {
   const [texto, setTexto] = useState('');
   const [busca, setBusca] = useState('');
 
@@ -43,16 +45,27 @@ export function useBuscaPaginada<T>({ chave, buscarPagina, ativa }: Opcoes<T>) {
     getNextPageParam: (ultima, todas) => (ultima.temMais ? todas.length + 1 : undefined),
     enabled: ativa,
     staleTime: 0,
+    refetchOnMount: 'always',
     retry: soRepeteFalhaDeRede,
   });
 
-  const itens = useMemo(() => (consulta.data?.pages ?? []).flatMap((p) => p.itens), [consulta.data]);
+  const itens = useMemo(() => {
+    const vistos = new Set<string>();
+    return (consulta.data?.pages ?? [])
+      .flatMap((p) => p.itens)
+      .filter((item) => {
+        if (vistos.has(item.id)) return false;
+        vistos.add(item.id);
+        return true;
+      });
+  }, [consulta.data]);
 
   const paginacao: PaginacaoDoCombobox = {
     onBuscar: setTexto,
     carregarMais: () => void consulta.fetchNextPage(),
     temMais: consulta.hasNextPage,
-    carregando: consulta.isFetching,
+    // Só a próxima página: a busca de fundo da primeira não pode barrar o "carregar mais"
+    carregando: consulta.isFetchingNextPage,
   };
 
   return {
