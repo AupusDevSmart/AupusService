@@ -37,6 +37,8 @@ interface InstrucaoExpandableCardProps {
   valor?: number;
   onValor?: (valor: number) => void;
   valorEditavel?: boolean;
+  /** O valor sugerido contou como zero alguma linha sem preço no cadastro (SN-86) */
+  semPrecoNoCadastro?: boolean;
 }
 
 const moeda = (valor: number) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -51,6 +53,7 @@ export function InstrucaoExpandableCard({
   valor,
   onValor,
   valorEditavel = true,
+  semPrecoNoCadastro = false,
 }: InstrucaoExpandableCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [details, setDetails] = useState<InstrucaoApiResponse | null>(null);
@@ -104,6 +107,14 @@ export function InstrucaoExpandableCard({
               para ser precificada. */}
           {valor !== undefined && (
             <>
+              {semPrecoNoCadastro && (
+                <span
+                  className="text-xs text-muted-foreground"
+                  title="Alguma linha desta instrução não tem preço no cadastro: o valor sugerido a conta como zero."
+                >
+                  sem preço
+                </span>
+              )}
               <span className="text-xs text-muted-foreground">R$</span>
               <div className="w-20">
                 <ValorDaInstrucao

@@ -41,6 +41,15 @@ const instrucoes: Record<string, InstrucaoDoTeste> = {
     recursos: [{ quantidade: 1, recurso: { nome: 'Técnico', preco_base: 200 }, subtotal: 200 }],
   },
   SEM: { id: 'SEM', codigo: 'INST-009', nome: 'Sem recursos', recursos: [] },
+  FURO: {
+    id: 'FURO',
+    codigo: 'INST-010',
+    nome: 'Com linha sem preço',
+    recursos: [
+      { quantidade: 10, recurso: { nome: 'Cabo', preco_base: 5 }, subtotal: 50 },
+      { quantidade: 4, recurso: { nome: 'Conector', preco_base: 0 }, subtotal: null },
+    ],
+  },
 };
 
 vi.mock('@/services/instrucoes.services', () => ({
@@ -115,6 +124,13 @@ describe('montarDeInstrucoes', () => {
 
     expect(itens[0].descricao).toBe('Inspeção visual');
     expect(itens[0].recurso_id).toBeUndefined();
+  });
+
+  it('a linha sem preço entra como zero, e o item leva a marca para a tela avisar (SN-86)', async () => {
+    const [furo, completa] = await montarDeInstrucoes(['FURO', 'B']);
+
+    expect(furo).toMatchObject({ preco_unitario: 50, sem_preco_no_cadastro: true });
+    expect(completa.sem_preco_no_cadastro).toBeUndefined();
   });
 
   it('instrução sem recursos entra valendo zero, e não some', async () => {

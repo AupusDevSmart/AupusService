@@ -20,6 +20,11 @@ export interface ItemProposta {
   preco_unitario_original?: number | null;
   preco_unitario: number;
   ordem?: number;
+  /**
+   * Só na tela (o payload é montado campo a campo): a sugestão contou como zero
+   * alguma linha sem preço no cadastro. No rascunho é daqui; salva, da leitura
+   */
+  sem_preco_no_cadastro?: boolean;
 }
 
 export interface OutroCusto {
@@ -34,6 +39,8 @@ export interface OutroCusto {
 export interface Proposta {
   itens: ItemProposta[];
   outros_custos: OutroCusto[];
+  /** As instruções cujo valor sugerido conta como zero alguma linha sem preço no cadastro (SN-86) */
+  instrucoes_sem_preco?: string[];
   /** SEM_REIDI ou COM_REIDI. O REIDI desonera PIS e COFINS. */
   bdi_regime: string;
   bdi_administracao_central: number;
@@ -293,10 +300,8 @@ export async function montarDeInstrucoes(
     // O custo de cada linha vem pronto do servidor (`subtotal`, a conta do
     // AupusProject, SN-85): a mesma da proposta do backend, recursos e
     // maquinário. A linha sem preço entra como zero: é sugestão, e a pessoa ajusta
-    const soma = [...(instrucao.recursos ?? []), ...(instrucao.maquinarios ?? [])].reduce(
-      (total, linha) => total + (Number(linha.subtotal ?? 0) || 0),
-      0,
-    );
+    const linhas = [...(instrucao.recursos ?? []), ...(instrucao.maquinarios ?? [])];
+    const soma = linhas.reduce((total, linha) => total + (Number(linha.subtotal ?? 0) || 0), 0);
 
     const valor = Math.round(soma * 100) / 100;
 
@@ -306,6 +311,8 @@ export async function montarDeInstrucoes(
       quantidade: 1,
       preco_unitario_original: valor,
       preco_unitario: valor,
+      // A linha sem preço entrou como zero: a tela avisa, senão o valor parece completo
+      ...(linhas.some((linha) => linha.subtotal == null) && { sem_preco_no_cadastro: true }),
     });
   }
 

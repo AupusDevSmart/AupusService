@@ -208,6 +208,7 @@ export function InstrucoesSelector({ value, onChange, disabled, entity }: Instru
               onRemove={disabled ? undefined : () => handleRemove(id)}
               onEditar={abrirInstrucao ?? undefined}
               valor={proposta?.valores[id.trim()]}
+              semPrecoNoCadastro={proposta?.semPreco?.includes(id.trim())}
               onValor={(valor) => proposta?.definir(id.trim(), valor)}
               valorEditavel={proposta?.editavel ?? false}
               disabled={disabled}
