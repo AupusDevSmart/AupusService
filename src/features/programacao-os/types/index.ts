@@ -1,5 +1,6 @@
 // src/features/programacao-os/types/index.ts - VERSÃO FINAL
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
+import type { InstrucaoDaProgramacao } from '@/services/programacao-os.service';
 
 // ========================================
 // ENUMS E TIPOS BASE (CONFORME SCHEMA)
@@ -216,6 +217,8 @@ export interface ProgramacaoOS extends BaseEntity {
   itens_orcamento?: ItemOrcamento[];
   historico?: HistoricoProgramacaoOS[];
   tarefas_programacao?: TarefaProgramacaoOS[];
+  /** SN-86: as instruções avulsas (da anomalia, da solicitação ou acrescentadas); as das tarefas vêm por elas */
+  instrucoes?: InstrucaoDaProgramacao[];
 
   // Relacionamentos expandidos (opcional)
   planta?: { id: string; nome: string };
@@ -287,6 +290,8 @@ export interface CreateProgramacaoDto {
   observacoes_programacao?: string;
   justificativa?: string;
   tarefas_ids?: string[];
+  /** SN-86: as instruções avulsas, trocadas inteiras; ausente no cadastro, o servidor põe as da origem */
+  instrucoes_ids?: string[];
   materiais?: Omit<MaterialProgramacaoOS, 'id' | 'programacao_id'>[];
   ferramentas?: Omit<FerramentaProgramacaoOS, 'id' | 'programacao_id'>[];
   tecnicos?: Omit<TecnicoProgramacaoOS, 'id' | 'programacao_id'>[];

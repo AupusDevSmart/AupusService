@@ -93,7 +93,10 @@ export interface TecnicoOS {
 export interface TarefaOS {
   id: string;
   os_id: string;
-  tarefa_id: string;
+  /** Nulo na instrução avulsa (SN-86) e no vínculo cuja cópia do plano foi apagada */
+  tarefa_id: string | null;
+  /** SN-86: TAREFA (do plano) ou INSTRUCAO (a avulsa) */
+  origem_item?: 'TAREFA' | 'INSTRUCAO';
   ordem?: number;
   status?: string;
   data_conclusao?: string;

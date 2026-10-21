@@ -37,6 +37,8 @@ export interface TarefaDaExecucao {
   /** Id do vínculo (tarefas_os.id) — é por ele que a API conclui/reabre */
   id: string;
   nome: string;
+  /** SN-86: a instrução avulsa (da anomalia, da solicitação ou acrescentada), sem tarefa do plano */
+  instrucaoAvulsa: boolean;
   status: StatusDaTarefa;
   /** Motivo registrado quando a tarefa não foi feita */
   motivo: string | null;
@@ -55,6 +57,7 @@ interface TarefaOsDaApi {
   nome_snapshot?: string | null;
   instrucao_nome?: string | null;
   tarefa?: { nome?: string | null } | null;
+  origem_item?: string | null;
   status?: string | null;
   observacoes?: string | null;
   ordem?: number | null;
@@ -128,6 +131,7 @@ export function montarProgresso(tarefasOs: TarefaOsDaApi[] = [], checklist: Item
       return comContagem({
         id,
         nome,
+        instrucaoAvulsa: t.origem_item === 'INSTRUCAO',
         status,
         motivo: status === 'CANCELADA' ? t.observacoes?.trim() || null : null,
         itens,

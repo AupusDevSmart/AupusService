@@ -406,12 +406,13 @@ export class TarefasApiService {
     }
   }
 
-  async findOne(id: string): Promise<TarefaApiResponse> {
+  /** `semAvisoGlobal`: quem chama trata a falha (a cópia do plano apagada é contexto da OS, não erro) */
+  async findOne(id: string, opcoes: { semAvisoGlobal?: boolean } = {}): Promise<TarefaApiResponse> {
     console.log('⏱️ [FRONTEND API] Iniciando busca da tarefa:', id);
     const inicio = performance.now();
 
     try {
-      const response = await api.get<TarefaApiResponse>(`${this.baseEndpoint}/${id}`);
+      const response = await api.get<TarefaApiResponse>(`${this.baseEndpoint}/${id}`, { semAvisoGlobal: opcoes.semAvisoGlobal });
       const tempo = performance.now() - inicio;
       console.log(`⏱️ [FRONTEND API] Busca concluída em ${tempo.toFixed(2)}ms`);
       console.log('✅ [FRONTEND API] Tarefa encontrada:', response.data);

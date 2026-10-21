@@ -14,7 +14,7 @@ vi.mock('@/services/solicitacoes-servico.service', () => ({
   solicitacoesServicoService: { findOne: (...a: unknown[]) => solicitacao(...a) },
 }));
 
-const { InstrucoesDaOrigem } = await import('./InstrucoesDaOrigem');
+const { InstrucoesDaProgramacao } = await import('./InstrucoesDaProgramacao');
 const { PrazoDaOrigem } = await import('./PrazoDaOrigem');
 
 const naoEncontrada = Object.assign(new Error('Request failed with status code 404'), { response: { status: 404 } });
@@ -26,7 +26,10 @@ beforeEach(() => {
 
 describe('origem excluída', () => {
   it('instruções da anomalia: busca sem aviso global, e a seção some', async () => {
-    const { container } = render(<InstrucoesDaOrigem tipo="ANOMALIA" anomaliaId=" an1 " />);
+    const nada = { materiais: [], ferramentas: [], tecnicos: [], itens_orcamento: [] };
+    const { container } = render(
+      <InstrucoesDaProgramacao tipo="ANOMALIA" anomaliaId=" an1 " semearDaOrigem={false} recursos={nada} />,
+    );
     await waitFor(() => expect(anomalia).toHaveBeenCalledWith('an1', { semAvisoGlobal: true }));
     await waitFor(() => expect(container).toBeEmptyDOMElement());
   });

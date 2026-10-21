@@ -31,6 +31,20 @@ describe('montarProgresso', () => {
     expect(p.tarefas[1].itens).toEqual([]);
   });
 
+  it('a instrução avulsa (SN-86) entra como as tarefas, marcada, com os itens dela', () => {
+    const p = montarProgresso(
+      [...tarefasOs, { id: 'V3', nome_snapshot: 'Trocar o fusível', origem_item: 'INSTRUCAO', status: 'PENDENTE', observacoes: null, ordem: 3 }],
+      [{ id: 'C4', atividade: 'Trocar o fusível: Desenergizar', obrigatoria: true, concluida: false, tarefa_os_id: 'V3', ordem: 4 }],
+    );
+
+    expect(p.tarefas.map((t) => [t.nome, t.instrucaoAvulsa])).toEqual([
+      ['Lubrificar mancal', false],
+      ['Inspeção visual', false],
+      ['Trocar o fusível', true],
+    ]);
+    expect(p.tarefas[2]).toMatchObject({ obrigatoriosPendentes: 1, itens: [{ texto: 'Desenergizar' }] });
+  });
+
   it('item sem tarefa (genérico de segurança das OS antigas) é ignorado', () => {
     const p = montarProgresso(tarefasOs, checklist);
 

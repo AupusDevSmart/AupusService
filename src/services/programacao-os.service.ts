@@ -68,6 +68,8 @@ export interface CreateProgramacaoDto {
   observacoes?: string;
   justificativa?: string;
   tarefas_ids?: string[];
+  /** SN-86: as instruções avulsas, trocadas inteiras; ausente no cadastro, o servidor põe as da origem */
+  instrucoes_ids?: string[];
   materiais?: MaterialProgramacaoDto[];
   ferramentas?: FerramentaProgramacaoDto[];
   tecnicos?: TecnicoProgramacaoDto[];
@@ -214,6 +216,16 @@ export interface InstalacaoDaOrigem {
   nome: string;
 }
 
+/** A instrução avulsa da programação, congelada (SN-86) */
+export interface InstrucaoDaProgramacao {
+  id: string;
+  instrucao_id: string | null;
+  codigo: string | null;
+  nome: string | null;
+  descricao: string | null;
+  ordem: number;
+}
+
 export interface ProgramacaoResponse {
   /**
    * Derivada no backend a partir da origem, porque a programacao nao guarda
@@ -264,6 +276,8 @@ export interface ProgramacaoResponse {
   data_programada_sugerida?: string;
   hora_programada_sugerida?: string;
   tarefas_programacao?: TarefaProgramacaoResponse[];
+  /** SN-86: as instruções avulsas (da anomalia, da solicitação ou acrescentadas); as das tarefas vêm por elas */
+  instrucoes?: InstrucaoDaProgramacao[];
   criado_por?: string;
   criado_por_id?: string;
   analisado_por?: string;

@@ -1,188 +1,131 @@
 // src/features/programacao-os/components/RecursosDaOrigem.tsx
 import { useEffect, useRef } from 'react';
-import type { MaterialItem } from '@/components/common/cards/MateriaisCardManager';
-import type { FerramentaItem } from '@/components/common/cards/FerramentasCardManager';
-import type { TecnicoItem } from '@/components/common/cards/TecnicosCardManager';
-
-/** O que a instrução declara precisar. */
-export interface RecursoDaInstrucao {
-  tipo?: string;
-  descricao?: string;
-  quantidade?: number | string | null;
-  unidade?: string | null;
-}
-
-/** A linha de recurso como a instrução a devolve (SN-85): o item embutido e o uso */
-interface LinhaDaInstrucao {
-  recurso?: { categoria?: string; nome?: string; unidade?: string | null } | null;
-  quantidade?: number | string | null;
-  duracao_horas?: number | string | null;
-  fator_perda?: number | string | null;
-}
-
-/**
- * A linha da instrução no formato que a programação reparte. A quantidade é a
- * que a OS planeja: o material com a perda (é o que se compra), a mão de obra
- * em horas de equipe (pessoas × horas de cada uma), o instrumento pela
- * quantidade.
- */
-export function daLinhaDaInstrucao(linha: LinhaDaInstrucao): RecursoDaInstrucao {
-  const n = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
-  const quantidade = n(linha.quantidade ?? 1) || 1;
-  const tipo = linha.recurso?.categoria;
-  const planejada =
-    tipo === 'MATERIAL'
-      ? Math.round(quantidade * (1 + n(linha.fator_perda)) * 10_000) / 10_000
-      : tipo === 'MAO_DE_OBRA'
-        ? // Sem duração, as horas ficam vazias (0) para a programação preencher: inventá-las da quantidade diria "2 h" de 2 pessoas
-          Math.round(quantidade * n(linha.duracao_horas) * 100) / 100
-        : quantidade;
-  return { tipo, descricao: linha.recurso?.nome, quantidade: planejada, unidade: linha.recurso?.unidade ?? null };
-}
-
-export interface RecursosSeparados {
-  materiais: MaterialItem[];
-  ferramentas: FerramentaItem[];
-  tecnicos: TecnicoItem[];
-}
-
-const vazio = (): RecursosSeparados => ({ materiais: [], ferramentas: [], tecnicos: [] });
-
-/**
- * Reparte os recursos das instruções nos três campos da programação.
- *
- * As 6 categorias do recurso (SN-83) e os três campos da programação, então o
- * mapa não é um-para-um:
- *
- *   MATERIAL                -> materiais
- *   INSTRUMENTO             -> ferramentas
- *   MAO_DE_OBRA             -> tecnicos
- *   VEICULO                 -> nenhum: veículo se resolve pela reserva, que tem
- *                              período e disponibilidade próprios
- *   TERCEIRO, DESPESA_CAMPO -> nenhum aqui (vão para o orçamento, SN-86)
- *   o MAQUINÁRIO da instrução -> nenhum aqui, por ora: a programação não tem
- *                              campo de máquina; entra com o planejado do SN-86
- *
- * O técnico da instrução descreve um PERFIL ("Eletricista"), não uma pessoa —
- * por isso vai para `especialidade` e deixa `nome` vazio, para ser preenchido
- * quando alguém for escalado.
- *
- * A mesma ferramenta pedida por duas instruções vira uma linha só, com as
- * quantidades somadas: são o mesmo recurso na mesma OS.
- */
-export function separarRecursos(recursos: RecursoDaInstrucao[]): RecursosSeparados {
-  const saida = vazio();
-
-  const numero = (valor: unknown) => {
-    const n = Number(valor ?? 0);
-    return Number.isFinite(n) && n > 0 ? n : 1;
-  };
-
-  for (const recurso of recursos) {
-    const descricao = (recurso.descricao ?? '').trim();
-    if (!descricao) continue;
-
-    const tipo = (recurso.tipo ?? '').toUpperCase();
-    const quantidade = numero(recurso.quantidade);
-    const unidade = recurso.unidade?.trim() || '';
-
-    if (tipo === 'MATERIAL') {
-      const existente = saida.materiais.find(
-        (m) => m.descricao === descricao && m.unidade === unidade,
-      );
-      if (existente) existente.quantidade_planejada += quantidade;
-      else saida.materiais.push({ descricao, quantidade_planejada: quantidade, unidade });
-      continue;
-    }
-
-    if (tipo === 'INSTRUMENTO') {
-      const existente = saida.ferramentas.find((f) => f.descricao === descricao);
-      if (existente) existente.quantidade += quantidade;
-      else saida.ferramentas.push({ descricao, quantidade, unidade: unidade || undefined });
-      continue;
-    }
-
-    if (tipo === 'MAO_DE_OBRA') {
-      const existente = saida.tecnicos.find((t) => t.especialidade === descricao);
-      // A quantidade do técnico é tempo, em horas de equipe. Sem horas, fica 0: a programação preenche
-      const horas = Number.isFinite(Number(recurso.quantidade)) && Number(recurso.quantidade) > 0 ? Number(recurso.quantidade) : 0;
-      if (existente) existente.horas_estimadas += horas;
-      else saida.tecnicos.push({ nome: '', especialidade: descricao, horas_estimadas: horas });
-      continue;
-    }
-
-    // VIATURA e qualquer tipo novo caem aqui e são ignorados de propósito.
-  }
-
-  return saida;
-}
+import { toast } from 'sonner';
+import { instrucoesApi } from '@/services/instrucoes.services';
+import {
+  contribuicaoDaInstrucao,
+  trocarInstrucoes,
+  type RecursosDaProgramacao,
+} from '@/features/programacao-os/utils/recursos-das-instrucoes';
 
 interface RecursosDaOrigemProps {
-  /** Os ids das instruções da origem. Mudou o conjunto, refaz os recursos. */
+  /** As instruções da programação: as das tarefas e as avulsas */
   instrucaoIds: string[];
-  /** Some quando não há origem — aí não há o que herdar. */
-  ativo: boolean;
-  onCarregar: (recursos: RecursosSeparados) => void;
+  /** A lista ainda está sendo lida da origem: a base só se firma depois */
+  carregando: boolean;
+  /**
+   * No cadastro o planejado começa vazio, e toda instrução que chega soma. Na
+   * edição, a primeira lista completa é a base: os recursos gravados já contam
+   * com ela
+   */
+  comecaVazio: boolean;
+  /** O planejado do formulário agora */
+  recursos: RecursosDaProgramacao;
+  /** Ausente (leitura), nada se aplica */
+  onRecursos?: (recursos: RecursosDaProgramacao) => void;
+  /** Há troca esperando o detalhe das instruções: salvar agora gravaria sem os recursos dela */
+  onCalculando?: (calculando: boolean) => void;
 }
 
+type Contribuicao = RecursosDaProgramacao | null;
+
 /**
- * Preenche materiais, ferramentas e técnicos a partir das instruções da origem.
+ * Mantém materiais, técnicos, ferramentas e orçamento de acordo com as
+ * instruções da programação (SN-86), sem apagar o que o planejador ajustou:
+ * a instrução que entra soma o que ela pede, a que sai subtrai
+ * (`trocarInstrucoes`). Não renderiza nada: os campos já existem no formulário.
  *
- * Não renderiza nada: os três campos já existem no formulário, e o que faltava
- * era alguém preenchê-los. Quem quiser ajustar ou acrescentar continua fazendo
- * isso nos próprios campos.
+ * Na edição, a primeira lista lida é a base: os recursos gravados já contam com
+ * ela, e somar de novo dobraria tudo. Por isso a base espera a origem terminar
+ * de ser lida — antes disso a lista está incompleta, e a diferença para a
+ * completa seria somada à programação gravada. No cadastro a base é vazia.
  *
- * Trocar a origem APAGA e recarrega. É perda deliberada: manter o que estava
- * misturaria os recursos de duas origens diferentes na mesma OS, e ninguém
- * conseguiria depois dizer de onde veio cada linha.
+ * As trocas vão em fila: duas seguidas (trocar a anomalia duas vezes) não se
+ * atropelam, e cada uma parte do que a anterior deixou.
  */
-export function RecursosDaOrigem({ instrucaoIds, ativo, onCarregar }: RecursosDaOrigemProps) {
-  // Chave em texto: o pai recria o array a cada render, e comparar por
-  // referência dispararia a carga sem parar.
-  const chave = [...instrucaoIds].map((i) => String(i).trim()).filter(Boolean).sort().join('|');
-  const anteriorRef = useRef<string | null>(null);
+export function RecursosDaOrigem({ instrucaoIds, carregando, comecaVazio, recursos, onRecursos, onCalculando }: RecursosDaOrigemProps) {
+  // Chave em texto: o pai recria o array a cada render
+  const ids = [...new Set(instrucaoIds.map((i) => String(i).trim()).filter(Boolean))];
+  const chave = [...ids].sort().join('|');
+
+  const baseRef = useRef<string[] | null>(comecaVazio ? [] : null);
+  const filaRef = useRef<Promise<void>>(Promise.resolve());
+  const contribuicoesRef = useRef(new Map<string, Promise<Contribuicao>>());
+  // O planejado mais novo: o do formulário, ou o que esta fila acabou de aplicar
+  const recursosRef = useRef(recursos);
+  recursosRef.current = recursos;
+  const onRecursosRef = useRef(onRecursos);
+  onRecursosRef.current = onRecursos;
+  const onCalculandoRef = useRef(onCalculando);
+  onCalculandoRef.current = onCalculando;
+  const naFilaRef = useRef(0);
+  const montadoRef = useRef(true);
+  useEffect(() => () => void (montadoRef.current = false), []);
 
   useEffect(() => {
-    if (!ativo) return;
-
-    // Primeira passagem numa OS já salva: os recursos gravados são os que
-    // valem, e recarregar apagaria o que já foi ajustado.
-    if (anteriorRef.current === null) {
-      anteriorRef.current = chave;
+    if (carregando) return;
+    // A base se firma também na leitura: o sheet abre em "Visualizar" e passa a
+    // "Editar" sem remontar, e sem base a primeira troca da edição virava a base,
+    // calada, sem somar nem tirar nada
+    if (baseRef.current === null) {
+      baseRef.current = ids;
       return;
     }
+    if (!onRecursosRef.current) return;
 
-    if (anteriorRef.current === chave) return;
-    anteriorRef.current = chave;
+    const destino = ids;
+    naFilaRef.current += 1;
+    if (naFilaRef.current === 1) onCalculandoRef.current?.(true);
+    filaRef.current = filaRef.current.then(async () => {
+      const antes = baseRef.current ?? [];
+      const entraram = destino.filter((id) => !antes.includes(id));
+      const sairam = antes.filter((id) => !destino.includes(id));
+      if (!entraram.length && !sairam.length) return;
 
-    if (!chave) {
-      onCarregar(vazio());
-      return;
-    }
+      const contribuicao = (id: string): Promise<Contribuicao> => {
+        let pedida = contribuicoesRef.current.get(id);
+        if (!pedida) {
+          pedida = instrucoesApi
+            .findOne(id)
+            .then(contribuicaoDaInstrucao)
+            // O interceptor já avisou da falha; sem o detalhe, essa instrução não mexe nos recursos
+            .catch(() => {
+              contribuicoesRef.current.delete(id);
+              return null;
+            });
+          contribuicoesRef.current.set(id, pedida);
+        }
+        return pedida;
+      };
+      const lidas = async (lista: string[]) =>
+        (await Promise.all(lista.map(contribuicao))).filter((c): c is RecursosDaProgramacao => c !== null);
 
-    let cancelado = false;
+      const [mais, menos, ficam] = await Promise.all([
+        lidas(entraram),
+        lidas(sairam),
+        lidas(destino.filter((id) => antes.includes(id))),
+      ]);
+      // Sem aplicar, a base não anda: a troca fica para a próxima vez que der
+      if (!montadoRef.current || !onRecursosRef.current) return;
 
-    void (async () => {
-      const { instrucoesApi } = await import('@/services/instrucoes.services');
-
-      const detalhes = await Promise.all(
-        chave.split('|').map((id) => instrucoesApi.findOne(id).catch(() => null)),
-      );
-
-      if (cancelado) return;
-
-      const recursos = detalhes
-        .filter(Boolean)
-        .flatMap((instrucao) => (instrucao!.recursos ?? []).map(daLinhaDaInstrucao));
-
-      onCarregar(separarRecursos(recursos));
-    })();
-
-    return () => {
-      cancelado = true;
-    };
+      const novo = trocarInstrucoes(recursosRef.current, { entraram: mais, sairam: menos, ficam });
+      recursosRef.current = novo;
+      onRecursosRef.current(novo);
+      baseRef.current = destino;
+    })
+      // Uma troca que falha avisa e não para a fila: sem o catch, as seguintes eram puladas caladas
+      .catch((erro: unknown) => {
+        toast.error('Não foi possível ajustar os recursos das instruções', {
+          description: erro instanceof Error ? erro.message : String(erro),
+        });
+      })
+      .finally(() => {
+        naFilaRef.current -= 1;
+        if (naFilaRef.current === 0 && montadoRef.current) onCalculandoRef.current?.(false);
+      });
+    // A chave resume a lista
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chave, ativo]);
+  }, [chave, carregando]);
 
   return null;
 }

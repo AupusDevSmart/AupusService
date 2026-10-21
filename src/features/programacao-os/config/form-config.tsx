@@ -1,5 +1,4 @@
 // src/features/programacao-os/config/form-config.tsx - CORRIGIDA COM MAPEAMENTO DE GRUPOS
-import { useState, type ComponentProps } from 'react';
 import type { FormField, FormFieldProps } from '@/types/base';
 import type { BaseEntity, DadosDoFormulario } from '@/core/types/base';
 import type { DadosOrigem, TarefasPorPlano } from '../types';
@@ -7,8 +6,8 @@ import type { OrigemOSValue } from '../components/origem-selector/types';
 import type { AnomaliaDoCard, SolicitacaoDoCard, TarefaDoCard } from '../components/OrigemOSCard';
 import type { ReservaVinculada } from '../components/ReservaVinculadaCard';
 import { OrigemOSSelector } from '../components/OrigemOSSelector';
-import { InstrucoesDaOrigem } from '../components/InstrucoesDaOrigem';
-import { RecursosDaOrigem } from '../components/RecursosDaOrigem';
+import { InstrucoesDaProgramacao } from '@/features/programacao-os/components/InstrucoesDaProgramacao';
+import { HORAS_DA_VAGA, type RecursosDaProgramacao } from '@/features/programacao-os/utils/recursos-das-instrucoes';
 import { PrazoDaOrigem } from '../components/PrazoDaOrigem';
 import { OrigemOSCard } from '../components/OrigemOSCard';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
@@ -38,6 +37,8 @@ type ProgramacaoAberta = BaseEntity & {
   tarefas_por_plano?: TarefasPorPlano;
   solicitacao_servico?: SolicitacaoDoCard | null;
   solicitacao_servico_id?: string;
+  /** As instruções avulsas gravadas (SN-86) */
+  instrucoes?: Array<{ instrucao_id?: string | null; codigo?: string | null; nome?: string | null }>;
   data_previsao_fim?: string;
   reserva_veiculo?: ReservaVinculada | null;
   observacoes_aprovacao?: string;
@@ -55,8 +56,13 @@ type CamposDaProgramacao = DadosDoFormulario & {
   reserva_id?: string | null;
   reserva_veiculo?: { id?: string } | null;
   observacoes_aprovacao?: string;
-  materiais?: Array<{ custo_unitario?: number; quantidade_planejada?: number }>;
-  tecnicos?: Array<{ custo_hora?: number; horas_estimadas?: number }>;
+  materiais?: RecursosDaProgramacao['materiais'];
+  tecnicos?: RecursosDaProgramacao['tecnicos'];
+  ferramentas?: RecursosDaProgramacao['ferramentas'];
+  itens_orcamento?: RecursosDaProgramacao['itens_orcamento'];
+  instrucoes_ids?: string[];
+  /** Fora do payload (o handleSubmit monta o dele): uma troca de instrução ainda calculando os recursos */
+  recursos_em_calculo?: boolean;
 };
 
 /** O render de um campo: o fieldProps inteiro, com a entidade e o formulário da programação. */
@@ -64,33 +70,6 @@ type PropsDoRender = FormFieldProps & {
   entity?: ProgramacaoAberta | null;
   formData?: CamposDaProgramacao;
 };
-
-/**
- * As instrucoes da origem, e os recursos que elas trazem.
- *
- * Um componente so porque as duas coisas dependem da MESMA lista: resolver o
- * vinculo em dois lugares daria duas listas que podem divergir, e a pessoa
- * veria uma instrucao na tela cujos materiais nao entraram.
- */
-function InstrucoesOrigemComRecursos({
-  onMultipleChange,
-  ...props
-}: Omit<ComponentProps<typeof InstrucoesDaOrigem>, 'onInstrucoes'> & {
-  onMultipleChange?: (valores: Record<string, unknown>) => void;
-}) {
-  const [instrucaoIds, setInstrucaoIds] = useState<string[]>([]);
-
-  return (
-    <>
-      <InstrucoesDaOrigem {...props} onInstrucoes={setInstrucaoIds} />
-      <RecursosDaOrigem
-        instrucaoIds={instrucaoIds}
-        ativo={Boolean(onMultipleChange)}
-        onCarregar={(recursos) => onMultipleChange?.({ ...recursos })}
-      />
-    </>
-  );
-}
 
 export const programacaoOSFormFields: FormField[] = [
   // Informações básicas - GRUPO: identificacao
@@ -175,13 +154,14 @@ export const programacaoOSFormFields: FormField[] = [
     }
   },
   {
-    key: 'instrucoes_origem',
+    // SN-86: as instruções da programação, as das tarefas e as avulsas. É delas
+    // que a OS tira o checklist, e os recursos planejados as acompanham
+    key: 'instrucoes_ids',
     label: '',
     type: 'custom',
     group: 'origem',
     colSpan: 2,
-    excludeFromSubmit: true,
-    render: ({ entity, formData, onMultipleChange }: PropsDoRender) => {
+    render: ({ entity, formData, value, onChange, onMultipleChange, mode, disabled }: PropsDoRender) => {
       // No cadastro a origem esta no formulario; numa OS ja salva, na entidade.
       const origem = formData?.origem;
       const tipo = origem?.tipo || entity?.origem?.tipo || 'MANUAL';
@@ -191,9 +171,10 @@ export const programacaoOSFormFields: FormField[] = [
         : (entity?.tarefas_programacao || [])
             .map((t) => t?.tarefa_id || t?.tarefa?.id || t?.id)
             .filter((id): id is string => Boolean(id));
+      const editavel = mode !== 'view' && !disabled;
 
       return (
-        <InstrucoesOrigemComRecursos
+        <InstrucoesDaProgramacao
           tipo={tipo}
           anomaliaId={origem?.anomaliaId || entity?.anomalia?.id || entity?.anomalia_id}
           solicitacaoId={
@@ -203,10 +184,26 @@ export const programacaoOSFormFields: FormField[] = [
           }
           planoId={origem?.planoId || entity?.plano_manutencao?.id || entity?.plano_manutencao_id}
           tarefaIds={tarefaIds}
-          onMultipleChange={onMultipleChange}
+          valor={Array.isArray(value) ? (value as string[]) : undefined}
+          onValor={editavel ? (ids) => onChange(ids) : undefined}
+          semearDaOrigem={mode === 'create'}
+          gravadas={(entity?.instrucoes ?? [])
+            .filter((i) => i.instrucao_id)
+            .map((i) => ({ id: String(i.instrucao_id).trim(), codigo: i.codigo ?? undefined, nome: i.nome ?? undefined }))}
+          recursos={{
+            materiais: formData?.materiais ?? [],
+            ferramentas: formData?.ferramentas ?? [],
+            tecnicos: formData?.tecnicos ?? [],
+            itens_orcamento: formData?.itens_orcamento ?? [],
+          }}
+          onRecursos={onMultipleChange ? (recursos) => onMultipleChange({ ...recursos }) : undefined}
+          onCalculando={onMultipleChange ? (sim) => onMultipleChange({ recursos_em_calculo: sim }) : undefined}
         />
       );
     },
+    // Salvar com a troca ainda calculando gravaria a instrução sem os recursos dela
+    validation: (_valor: unknown, formData?: CamposDaProgramacao) =>
+      formData?.recursos_em_calculo ? 'Aguarde: os recursos das instruções ainda estão sendo calculados.' : null,
   },
 
 
@@ -513,6 +510,18 @@ export const programacaoOSFormFields: FormField[] = [
       />
     ),
     defaultValue: [],
+    // As horas de cada técnico, de 0,25 a 24 (o servidor recusa fora disso). A
+    // vaga que a instrução abre sem duração vem com 0 h para a programação
+    // preencher; antes o salvar trocava o vazio por 8 h, calado
+    validation: (value: unknown) => {
+      const sem = (Array.isArray(value) ? (value as TecnicoItem[]) : []).filter((t) => {
+        const horas = Number(t?.horas_estimadas);
+        return !Number.isFinite(horas) || horas < HORAS_DA_VAGA.minimo || horas > HORAS_DA_VAGA.maximo;
+      });
+      if (!sem.length) return null;
+      const quem = [...new Set(sem.map((t) => t.nome?.trim() || t.especialidade?.trim() || 'técnico'))].join(', ');
+      return `Informe as horas de cada técnico, de 0,25 a 24 h: ${quem}`;
+    },
     group: 'equipe',
     colSpan: 2, // Ocupar largura total no sheet
     computeDisabled: (entity?: ProgramacaoAberta | null) => {

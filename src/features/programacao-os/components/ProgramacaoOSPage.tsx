@@ -44,6 +44,8 @@ interface FormularioDaProgramacao {
   tipo?: string;
   prioridade?: string;
   origem?: (OrigemOSValue & { equipamentoId?: string }) | null;
+  /** SN-86: as instruções avulsas; indefinido quando a origem não se leu */
+  instrucoes_ids?: string[];
   itens_orcamento?: Array<{ descricao?: string; valor?: NumeroDoFormulario }>;
   tempo_estimado?: NumeroDoFormulario;
   tempoEstimado?: NumeroDoFormulario;
@@ -457,6 +459,12 @@ export function ProgramacaoOSPage() {
           tarefas_ids: data.origem?.tarefasSelecionadas || []
         }),
 
+        // SN-86: as instruções avulsas. Sem a lista (a origem não se leu), o
+        // servidor põe as da origem no cadastro e não mexe na edição
+        ...(Array.isArray(data.instrucoes_ids) && {
+          instrucoes_ids: data.instrucoes_ids.map((id) => String(id).trim()).filter(Boolean),
+        }),
+
         // Arrays de recursos - Apenas campos aceitos pelo backend
         materiais: data.materiais?.map((m) => ({
           descricao: m.descricao,
@@ -474,7 +482,8 @@ export function ProgramacaoOSPage() {
         tecnicos: data.tecnicos?.map((t) => ({
           nome: t.nome,
           especialidade: t.especialidade,
-          horas_estimadas: parseFloat(String(t.horas_estimadas || t.horasEstimadas || 8)),
+          // O formulário exige as horas (0,25 a 24): o 8 que entrava no vazio era invenção
+          horas_estimadas: parseFloat(String(t.horas_estimadas ?? t.horasEstimadas ?? '')),
           custo_hora: parseFloat(String(t.custo_hora || t.custoHora || 0)),
           tecnico_id: t.tecnico_id || null
         })) || []
@@ -839,6 +848,10 @@ export function ProgramacaoOSPage() {
 
       // Itens de orcamento (tabela própria)
       itens_orcamento: entity.itens_orcamento || [],
+
+      // SN-86: as instruções avulsas gravadas, e o código e nome delas para a tela
+      instrucoes_ids: (entity.instrucoes ?? []).map((i) => i.instrucao_id?.trim()).filter((id): id is string => Boolean(id)),
+      instrucoes: entity.instrucoes ?? [],
 
       // Dados da origem expandidos (para exibição no card). A API da
       // programacao nao manda anomalia nem plano: o card busca pela origem.

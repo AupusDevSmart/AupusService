@@ -183,6 +183,8 @@ export function OQueFoiFeito({ osId, status, progresso, editavel, onChange }: OQ
                   <CircleDashed className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                 )}
                 <span className="truncate text-sm font-medium">{tarefa.nome}</span>
+                {/* Não vem do plano: feita ou não, não mexe na agenda de tarefa nenhuma */}
+                {tarefa.instrucaoAvulsa && <span className="shrink-0 text-xs text-muted-foreground">instrução</span>}
                 <Badge variant="outline" className="shrink-0 text-[11px]">
                   {tarefa.status === 'CONCLUIDA' ? 'Feita' : tarefa.status === 'CANCELADA' ? 'Não feita' : 'Pendente'}
                 </Badge>
