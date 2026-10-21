@@ -4,23 +4,37 @@ import { FormFieldProps } from '@/types/base';
 import { Input } from '@/components/ui/input';
 import { Clock } from 'lucide-react';
 import { ItensOrdenaveisTable, type ColunaItemOrdenavel } from '@/components/common/ItensOrdenaveisTable';
-import { formatarHoras } from '@/utils/horas';
-import type { TipoDePasso } from '@/services/instrucoes.services';
+import { formatarHoras, horasNoCampo, lerHorasDigitadas } from '@/utils/horas';
+import {
+  ROTULO_DA_DISCIPLINA,
+  type DisciplinaDoPasso,
+  type RegistroDoPasso,
+} from '@/services/instrucoes.services';
 import { CampoDeNumero } from '@/components/common/CampoDeNumero';
 
+/**
+ * O passo da instrução: os campos do AupusProject (descrição, disciplina,
+ * duração em horas, obrigatório, SN-85) e os que só o Service tem (a leitura
+ * com unidade e faixa, SN-58, e a foto, SN-59).
+ */
 interface SubInstrucao {
   id?: string;
   descricao: string;
   obrigatoria: boolean;
-  tempo_estimado?: number;
-  /** SN-58: a leitura pede o valor medido na OS, com unidade e faixa */
-  tipo?: TipoDePasso;
-  /** SN-59: o item da OS só é marcado com uma foto dele */
+  tipo?: DisciplinaDoPasso | null;
+  duracao_horas?: number | null;
+  registro?: RegistroDoPasso;
   exige_foto?: boolean;
   unidade?: string | null;
   valor_minimo?: number | null;
   valor_maximo?: number | null;
+  /** Os campos com texto que não dá para ler (só na tela): o formulário não salva com eles */
+  ilegiveis?: Record<string, boolean>;
 }
+
+/** Mesmo raio e borda do Input padrão para o select não destoar da linha */
+const classeDoSelect =
+  'h-8 w-full rounded-[0.25rem] border border-input bg-transparent px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
 
 /** A linha cabe na coluna estreita do sheet */
 const CAMPO_DA_FAIXA = 'h-7 w-16 px-2 text-xs';
@@ -45,7 +59,7 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
   };
 
   const adicionar = () => {
-    aplicar([...subInstrucoes, { descricao: '', obrigatoria: false, tempo_estimado: 0 }]);
+    aplicar([...subInstrucoes, { descricao: '', obrigatoria: false, tipo: null, duracao_horas: null }]);
   };
 
   const remover = (index: number) => {
@@ -55,6 +69,16 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
   const atualizar = (index: number, campo: keyof SubInstrucao, valor: unknown) => {
     aplicar(subInstrucoes.map((item, i) => (i === index ? { ...item, [campo]: valor } : item)));
   };
+
+  /** Os props de um campo numérico do passo: o ilegível marca o passo e trava o salvar (como nas linhas) */
+  const numerico = (index: number, campo: keyof SubInstrucao) => ({
+    onChange: (v: number | null) =>
+      aplicar(subInstrucoes.map((item, i) => (i === index ? { ...item, [campo]: v, ilegiveis: { ...item.ilegiveis, [campo]: false } } : item))),
+    onIlegivel: (sim: boolean) => {
+      if (Boolean(subInstrucoes[index].ilegiveis?.[campo]) === sim) return;
+      aplicar(subInstrucoes.map((item, i) => (i === index ? { ...item, ilegiveis: { ...item.ilegiveis, [campo]: sim } } : item)));
+    },
+  });
 
   const reordenar = (origem: number, destino: number) => {
     const lista = [...subInstrucoes];
@@ -70,14 +94,14 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
       render: (item, index) => (
         <div className="space-y-1.5">
           <Input
-            placeholder="Descrição da sub-instrução..."
+            placeholder="O que se faz neste passo..."
             type="text"
             value={item.descricao}
             onChange={(e) => atualizar(index, 'descricao', e.target.value)}
             disabled={disabled}
             className="h-8"
           />
-          {item.tipo === 'LEITURA' && (
+          {item.registro === 'LEITURA' && (
             <div className="flex flex-wrap items-start gap-1 text-xs text-muted-foreground">
               <Input
                 aria-label="Unidade da leitura"
@@ -94,7 +118,7 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
                 aria-label="Mínimo aceitável"
                 placeholder="mín."
                 value={item.valor_minimo ?? null}
-                onChange={(v) => atualizar(index, 'valor_minimo', v)}
+                {...numerico(index, 'valor_minimo')}
                 disabled={disabled}
                 avisoCurto
                 className={CAMPO_DA_FAIXA}
@@ -104,7 +128,7 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
                 aria-label="Máximo aceitável"
                 placeholder="máx."
                 value={item.valor_maximo ?? null}
-                onChange={(v) => atualizar(index, 'valor_maximo', v)}
+                {...numerico(index, 'valor_maximo')}
                 disabled={disabled}
                 avisoCurto
                 className={CAMPO_DA_FAIXA}
@@ -113,6 +137,83 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
             </div>
           )}
         </div>
+      )
+    },
+    {
+      // A disciplina de lá (SN-85): administrativo, civil, elétrico, mecânico
+      key: 'tipo',
+      header: 'Disciplina',
+      width: 'w-32',
+      render: (item, index) => (
+        <select
+          aria-label="Disciplina do passo"
+          value={item.tipo ?? ''}
+          onChange={(e) => atualizar(index, 'tipo', (e.target.value || null) as DisciplinaDoPasso | null)}
+          disabled={disabled}
+          className={classeDoSelect}
+        >
+          <option value="">—</option>
+          {Object.entries(ROTULO_DA_DISCIPLINA).map(([valor, rotulo]) => (
+            <option key={valor} value={valor}>
+              {rotulo}
+            </option>
+          ))}
+        </select>
+      )
+    },
+    {
+      // Em horas, como lá: "1h30", "45min" ou "1,5"
+      key: 'duracao_horas',
+      header: 'Duração',
+      width: 'w-24',
+      align: 'center',
+      render: (item, index) => (
+        <CampoDeNumero
+          aria-label="Duração do passo"
+          value={item.duracao_horas ?? null}
+          {...numerico(index, 'duracao_horas')}
+          ler={lerHorasDigitadas}
+          mostrar={horasNoCampo}
+          aviso="Horas como 1h30, 45min ou 1,5"
+          avisoCurto
+          placeholder="1h30"
+          disabled={disabled}
+          className="h-8 w-20 text-center"
+        />
+      )
+    },
+    {
+      key: 'obrigatoria',
+      header: 'Obrig.',
+      width: 'w-14',
+      align: 'center',
+      render: (item, index) => (
+        <input
+          type="checkbox"
+          checked={item.obrigatoria}
+          onChange={(e) => atualizar(index, 'obrigatoria', e.target.checked)}
+          disabled={disabled}
+          className="accent-foreground"
+          aria-label="Obrigatório: a tarefa não fecha sem este passo"
+          title="Obrigatório: a tarefa não fecha sem este passo"
+        />
+      )
+    },
+    {
+      key: 'registro',
+      header: 'Leitura',
+      width: 'w-14',
+      align: 'center',
+      render: (item, index) => (
+        <input
+          type="checkbox"
+          checked={item.registro === 'LEITURA'}
+          onChange={(e) => atualizar(index, 'registro', e.target.checked ? 'LEITURA' : 'VERIFICACAO')}
+          disabled={disabled}
+          className="accent-foreground"
+          aria-label="Passo de leitura (a equipe digita o valor medido)"
+          title="Leitura: a equipe digita o valor medido, com unidade e faixa"
+        />
       )
     },
     {
@@ -131,78 +232,11 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
           title="Exige foto: na OS, o item só é marcado com uma foto dele"
         />
       )
-    },
-    {
-      key: 'tipo',
-      header: 'Leitura',
-      width: 'w-16',
-      align: 'center',
-      render: (item, index) => (
-        <input
-          type="checkbox"
-          checked={item.tipo === 'LEITURA'}
-          onChange={(e) => atualizar(index, 'tipo', e.target.checked ? 'LEITURA' : 'VERIFICACAO')}
-          disabled={disabled}
-          className="accent-foreground"
-          aria-label="Passo de leitura (a equipe digita o valor medido)"
-          title="Leitura: a equipe digita o valor medido, com unidade e faixa"
-        />
-      )
-    },
-    {
-      key: 'obrigatoria',
-      header: 'Obrigatória',
-      width: 'w-24',
-      align: 'center',
-      render: (item, index) => (
-        <input
-          type="checkbox"
-          checked={item.obrigatoria}
-          onChange={(e) => atualizar(index, 'obrigatoria', e.target.checked)}
-          disabled={disabled}
-          className="accent-foreground"
-          title="Obrigatória"
-        />
-      )
-    },
-    {
-      key: 'tempo_estimado',
-      header: 'Tempo (h)',
-      width: 'w-28',
-      align: 'center',
-      // A coluna do banco continua em MINUTOS (Int) — so a tela trabalha em
-      // horas. Converter aqui evita migracao e mantem compativel o que o
-      // gerarChecklistPadrao ja le de sub_instrucoes.tempo_estimado.
-      render: (item, index) => (
-        <Input
-          type="number"
-          min={0}
-          step={0.25}
-          value={item.tempo_estimado ? item.tempo_estimado / 60 : ''}
-          onChange={(e) => {
-            const horas = Number(e.target.value);
-            atualizar(index, 'tempo_estimado', horas > 0 ? Math.round(horas * 60) : 0);
-          }}
-          disabled={disabled}
-          className="h-8 w-16 mx-auto text-center"
-          placeholder="0"
-        />
-      )
     }
   ];
 
-  /**
-   * Quanto a instrução dura por completo: a soma das etapas.
-   *
-   * O banco guarda minutos; a tela trabalha em horas. Somo em minutos e
-   * converto uma vez só no fim — dividir cada etapa por 60 antes de somar
-   * acumularia erro de arredondamento a cada linha.
-   */
-  const totalMinutos = subInstrucoes.reduce(
-    (soma, item) => soma + (Number(item.tempo_estimado) || 0),
-    0,
-  );
-  const totalHoras = totalMinutos / 60;
+  /** Quanto a instrução leva: a soma dos passos (é o que a programação sugere de duração) */
+  const totalHoras = subInstrucoes.reduce((soma, item) => soma + (Number(item.duracao_horas) || 0), 0);
 
   // Titulo proprio: assim ele e o botao de adicionar ficam na mesma linha.
   return (
@@ -212,8 +246,8 @@ export function SubInstrucoesController({ value, onChange, disabled }: FormField
       onReordenar={reordenar}
       onRemover={remover}
       onAdicionar={adicionar}
-      textoAdicionar="Adicionar sub-instrução"
-      titulo="Sub-instruções"
+      textoAdicionar="Adicionar passo"
+      titulo="Passos"
       resumo={[
         {
           icone: <Clock className="h-3.5 w-3.5" />,

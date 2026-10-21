@@ -134,17 +134,17 @@ export interface TarefaDisponivel {
   ordem?: number;
   instrucao?: {
     id?: string;
-    tag?: string;
+    /** SN-85: era tag */
+    codigo?: string;
     nome?: string;
-    categoria?: string;
-    tipo_manutencao?: string;
-    descricao?: string;
+    descricao?: string | null;
     sub_instrucoes?: Array<{
       id?: string;
       descricao: string;
       obrigatoria?: boolean;
       ordem?: number;
-      tempo_estimado?: number | null;
+      /** SN-85: em horas (era tempo_estimado, em minutos) */
+      duracao_horas?: number | null;
     }>;
   };
 }

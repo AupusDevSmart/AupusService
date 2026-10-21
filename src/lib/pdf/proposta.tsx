@@ -14,7 +14,8 @@ interface DadosProposta {
 interface EscopoDaInstrucao {
   id: string;
   rotulo: string;
-  etapas: Array<{ descricao: string; tempo_estimado?: number | null }>;
+  /** A duração do passo em horas (SN-85) */
+  etapas: Array<{ descricao: string; duracao_horas?: number | null }>;
 }
 
 function PropostaDocumento({
@@ -71,9 +72,9 @@ function PropostaDocumento({
                 <View key={indice} style={{ flexDirection: 'row', marginBottom: 2 }}>
                   <Text style={{ width: 24, color: '#6b7280' }}>{indice + 1}.</Text>
                   <Text style={{ flex: 1 }}>{etapa.descricao}</Text>
-                  {etapa.tempo_estimado ? (
+                  {etapa.duracao_horas ? (
                     <Text style={{ width: 60, textAlign: 'right', color: '#6b7280' }}>
-                      {(etapa.tempo_estimado / 60).toFixed(1).replace('.', ',')} h
+                      {etapa.duracao_horas.toFixed(1).replace('.', ',')} h
                     </Text>
                   ) : null}
                 </View>
@@ -177,10 +178,10 @@ async function carregarEscopo(proposta: Proposta): Promise<{ escopo: EscopoDaIns
     .filter((d): d is NonNullable<typeof d> => Boolean(d))
     .map((instrucao) => ({
       id: instrucao.id,
-      rotulo: rotuloInstrucao(instrucao.tag, instrucao.nome),
+      rotulo: rotuloInstrucao(instrucao.codigo, instrucao.nome),
       etapas: (instrucao.sub_instrucoes ?? []).map((s) => ({
         descricao: s.descricao,
-        tempo_estimado: s.tempo_estimado ?? null,
+        duracao_horas: s.duracao_horas ?? null,
       })),
     }))
     .filter((i) => i.etapas.length > 0);

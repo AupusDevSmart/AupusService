@@ -37,33 +37,9 @@ const initialDashboard: DashboardInstrucoesDto = {
   instrucoes_inativas: 0,
   instrucoes_em_revisao: 0,
   instrucoes_arquivadas: 0,
-  criticidade_muito_alta: 0,
-  criticidade_alta: 0,
-  criticidade_media: 0,
-  criticidade_baixa: 0,
-  criticidade_muito_baixa: 0,
-  distribuicao_tipos: {
-    preventiva: 0,
-    preditiva: 0,
-    corretiva: 0,
-    inspecao: 0,
-    visita_tecnica: 0
-  },
-  distribuicao_categorias: {
-    mecanica: 0,
-    eletrica: 0,
-    instrumentacao: 0,
-    lubrificacao: 0,
-    limpeza: 0,
-    inspecao: 0,
-    calibracao: 0,
-    outros: 0
-  },
-  tempo_total_estimado: 0,
-  media_tempo_por_instrucao: 0,
-  media_criticidade: 0,
   total_sub_instrucoes: 0,
   total_recursos: 0,
+  total_maquinarios: 0,
   total_tarefas_derivadas: 0
 };
 
@@ -136,15 +112,8 @@ export function InstrucoesPage() {
 
   const handleSubmit = async (data: FormularioDaInstrucao) => {
     try {
-      const readOnlyFields = [
-        'id', 'created_at', 'updated_at', 'deleted_at',
-        'total_sub_instrucoes', 'total_recursos', 'total_anexos',
-        'total_tarefas_derivadas', 'usuario_criador', 'usuario_atualizador',
-        'criado_por', 'atualizado_por', 'anexos'
-      ];
-
-      const cleanData = { ...data };
-      readOnlyFields.forEach(field => delete cleanData[field]);
+      // O formulário vem com a instrução inteira; o service manda só o que o DTO aceita (lista branca)
+      const cleanData = data;
 
       let instrucaoId: string;
 
@@ -154,12 +123,8 @@ export function InstrucoesPage() {
           return;
         }
 
-        const instrucaoData = {
-          ...cleanData,
-          criado_por: user.id
-        };
-
-        const novaInstrucao = await createInstrucao(instrucaoData);
+        // O autor sai do token no servidor
+        const novaInstrucao = await createInstrucao(cleanData);
         instrucaoId = novaInstrucao.id;
 
         if (pendingFiles.length > 0) {
@@ -195,7 +160,7 @@ export function InstrucoesPage() {
   const handleExcluir = async (instrucao: InstrucaoApiResponse) => {
     try {
       await deleteInstrucao(instrucao.id.trim());
-      toast.success(`Instrução ${instrucao.tag} excluída.`);
+      toast.success(`Instrução ${instrucao.codigo} excluída.`);
       await handleSuccess();
     } catch (error) {
       // O hook já reporta; aqui só evitamos fechar o modal em cima do erro,

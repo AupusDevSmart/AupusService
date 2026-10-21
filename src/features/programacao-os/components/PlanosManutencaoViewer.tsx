@@ -11,11 +11,15 @@ import {
   CheckCircle,
   AlertTriangle,
   FileText,
-  Wrench,
   Package
 } from 'lucide-react';
 import { tarefasApi, TarefaApiResponse } from '@/services/tarefas.services';
 import { planosManutencaoApi, PlanoManutencaoApiResponse } from '@/services/planos-manutencao.services';
+import { formatarHoras } from '@/utils/horas';
+
+/** A soma das durações dos passos da instrução da tarefa (SN-85) */
+const horasDosPassos = (tarefa: TarefaApiResponse) =>
+  (tarefa.instrucao?.sub_instrucoes ?? []).reduce((h, p) => h + (Number(p.duracao_horas) || 0), 0);
 
 // Usar tipos da API diretamente
 type TarefaDetalhada = TarefaApiResponse & {
@@ -229,19 +233,6 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
     );
   };
 
-  const getCategoriasIcons = (categoria: string) => {
-    const icons = {
-      MECANICA: <Wrench className="h-4 w-4 text-blue-600 dark:text-blue-400" />,
-      ELETRICA: <Settings className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />,
-      INSTRUMENTACAO: <Settings className="h-4 w-4 text-purple-600 dark:text-purple-400" />,
-      LUBRIFICACAO: <Package className="h-4 w-4 text-green-600 dark:text-green-400" />,
-      LIMPEZA: <CheckCircle className="h-4 w-4 text-teal-600 dark:text-teal-400" />,
-      INSPECAO: <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />,
-      CALIBRACAO: <Settings className="h-4 w-4 text-red-600 dark:text-red-400" />,
-    };
-    return icons[categoria as keyof typeof icons] || <FileText className="h-4 w-4 text-gray-600 dark:text-gray-400" />;
-  };
-
   if (loading) {
     return (
       <Card className={className}>
@@ -376,7 +367,7 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                                   <ChevronRight
                                     className={`h-3 w-3 text-muted-foreground mr-2 transition-transform duration-200 ${tarefaExpanded ? 'rotate-90' : ''}`}
                                   />
-                                  {getCategoriasIcons(tarefa.instrucao?.categoria ?? '')}
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
                                   <div className="text-left flex-1 ml-2">
                                     <div className="font-medium text-sm text-foreground flex items-center gap-2">
                                       <span>{tarefa.nome}</span>
@@ -411,9 +402,12 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                                     <span className="font-medium text-foreground">Frequência:</span>
                                     <span className="ml-2">{tarefa.frequencia}</span>
                                   </div>
+                                  {/* A instrução não tem mais condição do ativo (SN-85): a duração sai dos passos */}
                                   <div>
-                                    <span className="font-medium text-foreground">Condição:</span>
-                                    <span className="ml-2">{tarefa.instrucao?.condicao_ativo ?? '-'}</span>
+                                    <span className="font-medium text-foreground">Duração dos passos:</span>
+                                    <span className="ml-2">
+                                      {horasDosPassos(tarefa) > 0 ? formatarHoras(horasDosPassos(tarefa)) : '-'}
+                                    </span>
                                   </div>
                                   {/* "Responsável" saiu: a coluna foi droppada
                                       no PR6 e o bloco nunca renderizava. Quem
@@ -434,6 +428,9 @@ const PlanosManutencaoViewer: React.FC<PlanosManutencaoViewerProps> = React.memo
                                         <div key={`${instanceId.current}-etapa-${etapaIndex}-${etapa.id}`} className="flex items-center gap-2 text-xs bg-card rounded p-2 border">
                                           <span className="font-mono text-muted-foreground">{etapa.ordem}</span>
                                           <span className="flex-1">{etapa.descricao}</span>
+                                          {etapa.duracao_horas ? (
+                                            <span className="text-muted-foreground">{formatarHoras(etapa.duracao_horas)}</span>
+                                          ) : null}
                                           {etapa.obrigatoria && (
                                             <Badge variant="outline" className="text-xs">
                                               Obrigatória

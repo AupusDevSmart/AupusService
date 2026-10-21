@@ -82,6 +82,11 @@ export type PlanilhaDeFichas<T> = {
   montar: (cabecalho: Record<string, unknown>, secoes: SecoesLidas) => Record<string, unknown>;
   /** Problema da aba que nenhum campo sozinho acusa. */
   conferir?: (secoes: SecoesLidas) => string | null;
+  /**
+   * Linhas depois das seções (os subtotais da instrução, SN-85). Rótulo na
+   * coluna A: a leitura as pula, como qualquer rodapé de seção.
+   */
+  rodape?: (ws: Worksheet, registro: T) => void;
   referencias?: Referencia[];
   regrasDoCadastro?: string[];
 };
@@ -227,12 +232,25 @@ function escreverFicha<T>(
     }
   }
 
+  if (registro !== null && def.rodape) {
+    ws.addRow([]);
+    def.rodape(ws, registro);
+  }
+
   bordaFina(ws, ultimaColuna);
 }
 
 // ---- Leitura ---------------------------------------------------------------
 
-export function lerFichas<T>(def: PlanilhaDeFichas<T>, livro: Workbook): LeituraDaPlanilha {
+/**
+ * `deOutroSistema`: a planilha do Smart Project (AupusProject), que não tem as
+ * colunas que só este sistema tem (`soDesteSistema`) — faltar não é erro ali.
+ */
+export function lerFichas<T>(
+  def: PlanilhaDeFichas<T>,
+  livro: Workbook,
+  { deOutroSistema = false }: { deOutroSistema?: boolean } = {},
+): LeituraDaPlanilha {
   const erros: ProblemaDaPlanilha[] = [];
   const registros: RegistroDaPlanilha[] = [];
 
@@ -244,7 +262,7 @@ export function lerFichas<T>(def: PlanilhaDeFichas<T>, livro: Workbook): Leitura
   for (const ws of livro.worksheets) {
     if (reservadas.has(chave(ws.name))) continue;
 
-    const lida = lerFicha(def, ws);
+    const lida = lerFicha(def, ws, deOutroSistema);
     erros.push(...lida.erros);
     if (lida.registro) registros.push(lida.registro);
   }
@@ -260,6 +278,7 @@ type SecaoEmLeitura<T> = {
 function lerFicha<T>(
   def: PlanilhaDeFichas<T>,
   ws: Worksheet,
+  deOutroSistema: boolean,
 ): { registro: RegistroDaPlanilha | null; erros: ProblemaDaPlanilha[] } {
   const aba = ws.name;
   const erros: ProblemaDaPlanilha[] = [];
@@ -317,6 +336,7 @@ function lerFicha<T>(
         // da coluna existir, ou apagada) apagaria o dado dela calada. Antes era
         // descartada sem aviso — as leituras do SN-58 virariam verificação
         for (const campo of secao.colunas.filter((c) => !ehCalculado(c) && !c.identificador)) {
+          if (deOutroSistema && campo.soDesteSistema) continue;
           if (!porTitulo.has(chave(campo.titulo))) {
             erros.push({
               aba,

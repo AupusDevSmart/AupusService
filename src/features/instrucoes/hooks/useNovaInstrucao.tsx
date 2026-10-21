@@ -13,27 +13,6 @@ import { formatApiError } from '@/utils/api-error';
 const instrucoesApi = new InstrucoesApiService();
 
 /**
- * Campos que o servidor gerencia e que o BaseModal devolve junto porque semeia
- * o formulário com a entidade inteira. Mandá-los de volta faz o
- * `forbidNonWhitelisted` do backend recusar o create com 400.
- */
-const CAMPOS_DO_SERVIDOR = [
-  'id',
-  'created_at',
-  'updated_at',
-  'deleted_at',
-  'total_sub_instrucoes',
-  'total_recursos',
-  'total_anexos',
-  'total_tarefas_derivadas',
-  'usuario_criador',
-  'usuario_atualizador',
-  'criado_por',
-  'atualizado_por',
-  'anexos',
-];
-
-/**
  * Cadastrar uma instrução sem sair da tela onde ela vai ser usada.
  *
  * Quem monta um plano descobre a instrução que falta no momento de escolhê-la
@@ -96,16 +75,11 @@ export function useNovaInstrucao(aoCriar?: (instrucao: InstrucaoApiResponse) => 
         return;
       }
 
-      const payload = { ...dados };
-      CAMPOS_DO_SERVIDOR.forEach((campo) => delete payload[campo]);
-
       try {
-        // O BaseModal entrega o formData semeado com os padrões do cadastro;
-        // quem valida de verdade é o backend.
-        const nova = await instrucoesApi.create({
-          ...payload,
-          criado_por: user.id,
-        });
+        // O BaseModal entrega o formData semeado com os padrões do cadastro; o
+        // service manda só o que o DTO aceita, e quem valida de verdade é o backend
+        // O autor sai do token no servidor
+        const nova = await instrucoesApi.create(dados);
 
         // Anexo que falha não desfaz a instrução: ela já existe e é o que o
         // usuário veio buscar. O aviso diz qual arquivo ficou de fora.
@@ -125,7 +99,7 @@ export function useNovaInstrucao(aoCriar?: (instrucao: InstrucaoApiResponse) => 
         setPendingFiles([]);
         aoCriar?.(nova);
         responder(nova);
-        toast({ title: `Instrução ${nova.tag} criada` });
+        toast({ title: `Instrução ${nova.codigo} criada` });
       } catch (erro) {
         // O sheet fica aberto de propósito: o preenchimento continua lá para
         // corrigir o que o backend recusou.

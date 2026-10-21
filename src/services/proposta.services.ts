@@ -290,12 +290,11 @@ export async function montarDeInstrucoes(
       continue;
     }
 
-    // O custo de cada linha vem pronto do servidor (`subtotal`, SN-83): a mesma
-    // conta da proposta do backend, com a linha em horas de um recurso por
-    // diária virando diárias. A linha antiga, digitada antes do catálogo, vem
-    // sem preço
-    const soma = (instrucao.recursos ?? []).reduce(
-      (total, recurso) => total + (Number((recurso as { subtotal?: number | null }).subtotal ?? 0) || 0),
+    // O custo de cada linha vem pronto do servidor (`subtotal`, a conta do
+    // AupusProject, SN-85): a mesma da proposta do backend, recursos e
+    // maquinário. A linha sem preço entra como zero: é sugestão, e a pessoa ajusta
+    const soma = [...(instrucao.recursos ?? []), ...(instrucao.maquinarios ?? [])].reduce(
+      (total, linha) => total + (Number(linha.subtotal ?? 0) || 0),
       0,
     );
 
@@ -303,7 +302,7 @@ export async function montarDeInstrucoes(
 
     itens.push({
       instrucao_id: id,
-      descricao: rotuloInstrucao(instrucao.tag, instrucao.nome),
+      descricao: rotuloInstrucao(instrucao.codigo, instrucao.nome),
       quantidade: 1,
       preco_unitario_original: valor,
       preco_unitario: valor,
@@ -313,9 +312,9 @@ export async function montarDeInstrucoes(
   return itens;
 }
 
-/** "INST-003 - Troca de rolamento", ou só o nome quando não há tag. */
-export function rotuloInstrucao(tag: string | null | undefined, nome: string): string {
-  const limpa = tag?.trim();
+/** "INST-003 - Troca de rolamento", ou só o nome quando não há código. */
+export function rotuloInstrucao(codigo: string | null | undefined, nome: string): string {
+  const limpa = codigo?.trim();
   return limpa ? `${limpa} - ${nome}` : nome;
 }
 

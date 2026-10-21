@@ -33,13 +33,13 @@ export async function referenciaDeCategorias(): Promise<Referencia> {
   };
 }
 
-/** As instruções ativas, pelo nome, com a TAG (que também serve para achá-las). */
+/** As instruções ativas, pelo nome, com o código (que também serve para achá-las). */
 export async function referenciaDeInstrucoes(): Promise<Referencia> {
   const instrucoes = await instrucoesApi.listarTodasAtivas();
   return {
     chave: 'instrucoes',
     titulo: 'INSTRUÇÕES',
-    colunas: ['NOME', 'TAG', 'ID'],
-    linhas: instrucoes.map((i) => [i.nome, i.tag, i.id.trim()]),
+    colunas: ['NOME', 'CÓDIGO', 'ID'],
+    linhas: instrucoes.map((i) => [i.nome, i.codigo, i.id.trim()]),
   };
 }

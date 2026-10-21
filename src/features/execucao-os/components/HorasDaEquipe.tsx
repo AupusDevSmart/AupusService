@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { CampoDeNumero } from '@/components/common/CampoDeNumero';
 import { Combobox } from '@/core/components/ui/combobox';
 import { opcoesDePessoas } from '@/features/programacao-os/utils/pessoas';
-import { duracaoLegivel, formatarHoras, lerHorasDigitadas } from '@/utils/horas';
+import { duracaoLegivel, formatarHoras, horasNoCampo, lerHorasDigitadas } from '@/utils/horas';
 import { usePessoasDaOS } from '@/features/execucao-os/hooks/usePessoasDaOS';
 import { JORNADA_MAXIMA_MIN, linhaExtra, passaDoTempo, totalDasHoras, type LinhaDeHoras } from '@/features/execucao-os/utils/horas-da-equipe';
 
@@ -15,8 +15,6 @@ interface HorasDaEquipeProps {
   tempoEfetivoMinutos?: number | null;
   hhEstimado?: number;
 }
-
-const mostrarHoras = (valor: number | null) => (valor === null ? '' : formatarHoras(valor));
 
 /**
  * As horas trabalhadas no painel do Executar (SN-61): uma linha por pessoa da
@@ -79,7 +77,7 @@ export function HorasDaEquipe({ osId, linhas, onChange, tempoEfetivoMinutos, hhE
             onChange={(horas) => mudarLinha(linha.chave, { horas })}
             onIlegivel={(ilegivel) => mudarLinha(linha.chave, { ilegivel })}
             ler={lerHorasDigitadas}
-            mostrar={mostrarHoras}
+            mostrar={horasNoCampo}
             aviso="Horas como 3h30, 45min ou 3,5"
             placeholder="ex.: 3h30"
             className="h-8 w-28 text-right"

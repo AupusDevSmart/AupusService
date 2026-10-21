@@ -7,14 +7,11 @@ import { InstrucaoApiResponse, type CreateInstrucaoApiData } from '@/services/in
 import { AnexosInstrucaoManager } from './AnexosInstrucaoManager';
 import { FormField } from '@/types/base';
 
-/** A instrucao como o formulario a recebe: a da API, com a criticidade em texto (o select guarda texto). */
-type InstrucaoDoFormulario = Omit<InstrucaoApiResponse, 'criticidade'> & { criticidade: string };
-
 /** Os padroes de uma instrucao nova: o que o formulario precisa para abrir o cadastro. */
 type SementeDaInstrucao = Pick<
-  InstrucaoDoFormulario,
-  | 'id' | 'nome' | 'descricao' | 'categoria' | 'tipo_manutencao' | 'condicao_ativo' | 'criticidade'
-  | 'status' | 'ativo' | 'duracao_estimada' | 'tempo_estimado' | 'sub_instrucoes' | 'recursos'
+  InstrucaoApiResponse,
+  | 'id' | 'codigo' | 'nome' | 'descricao' | 'frente' | 'prazo_inicio_relativo' | 'duracao_dias'
+  | 'status' | 'ativo' | 'sub_instrucoes' | 'recursos' | 'maquinarios'
 >;
 
 /**
@@ -81,7 +78,7 @@ export function InstrucoesModal({
       confirmando ? (
         <div className="flex flex-col gap-2">
           <p className="text-xs text-muted-foreground">
-            Excluir <span className="font-medium text-foreground">{entity.tag}</span>?
+            Excluir <span className="font-medium text-foreground">{entity.codigo}</span>?
             {typeof entity.total_tarefas_derivadas === 'number' &&
               entity.total_tarefas_derivadas > 0 && (
                 <>
@@ -136,25 +133,24 @@ export function InstrucoesModal({
     return titles[mode] || 'Instrução';
   };
 
-  const modalEntity = useMemo((): InstrucaoDoFormulario | SementeDaInstrucao | null => {
+  const modalEntity = useMemo((): InstrucaoApiResponse | SementeDaInstrucao | null => {
     if (mode === 'create') {
       const semente: SementeDaInstrucao = {
         // Vazio, como na semente do plano: o cadastro ainda nao tem id e o
         // BaseModal pede um. Vazio ele vale como "novo", e o formulario o
         // guarda como undefined — nao vai no payload.
         id: '',
+        codigo: '',
         nome: '',
         descricao: '',
-        categoria: 'MECANICA',
-        tipo_manutencao: 'PREVENTIVA',
-        condicao_ativo: 'PARADO',
-        criticidade: '3',
+        frente: null,
+        prazo_inicio_relativo: 0,
+        duracao_dias: 1,
         status: 'ATIVA',
         ativo: true,
-        duracao_estimada: 1,
-        tempo_estimado: 60,
         sub_instrucoes: [],
-        recursos: []
+        recursos: [],
+        maquinarios: []
       };
       return semente;
     }
@@ -162,10 +158,9 @@ export function InstrucoesModal({
     if (entity) {
       return {
         ...entity,
-        criticidade: String(entity.criticidade),
-        status: entity.status,
         sub_instrucoes: entity.sub_instrucoes || [],
-        recursos: entity.recursos || []
+        recursos: entity.recursos || [],
+        maquinarios: entity.maquinarios || []
       };
     }
 
@@ -188,24 +183,19 @@ export function InstrucoesModal({
         {
           key: 'informacoes_basicas',
           title: 'Informações Básicas',
-          // Status logo apos a descricao: e informacao do cabecalho da
-          // instrucao, nao um apendice no fim do formulario.
-          fields: ['tag', 'nome', 'descricao']
+          fields: ['codigo', 'nome', 'descricao']
         },
         {
-          key: 'classificacao',
-          title: 'Classificação',
-          fields: ['categoria', 'tipo_manutencao', 'criticidade', 'condicao_ativo']
-        },
-        {
-          key: 'planejamento',
-          title: 'Planejamento',
-          fields: ['duracao_estimada', 'tempo_estimado']
+          // Os campos do AupusProject (SN-85): onde a instrução entra num
+          // cronograma de projeto e quanto tempo leva
+          key: 'cronograma',
+          title: 'Cronograma (D+X)',
+          fields: ['frente', 'prazo_inicio_relativo', 'duracao_dias']
         },
         {
           // 'main' e a unica chave cujo titulo o BaseForm nao renderiza. As
-          // duas tabelas titulam a si mesmas, com o botao de adicionar na
-          // mesma linha do titulo.
+          // tabelas titulam a si mesmas, com o botao de adicionar na mesma
+          // linha do titulo.
           key: 'main',
           title: '',
           fields: ['sub_instrucoes', 'recursos']

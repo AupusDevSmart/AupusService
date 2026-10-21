@@ -70,7 +70,8 @@ export interface FormField {
   options?: Array<{ value: string | number; label: string }>;
   // Callbacks como método (não propriedade-função): o componente pode declarar o
   // valor/entidade que espera e continua aceito — ver o comentário em @/core/types/base.
-  validation?(value: unknown): string | null;
+  /** O formulário inteiro vem junto (o BaseModal passa): para validar um campo pelo outro */
+  validation?(value: unknown, formData?: Record<string, unknown>): string | null;
   render?(props: FormFieldProps): React.ReactElement;
   /** Recebe só value, onChange, disabled e componentProps (sem formData/mode/entity — para isso, render). */
   component?: FormFieldComponent; // ✅ ADICIONADO: Para campos customizados

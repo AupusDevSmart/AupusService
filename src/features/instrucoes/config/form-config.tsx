@@ -1,19 +1,25 @@
 // src/features/instrucoes/config/form-config.tsx
-import { FormField, type FormFieldProps } from '@/types/base';
+import { FormField } from '@/types/base';
 import { SubInstrucoesController } from '../components/form/SubInstrucoesController';
 import { RecursosInstrucaoController } from '../components/form/RecursosInstrucaoController';
+import { CampoDaFrente } from '../components/form/CampoDaFrente';
+import { temIlegivel } from '../components/form/LinhasDeCusto';
 
+const ILEGIVEL = 'Há número que não dá para ler (o campo diz "inválido"): corrija ou apague antes de salvar.';
+
+/**
+ * Os campos da instrução do AupusProject (SN-85): código, nome, descrição, o
+ * D+X do cronograma, os passos e as linhas de recurso, maquinário e material.
+ */
 export const instrucoesFormFields: FormField[] = [
   // Informações Básicas
   {
-    key: 'tag',
-    label: 'TAG da Instrução',
+    key: 'codigo',
+    label: 'Código',
     type: 'text',
     required: false,
-    disabled: true,
-    // Sempre gerada pelo backend (gerarTagUnica). No cadastro nao ha o que
-    // mostrar, entao o campo so aparece depois que a instrucao existe.
-    showOnlyOnMode: ['view', 'edit'],
+    // Vazio no cadastro, o servidor dá o próximo INST-NNN; na edição, vazio mantém
+    placeholder: 'Gerado ao salvar (INST-…)',
     colSpan: 1
   },
   {
@@ -28,18 +34,48 @@ export const instrucoesFormFields: FormField[] = [
     key: 'descricao',
     label: 'Descrição',
     type: 'textarea',
-    required: true,
+    required: false,
     placeholder: 'Descreva detalhadamente a instrução...',
     colSpan: 2
   },
 
-  // Sub-instruções
+  // Cronograma (D+X), como no AupusProject
+  {
+    key: 'frente',
+    label: 'Frente',
+    type: 'custom',
+    required: false,
+    colSpan: 1,
+    render: (props) => <CampoDaFrente {...props} />
+  },
+  {
+    key: 'prazo_inicio_relativo',
+    label: 'Início (D+X, dias)',
+    type: 'number',
+    required: false,
+    min: 0,
+    placeholder: '0',
+    colSpan: 1
+  },
+  {
+    key: 'duracao_dias',
+    label: 'Duração (dias)',
+    type: 'number',
+    required: false,
+    min: 1,
+    placeholder: '1',
+    colSpan: 1
+  },
+
+  // Passos
   {
     key: 'sub_instrucoes',
     label: '',
     type: 'custom',
     required: false,
     colSpan: 2,
+    // O CampoDeNumero não grava o texto que não lê: salvar mandaria o valor anterior calado
+    validation: (value) => (temIlegivel(value) ? `Passos: ${ILEGIVEL}` : null),
     render: ({ value, onChange, disabled }) => (
       <SubInstrucoesController
         value={value}
@@ -49,25 +85,25 @@ export const instrucoesFormFields: FormField[] = [
     )
   },
 
-  // Recursos
+  // Recursos, maquinário e materiais: um campo só, que edita `recursos` e
+  // `maquinarios` (o render recebe o formulário inteiro e o onMultipleChange)
   {
     key: 'recursos',
     label: '',
     type: 'custom',
     required: false,
     colSpan: 2,
-    // A quantidade sugerida de cada recurso sai da duração das sub-instruções,
-    // então este campo precisa enxergá-las enquanto são editadas. O BaseForm
-    // entrega o valor de cada chave declarada aqui junto com os props do campo.
-    dependencies: ['sub_instrucoes'],
-    render: ({ value, onChange, disabled, sub_instrucoes }: FormFieldProps & { sub_instrucoes?: { tempo_estimado?: number }[] }) => (
+    validation: (value, formData) =>
+      temIlegivel(value) || temIlegivel((formData as Record<string, unknown> | undefined)?.maquinarios) ? `Recursos: ${ILEGIVEL}` : null,
+    render: ({ value, onChange, onMultipleChange, formData, disabled }) => (
       <RecursosInstrucaoController
         value={value}
         onChange={onChange}
+        maquinarios={formData?.maquinarios}
+        onMaquinarios={(maquinarios) => onMultipleChange?.({ maquinarios })}
+        passos={formData?.sub_instrucoes}
         disabled={disabled}
-        subInstrucoes={sub_instrucoes}
       />
     )
   },
-
 ];

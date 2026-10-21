@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatarHoras, lerHorasDigitadas } from './horas';
+import { formatarHoras, horasNoCampo, lerHorasDigitadas } from './horas';
 
 /** As horas trabalhadas no Executar (SN-61): em campo se pensa em "3h30", não em 3,5. */
 describe('lerHorasDigitadas', () => {
@@ -32,5 +32,23 @@ describe('lerHorasDigitadas', () => {
     for (const horas of [0.33, 3.33, 3.08, 7.5, 0.75]) {
       expect(lerHorasDigitadas(formatarHoras(horas))).toBe(horas);
     }
+  });
+});
+
+/**
+ * As horas no campo (SN-85): em horas e minutos quando a volta dá o mesmo
+ * número; senão em decimal, para só passar pelo campo não regravar outro valor.
+ */
+describe('horasNoCampo', () => {
+  it('em horas e minutos quando volta igual (0,33 h = 0h20, que volta 0,33)', () => {
+    expect(horasNoCampo(1.5)).toBe('1h30');
+    expect(horasNoCampo(0.33)).toBe('20min');
+    expect(lerHorasDigitadas(horasNoCampo(3.33))).toBe(3.33);
+  });
+
+  it('em decimal quando o minuto não volta o mesmo número (1,11 h viraria 1,12)', () => {
+    expect(horasNoCampo(1.11)).toBe('1,11');
+    expect(lerHorasDigitadas(horasNoCampo(1.11))).toBe(1.11);
+    expect(horasNoCampo(null)).toBe('');
   });
 });

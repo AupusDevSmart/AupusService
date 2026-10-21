@@ -19,6 +19,18 @@ export function formatarHoras(horas: number): string {
   return `${h}h${String(min).padStart(2, '0')}`;
 }
 
+/**
+ * As horas no campo de digitar ("3h30"); vazio é null. Em horas e minutos
+ * quando a volta dá o mesmo número (0,33 h é "0h20", que volta 0,33); senão em
+ * decimal: 1,11 h (da planilha) em "1h07" voltaria 1,12, e só passar pelo
+ * campo regravaria outro número.
+ */
+export const horasNoCampo = (valor: number | null) => {
+  if (valor === null) return '';
+  const volta = Math.round((Math.round(valor * 60) / 60) * 100) / 100;
+  return Math.abs(volta - valor) > 1e-9 ? String(valor).replace('.', ',') : formatarHoras(valor);
+};
+
 /** Até 999,99 h e 2 casas: a coluna das horas trabalhadas é Decimal(5, 2). */
 const HORAS_MAXIMAS = 999.99;
 

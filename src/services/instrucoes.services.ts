@@ -1,16 +1,14 @@
 // src/services/instrucoes.services.ts
 import { api } from '@/config/api';
 import type { TarefaApiResponse } from './tarefas.services';
-import type { CategoriaRecurso } from '@/services/recursos.services';
+import type { RecursoApiResponse } from '@/services/recursos.services';
+import type { MaquinarioApiResponse } from '@/services/maquinarios.services';
 
 // ============================================================================
 // ENUMS E TIPOS BASE
 // ============================================================================
 
 export type StatusInstrucao = 'ATIVA' | 'INATIVA' | 'EM_REVISAO' | 'ARQUIVADA';
-export type CategoriaTarefa = 'MECANICA' | 'ELETRICA' | 'INSTRUMENTACAO' | 'LUBRIFICACAO' | 'LIMPEZA' | 'INSPECAO' | 'CALIBRACAO' | 'OUTROS';
-export type TipoManutencao = 'PREVENTIVA' | 'PREDITIVA' | 'CORRETIVA' | 'INSPECAO' | 'VISITA_TECNICA';
-export type CondicaoAtivo = 'PARADO' | 'FUNCIONANDO' | 'QUALQUER';
 export type FrequenciaTarefa = 'DIARIA' | 'SEMANAL' | 'QUINZENAL' | 'MENSAL' | 'BIMESTRAL' | 'TRIMESTRAL' | 'SEMESTRAL' | 'ANUAL' | 'PERSONALIZADA';
 export type TipoAnexo = 'MANUAL' | 'PROCEDIMENTO' | 'MODELO_RELATORIO' | 'OUTROS';
 
@@ -18,15 +16,28 @@ export type TipoAnexo = 'MANUAL' | 'PROCEDIMENTO' | 'MODELO_RELATORIO' | 'OUTROS
 // TIPOS DA API PARA INSTRUCOES
 // ============================================================================
 
-/** VERIFICACAO = marcar feito; LEITURA = digitar o valor medido (SN-58) */
-export type TipoDePasso = 'VERIFICACAO' | 'LEITURA';
+/** VERIFICACAO = marcar feito; LEITURA = digitar o valor medido (SN-58). No passo é o `registro` (SN-85) */
+export type RegistroDoPasso = 'VERIFICACAO' | 'LEITURA';
+
+/** A disciplina do passo, a lista do AupusProject (SN-85) */
+export type DisciplinaDoPasso = 'administrativo' | 'civil' | 'eletrico' | 'mecanico';
+
+export const ROTULO_DA_DISCIPLINA: Record<DisciplinaDoPasso, string> = {
+  administrativo: 'Administrativo',
+  civil: 'Civil',
+  eletrico: 'Elétrico',
+  mecanico: 'Mecânico',
+};
 
 export interface CreateSubInstrucaoApiData {
   descricao: string;
   obrigatoria?: boolean;
-  tempo_estimado?: number;
+  /** A disciplina; vazio = sem disciplina */
+  tipo?: DisciplinaDoPasso | null;
+  /** Quanto o passo leva, em horas */
+  duracao_horas?: number | null;
   ordem?: number;
-  tipo?: TipoDePasso;
+  registro?: RegistroDoPasso;
   /** SN-59: o item da OS só é marcado com uma foto dele */
   exige_foto?: boolean;
   /** Unidade e faixa só na leitura: a API recusa em verificação */
@@ -35,43 +46,53 @@ export interface CreateSubInstrucaoApiData {
   valor_maximo?: number | null;
 }
 
+/** A linha de recurso da instrução (a `instrucao_recursos` do AupusProject) */
 export interface CreateRecursoInstrucaoApiData {
-  /** Aponta para o catalogo de recursos. Vazio so nas linhas antigas. */
-  recurso_id?: string | null;
-  tipo: CategoriaRecurso;
-  descricao: string;
-  quantidade?: number;
-  unidade?: string;
-  obrigatorio?: boolean;
+  recurso_id: string;
+  /** Quantos (pessoas, equipamentos, unidades). Vazio = 1 */
+  quantidade?: number | null;
+  /** Horas de uso de cada um (cobrança por hora ou diária) */
+  duracao_horas?: number | null;
+  /** Fração: 0,10 = 10% (só material) */
+  fator_perda?: number | null;
+  /** Faturamento direto: fora do custo */
+  fornecido_pelo_cliente?: boolean;
+  distancia_km?: number | null;
+  /** Vazio = o preço do cadastro */
+  preco_proprio?: number | null;
+}
+
+export interface CreateMaquinarioInstrucaoApiData {
+  maquinario_id: string;
+  quantidade?: number | null;
+  duracao_horas?: number | null;
+  distancia_km?: number | null;
+  preco_proprio?: number | null;
 }
 
 export interface CreateInstrucaoApiData {
-  tag?: string;
+  /** Vazio, o servidor gera INST-NNN */
+  codigo?: string | null;
   nome: string;
-  descricao: string;
-  categoria: CategoriaTarefa;
-  tipo_manutencao: TipoManutencao;
-  condicao_ativo: CondicaoAtivo;
-  /** O formulario manda em texto (o select guarda texto); o DTO converte (@Type(() => Number)). */
-  criticidade: number | string;
-  duracao_estimada: number;
-  tempo_estimado: number;
-  observacoes?: string;
+  descricao?: string | null;
+  /** O D+X do cronograma do AupusProject */
+  frente?: string | null;
+  prazo_inicio_relativo?: number;
+  duracao_dias?: number;
+  observacoes?: string | null;
   status?: StatusInstrucao;
   ativo?: boolean;
-  criado_por?: string;
   sub_instrucoes?: CreateSubInstrucaoApiData[];
   recursos?: CreateRecursoInstrucaoApiData[];
+  maquinarios?: CreateMaquinarioInstrucaoApiData[];
 }
 
-export interface UpdateInstrucaoApiData extends Partial<CreateInstrucaoApiData> {
-  atualizado_por?: string;
-}
+/** A autoria sai do token no servidor (SN-85): o corpo não diz quem criou nem quem alterou */
+export type UpdateInstrucaoApiData = Partial<CreateInstrucaoApiData>;
 
 export interface UpdateStatusInstrucaoApiData {
   status: StatusInstrucao;
   ativo?: boolean;
-  atualizado_por?: string;
 }
 
 export interface AssociarAnomaliaApiData {
@@ -96,9 +117,10 @@ export interface SubInstrucaoApiResponse {
   id: string;
   descricao: string;
   obrigatoria: boolean;
-  tempo_estimado?: number;
+  tipo?: DisciplinaDoPasso | null;
+  duracao_horas?: number | null;
   ordem?: number;
-  tipo?: TipoDePasso;
+  registro?: RegistroDoPasso;
   exige_foto?: boolean;
   unidade?: string | null;
   valor_minimo?: number | null;
@@ -107,15 +129,63 @@ export interface SubInstrucaoApiResponse {
   updated_at: Date;
 }
 
-export interface RecursoInstrucaoApiResponse {
+/** O custo aberto da linha, a conta do servidor (custo-da-instrucao.ts) */
+interface CustoDaLinhaApi {
+  /** Quantas unidades da cobrança: diárias, metros com a perda, km */
+  unidades: number;
+  /** O preço de uma unidade que a conta usou (o próprio, se houver) */
+  preco_base: number | null;
+  preco_cadastro: number | null;
+  /** Nulo sem preço (nunca zero); zero no fornecido pelo cliente */
+  subtotal: number | null;
+}
+
+/**
+ * O item como a linha o traz: o resumo e o preço de uma unidade. O cadastro
+ * inteiro (investimento, custos anuais) não vem: o detalhe da instrução se lê
+ * com `manutencao.view`, e o cadastro pede `recursos.manage`.
+ */
+export type RecursoDaLinha = Pick<
+  RecursoApiResponse,
+  'id' | 'nome' | 'categoria' | 'unidade' | 'base_calculo' | 'rubrica' | 'horas_por_diaria' | 'ativo' | 'preco_base' | 'custo_origem'
+> & { deleted_at?: string | null };
+
+export type MaquinarioDaLinha = Pick<
+  MaquinarioApiResponse,
+  'id' | 'nome' | 'tipo' | 'base_calculo' | 'rubrica' | 'horas_por_diaria' | 'ativo' | 'preco_base' | 'custo_origem'
+> & { deleted_at?: string | null };
+
+export interface RecursoInstrucaoApiResponse extends CustoDaLinhaApi {
   id: string;
-  tipo: CategoriaRecurso;
-  descricao: string;
-  quantidade?: number;
-  unidade?: string;
-  obrigatorio: boolean;
+  recurso_id: string;
+  recurso: RecursoDaLinha;
+  quantidade: number;
+  duracao_horas: number;
+  fator_perda: number;
+  fornecido_pelo_cliente: boolean;
+  distancia_km: number | null;
+  preco_proprio: number | null;
   created_at: Date;
   updated_at: Date;
+}
+
+export interface MaquinarioInstrucaoApiResponse extends CustoDaLinhaApi {
+  id: string;
+  maquinario_id: string;
+  maquinario: MaquinarioDaLinha;
+  quantidade: number;
+  duracao_horas: number;
+  distancia_km: number | null;
+  preco_proprio: number | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/** Recursos, maquinário e materiais: nulo quando uma linha do grupo não tem preço */
+export interface CustoPorGrupo {
+  recursos: number | null;
+  maquinario: number | null;
+  materiais: number | null;
 }
 
 export interface AnexoInstrucaoApiResponse {
@@ -131,16 +201,14 @@ export interface AnexoInstrucaoApiResponse {
 
 export interface InstrucaoApiResponse {
   id: string;
-  tag: string;
+  /** SN-85: era tag */
+  codigo: string;
   nome: string;
-  descricao: string;
-  categoria: CategoriaTarefa;
-  tipo_manutencao: TipoManutencao;
-  condicao_ativo: CondicaoAtivo;
-  criticidade: number;
-  duracao_estimada: number;
-  tempo_estimado: number;
-  observacoes?: string;
+  descricao: string | null;
+  frente: string | null;
+  prazo_inicio_relativo: number;
+  duracao_dias: number;
+  observacoes?: string | null;
   status: StatusInstrucao;
   ativo: boolean;
   created_at: Date;
@@ -152,14 +220,22 @@ export interface InstrucaoApiResponse {
   usuario_criador?: UsuarioResumoDto;
   usuario_atualizador?: UsuarioResumoDto;
 
-  // Sub-estruturas
+  // Sub-estruturas (só no detalhe)
   sub_instrucoes?: SubInstrucaoApiResponse[];
   recursos?: RecursoInstrucaoApiResponse[];
+  maquinarios?: MaquinarioInstrucaoApiResponse[];
   anexos?: AnexoInstrucaoApiResponse[];
+
+  /** O valor da instrução por grupo e o total, do servidor (só no detalhe) */
+  custo_por_grupo?: CustoPorGrupo;
+  custo?: number | null;
+  /** A soma das durações dos passos, em horas */
+  horas_dos_passos?: number;
 
   // Contadores
   total_sub_instrucoes?: number;
   total_recursos?: number;
+  total_maquinarios?: number;
   total_anexos?: number;
   total_tarefas_derivadas?: number;
 }
@@ -170,37 +246,9 @@ export interface DashboardInstrucoesDto {
   instrucoes_inativas: number;
   instrucoes_em_revisao: number;
   instrucoes_arquivadas: number;
-
-  criticidade_muito_alta: number;
-  criticidade_alta: number;
-  criticidade_media: number;
-  criticidade_baixa: number;
-  criticidade_muito_baixa: number;
-
-  distribuicao_tipos: {
-    preventiva: number;
-    preditiva: number;
-    corretiva: number;
-    inspecao: number;
-    visita_tecnica: number;
-  };
-
-  distribuicao_categorias: {
-    mecanica: number;
-    eletrica: number;
-    instrumentacao: number;
-    lubrificacao: number;
-    limpeza: number;
-    inspecao: number;
-    calibracao: number;
-    outros: number;
-  };
-
-  tempo_total_estimado: number;
-  media_tempo_por_instrucao: number;
-  media_criticidade: number;
   total_sub_instrucoes: number;
   total_recursos: number;
+  total_maquinarios: number;
   total_tarefas_derivadas: number;
 }
 
@@ -208,9 +256,8 @@ export interface QueryInstrucoesApiParams {
   search?: string;
   status?: StatusInstrucao;
   ativo?: boolean;
-  categoria?: CategoriaTarefa;
-  tipo_manutencao?: TipoManutencao;
-  criticidade?: number;
+  /** A frente de trabalho, exata */
+  frente?: string;
   page?: number;
   limit?: number;
   sort_by?: string;
@@ -243,10 +290,10 @@ export interface OpcaoDeInstrucao {
  * trim.
  */
 export const opcaoDaInstrucao = (
-  instrucao: Pick<InstrucaoApiResponse, 'id' | 'nome'> & { tag?: string },
+  instrucao: Pick<InstrucaoApiResponse, 'id' | 'nome'> & { codigo?: string | null },
 ): OpcaoDeInstrucao => ({
   value: (instrucao.id || '').trim(),
-  label: `${instrucao.tag ? instrucao.tag + ' - ' : ''}${instrucao.nome}`,
+  label: `${instrucao.codigo ? instrucao.codigo + ' - ' : ''}${instrucao.nome}`,
 });
 
 export interface AnomaliaAssociadaResponse {
@@ -290,62 +337,101 @@ export type TarefaDerivadaApiResponse = Omit<TarefaApiResponse, 'plano_manutenca
 };
 
 // ============================================================================
+// O PAYLOAD: LISTA BRANCA
+// ============================================================================
+
+/** Os campos que o DTO da instrução aceita. O resto do formulário fica de fora. */
+const CAMPOS_DA_INSTRUCAO = [
+  'codigo', 'nome', 'descricao', 'frente', 'prazo_inicio_relativo', 'duracao_dias',
+  'observacoes', 'status', 'ativo',
+] as const;
+
+const numeroOuNulo = (v: unknown): number | null => {
+  if (v === null || v === undefined || v === '') return null;
+  const n = typeof v === 'number' ? v : Number(String(v).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+};
+
+const idAparado = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+
+/**
+ * O que vai para a API, por lista BRANCA. O BaseModal semeia o formulário com a
+ * instrução inteira, e o `forbidNonWhitelisted` do backend recusa com 400 o
+ * campo que o DTO não tem. Antes cada tela tirava por lista negra (três cópias):
+ * campo novo na resposta (o custo, o total de maquinários) voltava no PUT e o
+ * salvar quebrava. Aqui só entra o que o DTO aceita, também nas listas, que o
+ * backend troca inteiras (os ids, created_at e o recurso embutido ficam fora).
+ */
+export function paraApi(dados: CreateInstrucaoApiData | UpdateInstrucaoApiData | Record<string, unknown>): UpdateInstrucaoApiData {
+  const origem = dados as Record<string, unknown>;
+  const payload: Record<string, unknown> = {};
+  for (const campo of CAMPOS_DA_INSTRUCAO) if (origem[campo] !== undefined) payload[campo] = origem[campo];
+  // O campo numérico do formulário guarda texto. Apagado é o padrão (D+0, 1 dia), não "mantém": quem
+  // apagou o 5 do D+X e salvou quer D+0, e o campo mostra 0 de dica
+  const PADRAO = { prazo_inicio_relativo: 0, duracao_dias: 1 } as const;
+  for (const campo of ['prazo_inicio_relativo', 'duracao_dias'] as const) {
+    if (campo in payload) payload[campo] = numeroOuNulo(payload[campo]) ?? PADRAO[campo];
+  }
+
+  const passos = origem.sub_instrucoes as CreateSubInstrucaoApiData[] | undefined;
+  if (Array.isArray(passos)) {
+    // A ordem é a posição na lista: arrastar reordena o array, e o `ordem` antigo desfaria a ordem nova (SN-12)
+    payload.sub_instrucoes = passos.map((passo, indice) => ({
+      descricao: passo.descricao,
+      obrigatoria: Boolean(passo.obrigatoria),
+      tipo: passo.tipo || null,
+      duracao_horas: numeroOuNulo(passo.duracao_horas),
+      ordem: indice + 1,
+      registro: passo.registro ?? 'VERIFICACAO',
+      exige_foto: Boolean(passo.exige_foto),
+      // A API recusa unidade e faixa no passo de verificação: o passo que
+      // deixou de ser leitura não leva o que sobrou dos campos escondidos
+      ...(passo.registro === 'LEITURA' && {
+        unidade: passo.unidade?.trim() || null,
+        valor_minimo: passo.valor_minimo ?? null,
+        valor_maximo: passo.valor_maximo ?? null,
+      }),
+    }));
+  }
+
+  const recursos = origem.recursos as CreateRecursoInstrucaoApiData[] | undefined;
+  if (Array.isArray(recursos)) {
+    payload.recursos = recursos.map((linha) => ({
+      recurso_id: idAparado(linha.recurso_id),
+      quantidade: numeroOuNulo(linha.quantidade),
+      duracao_horas: numeroOuNulo(linha.duracao_horas),
+      fator_perda: numeroOuNulo(linha.fator_perda),
+      fornecido_pelo_cliente: Boolean(linha.fornecido_pelo_cliente),
+      distancia_km: numeroOuNulo(linha.distancia_km),
+      preco_proprio: numeroOuNulo(linha.preco_proprio),
+    }));
+  }
+
+  const maquinarios = origem.maquinarios as CreateMaquinarioInstrucaoApiData[] | undefined;
+  if (Array.isArray(maquinarios)) {
+    payload.maquinarios = maquinarios.map((linha) => ({
+      maquinario_id: idAparado(linha.maquinario_id),
+      quantidade: numeroOuNulo(linha.quantidade),
+      duracao_horas: numeroOuNulo(linha.duracao_horas),
+      distancia_km: numeroOuNulo(linha.distancia_km),
+      preco_proprio: numeroOuNulo(linha.preco_proprio),
+    }));
+  }
+
+  return payload as UpdateInstrucaoApiData;
+}
+
+// ============================================================================
 // SERVICO DE API PARA INSTRUCOES
 // ============================================================================
 
 export class InstrucoesApiService {
   private readonly baseEndpoint = '/instrucoes';
 
-  // Mantem apenas os campos de conteudo aceitos pelos DTOs aninhados do backend.
-  // O backend faz replace (deleteMany + createMany) das sub-estruturas, entao
-  // campos gerenciados pelo servidor (id, instrucao_id, created_at, updated_at)
-  // sao lixo no payload e o ValidationPipe (forbidNonWhitelisted) rejeita com 400.
-  private sanitizeSubInstrucoes(subs?: CreateSubInstrucaoApiData[]): CreateSubInstrucaoApiData[] | undefined {
-    if (!subs) return subs;
-    // A ordem e a posicao na lista: arrastar reordena o array, e o `ordem`
-    // antigo de cada passo desfaria a ordem nova ao salvar (SN-12).
-    return subs.map((sub, indice) => ({
-      descricao: sub.descricao,
-      obrigatoria: sub.obrigatoria,
-      tempo_estimado: sub.tempo_estimado,
-      ordem: indice + 1,
-      tipo: sub.tipo ?? 'VERIFICACAO',
-      exige_foto: Boolean(sub.exige_foto),
-      // A API recusa unidade e faixa no passo de verificação: o passo que
-      // deixou de ser leitura não leva o que sobrou dos campos escondidos
-      ...(sub.tipo === 'LEITURA' && {
-        unidade: sub.unidade?.trim() || null,
-        valor_minimo: sub.valor_minimo ?? null,
-        valor_maximo: sub.valor_maximo ?? null,
-      }),
-    }));
-  }
-
-  private sanitizeRecursos(recursos?: CreateRecursoInstrucaoApiData[]): CreateRecursoInstrucaoApiData[] | undefined {
-    if (!recursos) return recursos;
-    return recursos.map(recurso => ({
-      // `recurso_id` é o vínculo com o catálogo e precisa viajar. Sem ele o
-      // backend cai no ramo da linha avulsa: grava tipo e descrição soltos,
-      // com recurso_id nulo. A linha até aparece salva, mas o combobox — que
-      // casa pelo id — reabre vazio, e o preço do catálogo se perde.
-      recurso_id: recurso.recurso_id,
-      tipo: recurso.tipo,
-      descricao: recurso.descricao,
-      quantidade: recurso.quantidade,
-      unidade: recurso.unidade,
-      obrigatorio: recurso.obrigatorio,
-    }));
-  }
-
   // CRUD
 
-  async create(data: CreateInstrucaoApiData): Promise<InstrucaoApiResponse> {
-    const payload: CreateInstrucaoApiData = {
-      ...data,
-      ...(data.sub_instrucoes !== undefined && { sub_instrucoes: this.sanitizeSubInstrucoes(data.sub_instrucoes) }),
-      ...(data.recursos !== undefined && { recursos: this.sanitizeRecursos(data.recursos) }),
-    };
-    const response = await api.post<InstrucaoApiResponse>(this.baseEndpoint, payload);
+  async create(data: CreateInstrucaoApiData | Record<string, unknown>): Promise<InstrucaoApiResponse> {
+    const response = await api.post<InstrucaoApiResponse>(this.baseEndpoint, paraApi(data));
     return response.data;
   }
 
@@ -413,13 +499,14 @@ export class InstrucoesApiService {
     return response.data;
   }
 
-  async update(id: string, data: UpdateInstrucaoApiData): Promise<InstrucaoApiResponse> {
-    const payload: UpdateInstrucaoApiData = {
-      ...data,
-      ...(data.sub_instrucoes !== undefined && { sub_instrucoes: this.sanitizeSubInstrucoes(data.sub_instrucoes) }),
-      ...(data.recursos !== undefined && { recursos: this.sanitizeRecursos(data.recursos) }),
-    };
-    const response = await api.put<InstrucaoApiResponse>(`${this.baseEndpoint}/${id}`, payload);
+  async update(id: string, data: UpdateInstrucaoApiData | Record<string, unknown>): Promise<InstrucaoApiResponse> {
+    const response = await api.put<InstrucaoApiResponse>(`${this.baseEndpoint}/${id}`, paraApi(data));
+    return response.data;
+  }
+
+  /** As frentes já usadas, para o formulário sugerir */
+  async frentes(): Promise<string[]> {
+    const response = await api.get<string[]>(`${this.baseEndpoint}/frentes`);
     return response.data;
   }
 

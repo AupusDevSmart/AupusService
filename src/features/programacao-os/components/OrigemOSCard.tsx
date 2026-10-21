@@ -18,7 +18,8 @@ import type { DadosOrigem, TarefasPorPlano } from '../types';
 export interface InstrucaoListada {
   id?: string;
   nome?: string;
-  tag?: string;
+  /** SN-85: era tag */
+  codigo?: string;
   instrucao?: InstrucaoListada | null;
 }
 
@@ -225,7 +226,7 @@ const ListaDeInstrucoes: React.FC<{ instrucoes?: InstrucaoListada[] }> = ({ inst
         <div key={i.id} className="flex items-center gap-3 py-2 border-t first:border-t-0">
           <div className="min-w-0 flex-1">
             <p className="text-xs text-foreground/90 truncate" title={i.nome}>{i.nome}</p>
-            {i.tag && <span className="font-mono text-[11px] text-muted-foreground">{i.tag}</span>}
+            {i.codigo && <span className="font-mono text-[11px] text-muted-foreground">{i.codigo}</span>}
           </div>
           <div className="shrink-0">
             <BotaoInstrucao instrucaoId={i.id} />

@@ -30,7 +30,7 @@ interface InstrucoesDaOrigemProps {
 
 interface InstrucaoResumida {
   id: string;
-  tag?: string;
+  codigo?: string;
   nome?: string;
 }
 
@@ -147,7 +147,7 @@ export function InstrucoesDaOrigem({
             <InstrucaoExpandableCard
               key={instrucao.id}
               id={instrucao.id}
-              tag={instrucao.tag}
+              codigo={instrucao.codigo}
               nome={instrucao.nome}
               disabled
             />

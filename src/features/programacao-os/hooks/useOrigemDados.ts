@@ -261,7 +261,7 @@ export const useOrigemDados = (tipoAtivo?: TipoDeOrigemResolvivel | string) => {
       criticidade: tarefa.criticidade,
       ordem: tarefa.ordem,
       // Conteudo do que sera feito: desde o PR6 vive na instrucao, nao na
-      // tarefa. E daqui que as telas de OS leem categoria, tipo e etapas.
+      // tarefa. E daqui que as telas de OS leem o codigo e as etapas.
       instrucao: tarefa.instrucao,
     }));
   }, []);

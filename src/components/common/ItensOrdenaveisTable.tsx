@@ -30,7 +30,8 @@ export interface ResumoItem {
 interface ItensOrdenaveisTableProps<T> {
   itens: T[];
   colunas: Array<ColunaItemOrdenavel<T>>;
-  onReordenar: (origem: number, destino: number) => void;
+  /** Sem ele a lista não se reordena (sem alça nem subir/descer): a que o banco guarda sem ordem (SN-85) */
+  onReordenar?: (origem: number, destino: number) => void;
   onRemover: (index: number) => void;
   onAdicionar: () => void;
   textoAdicionar: string;
@@ -62,7 +63,9 @@ export function ItensOrdenaveisTable<T>({
   const [alcaAtiva, setAlcaAtiva] = React.useState(false);
 
   const podeEditar = !disabled;
-  const totalColunas = colunas.length + (podeEditar ? 2 : 1);
+  const ordenavel = podeEditar && !!onReordenar;
+  // # + as colunas + a alça (se ordena) + as ações (se edita)
+  const totalColunas = colunas.length + 1 + (ordenavel ? 1 : 0) + (podeEditar ? 1 : 0);
   const { ref, estreito } = useMaisEstreitoQue<HTMLDivElement>(LARGURA_DA_TABELA);
 
   const limparArraste = () => {
@@ -73,7 +76,7 @@ export function ItensOrdenaveisTable<T>({
 
   const handleDrop = (destino: number) => {
     if (arrastando !== null && arrastando !== destino) {
-      onReordenar(arrastando, destino);
+      onReordenar?.(arrastando, destino);
     }
     limparArraste();
   };
@@ -135,30 +138,34 @@ export function ItensOrdenaveisTable<T>({
                 <span className="text-xs font-medium text-muted-foreground">#{index + 1}</span>
                 {podeEditar && (
                   <div className="flex items-center">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onReordenar(index, index - 1)}
-                      disabled={index === 0}
-                      className="h-8 w-8 text-muted-foreground"
-                      title="Subir"
-                      aria-label="Subir"
-                    >
-                      <ArrowUp className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onReordenar(index, index + 1)}
-                      disabled={index === itens.length - 1}
-                      className="h-8 w-8 text-muted-foreground"
-                      title="Descer"
-                      aria-label="Descer"
-                    >
-                      <ArrowDown className="h-3.5 w-3.5" />
-                    </Button>
+                    {ordenavel && (
+                      <>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onReordenar?.(index, index - 1)}
+                          disabled={index === 0}
+                          className="h-8 w-8 text-muted-foreground"
+                          title="Subir"
+                          aria-label="Subir"
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onReordenar?.(index, index + 1)}
+                          disabled={index === itens.length - 1}
+                          className="h-8 w-8 text-muted-foreground"
+                          title="Descer"
+                          aria-label="Descer"
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
                     <Button
                       type="button"
                       variant="ghost"
@@ -197,7 +204,7 @@ export function ItensOrdenaveisTable<T>({
               <thead>
                 {/* `bg-muted/50` não pintava nada (o token é var() sem canal alpha) */}
                 <tr className="bg-muted">
-                  {podeEditar && <th className="w-8" />}
+                  {ordenavel && <th className="w-8" />}
                   <th className="w-10 px-2 py-2 text-center text-xs font-medium text-muted-foreground">#</th>
                   {colunas.map((coluna) => (
                     <th
@@ -220,7 +227,7 @@ export function ItensOrdenaveisTable<T>({
                 {itens.map((item, index) => (
                   <tr
                     key={index}
-                    draggable={alcaAtiva && podeEditar}
+                    draggable={alcaAtiva && ordenavel}
                     onDragStart={(event) => {
                       setArrastando(index);
                       event.dataTransfer.effectAllowed = 'move';
@@ -239,7 +246,7 @@ export function ItensOrdenaveisTable<T>({
                       arrastando === index ? 'opacity-40' : ''
                     } ${alvo === index && arrastando !== index ? 'bg-muted' : 'hover:bg-muted'}`}
                   >
-                    {podeEditar && (
+                    {ordenavel && (
                       <td className="px-1 align-middle">
                         <span
                           onMouseDown={() => setAlcaAtiva(true)}

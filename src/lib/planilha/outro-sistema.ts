@@ -61,7 +61,7 @@ export function casarPelaChave(
   leitura: LeituraDaPlanilha,
   existentes: { id: string; chave: string; nome: string }[],
   chaveDo: (registro: RegistroDaPlanilha) => string,
-  { origem = 'do Smart Project', singular }: { origem?: string; singular: string },
+  { origem = 'do Smart Project', singular, plural = `${singular}s` }: { origem?: string; singular: string; plural?: string },
 ): LeituraDaPlanilha {
   const porChave = new Map<string, { id: string; chave: string; nome: string }[]>();
   for (const e of existentes) porChave.set(chave(e.chave), [...(porChave.get(chave(e.chave)) ?? []), e]);
@@ -96,7 +96,7 @@ export function casarPelaChave(
       {
         aba: leitura.registros[0]?.aba ?? 'RESUMO',
         linha: 1,
-        mensagem: `Planilha ${origem}: os IDs de lá foram ignorados. ${casamentos.length} ${casamentos.length === 1 ? singular : `${singular}s`} casado(s) pelo nome com os daqui (edita), ${novos} novo(s) (cria).`,
+        mensagem: `Planilha ${origem}: os IDs de lá foram ignorados. ${casamentos.length} ${casamentos.length === 1 ? singular : plural} casado(s) pelo nome com os daqui (edita), ${novos} novo(s) (cria).`,
       },
       ...casamentos.map(({ registro, nome }) => ({
         aba: registro.aba,

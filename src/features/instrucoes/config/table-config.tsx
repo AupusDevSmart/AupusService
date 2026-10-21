@@ -2,7 +2,7 @@
 import { FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TableColumn } from '@/types/base';
-import { InstrucaoApiResponse, StatusInstrucao, CategoriaTarefa, TipoManutencao } from '@/services/instrucoes.services';
+import { InstrucaoApiResponse, StatusInstrucao } from '@/services/instrucoes.services';
 
 const formatarStatus = (status: StatusInstrucao) => {
   const configs = {
@@ -14,53 +14,12 @@ const formatarStatus = (status: StatusInstrucao) => {
   return configs[status] || { label: status, color: 'bg-gray-100 text-gray-800' };
 };
 
-const _formatarCategoria = (categoria: CategoriaTarefa) => {
-  const labels: Record<string, string> = {
-    MECANICA: 'Mecânica',
-    ELETRICA: 'Elétrica',
-    INSTRUMENTACAO: 'Instrumentação',
-    LUBRIFICACAO: 'Lubrificação',
-    LIMPEZA: 'Limpeza',
-    INSPECAO: 'Inspeção',
-    CALIBRACAO: 'Calibração',
-    OUTROS: 'Outros'
-  };
-  return labels[categoria] || categoria;
-};
-
-const _formatarTipoManutencao = (tipo: TipoManutencao) => {
-  const labels: Record<string, string> = {
-    PREVENTIVA: 'Preventiva',
-    PREDITIVA: 'Preditiva',
-    CORRETIVA: 'Corretiva',
-    INSPECAO: 'Inspeção',
-    VISITA_TECNICA: 'Visita Técnica'
-  };
-  return labels[tipo] || tipo;
-};
-
-const _formatarCriticidade = (criticidade: string) => {
-  const configs: Record<string, { label: string; color: string }> = {
-    '1': { label: 'Muito Baixa', color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
-    '2': { label: 'Baixa', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
-    '3': { label: 'Média', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' },
-    '4': { label: 'Alta', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' },
-    '5': { label: 'Muito Alta', color: 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100' }
-  };
-  return configs[criticidade] || { label: criticidade, color: 'bg-gray-100 text-gray-800' };
-};
-
-// Keep references to prevent TS6133 - these are kept for future use
-void _formatarCategoria;
-void _formatarTipoManutencao;
-void _formatarCriticidade;
-
 export const instrucoesTableColumns: TableColumn<InstrucaoApiResponse>[] = [
   {
     key: 'dados_principais',
     label: 'Instrução',
     sortable: true,
-    // So o nome: a tag e um identificador interno e ocupava a linha de cima
+    // So o nome: o codigo e um identificador interno e ocupava a linha de cima
     // da celula, deixando a coluna com duas alturas para um dado que ninguem
     // le. Quem precisa dela continua achando pela busca.
     //
@@ -83,7 +42,7 @@ export const instrucoesTableColumns: TableColumn<InstrucaoApiResponse>[] = [
     render: (instrucao) => (
       <div
         className="text-sm text-muted-foreground truncate max-w-64 xl:max-w-md"
-        title={instrucao.descricao}
+        title={instrucao.descricao ?? undefined}
       >
         {instrucao.descricao}
       </div>

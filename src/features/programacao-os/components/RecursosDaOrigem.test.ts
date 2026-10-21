@@ -1,6 +1,6 @@
 // src/features/programacao-os/components/RecursosDaOrigem.test.ts
 import { describe, expect, it } from 'vitest';
-import { separarRecursos } from './RecursosDaOrigem';
+import { daLinhaDaInstrucao, separarRecursos } from './RecursosDaOrigem';
 
 /**
  * O reparte dos recursos da instrucao nos tres campos da programacao.
@@ -71,5 +71,30 @@ describe('separarRecursos', () => {
 
   it('descarta linha sem descrição', () => {
     expect(separarRecursos([{ tipo: 'MATERIAL', descricao: '   ', quantidade: 1 }]).materiais).toEqual([]);
+  });
+});
+
+/** A linha da instrução com o item embutido (SN-85) vira o que a programação reparte */
+describe('daLinhaDaInstrucao', () => {
+  it('material com a perda (o que se compra), mão de obra em horas de equipe, instrumento pela quantidade', () => {
+    expect(daLinhaDaInstrucao({ recurso: { categoria: 'MATERIAL', nome: 'Cabo', unidade: 'm' }, quantidade: 40, fator_perda: 0.1 })).toEqual({
+      tipo: 'MATERIAL',
+      descricao: 'Cabo',
+      quantidade: 44,
+      unidade: 'm',
+    });
+    expect(daLinhaDaInstrucao({ recurso: { categoria: 'MAO_DE_OBRA', nome: 'Eletricista' }, quantidade: 2, duracao_horas: 3 })).toMatchObject({ quantidade: 6 });
+    expect(daLinhaDaInstrucao({ recurso: { categoria: 'INSTRUMENTO', nome: 'Megômetro' }, quantidade: 1, duracao_horas: 10 })).toMatchObject({ quantidade: 1 });
+  });
+
+  it('a mão de obra sem duração fica sem horas (nada inventado), e a linha vira o reparte de sempre', () => {
+    const linhas = [
+      daLinhaDaInstrucao({ recurso: { categoria: 'MAO_DE_OBRA', nome: 'Eletricista' }, quantidade: 2, duracao_horas: 0 }),
+      daLinhaDaInstrucao({ recurso: { categoria: 'MATERIAL', nome: 'Fita', unidade: 'un' }, quantidade: '3' }),
+    ];
+    expect(separarRecursos(linhas)).toMatchObject({
+      tecnicos: [{ especialidade: 'Eletricista', horas_estimadas: 0 }],
+      materiais: [{ descricao: 'Fita', quantidade_planejada: 3, unidade: 'un' }],
+    });
   });
 });

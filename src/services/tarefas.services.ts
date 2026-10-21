@@ -184,20 +184,19 @@ export interface TarefaApiResponse {
    */
   instrucao?: {
     id: string;
-    tag?: string;
+    /** SN-85: era tag */
+    codigo?: string;
     nome: string;
-    descricao?: string;
-    // Conteudo que era da tarefa antes do PR6 e hoje vive so aqui. As telas de
-    // OS leem daqui para dizer o que deve ser feito.
-    categoria?: string;
-    tipo_manutencao?: string;
-    condicao_ativo?: string;
+    descricao?: string | null;
     sub_instrucoes?: Array<{
       id: string;
       descricao: string;
       obrigatoria: boolean;
       ordem: number;
-      tempo_estimado?: number;
+      /** SN-85: a disciplina e as horas; o registro (VERIFICACAO/LEITURA) era tipo */
+      tipo?: string | null;
+      duracao_horas?: number | null;
+      registro?: string;
     }>;
   };
   plano_manutencao?: PlanoResumoDto;
@@ -269,8 +268,6 @@ export interface QueryTarefasApiParams {
   planta_id?: string;               // Filtrar por ID da planta
   status?: StatusTarefa;            // Filtrar por status da tarefa
   ativo?: boolean;                  // Filtrar por status ativo
-  categoria?: CategoriaTarefa;      // Filtrar por categoria da tarefa
-  tipo_manutencao?: TipoManutencao; // Filtrar por tipo de manutenção
   frequencia?: FrequenciaTarefa;    // Filtrar por frequência
   criticidade?: number;             // Filtrar por nível de criticidade (1-5)
   status_atrasada?: boolean;        // Filtrar por tarefas atrasadas
