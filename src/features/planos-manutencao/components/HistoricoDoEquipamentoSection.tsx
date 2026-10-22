@@ -110,7 +110,7 @@ function LinhaDeSituacao({ situacao }: { situacao: SituacaoDaTarefa }) {
         <p className="text-xs text-muted-foreground">
           {rotuloFrequencia(situacao.frequencia)}
           {situacao.numero_execucoes > 0 &&
-            ` · ${situacao.numero_execucoes} execução${situacao.numero_execucoes === 1 ? '' : 'ões'}`}
+            ` · ${situacao.numero_execucoes} ${situacao.numero_execucoes === 1 ? 'execução' : 'execuções'}`}
         </p>
       </div>
 

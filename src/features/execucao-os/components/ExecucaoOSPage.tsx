@@ -191,7 +191,7 @@ export function ExecucaoOSPage() {
         reabrir: 'OS reaberta',
         cancelar: 'OS cancelada',
       };
-      toast({ title: actionLabels[pendingAction] || 'Acao realizada' });
+      toast({ title: actionLabels[pendingAction] || 'Ação realizada' });
 
       closeModal();
       setPendingAction(null);

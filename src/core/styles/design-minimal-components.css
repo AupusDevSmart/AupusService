@@ -456,9 +456,13 @@
    dialog). Os botoes do menu lateral ficam de fora: com !important, esta regra
    apagava o fundo do item ativo e o hover. Idem o gatilho que desenha o proprio
    fundo (`data-fundo-proprio`): o evento do calendario e um texto clicavel, e
-   virava uma caixa escura que nenhuma classe conseguia tirar. */
+   virava uma caixa escura que nenhuma classe conseguia tirar. Checkbox, switch e
+   radio tambem ficam de fora: o estado deles E o fundo, e esta regra (mais
+   especifica que a do checkbox, abaixo) pintava o marcado com a cor do card, com
+   o check preto em cima. No escuro, toda caixa marcada parecia desmarcada
+   (22/out/2026: "Necessita Veiculo" na programacao com reserva). */
 .dark [role="combobox"],
-.dark button[data-state]:not([data-sidebar]):not([data-fundo-proprio]) {
+.dark button[data-state]:not([data-sidebar]):not([data-fundo-proprio]):not([role="checkbox"]):not([role="switch"]):not([role="radio"]) {
   background-color: var(--card) !important;
   border-color: var(--input) !important;
 }

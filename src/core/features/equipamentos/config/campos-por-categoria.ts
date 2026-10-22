@@ -43,7 +43,7 @@ export const CAMPOS_POR_CATEGORIA: Record<string, CampoDaCategoria[]> = {
   // planilha: Banco de Capacitor
   "Banco Capacitor": [
     { campo: "potencia_reativa", rotulo: "Potência reativa", tipo: "number", unidade: "kVAr" },
-    { campo: "n_serie", rotulo: "N. Serie", tipo: "text" },
+    { campo: "n_serie", rotulo: "Nº de série", tipo: "text" },
     { campo: "tensao_nominal", rotulo: "Tensão nominal", tipo: "text" },
     { campo: "frequencia", rotulo: "Frequência", tipo: "text" },
     { campo: "celula", rotulo: "Célula:", tipo: "text" },
@@ -53,7 +53,7 @@ export const CAMPOS_POR_CATEGORIA: Record<string, CampoDaCategoria[]> = {
   // planilha: Transformador Força
   "Transformador de Potência": [
     { campo: "potencia_nominal", rotulo: "Potência nominal", tipo: "number", unidade: "kVA" },
-    { campo: "n_serie", rotulo: "N. Serie", tipo: "text" },
+    { campo: "n_serie", rotulo: "Nº de série", tipo: "text" },
     { campo: "tensao_primaria_e_secundaria", rotulo: "Tensão primária e secundária", tipo: "text" },
     { campo: "tipo_de_refrigeracao", rotulo: "Tipo de refrigeração (ONAN/ONAF/A SECO)", tipo: "text" },
     { campo: "impedancia", rotulo: "Impedância", tipo: "number", unidade: "%" },
@@ -72,7 +72,7 @@ export const CAMPOS_POR_CATEGORIA: Record<string, CampoDaCategoria[]> = {
   // planilha: Cabine Blindada ao Tempo
   "Cabine Blindada Medição Proteção": [
     { campo: "tensao_de_operacao", rotulo: "Tensão de operação", tipo: "text" },
-    { campo: "n_serie", rotulo: "N. Serie", tipo: "text" },
+    { campo: "n_serie", rotulo: "Nº de série", tipo: "text" },
     { campo: "corrente_nominal", rotulo: "Corrente nominal", tipo: "text" },
     { campo: "grau_de_protecao", rotulo: "Grau de proteção (IP)", tipo: "text" },
     { campo: "tipo_de_ventilacao", rotulo: "Tipo de ventilação", tipo: "text" },
@@ -90,7 +90,7 @@ export const CAMPOS_POR_CATEGORIA: Record<string, CampoDaCategoria[]> = {
   // planilha: QGBT – Quadro Geral de Baixa Tensão
   "Quadro Elétrico Baixa Tensão (QGBT)": [
     { campo: "corrente_nominal", rotulo: "Corrente nominal", tipo: "text" },
-    { campo: "n_serie", rotulo: "N. Serie", tipo: "text" },
+    { campo: "n_serie", rotulo: "Nº de série", tipo: "text" },
     { campo: "numero_de_barramentos", rotulo: "Número de barramentos", tipo: "number" },
     { campo: "tipo_de_disjuntores", rotulo: "Tipo de disjuntores", tipo: "text" },
     { campo: "grau_de_protecao", rotulo: "Grau de proteção (IP)", tipo: "text" },
@@ -144,7 +144,7 @@ export const CAMPOS_POR_CATEGORIA: Record<string, CampoDaCategoria[]> = {
   // planilha: Inversor Solar
   "Inversor PV": [
     { campo: "potencia_nominal", rotulo: "Potência nominal", tipo: "number", unidade: "kW" },
-    { campo: "n_serie", rotulo: "N. Serie", tipo: "text" },
+    { campo: "n_serie", rotulo: "Nº de série", tipo: "text" },
     { campo: "tensao_de_entrada", rotulo: "Tensão de entrada (CC)", tipo: "text" },
     { campo: "tensao_de_saida", rotulo: "Tensão de saída (CA)", tipo: "text" },
     { campo: "rendimento", rotulo: "Rendimento", tipo: "number", unidade: "%" },
@@ -153,7 +153,7 @@ export const CAMPOS_POR_CATEGORIA: Record<string, CampoDaCategoria[]> = {
   ],
   // planilha: String Fotovoltaica
   "Módulos PV": [
-    { campo: "qnt_modulo", rotulo: "Qnt Modulo", tipo: "number" },
+    { campo: "qnt_modulo", rotulo: "Quantidade de módulos", tipo: "number" },
     { campo: "potencia_nominal", rotulo: "Potência nominal", tipo: "number", unidade: "Wp" },
     { campo: "tensao_e_corrente_de_operacao", rotulo: "Tensão e corrente de operação", tipo: "text" },
     { campo: "tipo_de_celula", rotulo: "Tipo de célula (monocristalina/policristalina)", tipo: "text" },
@@ -190,13 +190,13 @@ export const CAMPOS_POR_CATEGORIA: Record<string, CampoDaCategoria[]> = {
   // planilha: Transformador Potencial
   "Transformador de Potencial (TP)": [
     { campo: "tipo", rotulo: "Tipo", tipo: "text" },
-    { campo: "n_serie", rotulo: "N. 'Serie", tipo: "text" },
+    { campo: "n_serie", rotulo: "Nº de série", tipo: "text" },
     { campo: "uso", rotulo: "Uso", tipo: "select", opcoes: ["Interno", "Externo"] },
     { campo: "norma", rotulo: "Norma", tipo: "text" },
     { campo: "freq", rotulo: "Freq", tipo: "text" },
     { campo: "pterm", rotulo: "Pterm", tipo: "text" },
     { campo: "fst", rotulo: "Fst", tipo: "text" },
-    { campo: "exatidao", rotulo: "Exatidao", tipo: "text" },
+    { campo: "exatidao", rotulo: "Exatidão", tipo: "text" },
     { campo: "n_i", rotulo: "N.I", tipo: "text" },
     { campo: "umax", rotulo: "Umax", tipo: "text" },
     { campo: "uprim", rotulo: "Uprim", tipo: "text" },
@@ -209,13 +209,13 @@ export const CAMPOS_POR_CATEGORIA: Record<string, CampoDaCategoria[]> = {
   // planilha: Transformador Corrente
   "Transformador de Corrente (TC)": [
     { campo: "tipo", rotulo: "Tipo", tipo: "text" },
-    { campo: "n_serie", rotulo: "N. Serie", tipo: "text" },
+    { campo: "n_serie", rotulo: "Nº de série", tipo: "text" },
     { campo: "ano", rotulo: "Ano", tipo: "text" },
     { campo: "ip", rotulo: "Ip", tipo: "text" },
     { campo: "is", rotulo: "Is", tipo: "text" },
     { campo: "rn", rotulo: "Rn", tipo: "text" },
     { campo: "umax", rotulo: "Umax", tipo: "text" },
-    { campo: "exatidao", rotulo: "Exatidao", tipo: "text" },
+    { campo: "exatidao", rotulo: "Exatidão", tipo: "text" },
     { campo: "it_id", rotulo: "It/Id", tipo: "text" },
     { campo: "ni", rotulo: "NI", tipo: "text" },
     { campo: "isol", rotulo: "Isol", tipo: "text" },

@@ -16,16 +16,16 @@ const actionConfig: Record<PendingAction, {
   className?: string;
 }> = {
   aprovar: {
-    confirmLabel: 'Confirmar Aprovacao',
+    confirmLabel: 'Confirmar aprovação',
     icon: CheckCircle,
     variant: 'default',
-    inputLabel: 'Observacoes da aprovacao',
-    inputPlaceholder: 'Observacoes da aprovacao (opcional)',
+    inputLabel: 'Observações da aprovação',
+    inputPlaceholder: 'Observações da aprovação (opcional)',
     inputRequired: false,
     className: 'bg-green-600 hover:bg-green-700',
   },
   cancelar: {
-    confirmLabel: 'Confirmar Cancelamento',
+    confirmLabel: 'Confirmar cancelamento',
     icon: Ban,
     variant: 'destructive',
     inputLabel: 'Motivo do cancelamento',
@@ -63,7 +63,7 @@ export function ActionConfirmPanel({ action, onConfirm, aviso, onVoltar }: Actio
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-medium">Confirmar acao</h3>
+      <h3 className="text-sm font-medium">Confirmar ação</h3>
 
       {aviso && <p className="text-sm text-muted-foreground">{aviso}</p>}
 

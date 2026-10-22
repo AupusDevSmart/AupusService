@@ -104,6 +104,27 @@ export function lerQuantidadeDigitada(texto: string): number | null | undefined 
   return Math.round(valor * 1000) / 1000 === valor ? valor : undefined;
 }
 
+/** O maior KM que a API aceita (as colunas são Int; acima, o Postgres recusava e dava 500) */
+export const KM_MAXIMO = 9_999_999;
+
+export const AVISO_DE_KM = 'KM em número inteiro, até 9.999.999 (ex.: 45.230)';
+
+/**
+ * KM do veículo: inteiro, como a coluna. Sem casa decimal, o ponto só pode ser
+ * de milhar, então "45.230" é quarenta e cinco mil duzentos e trinta (no número
+ * geral, "1.500" é ambíguo e se recusa). "45230,5" e "45,2" não são KM.
+ */
+export function lerKmDigitado(texto: string): number | null | undefined {
+  const limpo = texto.trim().replace(/\s/g, '');
+  if (limpo === '') return null;
+  if (!/^(\d{1,3}(\.\d{3})+|\d+)$/.test(limpo)) return undefined;
+  const km = Number(limpo.replace(/\./g, ''));
+  return km <= KM_MAXIMO ? km : undefined;
+}
+
+/** "45.230": volta para o campo com o milhar, que `lerKmDigitado` lê de volta igual */
+export const kmNoCampo = (n: number | null) => (n === null ? '' : n.toLocaleString('pt-BR', { maximumFractionDigits: 0 }));
+
 /** O dinheiro no campo, com as 2 casas ("181,50", "1.402,50"): o número cru mostrava "181,5" */
 export const dinheiroNoCampo = (n: number | null) =>
   n === null ? '' : n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

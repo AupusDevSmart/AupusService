@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Play, Pause, RotateCcw, Wrench, ClipboardCheck, CheckCircle, Undo2, Ban, Loader2 } from 'lucide-react';
 import { AvaliacaoEstrelas } from './AvaliacaoEstrelas';
+import { CampoDeNumero } from '@/components/common/CampoDeNumero';
+import { AVISO_DE_KM, kmNoCampo, lerKmDigitado } from '@/utils/leitura';
 import { HorasDaEquipe } from './HorasDaEquipe';
 import { OutrosCustosEditor } from './OutrosCustosEditor';
 import { duracaoLegivel } from '@/utils/horas';
@@ -97,13 +99,11 @@ export type DadosDaConfirmacao = {
 interface ActionField {
   key: string;
   label: string;
-  type: 'textarea' | 'text' | 'datetime-local' | 'number' | 'estrelas' | 'simnao';
+  type: 'textarea' | 'text' | 'datetime-local' | 'km' | 'estrelas' | 'simnao';
   placeholder?: string;
   /** Booleano, ou pela OS e pelo que já foi respondido (a parada só se o equipamento parou) */
   required?: boolean | ((entity: OSDoPainel, valores: ValoresDoPainel) => boolean);
   rows?: number;
-  min?: number;
-  step?: number;
   defaultNow?: boolean;
   /** Vai para o bloco "Mais detalhes", recolhido (ou pela OS) */
   detalhe?: boolean | ((entity: OSDoPainel) => boolean);
@@ -241,9 +241,8 @@ const actionConfig: Record<PendingAction, ActionMeta> = {
       {
         key: 'km_inicial',
         label: 'KM inicial do veículo',
-        type: 'number',
+        type: 'km',
         placeholder: 'Opcional',
-        min: 0,
         condition: temReservaAtiva,
       },
       { key: 'observacoes', label: 'Observações do início', type: 'textarea', placeholder: 'Opcional', rows: 2 },
@@ -266,7 +265,7 @@ const actionConfig: Record<PendingAction, ActionMeta> = {
     ],
   },
   executar: {
-    confirmLabel: 'Confirmar Execução',
+    confirmLabel: 'Confirmar execução',
     icon: Wrench,
     variant: 'default',
     fields: [
@@ -290,9 +289,8 @@ const actionConfig: Record<PendingAction, ActionMeta> = {
       {
         key: 'km_final',
         label: 'KM final do veículo',
-        type: 'number',
+        type: 'km',
         placeholder: 'KM no retorno',
-        min: 0,
         condition: temReservaAtiva,
       },
       {
@@ -315,7 +313,7 @@ const actionConfig: Record<PendingAction, ActionMeta> = {
     ],
   },
   auditar: {
-    confirmLabel: 'Confirmar Auditoria',
+    confirmLabel: 'Confirmar auditoria',
     icon: ClipboardCheck,
     variant: 'default',
     fields: [
@@ -419,6 +417,8 @@ export function ActionConfirmPanel({
   const [submitting, setSubmitting] = useState(false);
 
   const setValue = (key: string, value: unknown) => setValues((prev) => ({ ...prev, [key]: value }));
+  // KM que não deu para ler: o campo mostra o aviso, e confirmar mandaria o vazio de antes, calado
+  const [ilegiveis, setIlegiveis] = useState<Record<string, boolean>>({});
 
   // A parada vai inteira e coerente (a API recusa o contrário; aqui o aviso vem antes)
   const comParada = mostraParada(entity, values);
@@ -443,7 +443,8 @@ export function ActionConfirmPanel({
     pendentes.every((t) => preenchido(motivos[t.id])) &&
     !avisoDaParada &&
     !pendenciaHoras &&
-    !pendenciaOutros;
+    !pendenciaOutros &&
+    !visiveis.some((f) => ilegiveis[f.key]);
 
   const handleConfirm = async () => {
     if (!canConfirm || submitting) return;
@@ -459,7 +460,7 @@ export function ActionConfirmPanel({
         }
         if (field.type === 'simnao') {
           payload[field.key] = v === 'sim';
-        } else if (field.type === 'number' || field.type === 'estrelas') {
+        } else if (field.type === 'km' || field.type === 'estrelas') {
           payload[field.key] = Number(v);
         } else if (field.type === 'datetime-local') {
           // O input devolve hora local sem fuso ("2026-09-29T09:00"). Enviado
@@ -544,6 +545,24 @@ export function ActionConfirmPanel({
             />
           </div>
         );
+      case 'km':
+        // Texto, não type="number" (SN-58): "45.230" num navegador em português virava vazio, e o KM sumia calado
+        return (
+          <div key={field.key}>
+            {rotulo}
+            <CampoDeNumero
+              id={idDe(field.key)}
+              className="w-full"
+              value={value === '' || value === null || value === undefined ? null : Number(value)}
+              onChange={(km) => setValue(field.key, km ?? '')}
+              onIlegivel={(ilegivel) => setIlegiveis((prev) => ({ ...prev, [field.key]: ilegivel }))}
+              ler={lerKmDigitado}
+              mostrar={kmNoCampo}
+              aviso={AVISO_DE_KM}
+              placeholder={field.placeholder}
+            />
+          </div>
+        );
       default:
         return (
           <div key={field.key}>
@@ -554,8 +573,6 @@ export function ActionConfirmPanel({
               value={String(value)}
               onChange={(e) => setValue(field.key, e.target.value)}
               placeholder={field.placeholder}
-              min={field.min}
-              step={field.step}
             />
           </div>
         );

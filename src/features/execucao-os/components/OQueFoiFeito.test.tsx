@@ -54,6 +54,19 @@ describe('OQueFoiFeito', () => {
     expect(screen.getByText(/falta 1 item obrigatório/i)).toBeInTheDocument();
   });
 
+  it('com mais de um obrigatório pendente: "Faltam 2 itens obrigatórios" (era "items")', () => {
+    const p = montarProgresso(
+      [{ id: 'V1', nome_snapshot: 'Troca de rolamento', status: 'PENDENTE', ordem: 1 }],
+      [
+        { id: 'C1', atividade: 'Troca de rolamento: Desenergizar', obrigatoria: true, concluida: false, tarefa_os_id: 'V1', ordem: 1 },
+        { id: 'C2', atividade: 'Troca de rolamento: Substituir', obrigatoria: true, concluida: false, tarefa_os_id: 'V1', ordem: 2 },
+      ],
+    );
+    montar(<OQueFoiFeito osId="OS1" progresso={p} editavel onChange={vi.fn()} />);
+
+    expect(screen.getByText('Faltam 2 itens obrigatórios.')).toBeInTheDocument();
+  });
+
   it('marcar o item grava na hora e libera a tarefa', async () => {
     montar(<ComEstado />);
 

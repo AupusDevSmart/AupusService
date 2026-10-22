@@ -253,8 +253,9 @@ export function OQueFoiFeito({ osId, status, progresso, editavel, onChange }: OQ
 
             {editavel && pendente && tarefa.obrigatoriosPendentes > 0 && (
               <p className="pl-6 text-xs text-muted-foreground">
-                Falta{tarefa.obrigatoriosPendentes === 1 ? '' : 'm'} {tarefa.obrigatoriosPendentes} item
-                {tarefa.obrigatoriosPendentes === 1 ? '' : 's'} obrigatório{tarefa.obrigatoriosPendentes === 1 ? '' : 's'}.
+                {tarefa.obrigatoriosPendentes === 1
+                  ? 'Falta 1 item obrigatório.'
+                  : `Faltam ${tarefa.obrigatoriosPendentes} itens obrigatórios.`}
               </p>
             )}
             {editavel && pendente && tarefa.obrigatoriosPendentes === 0 && tarefa.leiturasSemExplicacao > 0 && (

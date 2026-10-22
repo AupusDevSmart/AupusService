@@ -591,25 +591,25 @@ export function ProgramacaoOSPage() {
         case 'aprovar':
           await aprovarProgramacao(entity.id, observacoes || '');
           toast({
-            title: 'Programacao aprovada',
-            description: 'OS gerada automaticamente. Acesse Execucao de OS para acompanhar.',
+            title: 'Programação aprovada',
+            description: 'A OS foi gerada. Acompanhe em Execução de OS.',
             action: (
               <button
                 className="text-xs underline"
                 onClick={() => navigate('/execucao-os')}
               >
-                Ir para Execucoes
+                Ir para execuções
               </button>
             ),
           });
           break;
         case 'cancelar':
           if (!observacoes?.trim()) {
-            alert('O motivo do cancelamento e obrigatorio');
+            toast({ title: 'Informe o motivo do cancelamento', variant: 'destructive' });
             return;
           }
           await cancelarProgramacao(entity.id, observacoes);
-          toast({ title: 'Programacao cancelada' });
+          toast({ title: 'Programação cancelada' });
           break;
       }
 

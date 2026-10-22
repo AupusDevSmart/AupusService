@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { descreverFaixa, dinheiroNoCampo, foraDaFaixa, formatarLeitura, lerDinheiroDigitado, lerQuantidadeDigitada, lerNumeroDigitado, numeroNoCampo, numeroOuNulo } from './leitura';
+import { descreverFaixa, dinheiroNoCampo, foraDaFaixa, formatarLeitura, kmNoCampo, lerDinheiroDigitado, lerKmDigitado, lerQuantidadeDigitada, lerNumeroDigitado, numeroNoCampo, numeroOuNulo } from './leitura';
 
 describe('leitura (SN-58)', () => {
   it.each([
@@ -100,5 +100,27 @@ describe('lerQuantidadeDigitada', () => {
     expect(lerQuantidadeDigitada('2')).toBe(2);
     expect(lerQuantidadeDigitada('')).toBeNull();
     expect(lerQuantidadeDigitada('0,3755')).toBeUndefined();
+  });
+});
+
+describe('lerKmDigitado', () => {
+  it('inteiro, com ou sem o ponto de milhar: KM não tem casa decimal, então "45.230" é 45230', () => {
+    expect(lerKmDigitado('45230')).toBe(45230);
+    expect(lerKmDigitado('45.230')).toBe(45230);
+    expect(lerKmDigitado(' 1.045.230 ')).toBe(1045230);
+    expect(lerKmDigitado('')).toBeNull();
+  });
+
+  it('decimal, milhar torto, texto ou acima do teto da API é ilegível', () => {
+    for (const texto of ['45230,5', '45,2', '45.23', '4.5230', 'abc', '-10', '10000000']) {
+      expect(lerKmDigitado(texto)).toBeUndefined();
+    }
+    expect(lerKmDigitado('9.999.999')).toBe(9_999_999);
+  });
+
+  it('volta para o campo com o milhar e se lê igual', () => {
+    expect(kmNoCampo(45230)).toBe('45.230');
+    expect(lerKmDigitado(kmNoCampo(45230))).toBe(45230);
+    expect(kmNoCampo(null)).toBe('');
   });
 });

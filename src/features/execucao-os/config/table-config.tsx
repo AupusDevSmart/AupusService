@@ -53,7 +53,10 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
   // A descricao volta, com teto — mesmo raciocinio da tabela de OP.
   //
   // Teto menor aqui: esta tabela tem nove colunas contra seis, entao a
-  // descricao pode ocupar menos sem espremer o resto. ~40 caracteres.
+  // descricao pode ocupar menos sem espremer o resto. ~28 caracteres: com 40 (e
+  // 26 na instalacao), ate 1440 px a tabela passava a area e o Editar e o "Mais
+  // acoes" da coluna Acoes so apareciam rolando para o lado (22/out/2026). Cabe
+  // de 1366 px para cima; a 1280 ainda rola um pouco.
   {
     key: 'descricao',
     label: 'Descrição',
@@ -61,7 +64,7 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
     render: (item) => {
       const descricao = item.descricao || item.os?.descricao;
       return descricao
-        ? <Texto limite="max-w-[40ch]" titulo={descricao}>{descricao}</Texto>
+        ? <Texto limite="max-w-[28ch]" titulo={descricao}>{descricao}</Texto>
         : <Texto fraco>Sem descrição</Texto>;
     },
   },
@@ -80,7 +83,7 @@ export const execucaoOSTableColumns: TableColumn<ExecucaoOS>[] = [
     render: (item) => {
       const rotulo = rotuloDaInstalacao(item.instalacoes);
       return (
-        <Texto fraco={rotulo.ausente} limite="max-w-[26ch]" titulo={rotulo.titulo}>
+        <Texto fraco={rotulo.ausente} limite="max-w-[20ch]" titulo={rotulo.titulo}>
           {rotulo.texto}
         </Texto>
       );

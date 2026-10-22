@@ -139,11 +139,46 @@ describe('ActionConfirmPanel — km da viatura', () => {
     const onConfirm = vi.fn().mockResolvedValue(undefined);
     render(<ActionConfirmPanel action="iniciar" entity={{ reserva_veiculo: { status: 'ativa' } }} onConfirm={onConfirm} />);
 
+    // O campo lê ao sair dele (no navegador, o clique no botão já tira o foco)
     fireEvent.change(screen.getByLabelText('KM inicial do veículo'), { target: { value: '1200' } });
+    fireEvent.blur(screen.getByLabelText('KM inicial do veículo'));
     fireEvent.click(screen.getByRole('button', { name: /Confirmar início/i }));
 
     await waitFor(() => expect(onConfirm).toHaveBeenCalled());
     expect(onConfirm.mock.calls[0][0]).toMatchObject({ km_inicial: 1200 });
+  });
+
+  it('"45.230" é quarenta e cinco mil km (era type="number": o navegador em português devolvia vazio e o KM sumia)', async () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(<ActionConfirmPanel action="iniciar" entity={{ reserva_veiculo: { status: 'ativa' } }} onConfirm={onConfirm} />);
+
+    const km = screen.getByLabelText('KM inicial do veículo');
+    fireEvent.change(km, { target: { value: '45.230' } });
+    fireEvent.blur(km);
+    expect(km).toHaveValue('45.230');
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar início/i }));
+
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    expect(onConfirm.mock.calls[0][0]).toMatchObject({ km_inicial: 45230 });
+  });
+
+  it('KM ilegível trava o confirmar, com aviso; apagado, confirma sem KM', async () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(<ActionConfirmPanel action="iniciar" entity={{ reserva_veiculo: { status: 'ativa' } }} onConfirm={onConfirm} />);
+
+    const km = screen.getByLabelText('KM inicial do veículo');
+    fireEvent.change(km, { target: { value: '45230,5' } });
+    fireEvent.blur(km);
+    expect(screen.getByRole('alert')).toHaveTextContent('KM em número inteiro');
+    expect(screen.getByRole('button', { name: /Confirmar início/i })).toBeDisabled();
+
+    fireEvent.change(km, { target: { value: '' } });
+    fireEvent.blur(km);
+    const confirmar = screen.getByRole('button', { name: /Confirmar início/i });
+    expect(confirmar).toBeEnabled();
+    fireEvent.click(confirmar);
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    expect(onConfirm.mock.calls[0][0]).not.toHaveProperty('km_inicial');
   });
 
   it('reserva já finalizada não pede km no executar', () => {
