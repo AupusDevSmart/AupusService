@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { renderToBuffer } from '@react-pdf/renderer';
 import jsQR from 'jsqr';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { entradasVazias } from '@/test-utils/pdf';
+import { prepararFontes } from './documento';
 import { pdfDasEtiquetas, type EtiquetaDoEquipamento } from './etiqueta-de-equipamento';
 import { caminhoDoQr, matrizDoQr } from './qr-code';
 
@@ -64,10 +66,15 @@ describe('QR code', () => {
 });
 
 describe('PDF das etiquetas', () => {
-  it('etiqueta: uma por página', async () => {
+  // O que o baixarPdf faz antes de desenhar (ver `prepararFontes`)
+  beforeAll(() => prepararFontes(), 30_000);
+
+  it('etiqueta: uma por página, com o texto que se copia (a Lexend da identidade, SN-92)', async () => {
     const pdf = await renderToBuffer(pdfDasEtiquetas([etiqueta(1), etiqueta(2), etiqueta(3)], 'etiqueta'));
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
     expect(paginas(pdf)).toBe(3);
+    expect(pdf.toString('latin1')).toMatch(/\/BaseFont\s*\/[A-Z]{6}\+Lexend-/);
+    expect(entradasVazias(pdf)).toBe(0);
   });
 
   it('A4: 8 por folha', async () => {

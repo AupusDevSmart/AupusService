@@ -1,6 +1,6 @@
 // src/lib/pdf/etiqueta-de-equipamento.tsx
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
-import { baixarPdf, textosDoPdf } from '@/lib/pdf/documento';
+import { COR, FONTE, baixarPdf, textosDoPdf } from '@/lib/pdf/documento';
 import { QrCode } from '@/lib/pdf/qr-code';
 
 /**
@@ -38,15 +38,17 @@ const estilos = StyleSheet.create({
     padding: 4 * MM,
     flexDirection: 'row',
     alignItems: 'center',
-    fontFamily: 'Helvetica',
-    color: '#111111',
+    fontFamily: FONTE,
+    color: COR.navy,
   },
-  corte: { borderWidth: 0.5, borderColor: '#bbbbbb', borderStyle: 'dashed' },
+  corte: { borderWidth: 0.5, borderColor: COR.linha, borderStyle: 'dashed' },
   texto: { flex: 1, marginLeft: 3 * MM, justifyContent: 'center' },
-  tag: { fontFamily: 'Helvetica-Bold', fontSize: 15, marginBottom: 2 },
+  tag: { fontWeight: 600, fontSize: 15, marginBottom: 2 },
+  // O traço verde da identidade (SN-92), debaixo do que se procura em campo
+  traco: { width: 22, height: 2, backgroundColor: COR.verdeBarra, marginBottom: 4 },
   nome: { fontSize: 10, marginBottom: 3 },
-  linha: { fontSize: 8, color: '#444444', marginBottom: 1.5 },
-  rodape: { fontSize: 6.5, color: '#666666', marginTop: 3 },
+  linha: { fontSize: 8, color: COR.cinza, marginBottom: 1.5 },
+  rodape: { fontSize: 6.5, color: COR.cinza, marginTop: 3 },
   folha: { paddingVertical: 18.5 * MM, paddingHorizontal: 5 * MM, flexDirection: 'row', flexWrap: 'wrap' },
 });
 
@@ -57,6 +59,7 @@ function Etiqueta({ etiqueta, comCorte }: { etiqueta: EtiquetaDoEquipamento; com
       <View style={estilos.texto}>
         {/* O título é a TAG, que é o que se procura em campo; sem ela, o nome */}
         <Text style={estilos.tag}>{etiqueta.tag ?? etiqueta.nome}</Text>
+        <View style={estilos.traco} />
         {etiqueta.tag && <Text style={estilos.nome}>{etiqueta.nome}</Text>}
         {etiqueta.lugar && <Text style={estilos.linha}>{etiqueta.lugar}</Text>}
         {etiqueta.criticidade && <Text style={estilos.linha}>Criticidade {etiqueta.criticidade}</Text>}
@@ -70,10 +73,10 @@ const emFolhas = <T,>(itens: T[]) =>
   Array.from({ length: Math.ceil(itens.length / POR_FOLHA) }, (_, i) => itens.slice(i * POR_FOLHA, (i + 1) * POR_FOLHA));
 
 export function pdfDasEtiquetas(etiquetas: EtiquetaDoEquipamento[], formato: FormatoDaEtiqueta) {
-  // A fonte do PDF só tem o Windows-1252: o resto sumiria calado
+  // O que a fonte do PDF não tem sumiria calado (ver `textoDoPdf`)
   const prontas = textosDoPdf(etiquetas);
   return (
-    <Document title="Etiquetas de equipamentos" author="Aupus Service">
+    <Document title="Etiquetas de equipamentos" author="Aupus Energia" creator="Aupus Service">
       {formato === 'etiqueta'
         ? prontas.map((etiqueta, i) => (
             <Page key={i} size={[LARGURA, ALTURA]}>

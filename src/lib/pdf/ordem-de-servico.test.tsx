@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { renderToBuffer } from '@react-pdf/renderer';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import type { DocumentoDaOS } from '@/features/execucao-os/utils/documento-da-os';
+import { entradasVazias, imagensEmbutidas } from '@/test-utils/pdf';
+import { prepararFontes } from './documento';
 import { pdfDaOS } from './ordem-de-servico';
 
 /**
@@ -37,16 +39,30 @@ const documento = (mudar: Partial<DocumentoDaOS> = {}): DocumentoDaOS => ({
 });
 
 describe('PDF da OS', () => {
+  // O que o baixarPdf faz antes de desenhar (ver `prepararFontes`)
+  beforeAll(() => prepararFontes(), 30_000);
+
   it('desenha o documento inteiro, com foto, tabela de várias páginas e o código', async () => {
     const arquivo = await renderToBuffer(pdfDaOS(documento()));
 
     expect(arquivo.subarray(0, 5).toString('latin1')).toBe('%PDF-');
     // Mais de uma página: o checklist longo quebra, e o rodapé com o código vai em todas
     expect(arquivo.toString('latin1').match(/\/Type\s*\/Page\b/g)!.length).toBeGreaterThan(1);
+    // A fonte da identidade (SN-92), embutida: a Courier fica só no código e no endereço
+    expect(arquivo.toString('latin1')).toMatch(/\/BaseFont\s*\/[A-Z]{6}\+Lexend-/);
+    // E o texto se copia: todo glifo com a sua letra no ToUnicode
+    expect(entradasVazias(arquivo)).toBe(0);
   }, 30_000);
 
   it('a prévia desenha sem código', async () => {
     const arquivo = await renderToBuffer(pdfDaOS(documento({ verificacao: null, aviso: 'Prévia: a OS ainda não foi finalizada.' })));
     expect(arquivo.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  }, 30_000);
+
+  // A logo é vetor: imagem no timbrado, no navegador, entrava de novo em cada página
+  // (uns 250 KB por página). Imagem no PDF da OS, só a das fotos.
+  it('sem foto, o PDF não embute imagem nenhuma', async () => {
+    const arquivo = await renderToBuffer(pdfDaOS(documento({ fotos: [] })));
+    expect(imagensEmbutidas(arquivo)).toBe(0);
   }, 30_000);
 });
