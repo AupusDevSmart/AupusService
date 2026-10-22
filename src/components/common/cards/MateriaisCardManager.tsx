@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Package, Trash2 } from 'lucide-react';
 import { CardLista, CardLinha, campoCard, type ColunaCard } from './card-lista';
+import { formatCurrency } from '@/lib/utils';
 
 export interface MaterialItem {
   id?: string;
@@ -192,7 +193,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
                     className={`${campoCard} text-center`}
                   />
                   <span className="text-sm text-muted-foreground text-right truncate">
-                    R$ {custoDaLinha(material).toFixed(2)}
+                    {formatCurrency(custoDaLinha(material))}
                   </span>
                 </>
               )}
@@ -215,7 +216,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
       {/* Resumo */}
       {showCustos && materiais.length > 0 && (
         <div className="text-xs text-muted-foreground text-right pr-1">
-          {somenteRegistro ? 'Custo do consumido' : 'Custo total'}: R$ {calcularCustoTotal().toFixed(2)}
+          {somenteRegistro ? 'Custo do consumido' : 'Custo total'}: {formatCurrency(calcularCustoTotal())}
         </div>
       )}
 

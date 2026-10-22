@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Receipt, Trash2 } from 'lucide-react';
 import { CardLista, CardLinha, campoCard, type ColunaCard } from './card-lista';
 import type { NaturezaDoOutroCusto } from '@/features/execucao-os/types/custos';
+import { formatCurrency } from '@/lib/utils';
 
 export interface ItemOrcamento {
   id?: string;
@@ -141,24 +142,24 @@ const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
         {custoMateriais > 0 && (
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Materiais</span>
-            <span>R$ {custoMateriais.toFixed(2)}</span>
+            <span>{formatCurrency(custoMateriais)}</span>
           </div>
         )}
         {custoEquipe > 0 && (
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Equipe</span>
-            <span>R$ {custoEquipe.toFixed(2)}</span>
+            <span>{formatCurrency(custoEquipe)}</span>
           </div>
         )}
         {custoOutros > 0 && (
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Outros custos</span>
-            <span>R$ {custoOutros.toFixed(2)}</span>
+            <span>{formatCurrency(custoOutros)}</span>
           </div>
         )}
         <div className="flex justify-between text-sm font-medium text-foreground">
           <span>Orçamento previsto</span>
-          <span>R$ {custoTotal.toFixed(2)}</span>
+          <span>{formatCurrency(custoTotal)}</span>
         </div>
       </div>
     </div>

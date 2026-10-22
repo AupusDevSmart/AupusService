@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { descreverFaixa, foraDaFaixa, formatarLeitura, lerDinheiroDigitado, lerNumeroDigitado, numeroNoCampo, numeroOuNulo } from './leitura';
+import { descreverFaixa, dinheiroNoCampo, foraDaFaixa, formatarLeitura, lerDinheiroDigitado, lerNumeroDigitado, numeroNoCampo, numeroOuNulo } from './leitura';
 
 describe('leitura (SN-58)', () => {
   it.each([
@@ -81,5 +81,15 @@ describe('lerDinheiroDigitado', () => {
     expect(lerDinheiroDigitado('1,005')).toBeUndefined();
     expect(lerDinheiroDigitado('1.500')).toBeUndefined();
     expect(lerDinheiroDigitado('')).toBeNull();
+  });
+});
+
+describe('dinheiroNoCampo', () => {
+  it('mostra as 2 casas, e o que mostra se lê de volta', () => {
+    expect(dinheiroNoCampo(181.5)).toBe('181,50');
+    expect(dinheiroNoCampo(160)).toBe('160,00');
+    expect(dinheiroNoCampo(1402.5)).toBe('1.402,50');
+    expect(dinheiroNoCampo(null)).toBe('');
+    for (const v of [181.5, 160, 1402.5, 9999999.99, 0.05]) expect(lerDinheiroDigitado(dinheiroNoCampo(v))).toBe(v);
   });
 });

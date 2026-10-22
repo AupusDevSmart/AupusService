@@ -5,7 +5,7 @@ import { CampoDeNumero } from '@/components/common/CampoDeNumero';
 import { Combobox } from '@/core/components/ui/combobox';
 import { opcoesDePessoas } from '@/features/programacao-os/utils/pessoas';
 import { duracaoLegivel, formatarHoras, horasNoCampo, lerHorasDigitadas } from '@/utils/horas';
-import { AVISO_DE_DINHEIRO, lerDinheiroDigitado } from '@/utils/leitura';
+import { AVISO_DE_DINHEIRO, dinheiroNoCampo, lerDinheiroDigitado } from '@/utils/leitura';
 import { usePessoasDaOS } from '@/features/execucao-os/hooks/usePessoasDaOS';
 import { JORNADA_MAXIMA_MIN, linhaExtra, passaDoTempo, totalDasHoras, type LinhaDeHoras } from '@/features/execucao-os/utils/horas-da-equipe';
 
@@ -95,6 +95,7 @@ export function HorasDaEquipe({ osId, linhas, onChange, tempoEfetivoMinutos, hhE
                   onChange={(custoHora) => mudarLinha(linha.chave, { custoHora })}
                   onIlegivel={(custoHoraIlegivel) => mudarLinha(linha.chave, { custoHoraIlegivel })}
                   ler={lerDinheiroDigitado}
+                  mostrar={dinheiroNoCampo}
                   aviso={AVISO_DE_DINHEIRO}
                   avisoCurto
                   placeholder="R$/h"

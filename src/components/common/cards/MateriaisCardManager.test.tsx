@@ -12,13 +12,13 @@ const cabo = { id: 'M1', descricao: 'Cabo 6 mm²', quantidade_planejada: 10, qua
 describe('MateriaisCardManager', () => {
   it('na execução, o custo é o do consumido', () => {
     render(<MateriaisCardManager value={[cabo]} onChange={vi.fn()} mode="execucao" showCustos />);
-    expect(screen.getByText('R$ 20.00')).toBeInTheDocument();
-    expect(screen.getByText('Custo do consumido: R$ 20.00')).toBeInTheDocument();
+    expect(screen.getByText('R$ 20,00')).toBeInTheDocument();
+    expect(screen.getByText('Custo do consumido: R$ 20,00')).toBeInTheDocument();
   });
 
   it('no planejamento, o planejado', () => {
     render(<MateriaisCardManager value={[cabo]} onChange={vi.fn()} mode="planejamento" showCustos />);
-    expect(screen.getByText('R$ 50.00')).toBeInTheDocument();
-    expect(screen.getByText('Custo total: R$ 50.00')).toBeInTheDocument();
+    expect(screen.getByText('R$ 50,00')).toBeInTheDocument();
+    expect(screen.getByText('Custo total: R$ 50,00')).toBeInTheDocument();
   });
 });

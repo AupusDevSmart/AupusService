@@ -590,7 +590,9 @@ export function BaseForm({
 
             {groupName !== 'main' && (
               <div className="mb-4">
-                <h3 className="text-base font-semibold text-foreground border-b pb-2 capitalize">
+                {/* Só a chave crua ("dados_tecnicos") ganha maiúsculas: o título escrito sai como está
+                    ("Histórico da OS" virava "Histórico Da OS") */}
+                <h3 className={cn('text-base font-semibold text-foreground border-b pb-2', !currentGroup?.title && 'capitalize')}>
                   {currentGroup?.title || groupName.replace(/_/g, ' ')}
                 </h3>
               </div>

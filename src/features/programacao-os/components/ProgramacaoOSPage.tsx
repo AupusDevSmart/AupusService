@@ -281,8 +281,9 @@ export function ProgramacaoOSPage() {
 
     (async () => {
       try {
-        const daLista = programacoes.find((p) => p.id?.trim() === id.trim());
-        const detalhe = daLista ?? (await buscarProgramacao(id));
+        // Sempre o detalhe: a linha da lista não traz a tarefa de cada linha nem o valor do cadastro
+        // (o sheet abria com os valores das instruções vazios e "Total: R$ 0,00")
+        const detalhe = await buscarProgramacao(id);
         if (detalhe) openModal('view', detalhe as ProgramacaoResponse);
       } catch (error) {
         console.error('Erro ao abrir programação vinda da URL:', error);
@@ -555,8 +556,10 @@ export function ProgramacaoOSPage() {
       const dadosCompletos = await buscarProgramacao(programacao.id);
       openModal('edit', dadosCompletos);
     } catch (error) {
+      // Sem o detalhe, não edita (o interceptor já mostrou o erro): a linha da lista não traz
+      // materiais, ferramentas, equipe nem outros custos, e salvar mandava as quatro listas vazias,
+      // que apagavam as da programação
       console.error('Erro ao carregar dados completos:', error);
-      openModal('edit', programacao);
     }
   };
 

@@ -8,6 +8,9 @@ import type { ResumoDoCusto } from '@/features/execucao-os/types/custos';
  * de cada instrução e a frase das instruções feitas.
  */
 
+/** "0,3", "1.500": a quantidade do material e da ferramenta, com vírgula e até 3 casas */
+export const formatarQuantidade = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+
 export type SentidoDaDiferenca = 'acima' | 'abaixo' | 'igual' | 'sem-previsto';
 
 /** "+R$ 26,50 (+0,4%)": o real menos o previsto, e o quanto isso é do previsto */

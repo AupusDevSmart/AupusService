@@ -5,8 +5,8 @@ import type { LinhaDeValor } from '@/features/programacao-os/utils/valores-das-i
 
 /** O valor de cada instrução na programação (SN-93, D1): do cadastro, ajustável só aqui */
 const linhas: LinhaDeValor[] = [
-  { chave: 'tarefa:T1', nome: 'INV-03 · Termografia', equipamento: 'Inversor 01', valor: 902.08, original: 902.08 },
-  { chave: 'instrucao:A1', nome: 'TR-01 · Inspeção', equipamento: null, valor: 120, original: 10 },
+  { chave: 'tarefa:T1', nome: 'INV-03 · Termografia', equipamento: 'Inversor 01', valor: 902.08, original: 902.08, doCadastroHoje: false },
+  { chave: 'instrucao:A1', nome: 'TR-01 · Inspeção', equipamento: null, valor: 120, original: 10, doCadastroHoje: false },
 ];
 const sem = (t: string | null) => (t ?? '').replace(/\s/g, ' ');
 
@@ -16,6 +16,15 @@ describe('ValoresDasInstrucoes', () => {
     expect(screen.getByLabelText('Valor de INV-03 · Termografia (Inversor 01)')).toHaveValue('902,08');
     expect(sem(screen.getByText(/cadastro R\$/).textContent)).toBe('cadastro R$ 10,00');
     expect(sem(screen.getByText(/^Total das instruções/).textContent)).toBe('Total das instruções: R$ 1.022,08');
+  });
+
+  // Revisão de falha silenciosa: na programação aprovada de antes, o valor de hoje parecia o da programação
+  it('a linha sem valor congelado diz "do cadastro de hoje"; ajustada, diz o do cadastro', () => {
+    const deAntes: LinhaDeValor = { chave: 'tarefa:T2', nome: 'MOT-02 · Lubrificação', equipamento: 'Compressor 01', valor: 74.12, original: 74.12, doCadastroHoje: true };
+    const { rerender } = render(<ValoresDasInstrucoes linhas={[deAntes]} ajustes={{}} onChange={vi.fn()} />);
+    expect(screen.getByText('Compressor 01 · do cadastro de hoje')).toBeInTheDocument();
+    rerender(<ValoresDasInstrucoes linhas={[deAntes]} ajustes={{ 'tarefa:T2': 80 }} onChange={vi.fn()} />);
+    expect(screen.queryByText(/do cadastro de hoje/)).toBeNull();
   });
 
   it('digitar ajusta pela chave da linha; "Voltar ao cadastro" manda null', () => {

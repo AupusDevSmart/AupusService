@@ -12,6 +12,7 @@ import type { ItemOrcamento } from '@/features/programacao-os/types';
 import type { ResumoDoCusto } from '@/features/execucao-os/types/custos';
 import {
   diferencaDoPrevisto,
+  formatarQuantidade,
   nomeDaInstrucao,
   resumoDasInstrucoes,
   situacaoDaInstrucao,
@@ -264,7 +265,9 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
                     <span className="min-w-0">
                       {m.descricao}
                       <span className="block text-xs text-muted-foreground">
-                        {apurado ? `${m.quantidade_consumida ?? 0} ${m.unidade} consumidos` : `${m.quantidade_planejada} ${m.unidade} planejados`} ×{' '}
+                        {apurado
+                          ? `${formatarQuantidade(m.quantidade_consumida ?? 0)} ${m.unidade} consumidos`
+                          : `${formatarQuantidade(m.quantidade_planejada)} ${m.unidade} planejados`} ×{' '}
                         {m.custo_unitario ? formatCurrency(m.custo_unitario) : 'sem custo unitário'}
                       </span>
                     </span>

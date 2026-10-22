@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CampoDeNumero } from '@/components/common/CampoDeNumero';
 import { formatCurrency } from '@/lib/utils';
-import { AVISO_DE_DINHEIRO, lerDinheiroDigitado } from '@/utils/leitura';
+import { AVISO_DE_DINHEIRO, dinheiroNoCampo, lerDinheiroDigitado } from '@/utils/leitura';
 import { valorNaTela, type AjustesDeValor, type LinhaDeValor } from '@/features/programacao-os/utils/valores-das-instrucoes';
 
 interface ValoresDasInstrucoesProps {
@@ -61,7 +61,14 @@ export function ValoresDasInstrucoes({ linhas, ajustes, onChange, disabled, cria
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm">{linha.nome}</p>
                 <p className="truncate text-xs text-muted-foreground">
-                  {[linha.equipamento, ajustado && linha.original !== null ? `cadastro ${formatCurrency(linha.original)}` : null].filter(Boolean).join(' · ')}
+                  {[
+                    linha.equipamento,
+                    ajustado && linha.original !== null ? `cadastro ${formatCurrency(linha.original)}` : null,
+                    // Sem valor congelado (de antes de 22/10/2026): o número muda com o cadastro, como na OS
+                    !ajustado && linha.doCadastroHoje ? 'do cadastro de hoje' : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </p>
               </div>
               <CampoDeNumero
@@ -69,6 +76,7 @@ export function ValoresDasInstrucoes({ linhas, ajustes, onChange, disabled, cria
                 onChange={(novo) => onChange({ ...ajustes, [linha.chave]: novo })}
                 onIlegivel={(ilegivel) => marcarIlegivel(linha.chave, ilegivel)}
                 ler={lerDinheiroDigitado}
+                mostrar={dinheiroNoCampo}
                 aviso={AVISO_DE_DINHEIRO}
                 disabled={disabled}
                 placeholder="R$"

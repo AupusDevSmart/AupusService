@@ -9,6 +9,7 @@ import { rotuloDaInstalacao, type InstalacaoDaOrigem } from '@/utils/instalacao'
 import { rotuloDoParou } from '@/features/execucao-os/utils/equipamento-parou';
 import {
   diferencaDoPrevisto,
+  formatarQuantidade,
   nomeDaInstrucao,
   resumoDasInstrucoes,
   situacaoDaInstrucao,
@@ -94,7 +95,6 @@ export interface ExibicaoDaOS {
 export const FUSO_DO_DOCUMENTO = 'America/Sao_Paulo';
 export const quando = (iso?: string | null) =>
   iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: FUSO_DO_DOCUMENTO }) : '';
-const numero = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
 const pares = (lista: [string, string | null | undefined][]): Par[] =>
   lista.filter((p): p is [string, string] => !!p[1]?.trim()).map(([r, v]) => [r, v.trim()]);
 const juntar = (...partes: (string | null | undefined)[]) => partes.filter((p) => p?.trim()).join(' · ');
@@ -295,14 +295,14 @@ export function documentoDaOS(
           : `Horas-homem não registradas (${formatarHoras(estimadas)} previstas)`,
     materiais: materiais.map((m, i) => ({
       descricao: juntar(m.descricao, m.observacoes),
-      planejado: `${numero(m.quantidade_planejada)} ${m.unidade}`,
-      consumido: m.quantidade_consumida === null ? '—' : `${numero(m.quantidade_consumida)} ${m.unidade}`,
+      planejado: `${formatarQuantidade(m.quantidade_planejada)} ${m.unidade}`,
+      consumido: m.quantidade_consumida === null ? '—' : `${formatarQuantidade(m.quantidade_consumida)} ${m.unidade}`,
       unitario: m.custo_unitario ? formatCurrency(m.custo_unitario) : '—',
       custo: m.custo_unitario ? dinheiro(custoDoMaterial[i]?.real) : 'sem custo unitário',
     })),
     ferramentas: ferramentas.map((f) => ({
       descricao: juntar(f.descricao, f.observacoes),
-      quantidade: numero(f.quantidade),
+      quantidade: formatarQuantidade(f.quantidade),
       utilizada: juntar(
         f.utilizada ? 'Sim' : 'Não',
         f.condicao_antes && `antes: ${f.condicao_antes}`,

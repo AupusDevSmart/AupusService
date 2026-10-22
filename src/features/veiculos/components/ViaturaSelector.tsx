@@ -6,6 +6,7 @@ import { ViaturaSelectorProps, ViaturaReservada } from '../../reservas/types';
 import { useReservasVeiculos } from '../../reservas/hooks/useReservasVeiculos';
 import { useVeiculos } from '../hooks/useVeiculos';
 import type { VeiculoResponse } from '@/services/veiculos.services';
+import { formatCurrency } from '@/lib/utils';
 // Mock data removed - using API now
 
 /** A viatura como o cartao le: `numeroPassageiros` e `valorDiaria` sobraram do mock — a API nao manda. */
@@ -258,10 +259,10 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
               {/* Custo */}
               <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                 <span className="text-sm font-medium text-gray-700">
-                  R$ {(veiculo.valorDiaria || 0).toFixed(2)}/dia
+                  {formatCurrency(veiculo.valorDiaria || 0)}/dia
                 </span>
                 <span className="text-sm font-bold text-blue-600">
-                  Total: R$ {custo.toFixed(2)}
+                  Total: {formatCurrency(custo)}
                 </span>
               </div>
 
@@ -298,7 +299,7 @@ export const ViaturaSelector: React.FC<ViaturaSelectorProps> = ({
                   {value.responsavel && <p>Responsável: {value.responsavel}</p>}
                   {value.finalidade && <p>Finalidade: {value.finalidade}</p>}
                   <p className="font-medium mt-1">
-                    Custo total: R$ {calcularCustoReserva(value.veiculoId, value.dataInicio, value.dataFim).toFixed(2)}
+                    Custo total: {formatCurrency(calcularCustoReserva(value.veiculoId, value.dataInicio, value.dataFim))}
                   </p>
                 </div>
               ) : (

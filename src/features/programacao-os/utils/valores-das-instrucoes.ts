@@ -16,6 +16,8 @@ export interface LinhaDeValor {
   valor: number | null;
   /** O do cadastro no vínculo */
   original: number | null;
+  /** A linha de antes do SN-93, sem valor congelado: o valor é o do cadastro de hoje */
+  doCadastroHoje: boolean;
 }
 
 /** O ajuste digitado, pela chave da linha; null volta ao do cadastro */
@@ -28,6 +30,7 @@ interface ValorDaLinha {
   valor?: number | null;
   valor_original?: number | null;
   equipamento_nome?: string | null;
+  do_cadastro_hoje?: boolean;
 }
 interface LinhaDaTarefa extends ValorDaLinha {
   tarefa_id?: string | null;
@@ -50,6 +53,7 @@ export function linhasDeValor(programacao?: { tarefas_programacao?: LinhaDaTaref
       equipamento: t.equipamento_nome?.trim() || null,
       valor: t.valor ?? null,
       original: t.valor_original ?? null,
+      doCadastroHoje: t.do_cadastro_hoje === true,
     }));
   const avulsas = (programacao?.instrucoes ?? [])
     .filter((i) => i.instrucao_id?.trim())
@@ -59,6 +63,7 @@ export function linhasDeValor(programacao?: { tarefas_programacao?: LinhaDaTaref
       equipamento: i.equipamento_nome?.trim() || null,
       valor: i.valor ?? null,
       original: i.valor_original ?? null,
+      doCadastroHoje: i.do_cadastro_hoje === true,
     }));
   return [...tarefas, ...avulsas];
 }

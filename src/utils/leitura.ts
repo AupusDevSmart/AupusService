@@ -90,3 +90,7 @@ export function lerDinheiroDigitado(texto: string): number | null | undefined {
   if (valor === null || valor === undefined) return valor;
   return Math.round(valor * 100) / 100 === valor ? valor : undefined;
 }
+
+/** O dinheiro no campo, com as 2 casas ("181,50", "1.402,50"): o número cru mostrava "181,5" */
+export const dinheiroNoCampo = (n: number | null) =>
+  n === null ? '' : n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

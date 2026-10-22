@@ -7,6 +7,7 @@ import { Plus, Users, Trash2 } from 'lucide-react';
 import { Combobox, type ComboboxOption } from '@/core/components/ui/combobox';
 import { CardLista, CardLinha, campoCard, selectCard, type ColunaCard } from './card-lista';
 import { formatarHoras } from '@/utils/horas';
+import { formatCurrency } from '@/lib/utils';
 
 export interface TecnicoItem {
   id?: string;
@@ -258,7 +259,7 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
                     className={`${campoCard} text-center`}
                   />
                   <span className="text-sm text-muted-foreground text-right truncate">
-                    R$ {(tecnico.custo_total || 0).toFixed(2)}
+                    {formatCurrency(tecnico.custo_total || 0)}
                   </span>
                 </>
               )}
@@ -295,7 +296,7 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
       {tecnicos.length > 0 && (
         <div className="flex items-center gap-4 text-xs text-muted-foreground text-right justify-end pr-1">
           <span>Total: {formatarHoras(calcularHorasTotal())}</span>
-          {showCustos && <span>Custo: R$ {calcularCustoTotal().toFixed(2)}</span>}
+          {showCustos && <span>Custo: {formatCurrency(calcularCustoTotal())}</span>}
         </div>
       )}
 

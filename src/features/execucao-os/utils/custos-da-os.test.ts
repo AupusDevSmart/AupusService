@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diferencaDoPrevisto, nomeDaInstrucao, resumoDasInstrucoes, valorDaInstrucao } from './custos-da-os';
+import { diferencaDoPrevisto, formatarQuantidade, nomeDaInstrucao, resumoDasInstrucoes, valorDaInstrucao } from './custos-da-os';
 import type { ResumoDoCusto } from '@/features/execucao-os/types/custos';
 
 const sem = (t: string) => t.replace(/\s/g, ' ');
@@ -41,5 +41,11 @@ describe('custo da OS em texto', () => {
     const custos = { instrucoes: [instrucao(), instrucao({ feita: false })], instrucoes_feitas: 1, instrucoes_feitas_total: 902.08, instrucoes_total: 1804.16 };
     expect(sem(resumoDasInstrucoes(custos as ResumoDoCusto)!)).toBe('1 de 2 feitas · R$ 902,08 de R$ 1.804,16');
     expect(resumoDasInstrucoes({ ...custos, instrucoes: [] } as unknown as ResumoDoCusto)).toBeNull();
+  });
+
+  it('a quantidade com vírgula (o sheet mostrava "0.3 kg")', () => {
+    expect(sem(formatarQuantidade(0.3))).toBe('0,3');
+    expect(sem(formatarQuantidade(1500))).toBe('1.500');
+    expect(sem(formatarQuantidade(1.23456))).toBe('1,235');
   });
 });

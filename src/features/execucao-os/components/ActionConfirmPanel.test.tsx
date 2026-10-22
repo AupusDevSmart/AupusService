@@ -40,8 +40,11 @@ describe('ActionConfirmPanel — executar', () => {
     expect(screen.getByText(/previsto R\$\s*1\.316,00/)).toBeInTheDocument();
 
     const picape = screen.getByLabelText('Quanto custou: Veículo: Picape 4x4');
+    // Dinheiro com as 2 casas no campo (mostrava "1316" e "181,5")
+    expect(picape).toHaveValue('1.316,00');
     fireEvent.change(picape, { target: { value: '1402,5' } });
     fireEvent.blur(picape);
+    expect(picape).toHaveValue('1.402,50');
     fireEvent.click(screen.getByRole('button', { name: /Confirmar Execu/i }));
 
     await waitFor(() => expect(onConfirm).toHaveBeenCalled());

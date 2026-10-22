@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CampoDeNumero } from '@/components/common/CampoDeNumero';
-import { AVISO_DE_DINHEIRO, lerDinheiroDigitado } from '@/utils/leitura';
+import { AVISO_DE_DINHEIRO, dinheiroNoCampo, lerDinheiroDigitado } from '@/utils/leitura';
 import { formatCurrency } from '@/lib/utils';
 import { NATUREZAS_DOS_OUTROS_CUSTOS, type NaturezaDoOutroCusto } from '@/features/execucao-os/types/custos';
 import { linhaNaoPrevista, type LinhaDeOutroCusto } from '@/features/execucao-os/utils/outros-custos';
@@ -39,6 +39,7 @@ export function OutrosCustosEditor({ linhas, onChange, explicacao }: OutrosCusto
       onChange={(valor) => mudar(linha.chave, { valor })}
       onIlegivel={(ilegivel) => mudar(linha.chave, { ilegivel })}
       ler={lerDinheiroDigitado}
+      mostrar={dinheiroNoCampo}
       aviso={AVISO_DE_DINHEIRO}
       placeholder="R$"
       aria-label={rotuloAcessivel}
