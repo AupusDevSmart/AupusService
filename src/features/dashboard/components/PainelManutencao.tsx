@@ -91,6 +91,9 @@ const ALTURA_PADRAO = 'h-[180px] 2xl:h-auto';
 const GRAFICOS_A_VISTA = ['execucaoPlano', 'planejadaVsNao', 'origemOS', 'custo', 'custoPorOS', 'anomalias', 'hh'];
 
 const moedaMil = (v: number) => `R$ ${v.toLocaleString('pt-BR')}k`;
+/** O eixo de um valor em reais (o custo médio por OS): "R$ 8k", "R$ 750" */
+const moedaCurta = (v: number) =>
+  Math.abs(v) >= 1000 ? `R$ ${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}k` : `R$ ${v.toLocaleString('pt-BR')}`;
 
 /**
  * Tooltip no visual do produto — o padrão do recharts destoa do resto.
@@ -287,7 +290,9 @@ export function PainelManutencao() {
               Painel de manutenção
             </h1>
 
-            <div className="w-[calc(50%-0.25rem)] sm:w-40">
+            {/* Larguras pelo texto da opção "todas" de cada combo: com 160 e 176 px saíam "Últimos 12 ..." e
+                "Todas as insta..." a 1440 px (22/out/2026). A linha cabe inteira a partir de 1440 e quebra abaixo */}
+            <div className="w-[calc(50%-0.25rem)] sm:w-48">
               <Combobox
                 options={PERIODOS}
                 value={filtros.periodo}
@@ -298,7 +303,7 @@ export function PainelManutencao() {
               />
             </div>
 
-            <div className="w-[calc(50%-0.25rem)] sm:w-44">
+            <div className="w-[calc(50%-0.25rem)] sm:w-48">
               <Combobox
                 options={opcoesPlanta}
                 value={filtros.plantaId ?? 'all'}
@@ -313,7 +318,7 @@ export function PainelManutencao() {
               />
             </div>
 
-            <div className="w-[calc(50%-0.25rem)] sm:w-44">
+            <div className="w-[calc(50%-0.25rem)] sm:w-56">
               <Combobox
                 options={opcoesUnidade}
                 value={filtros.unidadeId ?? 'all'}
@@ -324,7 +329,7 @@ export function PainelManutencao() {
               />
             </div>
 
-            <div className="w-[calc(50%-0.25rem)] sm:w-40">
+            <div className="w-[calc(50%-0.25rem)] sm:w-[11.5rem]">
               <Combobox
                 options={CRITICIDADES}
                 value={filtros.criticidade ?? 'all'}
@@ -596,7 +601,9 @@ export function PainelManutencao() {
             <Quadro
               titulo="Custo de manutenção"
               subtitulo="tracejado = orçado"
-              className={`${ALTURA_PADRAO} 2xl:col-span-8`}
+              // Duas colunas no xl: com uma, a linha ficava com um buraco ao lado do custo médio e o
+              // subtítulo saía "tracejado = ..."
+              className={`${ALTURA_PADRAO} xl:col-span-2 2xl:col-span-8`}
               pendencia={data.custo.pendencia}
               explicacao={explicacaoDe('custo')}
               legenda={[
@@ -660,7 +667,8 @@ export function PainelManutencao() {
                   <LineChart data={serieMensal} margin={{ top: 4, right: 4 }}>
                     <CartesianGrid vertical={false} {...grade} />
                     <XAxis dataKey="mes" tickLine={false} axisLine={false} tick={eixo} />
-                    <YAxis tickLine={false} axisLine={false} tick={eixo} width={48} />
+                    {/* Em reais, como o custo de manutenção: "8000" sem R$ nem milhar */}
+                    <YAxis tickLine={false} axisLine={false} tick={eixo} tickFormatter={moedaCurta} width={58} />
                     <Tooltip content={<DicaGrafico />} />
                     <Line dataKey="corretiva" name="Corretiva" stroke={COR.vermelho} strokeWidth={2} dot={false} />
                     <Line
@@ -783,7 +791,8 @@ export function PainelManutencao() {
 
             <Quadro
               titulo="HH planejado vs. apontado"
-              className={`${ALTURA_PADRAO} 2xl:col-span-4`}
+              // Último da grade: abaixo do 2xl ficava sozinho numa coluna, com o resto da linha vazio
+              className={`${ALTURA_PADRAO} md:col-span-2 xl:col-span-3 2xl:col-span-4`}
               explicacao={explicacaoDe('hh')}
               legenda={[
                 { rotulo: 'Planejado', cor: COR.azulPalido },
