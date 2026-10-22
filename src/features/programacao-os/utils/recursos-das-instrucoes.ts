@@ -8,6 +8,7 @@ import type {
   RecursoInstrucaoApiResponse,
 } from '@/services/instrucoes.services';
 import { rotuloCategoria } from '@/services/recursos.services';
+import type { NaturezaDoOutroCusto } from '@/features/execucao-os/types/custos';
 
 /**
  * O planejado que as instruções da programação sugerem (SN-86: "sugerem, e o
@@ -53,10 +54,19 @@ const vazio = (): RecursosDaProgramacao => ({ materiais: [], ferramentas: [], te
 const custoDaLinha = (linha: { subtotal: number | null }) => (linha.subtotal == null ? null : numero(linha.subtotal));
 
 /** Uma linha do orçamento: com o valor, ou marcada quando não há preço; nada quando é zero (o cliente fornece) */
-function noOrcamento(descricao: string, custo: number | null): ItemOrcamento[] {
-  if (custo == null) return [{ descricao: `${descricao} ${SEM_PRECO}`, valor: 0 }];
-  return custo > 0 ? [{ descricao, valor: casas(custo, 2) }] : [];
+/**
+ * O item do orçamento com a natureza do custo (SN-93): é ela que o custo da OS
+ * agrupa (veículo, despesa de campo...) e que o Executar confere. Sem ela, a API
+ * tira do prefixo da descrição; com ela, a descrição pode mudar à vontade.
+ */
+function noOrcamento(descricao: string, custo: number | null, natureza: NaturezaDoOutroCusto): ItemOrcamento[] {
+  if (custo == null) return [{ descricao: `${descricao} ${SEM_PRECO}`, valor: 0, natureza }];
+  return custo > 0 ? [{ descricao, valor: casas(custo, 2), natureza }] : [];
 }
+
+/** A natureza do custo pela categoria do recurso; a categoria nova, que ninguém previu, é OUTRO */
+const naturezaDaCategoria = (categoria?: string | null): NaturezaDoOutroCusto =>
+  categoria === 'INSTRUMENTO' || categoria === 'VEICULO' || categoria === 'TERCEIRO' || categoria === 'DESPESA_CAMPO' ? categoria : 'OUTRO';
 
 /** O que a linha de técnico aceita (TecnicoProgramacaoDto): de 0,25 a 24 h */
 export const HORAS_DA_VAGA = { minimo: 0.25, maximo: 24 };
@@ -133,16 +143,16 @@ function doRecurso(linha: RecursoInstrucaoApiResponse, saida: RecursosDaPrograma
       return;
     case 'INSTRUMENTO':
       saida.ferramentas.push({ descricao: nome, quantidade: casas(quantidade, 3), unidade: linha.recurso?.unidade?.trim() || undefined });
-      saida.itens_orcamento.push(...noOrcamento(`${rotuloCategoria(categoria)}: ${nome}`, custo));
+      saida.itens_orcamento.push(...noOrcamento(`${rotuloCategoria(categoria)}: ${nome}`, custo, naturezaDaCategoria(categoria)));
       return;
     case 'VEICULO':
     case 'TERCEIRO':
     case 'DESPESA_CAMPO':
-      saida.itens_orcamento.push(...noOrcamento(`${rotuloCategoria(categoria)}: ${nome}`, custo));
+      saida.itens_orcamento.push(...noOrcamento(`${rotuloCategoria(categoria)}: ${nome}`, custo, naturezaDaCategoria(categoria)));
       return;
     default:
       // Categoria nova cai aqui e não entra calada: vai ao orçamento com o nome dela
-      saida.itens_orcamento.push(...noOrcamento(`${rotuloCategoria(categoria)}: ${nome}`, custo));
+      saida.itens_orcamento.push(...noOrcamento(`${rotuloCategoria(categoria)}: ${nome}`, custo, naturezaDaCategoria(categoria)));
   }
 }
 
@@ -150,7 +160,7 @@ function doMaquinario(linha: MaquinarioInstrucaoApiResponse, saida: RecursosDaPr
   const nome = linha.maquinario?.nome?.trim();
   if (!nome) return;
   saida.ferramentas.push({ descricao: nome, quantidade: casas(numero(linha.quantidade) || 1, 3) });
-  saida.itens_orcamento.push(...noOrcamento(`Maquinário: ${nome}`, custoDaLinha(linha)));
+  saida.itens_orcamento.push(...noOrcamento(`Maquinário: ${nome}`, custoDaLinha(linha), 'MAQUINARIO'));
 }
 
 /** O que uma instrução sugere, já com as linhas iguais dela juntas */

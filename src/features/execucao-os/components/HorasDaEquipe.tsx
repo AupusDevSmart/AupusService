@@ -5,6 +5,7 @@ import { CampoDeNumero } from '@/components/common/CampoDeNumero';
 import { Combobox } from '@/core/components/ui/combobox';
 import { opcoesDePessoas } from '@/features/programacao-os/utils/pessoas';
 import { duracaoLegivel, formatarHoras, horasNoCampo, lerHorasDigitadas } from '@/utils/horas';
+import { AVISO_DE_DINHEIRO, lerDinheiroDigitado } from '@/utils/leitura';
 import { usePessoasDaOS } from '@/features/execucao-os/hooks/usePessoasDaOS';
 import { JORNADA_MAXIMA_MIN, linhaExtra, passaDoTempo, totalDasHoras, type LinhaDeHoras } from '@/features/execucao-os/utils/horas-da-equipe';
 
@@ -14,6 +15,8 @@ interface HorasDaEquipeProps {
   onChange: Dispatch<SetStateAction<LinhaDeHoras[]>>;
   tempoEfetivoMinutos?: number | null;
   hhEstimado?: number;
+  /** O valor da hora de quem entrou só para quem gerencia a OS (SN-93); sem ele, o da equipe */
+  podeInformarValorDaHora?: boolean;
 }
 
 /**
@@ -21,7 +24,7 @@ interface HorasDaEquipeProps {
  * equipe, começando no tempo efetivo da OS, e quem entrou na hora escolhido
  * entre as pessoas que podem atuar na planta.
  */
-export function HorasDaEquipe({ osId, linhas, onChange, tempoEfetivoMinutos, hhEstimado }: HorasDaEquipeProps) {
+export function HorasDaEquipe({ osId, linhas, onChange, tempoEfetivoMinutos, hhEstimado, podeInformarValorDaHora = false }: HorasDaEquipeProps) {
   const idBase = useId();
   const { data: pessoas, isError } = usePessoasDaOS(osId);
   const naTela = new Set(linhas.map((l) => l.tecnicoId).filter(Boolean));
@@ -83,9 +86,27 @@ export function HorasDaEquipe({ osId, linhas, onChange, tempoEfetivoMinutos, hhE
             className="h-8 w-28 text-right"
           />
           {linha.extra && (
-            <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => tirar(linha.chave)}>
-              Tirar
-            </Button>
+            <>
+              {/* SN-93: sem o valor da hora, o custo de quem entrou ficava R$ 0, calado. É custo: só
+                  quem gerencia a OS o informa; quem só executa fica com o da mesma especialidade */}
+              {podeInformarValorDaHora && (
+                <CampoDeNumero
+                  value={linha.custoHora ?? null}
+                  onChange={(custoHora) => mudarLinha(linha.chave, { custoHora })}
+                  onIlegivel={(custoHoraIlegivel) => mudarLinha(linha.chave, { custoHoraIlegivel })}
+                  ler={lerDinheiroDigitado}
+                  aviso={AVISO_DE_DINHEIRO}
+                  avisoCurto
+                  placeholder="R$/h"
+                  aria-label={`Valor da hora de ${linha.nome}`}
+                  title="Valor da hora. Vazio: o de quem tem a mesma especialidade na equipe"
+                  className="h-8 w-24 text-right"
+                />
+              )}
+              <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => tirar(linha.chave)}>
+                Tirar
+              </Button>
+            </>
           )}
         </div>
       ))}

@@ -5,11 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Receipt, Trash2 } from 'lucide-react';
 import { CardLista, CardLinha, campoCard, type ColunaCard } from './card-lista';
+import type { NaturezaDoOutroCusto } from '@/features/execucao-os/types/custos';
 
 export interface ItemOrcamento {
   id?: string;
   descricao: string;
   valor: number;
+  /** SN-93: a natureza do custo (o item lançado à mão vai sem: a API usa o prefixo, ou OUTRO) */
+  natureza?: NaturezaDoOutroCusto;
 }
 
 interface OrcamentoCardManagerProps {

@@ -18,6 +18,8 @@ import { ResponsavelDaOS } from '../components/ResponsavelDaOS';
 import { OrcamentoCardManager } from '@/components/common/cards/OrcamentoCardManager';
 import { ReservaViaturaField } from '../components/ReservaViaturaField';
 import { ReservaVinculadaCard } from '../components/ReservaVinculadaCard';
+import { ValoresDasInstrucoes } from '@/features/programacao-os/components/ValoresDasInstrucoes';
+import { linhasDeValor, type AjustesDeValor } from '@/features/programacao-os/utils/valores-das-instrucoes';
 
 /**
  * A programação aberta no sheet, como o `getModalEntity` da página a monta:
@@ -30,7 +32,8 @@ type ProgramacaoAberta = BaseEntity & {
   dados_origem?: DadosOrigem | null;
   anomalia?: AnomaliaDoCard | null;
   anomalia_id?: string;
-  tarefas_programacao?: TarefaDoCard[];
+  /** SN-93: com o valor da instrução nesta programação e o equipamento */
+  tarefas_programacao?: Array<TarefaDoCard & { valor?: number | null; valor_original?: number | null; equipamento_nome?: string | null }>;
   plano_manutencao?: { id?: string } | null;
   plano_manutencao_id?: string;
   planos_selecionados?: unknown[];
@@ -38,7 +41,14 @@ type ProgramacaoAberta = BaseEntity & {
   solicitacao_servico?: SolicitacaoDoCard | null;
   solicitacao_servico_id?: string;
   /** As instruções avulsas gravadas (SN-86) */
-  instrucoes?: Array<{ instrucao_id?: string | null; codigo?: string | null; nome?: string | null }>;
+  instrucoes?: Array<{
+    instrucao_id?: string | null;
+    codigo?: string | null;
+    nome?: string | null;
+    valor?: number | null;
+    valor_original?: number | null;
+    equipamento_nome?: string | null;
+  }>;
   data_previsao_fim?: string;
   reserva_veiculo?: ReservaVinculada | null;
   observacoes_aprovacao?: string;
@@ -61,8 +71,12 @@ type CamposDaProgramacao = DadosDoFormulario & {
   ferramentas?: RecursosDaProgramacao['ferramentas'];
   itens_orcamento?: RecursosDaProgramacao['itens_orcamento'];
   instrucoes_ids?: string[];
+  /** SN-93: o valor das instruções ajustado nesta programação, pela chave da linha */
+  valores_das_instrucoes?: AjustesDeValor;
   /** Fora do payload (o handleSubmit monta o dele): uma troca de instrução ainda calculando os recursos */
   recursos_em_calculo?: boolean;
+  /** Fora do payload: um valor de instrução que não dá para ler (SN-93) */
+  valores_ilegiveis?: boolean;
 };
 
 /** O render de um campo: o fieldProps inteiro, com a entidade e o formulário da programação. */
@@ -530,6 +544,27 @@ export const programacaoOSFormFields: FormField[] = [
   },
 
   // Orçamento - GRUPO: orcamento
+  // SN-93 (D1): o valor de cada instrução, o do cadastro no vínculo, ajustável só nesta programação
+  {
+    key: 'valores_das_instrucoes',
+    label: '',
+    type: 'custom',
+    group: 'orcamento',
+    colSpan: 2,
+    render: ({ entity, formData, value, onChange, onMultipleChange, mode, disabled }: PropsDoRender) => (
+      <ValoresDasInstrucoes
+        linhas={linhasDeValor(entity)}
+        ajustes={(value as AjustesDeValor | undefined) ?? formData?.valores_das_instrucoes ?? {}}
+        onChange={onChange}
+        onIlegivel={onMultipleChange ? (sim) => onMultipleChange({ valores_ilegiveis: sim }) : undefined}
+        criando={mode === 'create'}
+        disabled={disabled || mode === 'view' || (entity?.status !== undefined && entity.status !== 'PENDENTE')}
+      />
+    ),
+    // Salvar com um valor ilegível gravaria o anterior calado
+    validation: (_valor: unknown, formData?: CamposDaProgramacao) =>
+      formData?.valores_ilegiveis ? 'Corrija o valor da instrução marcado em vermelho (ex.: 1.402,50).' : null,
+  },
   {
     key: 'itens_orcamento',
     label: '', // duplicava o titulo do grupo
@@ -772,7 +807,7 @@ export const programacaoOSFormGroups = [
   {
     key: 'orcamento',
     title: 'Orçamento',
-    fields: ['itens_orcamento']
+    fields: ['valores_das_instrucoes', 'itens_orcamento']
   },
   {
     key: 'workflow',

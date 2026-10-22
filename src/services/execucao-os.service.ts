@@ -32,6 +32,7 @@ import type {
 import type { DadosOrigem, ItemOrcamento } from '@/features/programacao-os/types';
 import type { InstalacaoDaOrigem } from '@/utils/instalacao';
 import type { CategoriaRecurso } from '@/services/recursos.services';
+import type { OutroCustoPedido, ResumoDoCusto } from '@/features/execucao-os/types/custos';
 
 // ============================================================================
 // TIPOS DA API PARA EXECUCAO OS
@@ -386,6 +387,8 @@ export interface OrdemServicoDaApi {
   incidentes_seguranca?: string;
   medidas_seguranca_adicionais?: string;
   custos_adicionais?: number;
+  /** SN-93: o custo aberto, pela conta da API (a do PDF e do custo real gravado) */
+  custos?: ResumoDoCusto;
   tarefas_os?: TarefaOS[];
   materiais?: MaterialOS[];
   ferramentas?: FerramentaOS[];
@@ -537,6 +540,9 @@ export interface ConteudoDaOS {
     data_aprovacao: string | null;
     finalizado_por: string | null;
     finalizada_em: string | null;
+    /** Versão 2 (SN-93): o orçamento aprovado e os adicionais de antes do SN-93 */
+    orcamento_previsto?: number | null;
+    custos_adicionais?: number | null;
   };
   tarefas: {
     id: string;
@@ -547,6 +553,10 @@ export interface ConteudoDaOS {
     data_conclusao: string | null;
     concluida_por: string | null;
     observacoes: string | null;
+    /** Versão 2 (na 1, o relatório completa pelo sistema): o equipamento e o valor da instrução */
+    equipamento?: string | null;
+    valor?: number | null;
+    valor_original?: number | null;
   }[];
   checklist: {
     id: string;
@@ -583,6 +593,8 @@ export interface ConteudoDaOS {
     horas_estimadas: number;
     horas_trabalhadas: number | null;
     presente: boolean;
+    /** SN-93 (D3): o PDF mostra o valor/hora */
+    custo_hora?: number | null;
   }[];
   materiais: {
     id: string;
@@ -591,6 +603,8 @@ export interface ConteudoDaOS {
     quantidade_planejada: number;
     quantidade_consumida: number | null;
     observacoes: string | null;
+    /** SN-93 (D3): e o custo unitário */
+    custo_unitario?: number | null;
   }[];
   ferramentas: {
     id: string;
@@ -600,6 +614,15 @@ export interface ConteudoDaOS {
     condicao_antes: string | null;
     condicao_depois: string | null;
     observacoes: string | null;
+  }[];
+  /** Versão 2 (SN-93): os outros custos, previsto e real (null = não conferido) */
+  outros_custos?: {
+    id: string;
+    descricao: string;
+    natureza: string;
+    previsto: number;
+    real: number | null;
+    nao_previsto: boolean;
   }[];
 }
 
@@ -612,6 +635,8 @@ export interface RelatorioDaOS {
   finalizada_em: string | null;
   previa: boolean;
   conteudo: ConteudoDaOS;
+  /** SN-93: o custo aberto, pela mesma conta do sheet */
+  custos: ResumoDoCusto;
 }
 
 /** GET /execucao-os/conferencia?codigo= (SN-62) */
@@ -1015,6 +1040,15 @@ export class ExecucaoOSApiService {
     ferramentas: { id: string; utilizada: boolean; condicao_antes?: string; condicao_depois?: string; observacoes?: string }[],
   ): Promise<void> {
     await api.patch(`${this.baseEndpoint}/${id}/ferramentas`, { ferramentas });
+  }
+
+  /**
+   * SN-93: os outros custos depois do Executar (PATCH :id/outros-custos). A lista
+   * inteira: o não previsto que não vem sai da OS. Na executada ou auditada, a API
+   * refaz o custo real.
+   */
+  async registrarOutrosCustos(id: string, outros_custos: OutroCustoPedido[]): Promise<void> {
+    await api.patch(`${this.baseEndpoint}/${id.trim()}/outros-custos`, { outros_custos });
   }
 
   async getHistoricoCompleto(id: string): Promise<unknown> {

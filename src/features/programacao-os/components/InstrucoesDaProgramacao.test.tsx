@@ -108,7 +108,7 @@ describe('instruções da programação', () => {
     montar({ cadastro: true });
 
     await waitFor(() => expect(screen.getByTestId('valor')).toHaveTextContent('A,B'));
-    await waitFor(() => expect(recursos().itens_orcamento).toEqual([{ descricao: 'Terceiro: Laudo', valor: 300 }]));
+    await waitFor(() => expect(recursos().itens_orcamento).toEqual([{ descricao: 'Terceiro: Laudo', valor: 300, natureza: 'TERCEIRO' }]));
     expect(recursos().materiais).toEqual([{ descricao: 'Cabo', quantidade_planejada: 10, unidade: 'm', custo_unitario: 5 }]);
     expect(screen.getByText('I-A - Trocar o cabo')).toBeInTheDocument();
   });
@@ -183,7 +183,7 @@ describe('instruções da programação', () => {
     await usuario.click(screen.getByRole('option', { name: 'I-B - Laudo' }));
 
     // Antes, a lista com B virava a base calada e o laudo nunca entrava
-    await waitFor(() => expect(recursos().itens_orcamento).toEqual([{ descricao: 'Terceiro: Laudo', valor: 300 }]));
+    await waitFor(() => expect(recursos().itens_orcamento).toEqual([{ descricao: 'Terceiro: Laudo', valor: 300, natureza: 'TERCEIRO' }]));
     expect(recursos().materiais).toEqual(gravados.materiais);
   });
 

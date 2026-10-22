@@ -7,6 +7,13 @@ import { duracaoLegivel, formatarHoras } from '@/utils/horas';
 import { formatCurrency } from '@/lib/utils';
 import { rotuloDaInstalacao, type InstalacaoDaOrigem } from '@/utils/instalacao';
 import { rotuloDoParou } from '@/features/execucao-os/utils/equipamento-parou';
+import {
+  diferencaDoPrevisto,
+  nomeDaInstrucao,
+  resumoDasInstrucoes,
+  situacaoDaInstrucao,
+  valorDaInstrucao,
+} from '@/features/execucao-os/utils/custos-da-os';
 
 /**
  * O PDF da OS (SN-62), já em texto: o desenho (`src/lib/pdf/ordem-de-servico.tsx`)
@@ -40,16 +47,37 @@ export interface DocumentoDaOS {
   cadastro: Par[];
   textos: { titulo: string; texto: string }[];
   falha: Par[];
-  tarefas: { nome: string; situacao: string; quem: string; observacao: string }[];
+  /** SN-93: o custo aberto (por natureza, por instrução, os outros custos), a conta da API */
+  custos: CustosDoDocumento | null;
+  /** O equipamento de cada tarefa (SN-93): o PDF repetia o nome da instrução sem dizer de qual inversor */
+  tarefas: { nome: string; equipamento: string; situacao: string; quem: string; observacao: string }[];
   checklist: { tarefa: string; itens: { atividade: string; feito: string; leitura: string; observacao: string }[] }[];
-  equipe: { nome: string; estimadas: string; trabalhadas: string; presente: string }[];
+  /** SN-93 (D3): o valor/hora e o custo de cada pessoa */
+  equipe: { nome: string; estimadas: string; trabalhadas: string; valorHora: string; custo: string; presente: string }[];
   totalDaEquipe: string | null;
-  materiais: { descricao: string; planejado: string; consumido: string }[];
+  /** SN-93 (D3): o custo unitário e o custo do consumido */
+  materiais: { descricao: string; planejado: string; consumido: string; unitario: string; custo: string }[];
   ferramentas: { descricao: string; quantidade: string; utilizada: string }[];
   auditoria: Par[];
   fotos: { legenda: string; detalhe: string; foto: FotoDoPdf | null; falha: string | null }[];
   documentos: { nome: string; detalhe: string }[];
   verificacao: { codigo: string; agrupado: string; url: string } | null;
+}
+
+/** O custo da OS no PDF (SN-93), já em texto */
+export interface CustosDoDocumento {
+  real: string;
+  previsto: string;
+  diferenca: string;
+  naturezas: { rotulo: string; previsto: string; real: string; diferenca: string }[];
+  totalPrevisto: string;
+  totalReal: string;
+  /** O orçamento aprovado diferente do previsto pelas linhas: o ajuste da aprovação */
+  ajuste: string | null;
+  instrucoes: { nome: string; equipamento: string; situacao: string; valor: string; detalhe: string | null }[];
+  resumoDasInstrucoes: string | null;
+  outros: { descricao: string; natureza: string; previsto: string; real: string }[];
+  pendencias: string[];
 }
 
 /** O que o PDF mostra e não é conteúdo da OS: os nomes do cadastro de hoje */
@@ -74,6 +102,64 @@ const juntar = (...partes: (string | null | undefined)[]) => partes.filter((p) =
 const SITUACAO_DA_TAREFA: Record<string, string> = { CONCLUIDA: 'Feita', CANCELADA: 'Não feita', PENDENTE: 'Pendente' };
 
 const nomeDaTarefa = (t: ConteudoDaOS['tarefas'][number]) => juntar(t.instrucao_tag, t.nome || t.instrucao_nome || 'Tarefa');
+/** O título do grupo do checklist: a tarefa e o equipamento dela (nove "Termografia e reaperto" iguais não diziam nada) */
+const tituloDoGrupo = (t: ConteudoDaOS['tarefas'][number]) => juntar(nomeDaTarefa(t), t.equipamento);
+
+/**
+ * O item do checklist nasce com o nome da tarefa na frente ("Termografia e
+ * reaperto: Reapertar as conexões"); debaixo do título do grupo, que já o tem,
+ * a repetição só ocupa linha. O texto registrado não muda: só o que se imprime.
+ */
+function semONomeDaTarefa(atividade: string, tarefa: ConteudoDaOS['tarefas'][number] | undefined): string {
+  for (const nome of [tarefa?.nome, tarefa?.instrucao_nome]) {
+    const prefixo = nome?.trim() ? `${nome.trim()}: ` : null;
+    if (prefixo && atividade.startsWith(prefixo) && atividade.length > prefixo.length) return atividade.slice(prefixo.length);
+  }
+  return atividade;
+}
+
+const dinheiro = (v: number | null | undefined) => (v === null || v === undefined ? '—' : formatCurrency(v));
+
+function custosDoDocumento(custos: RelatorioDaOS['custos'] | undefined): CustosDoDocumento | null {
+  if (!custos) return null;
+  const temAlgo = custos.real > 0 || custos.previsto > 0 || custos.instrucoes.length > 0;
+  if (!temAlgo) return null;
+  // Na OS finalizada antes do SN-93 os outros custos ficam fora do real: o previsto comparado também
+  const previsto = custos.outros_fora_do_total ? custos.previsto : (custos.orcamento_previsto ?? custos.previsto);
+  return {
+    real: formatCurrency(custos.real),
+    previsto: formatCurrency(previsto),
+    diferenca: diferencaDoPrevisto(previsto, custos.real).texto,
+    naturezas: custos.naturezas
+      .filter((n) => n.previsto > 0 || (n.real ?? 0) > 0)
+      .map((n) => ({
+        rotulo: n.rotulo,
+        previsto: dinheiro(n.previsto),
+        // Fora do total: sem real nem diferença, que leria como economia ("−100%")
+        real: n.real === null ? 'fora do total' : dinheiro(n.real),
+        diferenca: n.real === null ? '—' : diferencaDoPrevisto(n.previsto, n.real).texto,
+      })),
+    totalPrevisto: formatCurrency(custos.previsto),
+    totalReal: formatCurrency(custos.real),
+    ajuste: !custos.outros_fora_do_total && custos.ajuste_do_orcamento !== 0 ? formatCurrency(custos.ajuste_do_orcamento) : null,
+    instrucoes: custos.instrucoes.map((i) => {
+      const valor = valorDaInstrucao(i);
+      return { nome: nomeDaInstrucao(i), equipamento: i.equipamento ?? '', situacao: situacaoDaInstrucao(i.status), valor: valor.texto, detalhe: valor.detalhe };
+    }),
+    resumoDasInstrucoes: resumoDasInstrucoes(custos),
+    outros: custos.outros.map((o) => ({
+      descricao: o.descricao,
+      natureza: o.nao_previsto ? `${o.rotulo} · não previsto` : o.rotulo,
+      previsto: o.nao_previsto ? '—' : formatCurrency(o.previsto),
+      real: o.conferido
+        ? formatCurrency(o.real ?? 0)
+        : o.no_real === null
+          ? 'não conferido, fora do total'
+          : `${formatCurrency(o.no_real)} (não conferido)`,
+    })),
+    pendencias: custos.pendencias,
+  };
+}
 
 function leituraDoItem(item: ConteudoDaOS['checklist'][number]): string {
   if (item.tipo !== 'LEITURA') return '';
@@ -97,6 +183,7 @@ export function documentoDaOS(
   const { os, tarefas, checklist, anexos, equipe, materiais, ferramentas } = relatorio.conteudo;
   const instalacao = rotuloDaInstalacao(exibicao.instalacoes);
   const nomePorTarefa = new Map(tarefas.map((t) => [t.id, nomeDaTarefa(t)]));
+  const tarefaPorId = new Map(tarefas.map((t) => [t.id, t]));
   const itemPorId = new Map(checklist.map((c) => [c.id, c]));
 
   const finalizada = relatorio.status === 'FINALIZADA';
@@ -109,11 +196,19 @@ export function documentoDaOS(
   // Item sem tarefa (OS antiga) ou de tarefa que não está na OS vai para "Itens gerais"
   const grupoDoItem = (c: ConteudoDaOS['checklist'][number]) => (c.tarefa_os_id && nomePorTarefa.has(c.tarefa_os_id) ? c.tarefa_os_id : null);
   const grupos = [...tarefas.map((t) => t.id), null].map((tarefaId) => ({
-    tarefa: tarefaId ? nomePorTarefa.get(tarefaId)! : 'Itens gerais',
+    tarefa: tarefaId ? tituloDoGrupo(tarefaPorId.get(tarefaId)!) : 'Itens gerais',
     itens: checklist
       .filter((c) => grupoDoItem(c) === tarefaId)
-      .map((c) => ({ atividade: c.atividade, feito: situacaoDoItem(c), leitura: leituraDoItem(c), observacao: c.observacoes ?? '' })),
+      .map((c) => ({
+        atividade: semONomeDaTarefa(c.atividade, tarefaId ? tarefaPorId.get(tarefaId) : undefined),
+        feito: situacaoDoItem(c),
+        leitura: leituraDoItem(c),
+        observacao: c.observacoes ?? '',
+      })),
   }));
+  // O custo de cada pessoa e de cada material, na ordem do conteúdo (a API monta o resumo dele)
+  const custoDaPessoa = relatorio.custos?.equipe ?? [];
+  const custoDoMaterial = relatorio.custos?.materiais ?? [];
 
   const trabalhadas = equipe.filter((t) => t.horas_trabalhadas !== null);
   const estimadas = equipe.reduce((s, t) => s + t.horas_estimadas, 0);
@@ -174,18 +269,22 @@ export function documentoDaOS(
       ['Causa', os.falha_causa],
       ['Ação tomada', os.falha_acao],
     ]),
+    custos: custosDoDocumento(relatorio.custos),
     tarefas: tarefas.map((t) => ({
       nome: nomeDaTarefa(t),
+      equipamento: t.equipamento ?? '',
       situacao: SITUACAO_DA_TAREFA[t.status] ?? t.status,
       quem: juntar(t.concluida_por, quando(t.data_conclusao)),
       // Na tarefa não feita, `observacoes` é o motivo (D2 da execução)
       observacao: t.observacoes ? (t.status === 'CANCELADA' ? `Motivo: ${t.observacoes}` : t.observacoes) : '',
     })),
     checklist: grupos.filter((g) => g.itens.length > 0),
-    equipe: equipe.map((t) => ({
+    equipe: equipe.map((t, i) => ({
       nome: juntar(t.nome || `${t.especialidade} (sem pessoa)`, t.nome ? t.especialidade : null),
       estimadas: formatarHoras(t.horas_estimadas),
       trabalhadas: t.horas_trabalhadas === null ? '—' : formatarHoras(t.horas_trabalhadas),
+      valorHora: t.custo_hora ? formatCurrency(t.custo_hora) : '—',
+      custo: t.custo_hora ? dinheiro(custoDaPessoa[i]?.real) : 'sem valor/hora',
       presente: t.horas_trabalhadas === null ? '—' : t.presente ? 'Sim' : 'Não',
     })),
     totalDaEquipe:
@@ -194,10 +293,12 @@ export function documentoDaOS(
         : trabalhadas.length > 0
           ? `Horas-homem: ${formatarHoras(Math.round(real * 100) / 100)} (${formatarHoras(estimadas)} previstas)`
           : `Horas-homem não registradas (${formatarHoras(estimadas)} previstas)`,
-    materiais: materiais.map((m) => ({
+    materiais: materiais.map((m, i) => ({
       descricao: juntar(m.descricao, m.observacoes),
       planejado: `${numero(m.quantidade_planejada)} ${m.unidade}`,
       consumido: m.quantidade_consumida === null ? '—' : `${numero(m.quantidade_consumida)} ${m.unidade}`,
+      unitario: m.custo_unitario ? formatCurrency(m.custo_unitario) : '—',
+      custo: m.custo_unitario ? dinheiro(custoDoMaterial[i]?.real) : 'sem custo unitário',
     })),
     ferramentas: ferramentas.map((f) => ({
       descricao: juntar(f.descricao, f.observacoes),
@@ -208,8 +309,8 @@ export function documentoDaOS(
         f.condicao_depois && `depois: ${f.condicao_depois}`,
       ),
     })),
+    // O custo real foi para a seção de custos (SN-93), com o previsto e o custo aberto
     auditoria: pares([
-      ['Custo real', os.custo_real ? formatCurrency(os.custo_real) : null],
       ['Nota da auditoria', os.avaliacao_qualidade ? `${os.avaliacao_qualidade} de 5` : null],
       ['Obs. da auditoria', os.observacoes_qualidade],
       // Antes da auditoria, `aprovado_por` é quem aprovou a programação (copiado ao gerar a OS);

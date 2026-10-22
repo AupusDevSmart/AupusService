@@ -79,8 +79,13 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
     updateMateriais(novosMateriais);
   };
 
+  // Na execução, o custo é o do CONSUMIDO: o `custo_total` da linha é o planejado, e o cartão
+  // "Materiais Consumidos" mostrava o custo de um consumo que não houve (SN-93)
+  const custoDaLinha = (material: MaterialItem) =>
+    somenteRegistro ? (material.quantidade_consumida ?? 0) * (material.custo_unitario ?? 0) : material.custo_total || 0;
+
   const calcularCustoTotal = () => {
-    return materiais.reduce((total, material) => total + (material.custo_total || 0), 0);
+    return materiais.reduce((total, material) => total + custoDaLinha(material), 0);
   };
 
   const colunas: ColunaCard[] = [
@@ -187,7 +192,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
                     className={`${campoCard} text-center`}
                   />
                   <span className="text-sm text-muted-foreground text-right truncate">
-                    R$ {(material.custo_total || 0).toFixed(2)}
+                    R$ {custoDaLinha(material).toFixed(2)}
                   </span>
                 </>
               )}
@@ -210,7 +215,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
       {/* Resumo */}
       {showCustos && materiais.length > 0 && (
         <div className="text-xs text-muted-foreground text-right pr-1">
-          Custo total: R$ {calcularCustoTotal().toFixed(2)}
+          {somenteRegistro ? 'Custo do consumido' : 'Custo total'}: R$ {calcularCustoTotal().toFixed(2)}
         </div>
       )}
 

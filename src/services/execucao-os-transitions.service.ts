@@ -2,6 +2,7 @@
 // Service for handling OS status transitions
 
 import { api } from '@/config/api';
+import type { OutroCustoPedido } from '@/features/execucao-os/types/custos';
 
 export type StatusExecucaoOS =
   | 'PENDENTE'
@@ -64,7 +65,10 @@ export interface ExecutarOSDto {
   tarefas_nao_feitas?: { id: string; motivo: string }[];
   /** SN-61: horas de cada linha da equipe (obrigatório para todas; 0 = não foi) e quem entrou na hora */
   horas_dos_tecnicos?: { id: string; horas: number }[];
-  tecnicos_extras?: { tecnico_id: string; horas: number }[];
+  /** SN-93: com o valor da hora de quem entrou (sem ele, o de quem tem a mesma especialidade na equipe) */
+  tecnicos_extras?: { tecnico_id: string; horas: number; custo_hora?: number | null }[];
+  /** SN-93: os outros custos conferidos (o previsto com o real) e os não previstos */
+  outros_custos?: OutroCustoPedido[];
 }
 
 export interface AuditarOSDto {

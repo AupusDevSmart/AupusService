@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { descreverFaixa, foraDaFaixa, formatarLeitura, lerNumeroDigitado, numeroNoCampo, numeroOuNulo } from './leitura';
+import { descreverFaixa, foraDaFaixa, formatarLeitura, lerDinheiroDigitado, lerNumeroDigitado, numeroNoCampo, numeroOuNulo } from './leitura';
 
 describe('leitura (SN-58)', () => {
   it.each([
@@ -69,5 +69,17 @@ describe('leitura (SN-58)', () => {
     expect(numeroOuNulo('')).toBeNull();
     expect(numeroOuNulo(undefined)).toBeNull();
     expect(numeroOuNulo('x')).toBeNull();
+  });
+});
+
+/** O dinheiro (SN-93): "1,005" virava 1,00 na tela e 1,01 na API */
+describe('lerDinheiroDigitado', () => {
+  it('até 2 casas; mais que isso é ilegível, e vazio apaga', () => {
+    expect(lerDinheiroDigitado('1.402,50')).toBe(1402.5);
+    expect(lerDinheiroDigitado('0,29')).toBe(0.29);
+    expect(lerDinheiroDigitado('85')).toBe(85);
+    expect(lerDinheiroDigitado('1,005')).toBeUndefined();
+    expect(lerDinheiroDigitado('1.500')).toBeUndefined();
+    expect(lerDinheiroDigitado('')).toBeNull();
   });
 });

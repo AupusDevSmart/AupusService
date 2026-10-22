@@ -602,7 +602,7 @@ export function PainelManutencao() {
               legenda={[
                 { rotulo: 'Mão de obra', cor: COR.azul },
                 { rotulo: 'Material', cor: COR.laranja },
-                { rotulo: 'Adicionais', cor: COR.verde },
+                { rotulo: 'Outros custos', cor: COR.verde },
               ]}
             >
               <Grafico>
@@ -621,7 +621,7 @@ export function PainelManutencao() {
                   <Bar dataKey="material" name="Material" stackId="c" fill={COR.laranja} maxBarSize={24} />
                   <Bar
                     dataKey="adicionais"
-                    name="Adicionais"
+                    name="Outros custos"
                     stackId="c"
                     fill={COR.verde}
                     maxBarSize={24}

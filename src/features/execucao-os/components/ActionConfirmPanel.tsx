@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Play, Pause, RotateCcw, Wrench, ClipboardCheck, CheckCircle, Undo2, Ban, Loader2 } from 'lucide-react';
 import { AvaliacaoEstrelas } from './AvaliacaoEstrelas';
 import { HorasDaEquipe } from './HorasDaEquipe';
+import { OutrosCustosEditor } from './OutrosCustosEditor';
 import { duracaoLegivel } from '@/utils/horas';
 import {
   horasDoPedido,
@@ -15,6 +16,14 @@ import {
   type LinhaDeHoras,
   type TecnicoDaOS,
 } from '@/features/execucao-os/utils/horas-da-equipe';
+import {
+  linhasDosOutrosCustos,
+  outrosCustosDoPedido,
+  pendenciaDosOutrosCustos,
+  type LinhaDeOutroCusto,
+} from '@/features/execucao-os/utils/outros-custos';
+import type { ItemOrcamento } from '@/features/programacao-os/types';
+import type { OutroCustoPedido } from '@/features/execucao-os/types/custos';
 
 export type PendingAction = 'iniciar' | 'pausar' | 'retomar' | 'executar' | 'auditar' | 'finalizar' | 'reabrir' | 'cancelar';
 
@@ -37,7 +46,8 @@ type OSDoPainel =
       problemas_encontrados?: string | null;
       recomendacoes?: string | null;
       incidentes_seguranca?: string | null;
-      custos_adicionais?: number | string | null;
+      // SN-93: os outros custos do orçamento, para conferir no Executar
+      itens_orcamento?: ItemOrcamento[];
       // SN-61: a equipe, para as horas trabalhadas, que começam no tempo efetivo
       id?: string;
       status?: string;
@@ -80,7 +90,8 @@ export type DadosDaConfirmacao = {
   motivo_cancelamento?: string;
   tarefas_nao_feitas?: { id: string; motivo: string }[];
   horas_dos_tecnicos?: { id: string; horas: number }[];
-  tecnicos_extras?: { tecnico_id: string; horas: number }[];
+  tecnicos_extras?: { tecnico_id: string; horas: number; custo_hora?: number | null }[];
+  outros_custos?: OutroCustoPedido[];
 };
 
 interface ActionField {
@@ -119,8 +130,9 @@ interface ActionMeta {
  * resultado, os problemas, o motivo de cada tarefa não feita e o KM (só com
  * veículo); recomendações e incidente de segurança vão recolhidos. Saíram
  * atividades, procedimentos, EPIs e próxima manutenção (D3). Os custos
- * adicionais voltaram recolhidos (SN-81): são a terceira natureza do custo no
- * painel, e sem o campo a série ficava sempre em zero.
+ * adicionais (um número só, sem descrição) saíram no SN-93: os outros custos se
+ * conferem item a item, e o não previsto se lança com descrição
+ * (`OutrosCustosEditor`).
  */
 /**
  * Reserva de viatura ainda ativa: é ela que recebe o km (saída no Iniciar,
@@ -300,16 +312,6 @@ const actionConfig: Record<PendingAction, ActionMeta> = {
         detalhe: true,
         inicial: (os) => os?.incidentes_seguranca,
       },
-      {
-        key: 'custos_adicionais',
-        label: 'Custos adicionais (R$)',
-        type: 'number',
-        placeholder: 'Terceiros, frete, aluguel de equipamento',
-        min: 0,
-        step: 0.01,
-        detalhe: true,
-        inicial: (os) => (os?.custos_adicionais == null ? null : String(os.custos_adicionais)),
-      },
     ],
   },
   auditar: {
@@ -367,6 +369,11 @@ interface ActionConfirmPanelProps {
    * feita" e volta para a agenda (D2). Não bloqueia a execução.
    */
   tarefasPendentes?: { id: string; nome: string }[];
+  /**
+   * Quem gerencia a OS (`execucao_os.manage`) informa o valor da hora de quem
+   * entrou na execução; quem só executa informa as horas (SN-93: a API recusa)
+   */
+  podeInformarValorDaHora?: boolean;
 }
 
 export function ActionConfirmPanel({
@@ -375,6 +382,7 @@ export function ActionConfirmPanel({
   onConfirm,
   onVoltar,
   tarefasPendentes = [],
+  podeInformarValorDaHora = false,
 }: ActionConfirmPanelProps) {
   const config = actionConfig[action];
   const Icon = config.icon;
@@ -403,6 +411,11 @@ export function ActionConfirmPanel({
     action === 'executar' ? linhasIniciais(entity?.tecnicos, tempoEfetivo) : [],
   );
   const pendenciaHoras = action === 'executar' ? pendenciaDasHoras(horas) : null;
+  // SN-93 (D2): os outros custos, com o previsto já preenchido para conferir
+  const [outros, setOutros] = useState<LinhaDeOutroCusto[]>(() =>
+    action === 'executar' ? linhasDosOutrosCustos(entity?.itens_orcamento) : [],
+  );
+  const pendenciaOutros = action === 'executar' ? pendenciaDosOutrosCustos(outros) : null;
   const [submitting, setSubmitting] = useState(false);
 
   const setValue = (key: string, value: unknown) => setValues((prev) => ({ ...prev, [key]: value }));
@@ -429,7 +442,8 @@ export function ActionConfirmPanel({
     visiveis.filter(obrigatorio).every((f) => preenchido(values[f.key])) &&
     pendentes.every((t) => preenchido(motivos[t.id])) &&
     !avisoDaParada &&
-    !pendenciaHoras;
+    !pendenciaHoras &&
+    !pendenciaOutros;
 
   const handleConfirm = async () => {
     if (!canConfirm || submitting) return;
@@ -460,6 +474,9 @@ export function ActionConfirmPanel({
         payload.tarefas_nao_feitas = pendentes.map((t) => ({ id: t.id, motivo: motivos[t.id].trim() }));
       }
       if (action === 'executar') Object.assign(payload, horasDoPedido(horas));
+      // A lista inteira, mesmo vazia: o não previsto tirado no reexecutar ficava no custo, calado. Sem a
+      // lista da OS (a linha da tabela não a traz), não vai: a API deixa os itens como estão
+      if (action === 'executar' && entity?.itens_orcamento) payload.outros_custos = outrosCustosDoPedido(outros);
       // As chaves são as dos campos da ação (actionConfig), com o valor já convertido
       await onConfirm(payload as DadosDaConfirmacao);
     } finally {
@@ -607,9 +624,18 @@ export function ActionConfirmPanel({
             onChange={setHoras}
             tempoEfetivoMinutos={tempoEfetivo}
             hhEstimado={entity?.hh_estimado}
+            podeInformarValorDaHora={podeInformarValorDaHora}
           />
           {/* O botão fica cinza por isto: o motivo à vista */}
           {pendenciaHoras && <p className="text-xs text-muted-foreground">{pendenciaHoras}</p>}
+        </div>
+      )}
+
+      {/* Só com a lista da OS: sem ela, o que se lançasse aqui não iria (e mandar apagaria os não previstos que já existem) */}
+      {action === 'executar' && entity?.itens_orcamento && (
+        <div className="space-y-1.5">
+          <OutrosCustosEditor linhas={outros} onChange={setOutros} />
+          {pendenciaOutros && <p className="text-xs text-muted-foreground">{pendenciaOutros}</p>}
         </div>
       )}
 

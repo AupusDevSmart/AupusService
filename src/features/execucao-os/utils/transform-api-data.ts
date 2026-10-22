@@ -264,6 +264,8 @@ export function transformApiResponseToExecucaoOS(apiData: OrdemServicoDaApi): Ex
     incidentesSeguranca: apiData.incidentes_seguranca,
     medidasSegurancaAdicionais: apiData.medidas_seguranca_adicionais,
     custosAdicionais: apiData.custos_adicionais,
+    // SN-93: o custo aberto, como a API manda (a tela não refaz a conta)
+    custos: apiData.custos,
 
     // Campos computados
     // O tempo efetivo da API (sem as pausas, SN-61); a conta local é para resposta sem ele

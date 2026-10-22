@@ -41,6 +41,90 @@ interface Secao {
   reserva?: number;
 }
 
+/**
+ * Os custos da OS (SN-93): o custo real em destaque contra o previsto; por
+ * natureza (mão de obra, material, cada outro custo); cada instrução com o valor
+ * dela e o total das feitas; os outros custos um a um; e o que a conta não fechou.
+ */
+function CustosDaOS({ custos }: { custos: NonNullable<DocumentoDaOS['custos']> }) {
+  return (
+    <View>
+      <PainelPdf rotulo="Custo real" valor={custos.real}>
+        <Text style={local.explicacao}>
+          Previsto {custos.previsto} · {custos.diferenca}. Mão de obra pelas horas trabalhadas × valor da hora, material pelo
+          consumido × custo unitário e os outros custos pelo conferido na execução.
+        </Text>
+      </PainelPdf>
+
+      <Text style={[estilos.subtitulo, { marginTop: 14 }]} minPresenceAhead={60}>
+        Por natureza
+      </Text>
+      <TabelaPdf
+        colunas={[
+          { titulo: 'Natureza', largura: '34%' },
+          { titulo: 'Previsto', largura: '20%', alinhar: 'right' },
+          { titulo: 'Real', largura: '20%', alinhar: 'right' },
+          { titulo: 'Diferença', largura: '26%', alinhar: 'right' },
+        ]}
+        linhas={[
+          ...custos.naturezas.map((n) => [n.rotulo, n.previsto, n.real, n.diferenca]),
+          ['Total', custos.totalPrevisto, custos.totalReal, ''],
+        ]}
+      />
+      {custos.ajuste && (
+        <Text style={[estilos.fraco, { marginTop: 4 }]}>Ajuste do orçamento na aprovação: {custos.ajuste} (o previsto acima é o aprovado).</Text>
+      )}
+
+      {custos.instrucoes.length > 0 && (
+        <>
+          <Text style={estilos.subtitulo} minPresenceAhead={60}>
+            Por instrução
+          </Text>
+          <TabelaPdf
+            colunas={[
+              { titulo: 'Instrução', largura: '52%' },
+              { titulo: 'Situação', largura: '16%' },
+              { titulo: 'Valor', largura: '32%', alinhar: 'right' },
+            ]}
+            linhas={custos.instrucoes.map((i) => [
+              { texto: i.nome, detalhe: i.equipamento || undefined },
+              i.situacao,
+              { texto: i.valor, detalhe: i.detalhe ?? undefined },
+            ])}
+          />
+          {custos.resumoDasInstrucoes && (
+            <Text style={[estilos.fraco, { marginTop: 4 }]}>
+              Instruções {custos.resumoDasInstrucoes}. O valor de cada instrução é o do cadastro no vínculo, ou o ajustado na programação.
+            </Text>
+          )}
+        </>
+      )}
+
+      {custos.outros.length > 0 && (
+        <>
+          <Text style={estilos.subtitulo} minPresenceAhead={60}>
+            Outros custos
+          </Text>
+          <TabelaPdf
+            colunas={[
+              { titulo: 'Custo', largura: '46%' },
+              { titulo: 'Previsto', largura: '22%', alinhar: 'right' },
+              { titulo: 'Real', largura: '32%', alinhar: 'right' },
+            ]}
+            linhas={custos.outros.map((o) => [{ texto: o.descricao, detalhe: o.natureza }, o.previsto, o.real])}
+          />
+        </>
+      )}
+
+      {custos.pendencias.map((p) => (
+        <Text key={p} style={[estilos.fraco, { marginTop: 4 }]}>
+          {p}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
 function OrdemDeServicoDocumento({ documento }: { documento: DocumentoDaOS }) {
   const d = documento;
 
@@ -56,6 +140,15 @@ function OrdemDeServicoDocumento({ documento }: { documento: DocumentoDaOS }) {
         </View>
       )),
     },
+    // SN-93: o custo logo depois do resultado, com destaque — pedido do usuário: é a parte que mais importa para o controle
+    d.custos
+      ? {
+          titulo: 'Custos',
+          // O painel do custo real inteiro com o cabeçalho
+          reserva: 100,
+          conteudo: <CustosDaOS custos={d.custos} />,
+        }
+      : false,
     d.falha.length > 0 && { titulo: 'Dados da falha', conteudo: <ParesPdf itens={d.falha} /> },
     d.tarefas.length > 0 && {
       titulo: 'Tarefas',
@@ -67,7 +160,8 @@ function OrdemDeServicoDocumento({ documento }: { documento: DocumentoDaOS }) {
             { titulo: 'Por / em', largura: '22%' },
             { titulo: 'Observação', largura: '24%' },
           ]}
-          linhas={d.tarefas.map((t) => [t.nome, t.situacao, t.quem, t.observacao])}
+          // O equipamento debaixo do nome: nove "INV-03 · Termografia" iguais não diziam de qual inversor
+          linhas={d.tarefas.map((t) => [{ texto: t.nome, detalhe: t.equipamento || undefined }, t.situacao, t.quem, t.observacao])}
         />
       ),
     },
@@ -94,14 +188,17 @@ function OrdemDeServicoDocumento({ documento }: { documento: DocumentoDaOS }) {
       titulo: 'Equipe e horas',
       conteudo: (
         <View>
+          {/* SN-93 (D3): o valor da hora e o custo de cada pessoa */}
           <TabelaPdf
             colunas={[
-              { titulo: 'Pessoa', largura: '52%' },
-              { titulo: 'Previstas', largura: '16%', alinhar: 'right' },
-              { titulo: 'Trabalhadas', largura: '16%', alinhar: 'right' },
-              { titulo: 'Foi', largura: '16%', alinhar: 'right' },
+              { titulo: 'Pessoa', largura: '36%' },
+              { titulo: 'Previstas', largura: '12%', alinhar: 'right' },
+              { titulo: 'Trabalhadas', largura: '13%', alinhar: 'right' },
+              { titulo: 'R$/h', largura: '13%', alinhar: 'right' },
+              { titulo: 'Custo', largura: '16%', alinhar: 'right' },
+              { titulo: 'Foi', largura: '10%', alinhar: 'right' },
             ]}
-            linhas={d.equipe.map((t) => [t.nome, t.estimadas, t.trabalhadas, t.presente])}
+            linhas={d.equipe.map((t) => [t.nome, t.estimadas, t.trabalhadas, t.valorHora, t.custo, t.presente])}
           />
           {d.totalDaEquipe && <Text style={[estilos.fraco, { marginTop: 6 }]}>{d.totalDaEquipe}</Text>}
         </View>
@@ -112,11 +209,13 @@ function OrdemDeServicoDocumento({ documento }: { documento: DocumentoDaOS }) {
       conteudo: (
         <TabelaPdf
           colunas={[
-            { titulo: 'Material', largura: '56%' },
-            { titulo: 'Planejado', largura: '22%', alinhar: 'right' },
-            { titulo: 'Consumido', largura: '22%', alinhar: 'right' },
+            { titulo: 'Material', largura: '34%' },
+            { titulo: 'Planejado', largura: '15%', alinhar: 'right' },
+            { titulo: 'Consumido', largura: '15%', alinhar: 'right' },
+            { titulo: 'Unitário', largura: '16%', alinhar: 'right' },
+            { titulo: 'Custo', largura: '20%', alinhar: 'right' },
           ]}
-          linhas={d.materiais.map((m) => [m.descricao, m.planejado, m.consumido])}
+          linhas={d.materiais.map((m) => [m.descricao, m.planejado, m.consumido, m.unitario, m.custo])}
         />
       ),
     },
@@ -133,7 +232,7 @@ function OrdemDeServicoDocumento({ documento }: { documento: DocumentoDaOS }) {
         />
       ),
     },
-    d.auditoria.length > 0 && { titulo: 'Custo e auditoria', conteudo: <ParesPdf itens={d.auditoria} /> },
+    d.auditoria.length > 0 && { titulo: 'Auditoria', conteudo: <ParesPdf itens={d.auditoria} /> },
     d.fotos.length > 0 && {
       titulo: 'Fotos',
       // A primeira foto inteira: até 210 pt, o respiro (10) e legenda e detalhe em duas
@@ -221,6 +320,12 @@ function OrdemDeServicoDocumento({ documento }: { documento: DocumentoDaOS }) {
 
 /** O documento como elemento do react-pdf (o teste o renderiza de verdade) */
 export const pdfDaOS = (documento: DocumentoDaOS) => <OrdemDeServicoDocumento documento={textosDoPdf(documento)} />;
+
+/** O `<Document>` do PDF, para o teste ler onde cada texto ficou (`textosDesenhados`) */
+export const documentoDoPdfDaOS = (documento: DocumentoDaOS) => {
+  const timbrado = OrdemDeServicoDocumento({ documento: textosDoPdf(documento) });
+  return DocumentoAupus(timbrado.props as Parameters<typeof DocumentoAupus>[0]);
+};
 
 export async function gerarPdfDaOS(documento: DocumentoDaOS) {
   await baixarPdf(pdfDaOS(documento), `${documento.numero}${documento.verificacao ? '' : '-previa'}.pdf`);

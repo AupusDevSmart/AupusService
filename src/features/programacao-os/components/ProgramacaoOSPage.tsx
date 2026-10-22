@@ -30,6 +30,7 @@ import { toast } from '@/hooks/use-toast';
 import type { IconeDeAcao } from '@/core/types/base';
 import type { OrigemOSValue } from './origem-selector/types';
 import { quantidadeDaFerramenta } from '../utils/quantidade-da-ferramenta';
+import { valoresDoPedido, type AjustesDeValor } from '@/features/programacao-os/utils/valores-das-instrucoes';
 
 /** Número como o formulário guarda: campo number dá número; texto ou vazio, string. */
 type NumeroDoFormulario = number | string | null | undefined;
@@ -46,7 +47,9 @@ interface FormularioDaProgramacao {
   origem?: (OrigemOSValue & { equipamentoId?: string }) | null;
   /** SN-86: as instruções avulsas; indefinido quando a origem não se leu */
   instrucoes_ids?: string[];
-  itens_orcamento?: Array<{ descricao?: string; valor?: NumeroDoFormulario }>;
+  itens_orcamento?: Array<{ descricao?: string; valor?: NumeroDoFormulario; natureza?: string }>;
+  /** SN-93: o valor das instruções ajustado nesta programação, pela chave da linha */
+  valores_das_instrucoes?: AjustesDeValor;
   tempo_estimado?: NumeroDoFormulario;
   tempoEstimado?: NumeroDoFormulario;
   duracao_estimada?: NumeroDoFormulario;
@@ -405,6 +408,8 @@ export function ProgramacaoOSPage() {
         itens_orcamento: (data.itens_orcamento || []).map((item) => ({
           descricao: item.descricao,
           valor: parseFloat(String(item.valor)) || 0,
+          // SN-93: a natureza que a instrução deu ao item (o lançado à mão vai sem; a API usa o prefixo)
+          ...(item.natureza && { natureza: item.natureza }),
         })).filter((item) => item.descricao),
 
         // Planejamento - campos atualizados para snake_case
@@ -458,6 +463,11 @@ export function ProgramacaoOSPage() {
           // IDs das tarefas selecionadas
           tarefas_ids: data.origem?.tarefasSelecionadas || []
         }),
+
+        // SN-93: o valor das instruções ajustado (só existe na edição: na criação as linhas nascem agora)
+        ...(modalState.mode === 'edit' &&
+          data.valores_das_instrucoes &&
+          Object.keys(data.valores_das_instrucoes).length > 0 && { valores_das_instrucoes: valoresDoPedido(data.valores_das_instrucoes) }),
 
         // SN-86: as instruções avulsas. Sem a lista (a origem não se leu), o
         // servidor põe as da origem no cadastro e não mexe na edição

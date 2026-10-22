@@ -1,6 +1,7 @@
 // src/features/programacao-os/types/index.ts - VERSÃO FINAL
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
 import type { InstrucaoDaProgramacao } from '@/services/programacao-os.service';
+import type { NaturezaDoOutroCusto } from '@/features/execucao-os/types/custos';
 
 // ========================================
 // ENUMS E TIPOS BASE (CONFORME SCHEMA)
@@ -49,7 +50,14 @@ export type OrigemProgramacao = OrigemOS;
 export interface ItemOrcamento {
   id?: string;
   descricao: string;
+  /** O previsto (0 no não previsto) */
   valor: number;
+  /** SN-93: a natureza do custo; sem ela, a API a tira do prefixo da descrição ("Veículo: ...") */
+  natureza?: NaturezaDoOutroCusto;
+  /** SN-93, só na OS: o que custou, conferido no Executar (null = não conferido) */
+  valor_real?: number | null;
+  /** SN-93, só na OS: lançado no Executar, fora do orçamento */
+  nao_previsto?: boolean;
 }
 
 /**

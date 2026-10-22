@@ -11,8 +11,8 @@ vi.mock('@/features/execucao-os/hooks/usePessoasDaOS', () => ({ usePessoasDaOS: 
  * tarefa não feita e o resto recolhido. Auditar deixa o select por estrelas.
  */
 describe('ActionConfirmPanel — executar', () => {
-  it('pede só resultado e problemas; recomendações, incidente e custos adicionais ficam em "Mais detalhes"', () => {
-    render(<ActionConfirmPanel action="executar" entity={{}} onConfirm={vi.fn()} />);
+  it('pede só resultado e problemas; recomendações e incidente ficam em "Mais detalhes"', () => {
+    render(<ActionConfirmPanel action="executar" entity={{ itens_orcamento: [] }} onConfirm={vi.fn()} />);
 
     expect(screen.getByText('Resultado do serviço')).toBeInTheDocument();
     expect(screen.getByText('Problemas encontrados')).toBeInTheDocument();
@@ -23,27 +23,68 @@ describe('ActionConfirmPanel — executar', () => {
     expect(detalhes).not.toHaveAttribute('open');
     expect(detalhes).toHaveTextContent('Recomendações');
     expect(detalhes).toHaveTextContent('Incidente de segurança');
-    // SN-81: a terceira natureza do custo do painel; sem o campo, a série ficava sempre em zero
-    expect(detalhes).toHaveTextContent('Custos adicionais (R$)');
+    // SN-93 (D2): o número único de custos adicionais saiu; o não previsto se lança com descrição
+    expect(screen.queryByText('Custos adicionais (R$)')).toBeNull();
+    expect(screen.getByText('Outros custos')).toBeInTheDocument();
   });
 
-  it('os custos adicionais vão como número; apagar o que veio da OS manda null', async () => {
+  // SN-93 (D2): até aqui veículo, hospedagem e alimentação ficavam só no orçamento, fora do custo real
+  it('os outros custos vêm com o previsto preenchido, para confirmar ou corrigir', async () => {
     const onConfirm = vi.fn().mockResolvedValue(undefined);
-    const { unmount } = render(<ActionConfirmPanel action="executar" entity={{}} onConfirm={onConfirm} />);
-    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'Trocado' } });
-    fireEvent.change(screen.getByLabelText(/Custos adicionais/), { target: { value: '150.5' } });
+    const itens_orcamento = [
+      { id: 'I1', descricao: 'Veículo: Picape 4x4', valor: 1316, natureza: 'VEICULO' as const },
+      { id: 'I2', descricao: 'Despesa de campo: Hospedagem', valor: 1380, natureza: 'DESPESA_CAMPO' as const },
+    ];
+    render(<ActionConfirmPanel action="executar" entity={{ itens_orcamento }} onConfirm={onConfirm} />);
+    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'Feito' } });
+    expect(screen.getByText(/previsto R\$\s*1\.316,00/)).toBeInTheDocument();
+
+    const picape = screen.getByLabelText('Quanto custou: Veículo: Picape 4x4');
+    fireEvent.change(picape, { target: { value: '1402,5' } });
+    fireEvent.blur(picape);
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar Execu/i }));
+
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    expect(onConfirm.mock.calls[0][0].outros_custos).toEqual([
+      { id: 'I1', valor_real: 1402.5 },
+      { id: 'I2', valor_real: 1380 },
+    ]);
+  });
+
+  it('o não previsto precisa de descrição e de valor, e vai com a natureza', async () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(<ActionConfirmPanel action="executar" entity={{ itens_orcamento: [] }} onConfirm={onConfirm} />);
+    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'Feito' } });
+    fireEvent.click(screen.getByRole('button', { name: /Lançar custo não previsto/ }));
+    const confirmar = screen.getByRole('button', { name: /Confirmar Execu/i });
+
+    expect(confirmar).toBeDisabled();
+    expect(screen.getByText('Diga o que é cada custo não previsto.')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Descrição do custo não previsto'), { target: { value: 'Pedágio' } });
+    expect(screen.getByText(/Informe quanto custou Pedágio/)).toBeInTheDocument();
+    const valor = screen.getByLabelText('Quanto custou: Pedágio');
+    fireEvent.change(valor, { target: { value: '85' } });
+    fireEvent.blur(valor);
+    fireEvent.click(confirmar);
+
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    expect(onConfirm.mock.calls[0][0].outros_custos).toEqual([{ descricao: 'Pedágio', natureza: 'OUTRO', valor_real: 85 }]);
+  });
+
+  // Revisão de falha silenciosa: o não previsto tirado no reexecutar ficava no custo (a lista vazia não ia)
+  it('a lista vai inteira, mesmo vazia; sem a lista da OS, não há o que conferir e nada vai', async () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    const itens_orcamento = [{ id: 'N1', descricao: 'Pedágio', valor: 0, natureza: 'VEICULO' as const, valor_real: 80, nao_previsto: true }];
+    const { unmount } = render(<ActionConfirmPanel action="executar" entity={{ itens_orcamento }} onConfirm={onConfirm} />);
+    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'Feito' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Tirar' }));
     fireEvent.click(screen.getByRole('button', { name: /Confirmar Execu/i }));
     await waitFor(() => expect(onConfirm).toHaveBeenCalled());
-    expect(onConfirm.mock.calls[0][0]).toMatchObject({ custos_adicionais: 150.5 });
+    expect(onConfirm.mock.calls[0][0].outros_custos).toEqual([]);
     unmount();
 
-    const reexecutar = vi.fn().mockResolvedValue(undefined);
-    render(<ActionConfirmPanel action="executar" entity={{ custos_adicionais: 80 }} onConfirm={reexecutar} />);
-    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'Trocado' } });
-    fireEvent.change(screen.getByLabelText(/Custos adicionais/), { target: { value: '' } });
-    fireEvent.click(screen.getByRole('button', { name: /Confirmar Execu/i }));
-    await waitFor(() => expect(reexecutar).toHaveBeenCalled());
-    expect(reexecutar.mock.calls[0][0]).toMatchObject({ custos_adicionais: null });
+    render(<ActionConfirmPanel action="executar" entity={{}} onConfirm={onConfirm} />);
+    expect(screen.queryByRole('button', { name: /Lançar custo não previsto/ })).toBeNull();
   });
 
   it('com tarefa pendente, exige o motivo de cada uma e manda no payload', async () => {

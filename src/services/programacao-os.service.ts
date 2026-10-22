@@ -38,6 +38,8 @@ export interface TecnicoProgramacaoDto {
 export interface ItemOrcamentoProgramacaoDto {
   descricao: string;
   valor: number;
+  /** SN-93: a natureza do custo (sem ela, a API tira do prefixo da descrição) */
+  natureza?: string;
 }
 
 export interface CreateProgramacaoDto {
@@ -74,6 +76,8 @@ export interface CreateProgramacaoDto {
   ferramentas?: FerramentaProgramacaoDto[];
   tecnicos?: TecnicoProgramacaoDto[];
   itens_orcamento?: ItemOrcamentoProgramacaoDto[];
+  /** SN-93: os valores das instruções ajustados nesta programação */
+  valores_das_instrucoes?: ValorDaInstrucaoDto[];
 }
 
 export type UpdateProgramacaoDto = Partial<CreateProgramacaoDto>;
@@ -145,6 +149,12 @@ export interface TarefaProgramacaoResponse {
     id: string;
     nome: string;
   };
+  /** SN-93: o código da instrução e o nome congelados, o valor dela nesta programação e o equipamento */
+  instrucao_tag?: string;
+  nome_snapshot?: string;
+  valor?: number | null;
+  valor_original?: number | null;
+  equipamento_nome?: string | null;
 }
 
 export interface MaterialProgramacaoResponse {
@@ -224,6 +234,17 @@ export interface InstrucaoDaProgramacao {
   nome: string | null;
   descricao: string | null;
   ordem: number;
+  /** SN-93: o valor nesta programação (o do cadastro no vínculo, ou o ajustado), o original e o equipamento */
+  valor?: number | null;
+  valor_original?: number | null;
+  equipamento_nome?: string | null;
+}
+
+/** SN-93 (D1): o valor de uma instrução só nesta programação; null volta ao do cadastro */
+export interface ValorDaInstrucaoDto {
+  tarefa_id?: string;
+  instrucao_id?: string;
+  valor: number | null;
 }
 
 export interface ProgramacaoResponse {

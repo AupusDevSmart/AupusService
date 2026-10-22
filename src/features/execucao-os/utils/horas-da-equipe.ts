@@ -33,6 +33,13 @@ export interface LinhaDeHoras {
   ilegivel?: boolean;
   /** Veio da execução anterior (reexecutar depois de reabrir), não da sugestão */
   registradaAntes?: boolean;
+  /**
+   * SN-93, só em quem entrou na hora: o valor da hora. Vazio, a API usa o de quem
+   * tem a mesma especialidade na equipe; sem ninguém, o custo da pessoa fica de
+   * fora, e o resumo do custo diz (antes saía R$ 0, calado)
+   */
+  custoHora?: number | null;
+  custoHoraIlegivel?: boolean;
 }
 
 export const nomeDaLinha = (t: TecnicoDaOS) => t.nome?.trim() || `${t.especialidade?.trim() || 'Técnico'} (sem pessoa)`;
@@ -100,6 +107,8 @@ export function linhaExtra(tecnicoId: string, nome: string, tempoEfetivoMinutos?
 export function pendenciaDasHoras(linhas: LinhaDeHoras[]): string | null {
   const ilegiveis = linhas.filter((l) => l.ilegivel).map((l) => l.nome);
   if (ilegiveis.length > 0) return `Corrija as horas de ${ilegiveis.join(', ')} (ex.: 3h30, 45min ou 3,5).`;
+  const valoresIlegiveis = linhas.filter((l) => l.custoHoraIlegivel).map((l) => l.nome);
+  if (valoresIlegiveis.length > 0) return `Corrija o valor da hora de ${valoresIlegiveis.join(', ')} (ex.: 78,50).`;
   const semHoras = linhas.filter((l) => l.horas === null).map((l) => l.nome);
   if (semHoras.length > 0) return `Informe as horas de ${semHoras.join(', ')} (0 se não trabalhou).`;
   const extrasSemHoras = linhas.filter((l) => l.extra && (l.horas ?? 0) <= 0).map((l) => l.nome);
@@ -116,7 +125,14 @@ export function passaDoTempo(horas: number | null, tempoEfetivoMinutos?: number 
 export function horasDoPedido(linhas: LinhaDeHoras[]) {
   return {
     horas_dos_tecnicos: linhas.filter((l) => !l.extra).map((l) => ({ id: l.id!, horas: l.horas ?? 0 })),
-    tecnicos_extras: linhas.filter((l) => l.extra).map((l) => ({ tecnico_id: l.tecnicoId!, horas: l.horas ?? 0 })),
+    tecnicos_extras: linhas
+      .filter((l) => l.extra)
+      .map((l) => ({
+        tecnico_id: l.tecnicoId!,
+        horas: l.horas ?? 0,
+        // O campo aceita 4 casas; o valor da hora, 2
+        ...(l.custoHora != null && { custo_hora: Math.round(l.custoHora * 100) / 100 }),
+      })),
   };
 }
 

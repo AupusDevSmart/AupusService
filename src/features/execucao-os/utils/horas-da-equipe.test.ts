@@ -57,6 +57,14 @@ describe('horas da equipe', () => {
     expect(totalDasHoras(linhas)).toBe('5h');
   });
 
+  // SN-93: sem o valor da hora, o custo de quem entrou saía R$ 0, calado
+  it('quem entrou na hora leva o valor da hora digitado, em centavos; sem ele, vai sem (a API usa o da equipe)', () => {
+    const com = { ...linhaExtra('U9', 'Paula', 60), custoHora: 62.555 };
+    expect(horasDoPedido([com]).tecnicos_extras).toEqual([{ tecnico_id: 'U9', horas: 1, custo_hora: 62.56 }]);
+    expect(horasDoPedido([linhaExtra('U9', 'Paula', 60)]).tecnicos_extras).toEqual([{ tecnico_id: 'U9', horas: 1 }]);
+    expect(pendenciaDasHoras([{ ...com, custoHoraIlegivel: true }])).toBe('Corrija o valor da hora de Paula (ex.: 78,50).');
+  });
+
   it('mais horas que o tempo efetivo pede conferência (não bloqueia)', () => {
     expect(passaDoTempo(3.5, 200)).toBe(true);
     // Um minuto de folga: a sugestão arredonda em 2 casas

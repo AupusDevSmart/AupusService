@@ -1,13 +1,12 @@
 // src/features/execucao-os/config/form-config.tsx - CORRIGIDA COM MAPEAMENTO DE GRUPOS E COLSPAN
 import type { FormField, FormFieldProps } from '@/types/base';
 import type { BaseEntity, DadosDoFormulario } from '@/core/types/base';
-import type { ExecucaoOS, HistoricoOS, MaterialOS, TecnicoOS } from '../types';
+import type { ExecucaoOS, HistoricoOS } from '@/features/execucao-os/types';
 import type { OSDaOrigem } from '../components/OrigemOSCardWrapper';
 import { ProgramacaoSelector } from '../components/ProgramacaoSelector';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
 import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManager';
-import { OrcamentoCardManager } from '@/components/common/cards/OrcamentoCardManager';
 import { OrigemOSCardWrapper } from '../components/OrigemOSCardWrapper';
 import { ReservaVeiculoCard } from '../components/ReservaVeiculoCard';
 import { HistoricoOSCard } from '../components/HistoricoOSCard';
@@ -241,16 +240,8 @@ export const execucaoOSFormFields: FormField[] = [
     width: 'half',
     condition: exibirSe(DEPOIS_DE_EXECUTAR, 'hhReal')
   },
-  {
-    // Material consumido mais as horas trabalhadas vezes o custo da hora
-    key: 'custoReal',
-    label: 'Custo real',
-    type: 'text',
-    disabled: true,
-    group: 'controle',
-    width: 'half',
-    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'custoReal')
-  },
+  // O custo real saiu daqui (SN-93): a seção "Custos", no alto do sheet, o mostra contra o
+  // previsto, por natureza e por instrução, pela conta da API
 
   // Equipe e Responsável - GRUPO: equipe
   {
@@ -361,52 +352,11 @@ export const execucaoOSFormFields: FormField[] = [
     condition: exibirListaSe('ferramentasUtilizadas')
   },
 
-  // ⚠️ MOVIDO PARA FinalizarExecucaoModal - Só mostra em visualização
-  {
-    key: 'custosAdicionais',
-    colSpan: 2,
-    label: 'Custos Adicionais (R$)',
-    type: 'number',
-    placeholder: 'Custos não planejados',
-    group: 'recursos',
-    width: 'half',
-    disabled: true,
-    startNewRow: true,
-    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'custosAdicionais')
-  },
+  // Os custos adicionais (o número antigo, sem descrição) aparecem na seção "Custos" (SN-93)
 
-  // Orçamento - GRUPO: orcamento
-  {
-    key: 'itens_orcamento',
-    label: '', // duplicava o titulo do grupo
-    type: 'custom',
-    component: OrcamentoCardManager,
-    componentProps: (formData: DadosDoFormulario & {
-      materiaisConsumidos?: MaterialOS[];
-      materiais?: MaterialOS[];
-      tecnicos?: TecnicoOS[];
-      tecnicosPresentes?: TecnicoOS[];
-    }) => {
-      const materiais = formData?.materiaisConsumidos || formData?.materiais || [];
-      const tecnicos = formData?.tecnicos || formData?.tecnicosPresentes || [];
-      const custoMateriais = materiais.reduce((acc: number, m) => {
-        return acc + ((Number(m.custo_unitario) || 0) * (Number(m.quantidade_planejada) || Number(m.quantidade_consumida) || 0));
-      }, 0);
-      const custoEquipe = tecnicos.reduce((acc: number, t) => {
-        return acc + ((Number(t.custo_hora) || 0) * (Number(t.horas_estimadas) || Number(t.horas_trabalhadas) || 0));
-      }, 0);
-      return {
-        title: 'Outros Custos',
-        custoMateriais,
-        custoEquipe,
-        disabled: true
-      };
-    },
-    defaultValue: [],
-    group: 'orcamento',
-    colSpan: 2,
-    condition: exibirListaSe('itens_orcamento', 'materiaisConsumidos', 'tecnicos'),
-  },
+  // O orçamento (o cartão "Outros Custos") saiu do sheet da execução (SN-93): a seção "Custos" mostra
+  // o previsto por natureza e o detalhe de cada pessoa, material e outro custo, pela conta da API. O
+  // cartão daqui somava o material planejado e as horas estimadas mesmo depois de executar
 
   // Condições de Segurança - GRUPO: seguranca
   // ⚠️ MOVIDO PARA FinalizarExecucaoModal - Só mostra em visualização de execuções finalizadas
@@ -698,7 +648,7 @@ export const execucaoOSFormGroups = [
     key: 'controle',
     title: 'Execução',
     columns: 3,
-    fields: ['dataHoraInicioReal', 'dataHoraFimReal', 'tempoEfetivo', 'hhReal', 'custoReal']
+    fields: ['dataHoraInicioReal', 'dataHoraFimReal', 'tempoEfetivo', 'hhReal']
   },
   {
     key: 'equipe',
@@ -718,12 +668,7 @@ export const execucaoOSFormGroups = [
   {
     key: 'recursos',
     title: 'Recursos Consumidos',
-    fields: ['materiaisConsumidos', 'ferramentasUtilizadas', 'custosAdicionais'] // ✅ ADICIONADO: mapping explícito
-  },
-  {
-    key: 'orcamento',
-    title: 'Orçamento',
-    fields: ['itens_orcamento']
+    fields: ['materiaisConsumidos', 'ferramentasUtilizadas'] // ✅ ADICIONADO: mapping explícito
   },
   {
     key: 'seguranca',

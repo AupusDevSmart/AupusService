@@ -1,6 +1,7 @@
 // src/features/execucao-os/types/index.ts - VERSÃO FINAL
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
 import type { InstalacaoDaOrigem } from '@/utils/instalacao';
+import type { ResumoDoCusto } from './custos';
 import { ProgramacaoResponse, ItemOrcamento, type DadosOrigem } from '../../programacao-os/types';
 
 // ========================================
@@ -113,6 +114,11 @@ export interface TarefaOS {
   plano_id?: string;
   plano_nome?: string;
   tarefa?: { id: string; nome: string } | null;
+  /** SN-93: o valor da instrução nesta OS (o do cadastro no vínculo, ou o ajustado) e o original */
+  valor?: number | null;
+  valor_original?: number | null;
+  /** SN-93: o equipamento da tarefa, com o nome congelado (o da posição) */
+  equipamento_nome?: string | null;
 }
 
 export interface ChecklistAtividadeOS {
@@ -340,6 +346,9 @@ export interface ExecucaoOS extends OrdemServico {
   problemasEncontrados?: string; // Alias para problemas_encontrados
   observacoesExecucao?: string; // Alias para observacoes_execucao
 
+  /** SN-93: o custo aberto (por natureza, por instrução, previsto e real), a conta da API */
+  custos?: ResumoDoCusto;
+
   // Relacionamento com reserva de veículo
   reserva_veiculo?: {
     id: string;
@@ -482,6 +491,8 @@ export interface ExecucaoOSFormData {
   materiaisConsumidos?: MaterialOS[];
   ferramentasUtilizadas?: FerramentaOS[];
   custosAdicionais?: number;
+  /** SN-93: o custo aberto (por natureza, por instrução, previsto e real), a conta da API */
+  custos?: ResumoDoCusto;
   
   // Segurança
   equipamentosSeguranca?: string;

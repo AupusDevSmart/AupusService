@@ -76,3 +76,17 @@ export function lerNumeroDigitado(texto: string): number | null | undefined {
   if (!new RegExp(`^-?\\d+(\\.${casas})?$`).test(limpo)) return undefined;
   return Number(limpo);
 }
+
+/** O aviso do campo de dinheiro (`lerDinheiroDigitado`) */
+export const AVISO_DE_DINHEIRO = 'Valor com vírgula e até 2 casas (ex.: 1.402,50)';
+
+/**
+ * Dinheiro (SN-93): o número de `lerNumeroDigitado` com no máximo 2 casas. Com
+ * 4, "1,005" virava 1,00 no arredondamento da tela e 1,01 no da API, e o campo
+ * seguia mostrando o digitado.
+ */
+export function lerDinheiroDigitado(texto: string): number | null | undefined {
+  const valor = lerNumeroDigitado(texto);
+  if (valor === null || valor === undefined) return valor;
+  return Math.round(valor * 100) / 100 === valor ? valor : undefined;
+}

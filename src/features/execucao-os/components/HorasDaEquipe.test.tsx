@@ -21,11 +21,18 @@ beforeAll(() => {
 const consultas: string[] = [];
 
 /** O estado fica no painel; aqui, um dono mínimo que mostra as linhas como o pedido as leva */
-function ComEstado({ inicial }: { inicial: LinhaDeHoras[] }) {
+function ComEstado({ inicial, gerente = false }: { inicial: LinhaDeHoras[]; gerente?: boolean }) {
   const [linhas, setLinhas] = useState(inicial);
   return (
     <>
-      <HorasDaEquipe osId="OS1 " linhas={linhas} onChange={setLinhas} tempoEfetivoMinutos={90} hhEstimado={4} />
+      <HorasDaEquipe
+        osId="OS1 "
+        linhas={linhas}
+        onChange={setLinhas}
+        tempoEfetivoMinutos={90}
+        hhEstimado={4}
+        podeInformarValorDaHora={gerente}
+      />
       <output data-testid="linhas">{linhas.map((l) => `${l.nome}=${l.horas}${l.extra ? '+' : ''}`).join(';')}</output>
     </>
   );
@@ -70,6 +77,16 @@ describe('HorasDaEquipe — quem entrou na hora', () => {
 
     await usuario.click(screen.getByRole('button', { name: 'Tirar' }));
     expect(screen.getByTestId('linhas')).toHaveTextContent(/^Ana Técnica=1.5$/);
+  });
+
+  // SN-93 (revisão de segurança): o valor da hora é custo; quem só executa não o informa
+  it('o valor da hora de quem entrou só aparece para quem gerencia a OS', async () => {
+    const extra = [...ana, { chave: 'U2', tecnicoId: 'U2', nome: 'Paula Planejadora', detalhe: '', horas: 1, extra: true, registradaAntes: false }];
+    const { unmount } = renderWithProviders(<ComEstado inicial={extra} />);
+    expect(screen.queryByLabelText('Valor da hora de Paula Planejadora')).toBeNull();
+    unmount();
+    renderWithProviders(<ComEstado inicial={extra} gerente />);
+    expect(screen.getByLabelText('Valor da hora de Paula Planejadora')).toBeInTheDocument();
   });
 
   it('sem a lista de pessoas, avisa em vez de sumir com a opção', async () => {

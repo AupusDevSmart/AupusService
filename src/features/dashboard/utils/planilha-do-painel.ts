@@ -48,7 +48,7 @@ export const COLUNAS_DAS_OS: Coluna[] = [
   // ?? e não ||: custo 0 é R$ 0,00; vazio é a OS que não foi concluída no período (o gráfico não a soma)
   { titulo: 'Mão de obra', largura: 13, valor: (o) => o.custo?.mao_de_obra ?? null, formato: 'moeda' },
   { titulo: 'Material', largura: 13, valor: (o) => o.custo?.material ?? null, formato: 'moeda' },
-  { titulo: 'Adicionais', largura: 13, valor: (o) => o.custo?.adicionais ?? null, formato: 'moeda' },
+  { titulo: 'Outros custos', largura: 13, valor: (o) => o.custo?.adicionais ?? null, formato: 'moeda' },
   { titulo: 'Custo total', largura: 13, valor: (o) => o.custo?.total ?? null, formato: 'moeda' },
   { titulo: 'Equipamento parou', largura: 11, valor: (o) => (o.equipamento_parou === null ? null : o.equipamento_parou ? 'sim' : 'não') },
   { titulo: 'Parou em', largura: 16, valor: (o) => dataNaCelula(o.parada_inicio), formato: 'data' },
@@ -109,7 +109,7 @@ export async function planilhaDoPainel(
   tabela(
     mensal,
     [
-      'Mês', 'Mão de obra (R$ mil)', 'Material (R$ mil)', 'Adicionais (R$ mil)', 'Custo total (R$ mil)', 'Orçado (R$ mil)',
+      'Mês', 'Mão de obra (R$ mil)', 'Material (R$ mil)', 'Outros custos (R$ mil)', 'Custo total (R$ mil)', 'Orçado (R$ mil)',
       'Custo médio corretiva (R$)', 'Custo médio demais (R$)', 'HH planejado', 'HH apontado',
       'Anomalias resolvidas', 'Anomalias com OS em andamento', 'Anomalias sem OS',
     ].map((header) => ({ header, width: header.length > 14 ? 16 : 12 })),

@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ConteudoDaOS, RelatorioDaOS } from '@/services/execucao-os.service';
+import type { ResumoDoCusto } from '@/features/execucao-os/types/custos';
 import { codigoAgrupado, documentoDaOS } from './documento-da-os';
 
 /** O PDF da OS (SN-62) montado do conteúdo gravado na finalização. */
 const CODIGO = 'ab12cd34'.repeat(8);
 
 const conteudo = (mudar: Partial<ConteudoDaOS> = {}): ConteudoDaOS => ({
-  versao: 1,
+  versao: 2,
   os: {
     numero_os: 'OS-2026-0042',
     tipo: 'CORRETIVA',
@@ -39,12 +40,12 @@ const conteudo = (mudar: Partial<ConteudoDaOS> = {}): ConteudoDaOS => ({
     finalizada_em: '2026-10-17T12:00:00.000Z',
   },
   tarefas: [
-    { id: 'T1', nome: 'Trocar ventilador', instrucao_tag: 'INS-7', instrucao_nome: 'Ventilação', status: 'CONCLUIDA', data_conclusao: '2026-10-16T13:00:00.000Z', concluida_por: 'Ana Técnica', observacoes: null },
-    { id: 'T2', nome: 'Termografia', instrucao_tag: null, instrucao_nome: null, status: 'CANCELADA', data_conclusao: null, concluida_por: null, observacoes: 'Câmera sem bateria' },
+    { id: 'T1', nome: 'Trocar ventilador', instrucao_tag: 'INS-7', instrucao_nome: 'Ventilação', status: 'CONCLUIDA', data_conclusao: '2026-10-16T13:00:00.000Z', concluida_por: 'Ana Técnica', observacoes: null, equipamento: 'Inversor 03', valor: 902.08, valor_original: 902.08 },
+    { id: 'T2', nome: 'Termografia', instrucao_tag: null, instrucao_nome: null, status: 'CANCELADA', data_conclusao: null, concluida_por: null, observacoes: 'Câmera sem bateria', equipamento: null, valor: null, valor_original: null },
   ],
   checklist: [
     { id: 'C1', tarefa_os_id: 'T1', atividade: 'Medir a tensão de saída', obrigatoria: true, concluida: true, concluida_em: '2026-10-16T12:30:00.000Z', concluida_por: 'Ana Técnica', tipo: 'LEITURA', unidade: 'V', valor_minimo: 580, valor_maximo: 620, valor_lido: 640, observacoes: 'Rede alta' },
-    { id: 'C2', tarefa_os_id: 'T1', atividade: 'Conferir o aperto', obrigatoria: true, concluida: false, concluida_em: null, concluida_por: null, tipo: 'VERIFICACAO', unidade: null, valor_minimo: null, valor_maximo: null, valor_lido: null, observacoes: null },
+    { id: 'C2', tarefa_os_id: 'T1', atividade: 'Trocar ventilador: Conferir o aperto', obrigatoria: true, concluida: false, concluida_em: null, concluida_por: null, tipo: 'VERIFICACAO', unidade: null, valor_minimo: null, valor_maximo: null, valor_lido: null, observacoes: null },
     { id: 'C3', tarefa_os_id: null, atividade: 'Isolar a área', obrigatoria: false, concluida: true, concluida_em: null, concluida_por: null, tipo: 'VERIFICACAO', unidade: null, valor_minimo: null, valor_maximo: null, valor_lido: null, observacoes: null },
   ],
   anexos: [
@@ -53,11 +54,44 @@ const conteudo = (mudar: Partial<ConteudoDaOS> = {}): ConteudoDaOS => ({
     { id: 'A3', nome_original: 'laudo.pdf', tipo: 'LAUDO', mime_type: 'application/pdf', tamanho: 10, descricao: null, tarefa_os_id: 'T2', checklist_item_id: null, uploaded_at: null, uploaded_by: 'Gil Gerente', sha256: 'e'.repeat(64) },
   ],
   equipe: [
-    { id: 'E1', nome: 'Ana Técnica', especialidade: 'Técnico Elétrico', horas_estimadas: 4, horas_trabalhadas: 3.5, presente: true },
-    { id: 'E2', nome: null, especialidade: 'Auxiliar', horas_estimadas: 4, horas_trabalhadas: 0, presente: false },
+    { id: 'E1', nome: 'Ana Técnica', especialidade: 'Técnico Elétrico', horas_estimadas: 4, horas_trabalhadas: 3.5, presente: true, custo_hora: 78 },
+    { id: 'E2', nome: null, especialidade: 'Auxiliar', horas_estimadas: 4, horas_trabalhadas: 0, presente: false, custo_hora: null },
   ],
-  materiais: [{ id: 'M1', descricao: 'Ventilador 120 mm', unidade: 'UN', quantidade_planejada: 1, quantidade_consumida: 1, observacoes: 'do estoque' }],
+  materiais: [{ id: 'M1', descricao: 'Ventilador 120 mm', unidade: 'UN', quantidade_planejada: 1, quantidade_consumida: 1, observacoes: 'do estoque', custo_unitario: 180 }],
   ferramentas: [{ id: 'F1', descricao: 'Multímetro', quantidade: 1, utilizada: true, condicao_antes: 'boa', condicao_depois: 'boa', observacoes: null }],
+  ...mudar,
+});
+
+/** O resumo como a API o manda (a conta é dela: aqui só a leitura) */
+const custos = (mudar: Partial<ResumoDoCusto> = {}): ResumoDoCusto => ({
+  previsto: 1802,
+  real: 1855.5,
+  orcamento_previsto: 1802,
+  ajuste_do_orcamento: 0,
+  outros_fora_do_total: false,
+  naturezas: [
+    { natureza: 'MAO_DE_OBRA', rotulo: 'Mão de obra', previsto: 312, real: 273 },
+    { natureza: 'MATERIAL', rotulo: 'Material', previsto: 180, real: 180 },
+    { natureza: 'VEICULO', rotulo: 'Veículo', previsto: 1310, real: 1402.5 },
+    { natureza: 'DESPESA_CAMPO', rotulo: 'Despesas de campo', previsto: 0, real: 0 },
+  ],
+  equipe: [
+    { nome: 'Ana Técnica', especialidade: 'Técnico Elétrico', horas_previstas: 4, horas_trabalhadas: 3.5, valor_hora: 78, previsto: 312, real: 273 },
+    { nome: 'Auxiliar (sem pessoa)', especialidade: 'Auxiliar', horas_previstas: 4, horas_trabalhadas: 0, valor_hora: null, previsto: 0, real: 0 },
+  ],
+  materiais: [{ descricao: 'Ventilador 120 mm', unidade: 'UN', quantidade_planejada: 1, quantidade_consumida: 1, custo_unitario: 180, previsto: 180, real: 180 }],
+  outros: [
+    { descricao: 'Veículo: Picape 4x4', natureza: 'VEICULO', rotulo: 'Veículo', previsto: 1310, real: 1402.5, no_real: 1402.5, conferido: true, nao_previsto: false },
+    { descricao: 'Pedágio', natureza: 'VEICULO', rotulo: 'Veículo', previsto: 0, real: null, no_real: 0, conferido: false, nao_previsto: true },
+  ],
+  instrucoes: [
+    { codigo: 'INS-7', nome: 'Trocar ventilador', equipamento: 'Inversor 03', status: 'CONCLUIDA', feita: true, valor: 850, valor_original: 902.08, ajustado: true, do_cadastro_hoje: false },
+    { codigo: null, nome: 'Termografia', equipamento: null, status: 'CANCELADA', feita: false, valor: 400, valor_original: null, ajustado: false, do_cadastro_hoje: true },
+  ],
+  instrucoes_total: 1250,
+  instrucoes_feitas: 1,
+  instrucoes_feitas_total: 850,
+  pendencias: ['Sem valor/hora, fora do custo: Auxiliar (sem pessoa) (0 h).'],
   ...mudar,
 });
 
@@ -69,6 +103,7 @@ const relatorio = (mudar: Partial<RelatorioDaOS> = {}): RelatorioDaOS => ({
   finalizada_em: '2026-10-17T12:00:00.000Z',
   previa: false,
   conteudo: conteudo(),
+  custos: custos(),
   ...mudar,
 });
 
@@ -120,23 +155,74 @@ describe('documento da OS (PDF)', () => {
   it('tarefa não feita com o motivo; checklist por tarefa, leitura fora da faixa, obrigatório não feito, itens gerais', () => {
     const d = montar();
 
-    expect(d.tarefas[1]).toEqual({ nome: 'Termografia', situacao: 'Não feita', quem: '', observacao: 'Motivo: Câmera sem bateria' });
-    expect(d.tarefas[0].nome).toBe('INS-7 · Trocar ventilador');
-    expect(d.checklist.map((g) => g.tarefa)).toEqual(['INS-7 · Trocar ventilador', 'Itens gerais']);
+    expect(d.tarefas[1]).toEqual({ nome: 'Termografia', equipamento: '', situacao: 'Não feita', quem: '', observacao: 'Motivo: Câmera sem bateria' });
+    expect(d.tarefas[0]).toMatchObject({ nome: 'INS-7 · Trocar ventilador', equipamento: 'Inversor 03' });
+    // SN-93: o grupo diz de qual equipamento (nove "Termografia e reaperto" iguais não diziam)
+    expect(d.checklist.map((g) => g.tarefa)).toEqual(['INS-7 · Trocar ventilador · Inversor 03', 'Itens gerais']);
     expect(d.checklist[0].itens[0]).toMatchObject({ leitura: '640 V — fora da faixa (580 a 620 V)', observacao: 'Rede alta' });
     expect(d.checklist[0].itens[0].feito).toMatch(/^Feito · Ana Técnica · 16\/10\/2026/);
     expect(d.checklist[0].itens[1].feito).toBe('Não feito (obrigatório)');
+    // O nome da tarefa na frente do item sai: o título do grupo já o tem
+    expect(d.checklist[0].itens[1].atividade).toBe('Conferir o aperto');
   });
 
-  it('equipe com as horas e o total; custo e auditoria', () => {
+  it('equipe com as horas, o valor da hora e o custo (D3); a auditoria sem o custo, que tem seção própria', () => {
     const d = montar();
+    const sem = (t: string) => t.replace(/\s/g, ' ');
 
-    expect(d.equipe).toEqual([
-      { nome: 'Ana Técnica · Técnico Elétrico', estimadas: '4h', trabalhadas: '3h30', presente: 'Sim' },
-      { nome: 'Auxiliar (sem pessoa)', estimadas: '4h', trabalhadas: '0h', presente: 'Não' },
+    expect(d.equipe.map((t) => ({ ...t, valorHora: sem(t.valorHora), custo: sem(t.custo) }))).toEqual([
+      { nome: 'Ana Técnica · Técnico Elétrico', estimadas: '4h', trabalhadas: '3h30', valorHora: 'R$ 78,00', custo: 'R$ 273,00', presente: 'Sim' },
+      { nome: 'Auxiliar (sem pessoa)', estimadas: '4h', trabalhadas: '0h', valorHora: '—', custo: 'sem valor/hora', presente: 'Não' },
     ]);
     expect(d.totalDaEquipe).toBe('Horas-homem: 3h30 (8h previstas)');
-    expect(d.auditoria).toEqual(expect.arrayContaining([['Custo real', 'R$ 234,50'], ['Nota da auditoria', '4 de 5']]));
+    expect(sem(d.materiais[0].unitario)).toBe('R$ 180,00');
+    expect(d.auditoria.map(([r]) => r)).not.toContain('Custo real');
+    expect(d.auditoria).toEqual(expect.arrayContaining([['Nota da auditoria', '4 de 5']]));
+  });
+
+  // SN-93: o custo aberto, com o real em destaque contra o previsto
+  it('custos: o real contra o previsto, as naturezas com valor, as instruções e os outros custos', () => {
+    const c = montar().custos!;
+    const sem = (t: string) => t.replace(/\s/g, ' ');
+
+    expect([sem(c.real), sem(c.previsto), sem(c.diferenca)]).toEqual(['R$ 1.855,50', 'R$ 1.802,00', '+R$ 53,50 (+3%)']);
+    // A natureza sem previsto nem real não ocupa linha
+    expect(c.naturezas.map((n) => n.rotulo)).toEqual(['Mão de obra', 'Material', 'Veículo']);
+    expect(sem(c.naturezas[0].diferenca)).toBe('−R$ 39,00 (−12,5%)');
+    expect(c.instrucoes.map((i) => [i.nome, i.equipamento, i.situacao, sem(i.valor), i.detalhe && sem(i.detalhe)])).toEqual([
+      ['INS-7 · Trocar ventilador', 'Inversor 03', 'Feita', 'R$ 850,00', 'ajustado; cadastro R$ 902,08'],
+      ['Termografia', '', 'Não feita', 'R$ 400,00', 'do cadastro de hoje'],
+    ]);
+    expect(sem(c.resumoDasInstrucoes!)).toBe('1 de 2 feitas · R$ 850,00 de R$ 1.250,00');
+    expect(c.outros.map((o) => [o.natureza, sem(o.previsto), sem(o.real)])).toEqual([
+      ['Veículo', 'R$ 1.310,00', 'R$ 1.402,50'],
+      ['Veículo · não previsto', '—', 'R$ 0,00 (não conferido)'],
+    ]);
+    expect(c.pendencias).toEqual(['Sem valor/hora, fora do custo: Auxiliar (sem pessoa) (0 h).']);
+  });
+
+  it('custos da OS finalizada antes do SN-93: os outros custos fora do total, sem "−100%"', () => {
+    const sem = (t: string) => t.replace(/\s/g, ' ');
+    const antiga = custos({
+      previsto: 312,
+      real: 273,
+      orcamento_previsto: 1802,
+      outros_fora_do_total: true,
+      naturezas: [
+        { natureza: 'MAO_DE_OBRA', rotulo: 'Mão de obra', previsto: 312, real: 273 },
+        { natureza: 'VEICULO', rotulo: 'Veículo', previsto: 1310, real: null },
+      ],
+      outros: [{ descricao: 'Veículo: Picape', natureza: 'VEICULO', rotulo: 'Veículo', previsto: 1310, real: null, no_real: null, conferido: false, nao_previsto: false }],
+    });
+    const c = montar(relatorio({ custos: antiga })).custos!;
+    expect([sem(c.previsto), sem(c.diferenca), c.ajuste]).toEqual(['R$ 312,00', '−R$ 39,00 (−12,5%)', null]);
+    expect(c.naturezas[1]).toMatchObject({ rotulo: 'Veículo', real: 'fora do total', diferenca: '—' });
+    expect(c.outros[0].real).toBe('não conferido, fora do total');
+  });
+
+  it('sem custo nenhum (OS sem recurso nem instrução), a seção não sai', () => {
+    const zerado = custos({ previsto: 0, real: 0, orcamento_previsto: null, naturezas: [], instrucoes: [], outros: [], equipe: [], materiais: [] });
+    expect(montar(relatorio({ custos: zerado })).custos).toBeNull();
   });
 
   it('cada foto que não entra diz por quê; documento vai para a lista', () => {

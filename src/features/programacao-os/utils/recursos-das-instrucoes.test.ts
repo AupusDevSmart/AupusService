@@ -55,11 +55,12 @@ describe('contribuicaoDaInstrucao', () => {
       ['Guindaste', 1],
     ]);
     expect(c.itens_orcamento).toEqual([
-      { descricao: 'Instrumento: Megômetro', valor: 80 },
-      { descricao: 'Veículo: Caminhonete', valor: 150 },
-      { descricao: 'Terceiro: Laudo', valor: 1000 },
-      { descricao: 'Despesa de campo: Hospedagem', valor: 250.56 },
-      { descricao: 'Maquinário: Guindaste', valor: 900 },
+      // SN-93: com a natureza do custo, que a OS agrupa e o Executar confere
+      { descricao: 'Instrumento: Megômetro', valor: 80, natureza: 'INSTRUMENTO' },
+      { descricao: 'Veículo: Caminhonete', valor: 150, natureza: 'VEICULO' },
+      { descricao: 'Terceiro: Laudo', valor: 1000, natureza: 'TERCEIRO' },
+      { descricao: 'Despesa de campo: Hospedagem', valor: 250.56, natureza: 'DESPESA_CAMPO' },
+      { descricao: 'Maquinário: Guindaste', valor: 900, natureza: 'MAQUINARIO' },
     ]);
   });
 
@@ -72,7 +73,7 @@ describe('contribuicaoDaInstrucao', () => {
       ]),
     );
     expect(c.materiais).toEqual([{ descricao: 'Fusível', quantidade_planejada: 2, unidade: '' }]);
-    expect(c.itens_orcamento).toEqual([{ descricao: `Terceiro: Ensaio ${SEM_PRECO}`, valor: 0 }]);
+    expect(c.itens_orcamento).toEqual([{ descricao: `Terceiro: Ensaio ${SEM_PRECO}`, valor: 0, natureza: 'TERCEIRO' }]);
     expect(c.ferramentas.map((f) => f.descricao)).toEqual(['Escada']);
   });
 
@@ -145,7 +146,7 @@ describe('somar e tirar', () => {
     expect(juntas.materiais).toEqual([{ descricao: 'Cabo', quantidade_planejada: 20, unidade: 'm', custo_unitario: 6 }]);
     // A mesma equipe faz as duas: a primeira vaga 2 + 3 h, a segunda só as 2 h de A
     expect(juntas.tecnicos.map((t) => t.horas_estimadas)).toEqual([5, 2]);
-    expect(juntas.itens_orcamento).toEqual([{ descricao: `Terceiro: Ensaio ${SEM_PRECO}`, valor: 0 }]);
+    expect(juntas.itens_orcamento).toEqual([{ descricao: `Terceiro: Ensaio ${SEM_PRECO}`, valor: 0, natureza: 'TERCEIRO' }]);
   });
 
   it('tirar devolve ao que a outra pede, e o que só a retirada trazia sai', () => {

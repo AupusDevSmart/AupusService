@@ -19,6 +19,7 @@ import { createExecucaoOSTableActions } from '../config/actions-config';
 import { ActionConfirmPanel, type PendingAction, type DadosDaConfirmacao } from './ActionConfirmPanel';
 import { AcoesDaOS } from './AcoesDaOS';
 import { OQueFoiFeito } from './OQueFoiFeito';
+import { CustosDaOS } from './CustosDaOS';
 import { AnexosDaOS } from './AnexosDaOS';
 import { BotaoPdfDaOS } from './BotaoPdfDaOS';
 import { BotaoExportarOS } from './BotaoExportarOS';
@@ -468,6 +469,7 @@ export function ExecucaoOSPage() {
                               onConfirm={handleConfirmAction}
                               onVoltar={() => setPendingAction(null)}
                               tarefasPendentes={tarefasPendentes(progresso).map((t) => ({ id: t.id, nome: t.nome }))}
+                              podeInformarValorDaHora={temPermissao('execucao_os.manage')}
                             />
                           ) : (
                             <div className="space-y-3">
@@ -493,6 +495,30 @@ export function ExecucaoOSPage() {
                               progresso={progresso}
                               editavel={emExecucao && temPermissao('execucao_os.manage', 'execucao_os.executar')}
                               onChange={setProgresso}
+                            />
+                          </div>
+                        )}
+
+                        {/* SN-93: o custo com destaque, logo depois do que foi feito — o real contra o
+                            previsto, por natureza e por instrução; os outros custos se corrigem aqui */}
+                        {modalState.entity?.custos && (
+                          <div className="rounded-md border p-4">
+                            <CustosDaOS
+                              osId={modalState.entity.id}
+                              status={status ?? ''}
+                              custos={modalState.entity.custos}
+                              itensOrcamento={modalState.entity.itens_orcamento}
+                              // Na auditada, só quem gerencia: o auditor aprovou um custo (a API recusa igual)
+                              podeCorrigir={
+                                status === 'AUDITADA'
+                                  ? temPermissao('execucao_os.manage')
+                                  : temPermissao('execucao_os.manage', 'execucao_os.executar')
+                              }
+                              onCorrigido={async () => {
+                                // A lista da tabela também tem o custo real
+                                const [atual] = await Promise.all([fetchOne(modalState.entity!.id), fetchItems(toApiParams)]);
+                                if (atual) openModal(modalState.mode, atual);
+                              }}
                             />
                           </div>
                         )}

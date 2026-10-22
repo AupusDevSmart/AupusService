@@ -82,7 +82,7 @@ describe('planilhaDoPainel', { timeout: 60_000 }, () => {
     const coluna = (titulo: string) => COLUNAS_DAS_OS.findIndex((c) => c.titulo === titulo) + 1;
     expect(aba.rowCount).toBe(ordens.length + 1);
     expect(aba.getRow(2).getCell(coluna('Custo total')).value).toBe(3150.5);
-    expect(aba.getRow(2).getCell(coluna('Adicionais')).value).toBe(150.5);
+    expect(aba.getRow(2).getCell(coluna('Outros custos')).value).toBe(150.5);
     expect(aba.getRow(3).getCell(coluna('Custo total')).value).toBeNull();
     expect([aba.getRow(3).getCell(coluna('Aberta agora')).value, aba.getRow(3).getCell(coluna('Sem estimativa')).value]).toEqual(['sim', 'sim']);
     // A data no horário de Brasília: o Excel não tem fuso (15:30 UTC = 12:30)
