@@ -6,7 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Plus, Users, Trash2 } from 'lucide-react';
 import { Combobox, type ComboboxOption } from '@/core/components/ui/combobox';
 import { CardLista, CardLinha, campoCard, selectCard, type ColunaCard } from './card-lista';
-import { formatarHoras } from '@/utils/horas';
+import { formatarHoras, horasNoCampo, lerHorasDigitadas } from '@/utils/horas';
+import { CampoDeNumero } from '@/components/common/CampoDeNumero';
+import { AVISO_DE_DINHEIRO, dinheiroNoCampo, lerDinheiroDigitado } from '@/utils/leitura';
+
+const AVISO_DE_HORAS = 'Horas como 3h30, 45min ou 3,5';
 import { formatCurrency } from '@/lib/utils';
 
 export interface TecnicoItem {
@@ -227,36 +231,46 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
                   <option key={esp} value={esp}>{esp}</option>
                 ))}
               </select>
-              <Input
-                type="number"
-                min="0"
-                step="0.5"
-                value={tecnico.horas_estimadas}
-                onChange={(e) => atualizarTecnico(index, 'horas_estimadas', parseFloat(e.target.value) || 0)}
+              {/* Horas como na execução ("3h30", "45min" ou "3,5"), não type="number" (SN-58) */}
+              <CampoDeNumero
+                value={tecnico.horas_estimadas ?? null}
+                onChange={(valor) => atualizarTecnico(index, 'horas_estimadas', valor ?? 0)}
+                ler={lerHorasDigitadas}
+                mostrar={horasNoCampo}
+                aviso={AVISO_DE_HORAS}
+                avisoCurto
+                placeholder="ex.: 3h30"
+                aria-label={`Horas estimadas de ${tecnico.nome || tecnico.especialidade || 'técnico'}`}
                 disabled={disabled}
                 className={`${campoCard} text-center`}
               />
               {showHorasReais && mode === 'execucao' && (
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={tecnico.horas_trabalhadas ?? ''}
-                  onChange={(e) => atualizarTecnico(index, 'horas_trabalhadas', parseFloat(e.target.value) || 0)}
+                <CampoDeNumero
+                  value={tecnico.horas_trabalhadas ?? null}
+                  onChange={(valor) => atualizarTecnico(index, 'horas_trabalhadas', valor ?? 0)}
+                  ler={lerHorasDigitadas}
+                  mostrar={horasNoCampo}
+                  aviso={AVISO_DE_HORAS}
+                  avisoCurto
+                  placeholder="ex.: 3h30"
+                  aria-label={`Horas trabalhadas de ${tecnico.nome || tecnico.especialidade || 'técnico'}`}
                   disabled={disabled}
                   className={`${campoCard} text-center`}
                 />
               )}
               {showCustos && (
                 <>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={tecnico.custo_hora || ''}
-                    onChange={(e) => atualizarTecnico(index, 'custo_hora', parseFloat(e.target.value) || 0)}
+                  <CampoDeNumero
+                    value={tecnico.custo_hora || null}
+                    onChange={(valor) => atualizarTecnico(index, 'custo_hora', valor ?? 0)}
+                    ler={lerDinheiroDigitado}
+                    mostrar={dinheiroNoCampo}
+                    aviso={AVISO_DE_DINHEIRO}
+                    avisoCurto
+                    placeholder="R$/h"
+                    aria-label={`Valor da hora de ${tecnico.nome || tecnico.especialidade || 'técnico'}`}
                     disabled={disabled}
-                    className={`${campoCard} text-center`}
+                    className={`${campoCard} text-right`}
                   />
                   <span className="text-sm text-muted-foreground text-right truncate">
                     {formatCurrency(tecnico.custo_total || 0)}

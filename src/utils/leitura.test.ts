@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { descreverFaixa, dinheiroNoCampo, foraDaFaixa, formatarLeitura, lerDinheiroDigitado, lerNumeroDigitado, numeroNoCampo, numeroOuNulo } from './leitura';
+import { descreverFaixa, dinheiroNoCampo, foraDaFaixa, formatarLeitura, lerDinheiroDigitado, lerQuantidadeDigitada, lerNumeroDigitado, numeroNoCampo, numeroOuNulo } from './leitura';
 
 describe('leitura (SN-58)', () => {
   it.each([
@@ -91,5 +91,14 @@ describe('dinheiroNoCampo', () => {
     expect(dinheiroNoCampo(1402.5)).toBe('1.402,50');
     expect(dinheiroNoCampo(null)).toBe('');
     for (const v of [181.5, 160, 1402.5, 9999999.99, 0.05]) expect(lerDinheiroDigitado(dinheiroNoCampo(v))).toBe(v);
+  });
+});
+
+describe('lerQuantidadeDigitada', () => {
+  it('até 3 casas, como a API; mais é ilegível (a API recusava o salvar inteiro)', () => {
+    expect(lerQuantidadeDigitada('0,375')).toBe(0.375);
+    expect(lerQuantidadeDigitada('2')).toBe(2);
+    expect(lerQuantidadeDigitada('')).toBeNull();
+    expect(lerQuantidadeDigitada('0,3755')).toBeUndefined();
   });
 });

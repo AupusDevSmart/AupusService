@@ -91,6 +91,19 @@ export function lerDinheiroDigitado(texto: string): number | null | undefined {
   return Math.round(valor * 100) / 100 === valor ? valor : undefined;
 }
 
+export const AVISO_DE_QUANTIDADE = 'Quantidade com vírgula e até 3 casas (ex.: 0,375)';
+
+/**
+ * Quantidade de material e ferramenta: o número de `lerNumeroDigitado` com no
+ * máximo 3 casas, como a API (Decimal(_, 3)); com 4, "0,3755" passava aqui e a API
+ * recusava o salvar inteiro.
+ */
+export function lerQuantidadeDigitada(texto: string): number | null | undefined {
+  const valor = lerNumeroDigitado(texto);
+  if (valor === null || valor === undefined) return valor;
+  return Math.round(valor * 1000) / 1000 === valor ? valor : undefined;
+}
+
 /** O dinheiro no campo, com as 2 casas ("181,50", "1.402,50"): o número cru mostrava "181,5" */
 export const dinheiroNoCampo = (n: number | null) =>
   n === null ? '' : n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

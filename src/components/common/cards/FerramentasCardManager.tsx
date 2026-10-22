@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Wrench, Trash2 } from 'lucide-react';
 import { CardLista, CardLinha, campoCard, type ColunaCard } from './card-lista';
+import { CampoDeNumero } from '@/components/common/CampoDeNumero';
+import { AVISO_DE_QUANTIDADE, lerQuantidadeDigitada } from '@/utils/leitura';
 
 export interface FerramentaItem {
   id?: string;
@@ -132,15 +134,14 @@ const FerramentasCardManager: React.FC<FerramentasCardManagerProps> = ({
               />
               {/* Decimal e min 0: a ferramenta pode vir da instrucao, onde
                   "2,5 m de cabo" e valido. parseInt truncava para 2. */}
-              <Input
-                type="number"
-                min="0"
-                step="0.001"
-                value={ferramenta.quantidade}
-                onChange={(e) =>
-                  atualizarFerramenta(index, 'quantidade', parseFloat(e.target.value) || 0)
-                }
+              <CampoDeNumero
+                value={ferramenta.quantidade ?? null}
+                onChange={(valor) => atualizarFerramenta(index, 'quantidade', valor ?? 0)}
+                ler={lerQuantidadeDigitada}
+                aviso={AVISO_DE_QUANTIDADE}
+                avisoCurto
                 placeholder="Qtd"
+                aria-label={`Quantidade de ${ferramenta.descricao || 'ferramenta'}`}
                 disabled={planejadoTravado}
                 className={`${campoCard} text-center`}
               />

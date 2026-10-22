@@ -64,6 +64,8 @@ export function CampoDeNumero({
         autoComplete="off"
         value={digitado}
         aria-invalid={invalido || destacar || undefined}
+        // Só o ilegível (o `destacar` é leitura fora da faixa, que se grava): o BaseModal não salva com ele
+        data-ilegivel={invalido || undefined}
         onChange={(e) => setDigitado(e.target.value)}
         onBlur={(e) => {
           const valor = ler(digitado);

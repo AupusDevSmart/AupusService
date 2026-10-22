@@ -157,6 +157,7 @@ export function BaseModal<T extends BaseEntity, D = DadosDoFormulario>({
   // ✅ CORREÇÃO: Refs para controle de inicialização
   const initialDataRef = useRef<DadosDoFormulario>(formData);
   const modalRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const isInitializedRef = useRef(Object.keys(formData).length > 0);
   const isLoading = loading || isSubmitting;
 
@@ -343,6 +344,19 @@ export function BaseModal<T extends BaseEntity, D = DadosDoFormulario>({
       return;
     }
 
+    // Número que não deu para ler (`CampoDeNumero`, nos cartões de material, equipe, ferramentas e custos):
+    // o campo mostra o aviso, mas o formData segue com o valor anterior, e salvar o gravava calado
+    const ilegivel = formRef.current?.querySelector<HTMLElement>('[data-ilegivel="true"]');
+    if (ilegivel) {
+      ilegivel.focus();
+      const { toast } = await import('@/hooks/use-toast');
+      toast({
+        title: 'Erro de validação',
+        description: 'Corrija o número marcado em vermelho (use vírgula: ex.: 1.402,50 ou 0,375).',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     const validationErrors = validateFields(formData);
     if (Object.keys(validationErrors).length > 0) {
@@ -533,7 +547,7 @@ export function BaseModal<T extends BaseEntity, D = DadosDoFormulario>({
 
           <div className="flex-1 overflow-y-auto">
             <div className="p-4 md:p-6">
-              <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+              <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
                 {typeof topo === 'function'
                   ? topo({ alteracoesPendentes: hasUnsavedChanges && !isViewMode })
                   : topo}

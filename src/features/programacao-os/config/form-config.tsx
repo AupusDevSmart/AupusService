@@ -15,7 +15,7 @@ import { FerramentasCardManager } from '@/components/common/cards/FerramentasCar
 import { TecnicosDaPlanta } from '../components/TecnicosDaPlanta';
 import type { TecnicoItem } from '@/components/common/cards/TecnicosCardManager';
 import { ResponsavelDaOS } from '../components/ResponsavelDaOS';
-import { OrcamentoCardManager } from '@/components/common/cards/OrcamentoCardManager';
+import { OrcamentoCardManager, type ItemOrcamento } from '@/components/common/cards/OrcamentoCardManager';
 import { ReservaViaturaField } from '../components/ReservaViaturaField';
 import { ReservaVinculadaCard } from '../components/ReservaVinculadaCard';
 import { ValoresDasInstrucoes } from '@/features/programacao-os/components/ValoresDasInstrucoes';
@@ -77,6 +77,8 @@ type CamposDaProgramacao = DadosDoFormulario & {
   recursos_em_calculo?: boolean;
   /** Fora do payload: um valor de instrução que não dá para ler (SN-93) */
   valores_ilegiveis?: boolean;
+  /** Algum outro custo com valor ilegível: o Salvar mandaria o anterior calado */
+  orcamento_ilegivel?: boolean;
 };
 
 /** O render de um campo: o fieldProps inteiro, com a entidade e o formulário da programação. */
@@ -569,20 +571,21 @@ export const programacaoOSFormFields: FormField[] = [
     key: 'itens_orcamento',
     label: '', // duplicava o titulo do grupo
     type: 'custom',
-    component: OrcamentoCardManager,
-    componentProps: (formData: CamposDaProgramacao) => {
-      const custoMateriais = (formData?.materiais || []).reduce((acc: number, m) => {
-        return acc + ((m.custo_unitario || 0) * (m.quantidade_planejada || 0));
-      }, 0);
-      const custoEquipe = (formData?.tecnicos || []).reduce((acc: number, t) => {
-        return acc + ((t.custo_hora || 0) * (t.horas_estimadas || 0));
-      }, 0);
-      return {
-        title: 'Outros Custos',
-        custoMateriais,
-        custoEquipe
-      };
-    },
+    // `render`, não `component`: só o render recebe o formData e o onMultipleChange, e o valor
+    // ilegível tem de travar o Salvar
+    render: ({ entity, formData, value, onChange, onMultipleChange, mode, disabled }: PropsDoRender) => (
+      <OrcamentoCardManager
+        title="Outros Custos"
+        value={(value as ItemOrcamento[] | undefined) ?? []}
+        onChange={onChange}
+        disabled={disabled || mode === 'view' || (entity?.status !== undefined && entity.status !== 'PENDENTE')}
+        custoMateriais={(formData?.materiais || []).reduce((acc: number, m) => acc + (m.custo_unitario || 0) * (m.quantidade_planejada || 0), 0)}
+        custoEquipe={(formData?.tecnicos || []).reduce((acc: number, t) => acc + (t.custo_hora || 0) * (t.horas_estimadas || 0), 0)}
+        onIlegivel={onMultipleChange ? (sim) => onMultipleChange({ orcamento_ilegivel: sim }) : undefined}
+      />
+    ),
+    validation: (_valor: unknown, formData?: CamposDaProgramacao) =>
+      formData?.orcamento_ilegivel ? 'Corrija o valor do outro custo marcado em vermelho (ex.: 1.402,50).' : null,
     defaultValue: [],
     group: 'orcamento',
     colSpan: 2,
