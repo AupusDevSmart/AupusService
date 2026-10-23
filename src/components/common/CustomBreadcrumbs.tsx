@@ -47,10 +47,6 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
   };
 
   const breadcrumbConfig: BreadcrumbConfigItem[] = [
-    {
-      label: 'Aupus Service',
-      path: null,
-    },
     // 📊 DASHBOARD
     {
       path: '/dashboard',
@@ -200,8 +196,6 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
       return currentPath;
     }, '');
 
-    breadcrumbItems.unshift(breadcrumbConfig[0]);
-
     return breadcrumbItems;
   };
 
@@ -224,25 +218,7 @@ export function CustomBreadcrumbs({ className = '' }: { className?: string }) {
           {breadcrumbItems.map((item, index) => (
             <React.Fragment key={nanoid()}>
               <BItem>
-                {index === 0 ? (
-                  // Logo trocado por tema so com CSS, sem ler o tema em JS.
-                  // Nao ha versao compacta do logo: vale a normal.
-                  <div className="flex items-center gap-2">
-                    <img
-                      src="/brand/service-logo-colorido.png"
-                      alt="Aupus Service"
-                      className="hidden h-6 w-auto sm:block dark:sm:hidden"
-                    />
-                    <img
-                      src="/brand/service-logo-negativo.svg"
-                      alt="Aupus Service"
-                      className="hidden h-6 w-auto dark:sm:block"
-                    />
-                    <BreadcrumbPage className="text-secondary-foreground font-semibold sm:hidden">
-                      Aupus Service
-                    </BreadcrumbPage>
-                  </div>
-                ) : item.isDropdown ? (
+                {item.isDropdown ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger className="flex items-center gap-1 text-secondary-foreground">
                       {item.label}

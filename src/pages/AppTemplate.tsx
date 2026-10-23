@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { CustomBreadcrumbs } from '@/components/common/CustomBreadcrumbs';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { CommandPallete } from '@/features/navigation/components/CommandPallete';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { AppSidebar } from '@/features/navigation/components/Sidebar/app-sidebar';
 import { useUserStore } from '@/store/useUserStore';
 import { NotificacoesSheet } from '@/features/notificacoes/components/NotificacoesSheet';
@@ -39,6 +39,12 @@ export function AppTemplate() {
                   empurrar o sino das notificacoes para fora da tela. */}
               <div className="flex h-12 min-w-0 flex-1 items-center gap-2 px-4 bg-secondary">
                 <SidebarTrigger className="w-4 h-4 mr-2" />
+                {/* Logo trocado por tema so com CSS. Caminho absoluto: relativo,
+                    o navegador resolve pela rota atual e a imagem quebra. */}
+                <Link to="/" className="mr-2 shrink-0" aria-label="Aupus Service">
+                  <img src="/brand/service-logo.png" alt="Aupus Service" className="h-7 w-auto dark:hidden" />
+                  <img src="/brand/service-logo-negativo.png" alt="Aupus Service" className="hidden h-7 w-auto dark:block" />
+                </Link>
                 <CustomBreadcrumbs className="min-w-0 flex-1" />
               </div>
               <NotificacoesSheet />
