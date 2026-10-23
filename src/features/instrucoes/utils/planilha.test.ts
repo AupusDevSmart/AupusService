@@ -144,10 +144,15 @@ describe('planilha de instruções', { timeout: 120_000 }, () => {
 
   it('ida e volta: o cabeçalho, os passos na ordem, cada item pelo nome com o ID ao lado, a perda em fração', async () => {
     const livro = await gravarEReabrir(await montarLivroDeFichas(definicaoDeInstrucoes, [limpeza]));
-    const { registros, erros } = await lerInstrucoes(livro);
+    const { registros, erros, catalogos } = await lerInstrucoes(livro);
 
     expect(erros).toEqual([]);
     expect(api.findAll).not.toHaveBeenCalled();
+    // SN-98: os recursos citados vão junto, para o servidor acertar o cadastro (recursos-da-planilha.test.ts)
+    expect(catalogos?.recursos?.map((x) => [x.nome, x.id, x.base_calculo, x.preco])).toEqual([
+      ['Eletricista', 'r1', 'hora', 80],
+      ['Cabo', 'r2', null, 12.5],
+    ]);
     expect(livro.worksheets.map((w) => w.name)).toEqual(['COMO PREENCHER', 'RESUMO', '01', 'MODELO']);
     const [r] = registros;
     expect(r).toMatchObject({ id: 'i1', aba: '01', linha: 1, atualizado_em: '2026-08-20T17:22:01.000Z' });

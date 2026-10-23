@@ -36,6 +36,12 @@ export type ComoPreencher = {
   regrasDoCadastro?: string[];
   /** Há aba REFERÊNCIAS com os nomes válidos de outros cadastros. */
   temReferencias?: boolean;
+  /**
+   * Onde o cadastro foge de uma regra geral (SN-98), para a regra não mentir:
+   * `cinza`, a seção cinza que a importação usa; `referencias`, o referenciado
+   * que a importação cria quando o nome não existe.
+   */
+  excecoes?: { cinza?: string; referencias?: string };
 };
 
 const marcador = (cadastro: string) => `PLANILHA DE ${cadastro.toUpperCase()}`;
@@ -55,7 +61,7 @@ function regrasGerais(c: ComoPreencher): string[] {
           `Cada aba numerada (01, 02…) é um registro: edite na própria aba. A aba RESUMO é só um índice (com link para cada aba) e é ignorada na importação.`,
           `Para criar um registro novo, copie a aba MODELO, dê a ela qualquer nome que ainda não exista (ex.: NOVO 1) e preencha. O ID fica em branco. A célula A1 tem de continuar "${c.tituloDaFicha}".`,
           'Em cada seção, cada linha abaixo do cabeçalho é um item. Para acrescentar, insira linhas logo abaixo do cabeçalho da seção. Não apague o cabeçalho da seção: sem ele a importação não mexe naquela lista. O que cada seção faz com o item que sumiu está na lista de seções abaixo.',
-          'Seções em cinza são só informação: a importação as ignora.',
+          `Seções em cinza são só informação: a importação as ignora${c.excecoes?.cinza ? ` — exceto ${c.excecoes.cinza} (veja a lista de seções)` : ''}.`,
         ];
 
   return [
@@ -70,7 +76,11 @@ function regrasGerais(c: ComoPreencher): string[] {
     'SIM/NÃO: escreva SIM ou NÃO. Listas (categoria, status, tipo…): use exatamente um dos valores aceitos da tabela abaixo.',
     ...(c.temReferencias
       ? [
-          'Itens de outros cadastros entram pelo NOME, exatamente como na aba REFERÊNCIAS — maiúsculas e acentos não importam. Nome que não existir é erro: a importação não cria o item referenciado; cadastre-o antes. A linha exportada leva também o ID do item (cinza): mantenha-o; ele resolve nomes repetidos no cadastro. Para trocar o item, troque o nome — com o nome trocado, vale o nome. Em linha nova, deixe o ID vazio.',
+          `Itens de outros cadastros entram pelo NOME, exatamente como na aba REFERÊNCIAS — maiúsculas e acentos não importam. ${
+            c.excecoes?.referencias
+              ? `Nome que não existir é erro (a importação não cria o item referenciado; cadastre-o antes) — exceto ${c.excecoes.referencias}, que a importação cria: veja as regras deste cadastro.`
+              : 'Nome que não existir é erro: a importação não cria o item referenciado; cadastre-o antes.'
+          } A linha exportada leva também o ID do item (cinza): mantenha-o; ele resolve nomes repetidos no cadastro. Para trocar o item, troque o nome — com o nome trocado, vale o nome. Em linha nova, deixe o ID vazio.`,
         ]
       : []),
     'A importação respeita as permissões e as plantas de quem importa, como a tela: o que você não pode criar ou editar na tela é erro aqui.',

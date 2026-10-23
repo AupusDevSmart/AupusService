@@ -5,6 +5,7 @@ import { AMARELO, AZUL_CLARO, SALMAO, VERDE, VERDE_RECURSOS, calculada, moeda, p
 import { exportarFichas, lerFichas, secao, type PlanilhaDeFichas, type SecaoDaFicha, type SecoesLidas } from '@/lib/planilha/fichas';
 import { AUTOR_DO_SMART_PROJECT, casarPelaChave, separarOutroSistema } from '@/lib/planilha/outro-sistema';
 import { referencia, type Referencia } from '@/lib/planilha/referencias';
+import { recursosDaPlanilha } from '@/features/instrucoes/utils/recursos-da-planilha';
 import { todasAsPaginas } from '@/lib/planilha/todas-as-paginas';
 import type { LeituraDaPlanilha } from '@/lib/planilha/tipos';
 import {
@@ -102,7 +103,10 @@ const ITEM = (lista: string | undefined, caminho: 'recurso' | 'maquinario', oQue
   tipo: 'texto',
   lista,
   obrigatorio: 'Sim',
-  explicacao: `O ${oQue}, pelo nome exato da aba REFERÊNCIAS. Cada item entra uma vez só por instrução.`,
+  explicacao:
+    caminho === 'recurso'
+      ? `O ${oQue}, pelo nome. Cada item entra uma vez só por instrução. ${oQue === 'material' ? 'Material' : 'Recurso'} que não existe no cadastro é criado pela importação, com a categoria da aba REFERÊNCIAS (NOME e CATEGORIA) e a COBRANÇA e o VALOR DO CADASTRO desta linha.`
+      : `O ${oQue}, pelo nome exato da aba REFERÊNCIAS. Cada item entra uma vez só por instrução.`,
   valor: (l) => l.nome,
 });
 
@@ -111,6 +115,13 @@ const COBRANCA: Campo<LinhaDaFicha> = {
   tipo: 'texto',
   explicacao: 'Como o item é cobrado — vem do cadastro dele.',
   valor: (l) => (l.base ? (ROTULO_DA_BASE[l.base as BaseDeCusto] ?? l.base) : null),
+};
+
+/** Nos recursos e materiais a importação lê as duas (SN-98): acertam o cadastro do recurso */
+const COBRANCA_DO_RECURSO: Campo<LinhaDaFicha> = {
+  ...COBRANCA,
+  explicacao:
+    'Como o recurso é cobrado. Diferente do cadastro: a importação acerta a cobrança no CADASTRO do recurso, e isso vale para todas as instruções (a prévia mostra em "Outros cadastros"). Recurso novo nasce com esta cobrança.',
 };
 
 const QNT: Campo<LinhaDaFicha> = {
@@ -157,6 +168,12 @@ const VALOR_DO_CADASTRO: Campo<LinhaDaFicha> = {
   tipo: 'moeda',
   explicacao: 'O preço por unidade que o cadastro do item tem hoje.',
   valor: (l) => l.preco_cadastro,
+};
+
+const VALOR_DO_CADASTRO_DO_RECURSO: Campo<LinhaDaFicha> = {
+  ...VALOR_DO_CADASTRO,
+  explicacao:
+    'O preço por unidade no cadastro do recurso. Diferente do cadastro: a importação acerta o preço no CADASTRO, para todas as instruções e as propostas novas (a prévia mostra em "Outros cadastros"); recurso novo nasce com este preço. Para mudar só nesta instrução, use o VALOR PRÓPRIO.',
 };
 
 const TOTAL: Campo<LinhaDaFicha> = {
@@ -280,7 +297,7 @@ function secoes(refs: Referencia[]): SecaoDaFicha<Instrucao, never>[] {
     explicacao:
       'Mão de obra, instrumentos, veículos, terceiros e despesas de campo (os recursos que não são material). Linha que sumiu é removida.',
     itens: (i) => recursosDa(i, false),
-    colunas: [ITEM(referencia(refs, 'recursos'), 'recurso', 'recurso'), COBRANCA, QNT, DURACAO, DISTANCIA, VALOR_PROPRIO, VALOR_DO_CADASTRO, TOTAL, ID_DO_ITEM('recurso_ref')],
+    colunas: [ITEM(referencia(refs, 'recursos'), 'recurso', 'recurso'), COBRANCA_DO_RECURSO, QNT, DURACAO, DISTANCIA, VALOR_PROPRIO, VALOR_DO_CADASTRO_DO_RECURSO, TOTAL, ID_DO_ITEM('recurso_ref')],
   };
 
   const maquinario: SecaoDaFicha<Instrucao, LinhaDaFicha> = {
@@ -491,12 +508,16 @@ function definicao(referencias: Referencia[]): PlanilhaDeFichas<Instrucao> {
     rodape,
     referencias,
     regrasDoCadastro: [
-      'Antes de importar instruções, os recursos, materiais e maquinários que elas usam já têm de existir (importe Recursos e Maquinários primeiro).',
+      'Recurso e material que não existem no cadastro são criados pela importação (a categoria vem da aba REFERÊNCIAS). Os que existem com COBRANÇA ou VALOR DO CADASTRO diferentes têm o CADASTRO acertado, para todas as instruções — isso pede a permissão da tela de Recursos; sem ela, a prévia avisa e o cadastro fica como está. A prévia lista tudo em "Outros cadastros" antes de gravar.',
+      'O ID DO ITEM de um recurso que hoje tem outro nome (renomeado depois da exportação) é erro: escreva o nome de hoje em ITEM, ou apague o ID DO ITEM para cadastrar um recurso novo com o nome da linha.',
+      'Planilha exportada há tempo: se o preço de um recurso mudou no cadastro depois, a importação volta ao preço da planilha. Confira "Outros cadastros" na prévia antes de confirmar.',
+      'O maquinário continua tendo de existir antes: importe Maquinários primeiro.',
       'VALOR PRÓPRIO vazio é o normal: a linha segue o preço do cadastro. Preencher fixa um preço só nesta instrução.',
       'A planilha de instruções do Smart Project (AupusProject) importa aqui: cada instrução casa pelo CÓDIGO (sem ele, pelo nome) e cada item pelo nome.',
       'Anexos da instrução não passam pela planilha: anexe pela tela.',
       'Mudar a instrução muda na hora o que as tarefas que a usam mostram; as OS já geradas guardam a cópia delas.',
     ],
+    excecoes: { referencias: 'o recurso e o material (seções RECURSOS e MATERIAIS)' },
   };
 }
 
@@ -554,15 +575,25 @@ export async function exportarInstrucoes(filtros: Omit<QueryInstrucoesApiParams,
 }
 
 /**
- * A leitura não usa as referências: quem acha o item pelo nome é o servidor.
- * A planilha do Smart Project (AupusProject) não tem as colunas só daqui e
- * traz os IDs de lá: cada instrução casa pelo código (sem ele, pelo nome) com
- * as daqui.
+ * Quem acha o item pelo nome é o servidor. A planilha do Smart Project
+ * (AupusProject) não tem as colunas só daqui e traz os IDs de lá: cada
+ * instrução casa pelo código (sem ele, pelo nome) com as daqui.
+ *
+ * Junto vão os recursos que as linhas citam (`recursosDaPlanilha`, SN-98): o
+ * servidor cria o que falta e acerta cobrança e preço do cadastro antes das
+ * instruções, e a prévia diz o que muda.
  */
 export async function lerInstrucoes(livro: Workbook): Promise<LeituraDaPlanilha> {
+  const citados = recursosDaPlanilha(livro);
+  const comCatalogos = (leitura: LeituraDaPlanilha): LeituraDaPlanilha => ({
+    ...leitura,
+    erros: [...leitura.erros, ...citados.erros],
+    catalogos: { recursos: citados.recursos },
+  });
+
   const lida = lerFichas(definicaoDeInstrucoes, livro, { deOutroSistema: livro.creator?.trim() === AUTOR_DO_SMART_PROJECT });
   const { deOutroSistema, leitura } = separarOutroSistema(livro, lida);
-  if (!deOutroSistema) return leitura;
+  if (!deOutroSistema) return comCatalogos(leitura);
 
   const daqui = await todasAsPaginas((page, limit) => instrucoesApi.findAll({ page, limit }));
   const pelaChave = daqui.flatMap((i) => [
@@ -573,5 +604,5 @@ export async function lerInstrucoes(livro: Workbook): Promise<LeituraDaPlanilha>
     const codigo = typeof dados.codigo === 'string' ? dados.codigo.trim() : '';
     return codigo ? `codigo ${codigo}` : `nome ${String(dados.nome ?? '')}`;
   };
-  return casarPelaChave(leitura, pelaChave, (r) => chaveDo(r.dados), { singular: 'instrução', plural: 'instruções' });
+  return comCatalogos(await casarPelaChave(leitura, pelaChave, (r) => chaveDo(r.dados), { singular: 'instrução', plural: 'instruções' }));
 }

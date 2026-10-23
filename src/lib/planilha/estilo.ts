@@ -84,20 +84,75 @@ export function linkPara(aba: string) {
 /** O autor gravado no livro: é por ele que a importação reconhece a planilha de outro sistema */
 export const CRIADOR_DO_LIVRO = 'Aupus Service';
 
+/** O que a tela diz quando o leitor de planilhas não baixa: a aba é de antes do último deploy */
+export const MENSAGEM_DA_PAGINA_DESATUALIZADA =
+  'O sistema foi atualizado desde que esta página abriu: recarregue a página (Ctrl+F5) e tente de novo.';
+
 /** Cria o livro. A biblioteca só carrega aqui — fora do pacote inicial. */
 export async function novoLivro(): Promise<Workbook> {
-  const { default: ExcelJS } = await import('exceljs');
+  let ExcelJS: typeof import('exceljs');
+  try {
+    ExcelJS = (await import('exceljs')).default;
+  } catch {
+    throw new Error(MENSAGEM_DA_PAGINA_DESATUALIZADA);
+  }
   const livro = new ExcelJS.Workbook();
   livro.creator = CRIADOR_DO_LIVRO;
   livro.created = new Date();
   return livro;
 }
 
+/**
+ * Por que o arquivo não abriu, para a tela dizer o que fazer (até o SN-98 era
+ * sempre "envie em .xlsx", e nas duas vezes de 23/out/2026 o arquivo era .xlsx):
+ * - `pagina-desatualizada`: o leitor de planilhas é baixado sob demanda, e a aba
+ *   aberta antes de um deploy pede o arquivo antigo, que não existe mais;
+ * - `formato`: o leitor não entendeu o arquivo (o `detalhe` diz onde).
+ */
+export class ArquivoNaoAbriu extends Error {
+  constructor(
+    readonly motivo: 'pagina-desatualizada' | 'formato',
+    readonly detalhe: string,
+  ) {
+    super(detalhe);
+  }
+}
+
 export async function abrirLivro(arquivo: File): Promise<Workbook> {
-  const { default: ExcelJS } = await import('exceljs');
+  let ExcelJS: typeof import('exceljs');
+  try {
+    ExcelJS = (await import('exceljs')).default;
+  } catch (erro) {
+    throw new ArquivoNaoAbriu('pagina-desatualizada', erro instanceof Error ? erro.message : String(erro));
+  }
+
+  const conteudo = await arquivo.arrayBuffer();
   const livro = new ExcelJS.Workbook();
-  await livro.xlsx.load(await arquivo.arrayBuffer());
-  return livro;
+  try {
+    await livro.xlsx.load(conteudo);
+    return livro;
+  } catch (erro) {
+    // A planilha do openpyxl com notas: acerta o lugar delas e tenta de novo.
+    // O módulo (com o JSZip dentro) também é baixado sob demanda: falhar aqui é a página desatualizada.
+    let notas: typeof import('@/lib/planilha/notas-do-openpyxl');
+    try {
+      notas = await import('@/lib/planilha/notas-do-openpyxl');
+    } catch (deImportar) {
+      throw new ArquivoNaoAbriu('pagina-desatualizada', deImportar instanceof Error ? deImportar.message : String(deImportar));
+    }
+    const { temNotasDoOpenpyxl, comNotasNoLugar } = notas;
+    // Não abrir como zip quer dizer que não é .xlsx: o motivo é o do exceljs
+    if (!(await temNotasDoOpenpyxl(conteudo).catch(() => false))) {
+      throw new ArquivoNaoAbriu('formato', erro instanceof Error ? erro.message : String(erro));
+    }
+    const corrigido = new ExcelJS.Workbook();
+    try {
+      await corrigido.xlsx.load(await comNotasNoLugar(conteudo));
+      return corrigido;
+    } catch (deNovo) {
+      throw new ArquivoNaoAbriu('formato', deNovo instanceof Error ? deNovo.message : String(deNovo));
+    }
+  }
 }
 
 export async function baixar(livro: Workbook, nome: string) {

@@ -5,7 +5,9 @@ import { AZUL, AZUL_CLARO, BRANCO, preencher, somenteLeitura } from '@/lib/plani
 /**
  * A aba REFERÊNCIAS: os nomes válidos de outros cadastros (plantas,
  * instruções, recursos…), para a lista suspensa e para quem preenche saber o
- * que existe. A importação não a lê — quem acha o nome é o servidor.
+ * que existe. Quem acha o nome é o servidor; a importação só a lê para o que
+ * ela cria (SN-98): a categoria do recurso novo, na planilha de instruções
+ * (`recursos-da-planilha.ts`).
  */
 
 export type Referencia = {

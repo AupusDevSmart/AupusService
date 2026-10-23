@@ -12,10 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { abrirLivro } from '@/lib/planilha/estilo';
+import { abrirLivro, ArquivoNaoAbriu } from '@/lib/planilha/estilo';
 import type {
   CadastroImportavel,
+  CatalogosDaPlanilha,
   LeituraDaPlanilha,
+  OutroCadastro,
   ProblemaDaPlanilha,
   RegistroDaPlanilha,
   ResultadoDaImportacao,
@@ -43,6 +45,8 @@ type Props = {
 type Previa = {
   arquivo: string;
   registros: RegistroDaPlanilha[];
+  /** O que a planilha cita de outros cadastros (SN-98): vai de novo no confirmar */
+  catalogos?: CatalogosDaPlanilha;
   resultado: ResultadoDaImportacao | null;
   erros: ProblemaDaPlanilha[];
   /** O que a própria leitura avisa (os do servidor vêm no resultado) */
@@ -99,20 +103,21 @@ export function PlanilhaDoCadastro({
       let livro: Workbook;
       try {
         livro = await abrirLivro(arquivo);
-      } catch {
-        toast.error('Não foi possível abrir o arquivo. Envie a planilha em .xlsx.');
+      } catch (erro) {
+        toast.error(mensagemDeArquivoQueNaoAbriu(erro));
         return;
       }
       // Fora do catch de cima: a leitura pode buscar registros na API, e o erro dela não é "arquivo inválido"
       const leitura = await ler(livro);
 
       const resultado = leitura.registros.length
-        ? await ImportacaoService.importar(cadastro, leitura.registros, false)
+        ? await ImportacaoService.importar(cadastro, leitura.registros, false, leitura.catalogos)
         : null;
 
       setPrevia({
         arquivo: arquivo.name,
         registros: leitura.registros,
+        catalogos: leitura.catalogos,
         resultado,
         erros: [...leitura.erros, ...apontarLinhas(resultado?.erros ?? [], leitura.registros)],
         avisosDaLeitura: leitura.avisos ?? [],
@@ -130,7 +135,7 @@ export function PlanilhaDoCadastro({
     setGravando(true);
 
     try {
-      const resultado = await ImportacaoService.importar(cadastro, previa.registros, true);
+      const resultado = await ImportacaoService.importar(cadastro, previa.registros, true, previa.catalogos);
 
       if (!resultado.confirmado) {
         // Algo mudou entre a prévia e o confirmar: mostra a prévia nova.
@@ -152,7 +157,9 @@ export function PlanilhaDoCadastro({
   };
 
   const resultado = previa?.resultado ?? null;
-  const aGravar = (resultado?.novos ?? 0) + (resultado?.alterados ?? 0);
+  const outros = resultado?.outros_cadastros ?? [];
+  // O recurso ou o plano acertado também se grava: a instrução sem mudança não impede confirmar
+  const aGravar = (resultado?.novos ?? 0) + (resultado?.alterados ?? 0) + outros.length;
   const podeConfirmar = !!previa && previa.erros.length === 0 && aGravar > 0;
 
   return (
@@ -255,7 +262,9 @@ export function PlanilhaDoCadastro({
 
                   <ListaDeProblemas titulo="Avisos" problemas={[...previa.avisosDaLeitura, ...(resultado?.avisos ?? [])]} tom="aviso" />
 
-                  {resultado && aGravar > 0 && (
+                  <OutrosCadastros itens={outros} />
+
+                  {resultado && resultado.novos + resultado.alterados > 0 && (
                     <div className="space-y-1">
                       <p className="text-sm font-medium">O que vai mudar</p>
                       <ul className="divide-y rounded-md border text-sm">
@@ -294,6 +303,49 @@ export function PlanilhaDoCadastro({
       </Dialog>
     </>
   );
+}
+
+/**
+ * O que a importação cria ou muda FORA do cadastro desta tela (SN-98): o recurso
+ * que a planilha de instruções cita, o plano que a de equipamentos cita. Fica
+ * antes de "O que vai mudar" porque é o que menos se espera.
+ */
+function OutrosCadastros({ itens }: { itens: OutroCadastro[] }) {
+  if (itens.length === 0) return null;
+  const tipo = (o: OutroCadastro) => `${o.cadastro === 'recurso' ? 'Recurso' : 'Plano'} ${o.acao === 'novo' ? 'novo' : 'alterado'}`;
+
+  return (
+    <div className="space-y-1">
+      <p className="text-sm font-medium">Outros cadastros</p>
+      <p className="text-xs text-muted-foreground">
+        A planilha cita estes itens de outros cadastros, e a importação os cria ou acerta antes de gravar o resto.
+      </p>
+      <ul className="divide-y rounded-md border text-sm">
+        {itens.slice(0, LIMITE_NA_TELA).map((o, i) => (
+          // O nome pode repetir: o cadastro de recursos aceita o mesmo nome em categorias diferentes
+          <li key={`${o.cadastro}-${i}`} className="space-y-0.5 px-3 py-2">
+            <p className="flex items-center justify-between gap-3">
+              <span className="min-w-0 truncate">{o.nome}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {tipo(o)} · {onde(o)}
+              </span>
+            </p>
+            <p className="text-xs text-muted-foreground">{o.detalhe}</p>
+          </li>
+        ))}
+        {itens.length > LIMITE_NA_TELA && <li className="px-3 py-2 text-muted-foreground">e mais {itens.length - LIMITE_NA_TELA}</li>}
+      </ul>
+    </div>
+  );
+}
+
+/** A causa, e não sempre "envie em .xlsx" (nas duas vezes de 23/out/2026 o arquivo era .xlsx) */
+function mensagemDeArquivoQueNaoAbriu(erro: unknown): string {
+  if (erro instanceof ArquivoNaoAbriu && erro.motivo === 'pagina-desatualizada') {
+    return 'O sistema foi atualizado desde que esta página abriu: recarregue a página (Ctrl+F5) e envie o arquivo de novo.';
+  }
+  const detalhe = erro instanceof Error ? erro.message : String(erro);
+  return `O arquivo não abriu como planilha .xlsx (${detalhe}). Abra no Excel e salve de novo como .xlsx, ou exporte de novo pela tela.`;
 }
 
 function Contador({ rotulo, valor }: { rotulo: string; valor: number }) {
@@ -357,9 +409,11 @@ function apontarLinhas(erros: ProblemaDaPlanilha[], registros: RegistroDaPlanilh
 }
 
 function resumoDoResultado(r: ResultadoDaImportacao): string {
+  const outros = r.outros_cadastros?.length ?? 0;
   const partes = [
     r.novos && `${r.novos} ${r.novos === 1 ? 'criado' : 'criados'}`,
     r.alterados && `${r.alterados} ${r.alterados === 1 ? 'alterado' : 'alterados'}`,
+    outros && `${outros} em outros cadastros`,
   ].filter(Boolean);
 
   return `Planilha importada: ${partes.join(', ')}.`;

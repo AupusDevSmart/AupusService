@@ -1,7 +1,7 @@
 import type { Workbook, Worksheet } from 'exceljs';
 
 import { definir, ehCalculado, escreverCelula, lerCampo, type Campo } from '@/lib/planilha/campos';
-import { abaComoPreencher, conferirCadastro } from '@/lib/planilha/como-preencher';
+import { abaComoPreencher, conferirCadastro, type ComoPreencher } from '@/lib/planilha/como-preencher';
 import {
   AZUL,
   AZUL_CLARO,
@@ -45,6 +45,8 @@ export type SecaoDaFicha<T, L> = {
   explicacao: string;
   /** Só informação: sai em cinza e a importação a ignora inteira. */
   somenteLeitura?: boolean;
+  /** A nota do título da seção só de leitura, quando a importação a usa para outra coisa (TAREFAS DO PLANO, SN-98) */
+  notaDeLeitura?: string;
 };
 
 /**
@@ -89,6 +91,7 @@ export type PlanilhaDeFichas<T> = {
   rodape?: (ws: Worksheet, registro: T) => void;
   referencias?: Referencia[];
   regrasDoCadastro?: string[];
+  excecoes?: ComoPreencher['excecoes'];
 };
 
 const ABA_RESUMO = 'RESUMO';
@@ -139,6 +142,7 @@ export async function montarLivroDeFichas<T>(def: PlanilhaDeFichas<T>, registros
       ...def.secoes.map((s) => ({ onde: `Ficha — seção ${s.titulo}`, campos: s.colunas })),
     ],
     regrasDoCadastro: def.regrasDoCadastro,
+    excecoes: def.excecoes,
   });
 
   await abaDoResumo(livro, def, registros);
@@ -217,7 +221,7 @@ function escreverFicha<T>(
       topo.getCell(c).font = { bold: true };
       topo.getCell(c).alignment = { wrapText: true, vertical: 'middle' };
     }
-    if (secao.somenteLeitura) topo.getCell(1).note = 'Só informação — a importação ignora esta seção.';
+    if (secao.somenteLeitura) topo.getCell(1).note = secao.notaDeLeitura ?? 'Só informação — a importação ignora esta seção.';
 
     const itens = registro === null ? [] : secao.itens(registro);
     for (const item of itens) {

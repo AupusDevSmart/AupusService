@@ -6,18 +6,22 @@ import { AMARELO, AZUL_CLARO, VERDE_RECURSOS } from '@/lib/planilha/estilo';
 import { exportarFichas, lerFichas, secao, type PlanilhaDeFichas, type SecoesLidas } from '@/lib/planilha/fichas';
 import { chave } from '@/lib/planilha/leitura';
 import { referencia, type Referencia } from '@/lib/planilha/referencias';
+import type { LeituraDaPlanilha } from '@/lib/planilha/tipos';
 import { emParalelo, todasAsPaginas } from '@/lib/planilha/todas-as-paginas';
 import { equipamentosApi, type EquipamentosQueryParams } from '@/services/equipamentos.services';
 import { planosManutencaoApi } from '@/services/planos-manutencao.services';
 import { IMPACTOS, PROBABILIDADES, type NotaDaEscala } from '@/core/features/equipamentos/utils/criticidade-pela-matriz';
 import { tarefasApi } from '@/services/tarefas.services';
+import { CRITICIDADES, PERIODICIDADES, rotuloDaPeriodicidade } from '@/core/features/equipamentos/utils/rotulos-da-planilha';
+import { planosDaPlanilha } from '@/core/features/equipamentos/utils/planos-da-planilha';
 
 /**
  * Equipamentos na planilha: uma aba por UC, com DADOS TÉCNICOS, COMPONENTES
- * UAR e, só para leitura, as TAREFAS DO PLANO. Decidido com o usuário
- * (09/out/2026): o plano entra pelo nome do template (trocar = vincular, como
- * na tela); as tarefas herdadas nunca viram customizadas pela planilha;
- * posição, pontos e MQTT ficam na tela.
+ * UAR e as TAREFAS DO PLANO. Decidido com o usuário (09/out/2026): o plano
+ * entra pelo nome do template (trocar = vincular, como na tela); as tarefas
+ * herdadas nunca viram customizadas pela planilha; posição, pontos e MQTT ficam
+ * na tela. Desde o SN-98 (23/out/2026) o plano que não existe é criado com as
+ * TAREFAS DO PLANO da aba; no que existe, a seção continua só informação.
  */
 
 type DadoTecnico = { campo: string; valor: string; tipo: string; unidade?: string | null };
@@ -100,25 +104,6 @@ type Equipamento = EquipamentoDaApi & {
   modeloPorId: Map<string, string>;
 };
 
-const CRITICIDADES: Record<string, string> = {
-  '1': 'Muito Baixa',
-  '2': 'Baixa',
-  '3': 'Média',
-  '4': 'Alta',
-  '5': 'Muito Alta',
-};
-
-const PERIODICIDADES: Record<string, string> = {
-  DIARIA: 'Diária',
-  SEMANAL: 'Semanal',
-  QUINZENAL: 'Quinzenal',
-  MENSAL: 'Mensal',
-  BIMESTRAL: 'Bimestral',
-  TRIMESTRAL: 'Trimestral',
-  SEMESTRAL: 'Semestral',
-  ANUAL: 'Anual',
-  PERSONALIZADA: 'Personalizada',
-};
 
 const ORIGENS: Record<string, string> = {
   HERDADA: 'Herdada do plano',
@@ -241,7 +226,7 @@ function cabecalho(refs: Referencia[]): Campo<Equipamento>[] {
       'PLANO',
       'plano',
       (e) => e.plano?.nome ?? null,
-      'O plano da categoria (modelo), pelo nome como na aba REFERÊNCIAS. Trocar o plano faz o mesmo que vincular na tela: a cópia é refeita e as tarefas customizadas são perdidas. Vazio = mantém.',
+      'O plano da categoria, pelo nome como na aba REFERÊNCIAS. Nome que não existe cria o plano (na CATEGORIA desta aba, com as tarefas da seção TAREFAS DO PLANO) e vincula o equipamento a ele. Trocar o plano faz o mesmo que vincular na tela: a cópia é refeita e as tarefas customizadas são perdidas. Vazio = mantém.',
       { lista: referencia(refs, 'planos'), vazioEhPadrao: true },
     ),
     ...(
@@ -334,26 +319,35 @@ function secoes(refs: Referencia[]) {
     titulo: 'TAREFAS DO PLANO',
     cor: AMARELO,
     somenteLeitura: true,
+    notaDeLeitura: 'Só vale para o plano que ainda não existe: ele é criado com estas tarefas. No plano que já existe, é só informação.',
     explicacao:
-      'Só informação: as tarefas do plano deste equipamento. Elas se editam na tela (no plano da categoria ou na ficha do equipamento); a planilha nunca transforma uma tarefa herdada em customizada.',
+      'As tarefas do plano deste equipamento. Plano que já existe: só informação — as tarefas se editam na tela (no plano da categoria ou na ficha do equipamento), e a planilha nunca transforma uma tarefa herdada em customizada. Plano que ainda não existe (nome novo em PLANO): estas linhas são as tarefas com que ele é criado; para acrescentar, insira linhas logo abaixo do cabeçalho da seção. As abas que citam o mesmo plano novo têm de ter as mesmas tarefas, ou a seção vazia.',
     itens: (e) => e.tarefasDoPlano,
     colunas: [
-      { titulo: 'TAG', tipo: 'texto', explicacao: '', valor: (t) => t.tag },
-      { titulo: 'NOME', tipo: 'texto', explicacao: '', valor: (t) => t.nome },
-      { titulo: 'INSTRUÇÃO', tipo: 'texto', explicacao: '', valor: (t) => t.instrucao?.nome ?? null },
+      { titulo: 'TAG', tipo: 'texto', explicacao: 'A etiqueta da tarefa; no plano novo, o sistema gera.', valor: (t) => t.tag },
+      { titulo: 'NOME', tipo: 'texto', explicacao: 'No plano novo: o nome da tarefa. Vazio = o nome da instrução.', exemplo: 'Inspeção semestral', valor: (t) => t.nome },
+      {
+        titulo: 'INSTRUÇÃO',
+        tipo: 'texto',
+        explicacao: 'No plano novo: a instrução da tarefa, pelo código ou pelo nome, como no cadastro de Instruções (obrigatória). A instrução tem de existir: importe Instruções antes.',
+        exemplo: 'CS-63',
+        valor: (t) => t.instrucao?.nome ?? null,
+      },
       {
         titulo: 'PERIODICIDADE',
         tipo: 'texto',
-        explicacao: '',
-        valor: (t) =>
-          t.frequencia === 'PERSONALIZADA'
-            ? `A cada ${t.frequencia_personalizada ?? '?'} dias`
-            : t.frequencia
-              ? (PERIODICIDADES[t.frequencia] ?? t.frequencia)
-              : null,
+        explicacao: `No plano novo: ${Object.values(PERIODICIDADES).filter((p) => p !== 'Personalizada').join(', ')}, ou "A cada N dias" (ex.: A cada 45 dias).`,
+        exemplo: 'Semestral',
+        valor: (t) => rotuloDaPeriodicidade(t.frequencia, t.frequencia_personalizada),
       },
-      { titulo: 'CRITICIDADE', tipo: 'texto', explicacao: '', valor: (t) => rotuloDaCriticidade(String(t.criticidade)) },
-      { titulo: 'ORIGEM', tipo: 'texto', explicacao: '', valor: (t) => (t.origem_status ? (ORIGENS[t.origem_status] ?? t.origem_status) : null) },
+      {
+        titulo: 'CRITICIDADE',
+        tipo: 'texto',
+        explicacao: `No plano novo: ${Object.values(CRITICIDADES).join(', ')}.`,
+        exemplo: 'Alta',
+        valor: (t) => rotuloDaCriticidade(String(t.criticidade)),
+      },
+      { titulo: 'ORIGEM', tipo: 'texto', explicacao: 'Se a tarefa veio do plano da categoria ou foi mudada no equipamento. Só informação.', valor: (t) => (t.origem_status ? (ORIGENS[t.origem_status] ?? t.origem_status) : null) },
     ],
   });
 
@@ -421,7 +415,14 @@ function definicao(referencias: Referencia[]): PlanilhaDeFichas<Equipamento> {
       'Cada aba é uma UC. Os componentes (UAR) entram na seção COMPONENTES UAR da UC deles.',
       'Foto, anexos, posição (ativo funcional), pontos e MQTT não passam pela planilha: ficam na tela.',
       'Equipamento compartilhado com o NexOn: a alteração confirmada é replicada lá.',
+      'Plano que não existe com o nome da coluna PLANO é criado pela importação, antes dos equipamentos: na CATEGORIA da aba, com as tarefas da seção TAREFAS DO PLANO (a prévia mostra em "Outros cadastros"). Criar plano pede a permissão da tela de Planos. As instruções das tarefas têm de existir: importe Instruções antes.',
+      'Plano que já existe só é vinculado: a planilha não muda o plano nem as tarefas dele (isso se faz na tela de Planos ou na ficha do equipamento). Na aba de equipamento novo com tarefas que não são as do plano, a prévia avisa que elas ficam de fora.',
+      'O ID DO PLANO de um plano que hoje tem outro nome (renomeado depois da exportação) é erro: escreva o nome de hoje em PLANO, ou apague o ID DO PLANO para criar um plano novo com o nome da aba. O plano de hoje do equipamento (mesmo com o nome antigo da cópia) não é plano novo.',
     ],
+    excecoes: {
+      cinza: 'TAREFAS DO PLANO, que dá as tarefas do plano que ainda não existe',
+      referencias: 'o plano (coluna PLANO)',
+    },
   };
 }
 
@@ -513,5 +514,11 @@ export async function exportarEquipamentos(filtros: FiltrosDeEquipamentos) {
   await exportarFichas(definicao(refs), equipamentos);
 }
 
-/** A leitura não usa as referências: quem acha o nome é o servidor. */
-export const lerEquipamentos = (livro: Workbook) => lerFichas(definicaoDeEquipamentos, livro);
+/**
+ * A leitura não usa as referências: quem acha o nome é o servidor. Junto vão
+ * os planos que a coluna PLANO cita (`planosDaPlanilha`, SN-98): o servidor cria
+ * o que não existe, com as TAREFAS DO PLANO da aba, antes dos equipamentos.
+ */
+export function lerEquipamentos(livro: Workbook): LeituraDaPlanilha {
+  return { ...lerFichas(definicaoDeEquipamentos, livro), catalogos: { planos: planosDaPlanilha(livro) } };
+}
