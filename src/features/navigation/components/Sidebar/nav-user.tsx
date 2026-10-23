@@ -1,3 +1,4 @@
+import { lunaLogout } from "@/features/luna-pedidos/luna-api"
 import {
   LogOut,
   Sun,
@@ -49,6 +50,8 @@ export function NavUser() {
   const logout = () => {
     clearUser();
     queryClient.clear();
+    // SERV-8: sair do Service encerra também a sessão do pedido ao Luna.
+    lunaLogout();
     navigate('/login');
   }
 
