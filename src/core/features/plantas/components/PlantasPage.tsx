@@ -22,6 +22,7 @@ import { useUserStore, usePlantasFeature, useHttpClient } from '@/core/context/h
 import { unwrapApiResponse } from '@/core/lib/utils';
 import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
 import { exportarPlantas, lerPlantas } from '../utils/planilha';
+import { formatApiError } from '@/utils/api-error';
 
 const initialFilters: PlantasFilters = {
   search: '',
@@ -208,7 +209,7 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
       console.error('[PLANTAS PAGE] Erro ao carregar plantas:', error);
       toast({
         title: "Erro ao carregar plantas",
-        description: (error instanceof Error && error.message) || "Não foi possível carregar a lista de plantas.",
+        description: formatApiError(error) || "Não foi possível carregar a lista de plantas.",
         variant: "destructive",
       });
       setPlantas([]);
@@ -299,7 +300,7 @@ export function PlantasPage({ mostrarTarifacao = false }: PlantasPageProps = {})
       console.error('❌ [PLANTAS PAGE] Erro ao buscar detalhes da planta:', error);
       toast({
         title: "Erro ao carregar planta",
-        description: (error instanceof Error && error.message) || "Não foi possível carregar os detalhes da planta.",
+        description: formatApiError(error) || "Não foi possível carregar os detalhes da planta.",
         variant: "destructive",
       });
       return null;

@@ -18,6 +18,7 @@ import { cn } from '@/core/lib/utils';
 import { useHttpClient } from '@/core/context/hooks';
 import { toast } from '@/core/hooks/use-toast';
 import { AnexoConcessionaria, AnexoTemporario, AnexoItem, ehAnexoTemporario } from '../types';
+import { formatApiError } from '@/utils/api-error';
 
 interface AnexosConcessionariaFieldProps {
   concessionariaId?: string;
@@ -172,7 +173,7 @@ export function AnexosConcessionariaField({
       console.error('Erro ao processar arquivo:', error);
       toast({
         title: "Erro ao adicionar arquivo",
-        description: (error instanceof Error && error.message) || "Não foi possível adicionar o arquivo.",
+        description: formatApiError(error) || "Não foi possível adicionar o arquivo.",
         variant: "destructive",
       });
     } finally {
@@ -225,7 +226,7 @@ export function AnexosConcessionariaField({
       console.error('Erro ao fazer download:', error);
       toast({
         title: "Erro ao baixar arquivo",
-        description: (error instanceof Error && error.message) || "Não foi possível baixar o arquivo.",
+        description: formatApiError(error) || "Não foi possível baixar o arquivo.",
         variant: "destructive",
       });
     }
@@ -268,7 +269,7 @@ export function AnexosConcessionariaField({
       console.error('Erro ao excluir anexo:', error);
       toast({
         title: "Erro ao excluir arquivo",
-        description: (error instanceof Error && error.message) || "Não foi possível excluir o arquivo.",
+        description: formatApiError(error) || "Não foi possível excluir o arquivo.",
         variant: "destructive",
       });
     } finally {

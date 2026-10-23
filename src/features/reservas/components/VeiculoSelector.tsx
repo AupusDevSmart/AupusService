@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Car, Users, Fuel, AlertTriangle, CheckCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { VeiculosService, type ViaturaComDisponibilidade } from '@/services/veiculos.services';
-import { formatApiError } from '@/utils/api-error';
+import { erroParaATela } from '@/utils/api-error';
 import { FiltrosDisponibilidade } from '../types';
 import { formatarDiaDaReserva } from '../utils/dia-da-reserva';
 
@@ -69,7 +69,7 @@ export function VeiculoSelector({
     setErro(null);
     VeiculosService.getDisponibilidade({ dataInicio, dataFim, horaInicio, horaFim, excluirReservaId })
       .then((lista) => ativo && setViaturas(lista.map(paraLista)))
-      .catch((e) => ativo && setErro(formatApiError(e)))
+      .catch((e) => ativo && setErro(erroParaATela(e)))
       .finally(() => ativo && setCarregando(false));
     return () => {
       ativo = false;
@@ -138,6 +138,10 @@ export function VeiculoSelector({
                 aqui, antes do Salvar recusar */}
             {!veiculoAtual.disponivel && veiculoAtual.motivo && (
               <p className="mt-1 text-xs text-destructive">Ocupada neste horário: {veiculoAtual.motivo}</p>
+            )}
+            {/* A disponibilidade do novo horário falhou: sem isto, o resumo mostrava a da janela anterior */}
+            {erro && (
+              <p className="mt-1 text-xs text-destructive">Não foi possível ver se ela está livre neste horário: {erro}</p>
             )}
           </div>
         </div>

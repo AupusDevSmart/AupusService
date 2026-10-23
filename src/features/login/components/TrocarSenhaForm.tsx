@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { profileService } from '@/services/profile.service';
 import { AuthService } from '@/services/auth.service';
 import { useUserStore } from '@/store/useUserStore';
-import { formatApiError } from '@/utils/api-error';
+import { erroParaATela } from '@/utils/api-error';
 import {
   AVISO_ERRO,
   BOTAO_PRINCIPAL,
@@ -62,7 +62,7 @@ export function TrocarSenhaForm() {
       updateUser(await AuthService.getCurrentUser());
       navigate('/dashboard', { replace: true });
     } catch (e) {
-      setErro(formatApiError(e));
+      setErro(erroParaATela(e));
     }
   };
 

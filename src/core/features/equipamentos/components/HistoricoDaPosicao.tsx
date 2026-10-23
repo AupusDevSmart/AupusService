@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { History, Loader2, PackageMinus, ArrowRightLeft } from 'lucide-react';
 import { Combobox } from '@/core/components/ui/combobox';
 import { useAtivosFuncionais } from '../hooks/useAtivosFuncionais';
-import { mensagemDoBackend } from '@/utils/api-error';
+import { erroParaATela } from '@/utils/api-error';
 import { Button } from '@/core/components/ui/button';
 import {
   useVinculoDaPosicao,
@@ -68,12 +68,13 @@ export function HistoricoDaPosicao({
     setErro(null);
     try {
       await remover(posicaoId, motivo.trim() || undefined);
+      // Fecha o bloco só depois de reler: o erro da releitura aparece nele, e não some com ele
+      setPosicao(await buscar(posicaoId));
       setPedindoMotivo(false);
       setMotivo('');
-      setPosicao(await buscar(posicaoId));
       onMudou?.();
     } catch (e) {
-      setErro(mensagemDoBackend(e) ?? 'Nao foi possivel remover');
+      setErro(erroParaATela(e, 'Nao foi possivel remover'));
     } finally {
       setRemovendo(false);
     }
@@ -87,12 +88,12 @@ export function HistoricoDaPosicao({
     setErro(null);
     try {
       await transferir(eq, destino, motivo.trim() || undefined);
+      setPosicao(await buscar(posicaoId!));
       setPedindoDestino(false);
       setDestino(""); setMotivo("");
-      setPosicao(await buscar(posicaoId!));
       onMudou?.();
     } catch (e) {
-      setErro(mensagemDoBackend(e) ?? "Nao foi possivel transferir");
+      setErro(erroParaATela(e, "Nao foi possivel transferir"));
     } finally {
       setTransferindo(false);
     }

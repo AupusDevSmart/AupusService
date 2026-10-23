@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, Loader2, Factory } from 'lucide-react';
 import { useHttpClient } from '@/core/context/hooks';
-import { formatApiError } from '@/utils/api-error';
+import { erroParaATela } from '@/utils/api-error';
 
 interface UsuarioPlantasTabProps {
   usuarioId: string;
@@ -38,7 +38,7 @@ export function UsuarioPlantasTab({ usuarioId }: UsuarioPlantasTabProps) {
         setVinculos(data);
       } catch (err) {
         if (cancel) return;
-        setError(formatApiError(err));
+        setError(erroParaATela(err));
       } finally {
         if (!cancel) setLoading(false);
       }

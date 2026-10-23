@@ -3,6 +3,7 @@ import axios, { InternalAxiosRequestConfig } from 'axios';
 import { env } from '@/config/env';
 import { useUserStore } from '@/store/useUserStore';
 import { toast } from '@/hooks/use-toast';
+import { avisoGlobalDeErro } from '@/lib/aviso-de-erro';
 import { AuthService } from '@/services/auth.service';
 import qs from 'qs';
 
@@ -189,13 +190,19 @@ api.interceptors.response.use(
       || error.response?.status
       || 'UNKNOWN_ERROR';
 
-    // Mostrar toast com o erro (exceto para erros 401 que são tratados acima)
+    // O aviso global é a rede de segurança (SN-43): espera um instante e não aparece se a tela avisar
+    // o erro do jeito dela, com contexto. Eram dois avisos com a mesma mensagem. O código fica no console
     if (error.response?.status !== 401 && !originalRequest?.semAvisoGlobal) {
-      toast({
-        variant: 'destructive',
-        title: `Erro ${errorCode}`,
-        description: errorMessage,
-      });
+      avisoGlobalDeErro(
+        () =>
+          toast({
+            variant: 'destructive',
+            title: 'Não foi possível concluir',
+            description: errorMessage,
+          }),
+        undefined,
+        error,
+      );
     }
 
     // Log detalhado no console para debug

@@ -1,5 +1,5 @@
 // src/features/plantas/components/planta-modal.tsx
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BaseModal } from '@/core/components/common/base-modal/BaseModal';
 import { Button } from '@/core/components/ui/button';
 import {
@@ -12,7 +12,7 @@ import { ModalMode, PlantaFormData, type Endereco, type Planta } from '../types'
 import { plantasFormFields } from '../config/form-config';
 import { useHttpClient } from '@/core/context/hooks';
 import { CNPJUtils } from '@/core/components/ui/cnpj-input';
-import { formatApiError } from '@/utils/api-error';
+import { erroParaATela, formatApiError } from '@/utils/api-error';
 import { PlantaOperadoresTab, type PlantaOperadoresTabHandle } from './PlantaOperadoresTab';
 import {
   AlertDialog,
@@ -93,6 +93,11 @@ export function PlantaModal({
 
   // Estado local para feedback
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // O bloco do erro fica depois do formulário inteiro: sem rolar até ele, o motivo ficava abaixo da dobra
+  const erroRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (submitError) erroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [submitError]);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -149,7 +154,7 @@ export function PlantaModal({
     } catch (error) {
       console.error('❌ Erro no handleSubmit:', error);
       // Pegar a mensagem de erro da resposta da API se disponível
-      const errorMessage = formatApiError(error);
+      const errorMessage = erroParaATela(error);
       setSubmitError(errorMessage);
       // Não re-lançar o erro - já tratamos mostrando a mensagem
     } finally {
@@ -176,7 +181,7 @@ export function PlantaModal({
     } catch (error) {
       console.error('❌ Erro ao deletar planta:', error);
       // Pegar a mensagem de erro da resposta da API se disponível
-      const errorMessage = formatApiError(error);
+      const errorMessage = erroParaATela(error);
       setSubmitError(errorMessage);
       setShowDeleteDialog(false);
     } finally {
@@ -249,7 +254,7 @@ export function PlantaModal({
     >
       {/* FEEDBACK DE ERRO - Responsivo */}
       {submitError && (
-        <div className="mb-3 md:mb-4 p-3 md:p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-950 dark:border-red-800">
+        <div ref={erroRef} className="mb-3 md:mb-4 p-3 md:p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-950 dark:border-red-800">
           <div className="flex items-start gap-2 md:gap-3">
             <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-red-600 mt-0.5 shrink-0" />
             <div className="min-w-0 flex-1">

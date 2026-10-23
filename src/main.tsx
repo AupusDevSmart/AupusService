@@ -7,6 +7,11 @@ import '@/assets/globals.css';
 import '@/core/styles/design-minimal-components.css';
 
 import App from './App.tsx'
+import { toast as toastDoSonner } from 'sonner'
+import { detectarAvisosDoSonner } from '@/lib/aviso-de-erro'
+
+// O toast.error da tela cancela o aviso global do mesmo erro da API (SN-43)
+detectarAvisosDoSonner(toastDoSonner)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -102,8 +102,8 @@ export function UnidadeModal({
         // existir. Falha aqui nao invalida a instalacao, que ja foi criada —
         // por isso o erro e avisado sem desfazer nada.
         const novoId = resultado?.id?.trim?.() || resultado?.id;
+        const pendencias: string[] = [];
         if (novoId) {
-          const pendencias: string[] = [];
 
           for (const [chave, acao] of acoesPosCriacaoRef.current) {
             try {
@@ -116,19 +116,21 @@ export function UnidadeModal({
             }
           }
 
-          if (pendencias.length > 0) {
-            // A instalacao existe: nao adianta segurar o sheet aberto. O aviso
-            // diz o que faltou e o motivo, que e o que permite agir.
-            toast({
-              title: 'Instalação criada, mas os anexos não subiram',
-              description: pendencias.join(' | '),
-              variant: 'destructive',
-              duration: 8000,
-            });
-          }
         }
 
-        toast({ title: `Instalação ${resultado.nome} criada!` });
+        if (pendencias.length > 0) {
+          // A instalacao existe: nao adianta segurar o sheet aberto. O aviso
+          // diz o que faltou e o motivo, que e o que permite agir. Um aviso so:
+          // com o de sucesso logo depois, o TOAST_LIMIT = 1 descartava este
+          toast({
+            title: `Instalação ${resultado.nome} criada, mas os anexos não subiram`,
+            description: pendencias.join(' | '),
+            variant: 'destructive',
+            duration: 8000,
+          });
+        } else {
+          toast({ title: `Instalação ${resultado.nome} criada!` });
+        }
       } else if (isEditMode && unidade) {
         resultado = await updateUnidade({ id: unidade.id, data: dto });
         toast({ title: `Instalação ${resultado.nome} atualizada!` });

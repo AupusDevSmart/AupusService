@@ -19,6 +19,7 @@ import { concessionariasFormFields } from '../config/form-config';
 import { useUserStore, useConcessionariasFeature, useHttpClient } from '@/core/context/hooks';
 import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
 import { exportarConcessionarias, lerConcessionarias } from '../utils/planilha';
+import { formatApiError } from '@/utils/api-error';
 
 const initialFilters: ConcessionariasFilters = {
   search: '',
@@ -82,7 +83,7 @@ export function ConcessionariasPage() {
       console.error('❌ [CONCESSIONARIAS PAGE] Erro ao carregar concessionárias:', error);
       toast({
         title: "Erro ao carregar concessionárias",
-        description: (error instanceof Error && error.message) || "Não foi possível carregar a lista de concessionárias.",
+        description: formatApiError(error) || "Não foi possível carregar a lista de concessionárias.",
         variant: "destructive",
       });
       setConcessionarias([]);
@@ -144,7 +145,7 @@ export function ConcessionariasPage() {
       console.error('❌ [CONCESSIONARIAS PAGE] Erro ao buscar detalhes da concessionária:', error);
       toast({
         title: "Erro ao carregar concessionária",
-        description: (error instanceof Error && error.message) || "Não foi possível carregar os detalhes da concessionária.",
+        description: formatApiError(error) || "Não foi possível carregar os detalhes da concessionária.",
         variant: "destructive",
       });
       return null;
@@ -257,7 +258,7 @@ export function ConcessionariasPage() {
 
       toast({
         title: modalState.mode === 'create' ? "Erro ao cadastrar concessionária" : "Erro ao atualizar concessionária",
-        description: (error instanceof Error && error.message) || "Ocorreu um erro interno. Tente novamente.",
+        description: formatApiError(error) || "Ocorreu um erro interno. Tente novamente.",
         variant: "destructive",
       });
     } finally {

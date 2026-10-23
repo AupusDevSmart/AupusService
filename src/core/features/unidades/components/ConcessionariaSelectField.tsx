@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/core/components/ui/select';
+import { formatApiError } from '@/utils/api-error';
 
 interface ConcessionariaSelectFieldProps {
   value?: string;
@@ -70,7 +71,7 @@ export function ConcessionariaSelectField({
         }
       } catch (err) {
         console.error('❌ [ConcessionariaSelect] Erro ao carregar concessionárias:', err);
-        setError((err instanceof Error && err.message) || 'Erro ao carregar concessionárias');
+        setError(formatApiError(err) || 'Erro ao carregar concessionárias');
         setConcessionarias([]);
       } finally {
         setLoading(false);

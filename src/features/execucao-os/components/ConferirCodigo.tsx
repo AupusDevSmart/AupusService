@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { execucaoOSApi, type ConferenciaDoCodigo } from '@/services/execucao-os.service';
-import { formatApiError, mensagemDoBackend } from '@/utils/api-error';
+import { erroParaATela } from '@/utils/api-error';
 import { quando } from '@/features/execucao-os/utils/documento-da-os';
 import { avisarFalhaDoPdf, baixarPdfDaOS } from '@/features/execucao-os/utils/baixar-pdf-da-os';
 
@@ -47,7 +47,7 @@ export function ConferirCodigo({ aberto, onAbertoChange, codigoInicial, onAbrirO
       if (pedido === ultimoPedido.current) setResultado(conferencia);
     } catch (e) {
       // A chamada vai sem o toast global: a recusa aparece aqui, no lugar do resultado
-      if (pedido === ultimoPedido.current) setErro(mensagemDoBackend(e) ?? formatApiError(e));
+      if (pedido === ultimoPedido.current) setErro(erroParaATela(e));
     } finally {
       if (pedido === ultimoPedido.current) setConferindo(false);
     }

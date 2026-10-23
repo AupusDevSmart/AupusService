@@ -2,6 +2,7 @@
 
 // Inspired by react-hot-toast library
 import * as React from "react"
+import { telaAvisouErro } from "@/lib/aviso-de-erro"
 
 import type {
   ToastActionElement,
@@ -143,6 +144,8 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
+  // Aviso de erro da tela: o aviso global do interceptor, que ainda espera, não aparece (SN-43)
+  if (props.variant === "destructive") telaAvisouErro()
   const id = genId()
 
   const update = (props: ToasterToast) =>
