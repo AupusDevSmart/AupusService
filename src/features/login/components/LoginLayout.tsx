@@ -14,16 +14,13 @@ export function LoginBanner() {
 
       <div className="flex flex-1 flex-col items-center justify-center gap-8 text-center">
         <img
-          src="/brand/service-logo-negativo.svg"
+          src="/brand/service-logo-negativo.png"
           alt="Aupus Service"
           className="h-auto w-full max-w-[340px] object-contain"
         />
-        <div className="space-y-2">
-          <p className="text-lg font-semibold text-white">Aupus Service</p>
-          <p className="max-w-xs text-sm leading-relaxed text-service-texto-secundario">
-            Interligando você com o futuro. Energize-se.
-          </p>
-        </div>
+        <p className="max-w-xs text-sm leading-relaxed text-service-texto-secundario">
+          Interligando você com o futuro. Energize-se.
+        </p>
       </div>
     </aside>
   );
@@ -42,9 +39,9 @@ export function LoginLayout({ children }: { children: ReactNode }) {
         <div className="flex w-full max-w-sm flex-col items-center gap-8">
           {/* Sem o painel (< lg), a marca entra reduzida no topo. */}
           <img
-            src="/brand/service-logo-negativo.svg"
+            src="/brand/service-logo-negativo.png"
             alt="Aupus Service"
-            className="h-12 w-auto object-contain lg:hidden"
+            className="h-auto w-44 object-contain lg:hidden"
           />
           {children}
         </div>
