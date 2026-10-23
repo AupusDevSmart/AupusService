@@ -4,10 +4,12 @@ import { describe, expect, it } from 'vitest';
 import { CAIXA_DA_LOGO, TRACOS_DA_LOGO } from './logo-aupus';
 
 /**
- * A logo do PDF são os traços do SVG da marca (SN-92): trocar a logo do app sem
- * gerar de novo o `logo-aupus.ts` quebra aqui, e não num PDF com a marca velha.
+ * A logo do PDF são os traços do SVG da Aupus Energia (SN-92), guardado ao lado
+ * (`logo-aupus.svg`): trocar a logo do PDF sem gerar de novo o `logo-aupus.ts`
+ * quebra aqui, e não num PDF com a marca velha. O app usa outra, a do kit
+ * Service (`public/brand`), desde 22/out/2026.
  */
-const svg = readFileSync(`${process.cwd()}/public/brand/service-logo-negativo.svg`, 'utf8');
+const svg = readFileSync(`${process.cwd()}/src/lib/pdf/logo-aupus.svg`, 'utf8');
 const caminhos = [...svg.matchAll(/<path ([^>]*?)\/?>/g)].map(([, atributos]) =>
   Object.fromEntries([...atributos.matchAll(/([\w-]+)="([^"]*)"/g)].map(([, k, v]) => [k, v])),
 );

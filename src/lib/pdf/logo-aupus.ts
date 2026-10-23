@@ -1,9 +1,9 @@
 // src/lib/pdf/logo-aupus.ts
 /**
- * A logo da Aupus em vetor para o PDF: os traços de
- * `public/brand/service-logo-negativo.svg` (o `logo-aupus.test.ts` confere que
- * são os mesmos), com as cores e o peso da versão colorida
- * (`service-logo-colorido.png`, a da barra do app): o navy nas letras, o verde
+ * A logo da Aupus Energia em vetor para o PDF: os traços de `logo-aupus.svg`,
+ * ao lado (o `logo-aupus.test.ts` confere que são os mesmos), com as cores e o
+ * peso da versão colorida (o PNG que a barra do app usava até 22/out/2026,
+ * quando o app passou ao logo do kit Service): o navy nas letras, o verde
  * na onda, o branco do papel nos cortes da linha tracejada, e o "Aupus" e a
  * onda mais grossos, medidos contra o PNG. Gerado do SVG; não editar à mão.
  *
