@@ -21,7 +21,9 @@ const feriado = (extra: Partial<FeriadoResponse>): FeriadoResponse => ({
   ...extra,
 });
 
-describe('planilha de feriados', { timeout: 30_000 }, () => {
+// 120 s: o primeiro teste carrega o exceljs; sozinho leva ~3 s, mas na suíte inteira
+// (12 workers carregando ao mesmo tempo) passava dos 30 s e falhava sem defeito nenhum.
+describe('planilha de feriados', { timeout: 120_000 }, () => {
   it('ida e volta: a data volta no mesmo dia; plantas e IDs na mesma ordem', async () => {
     const registros = [
       feriado({}),

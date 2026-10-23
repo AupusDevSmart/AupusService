@@ -39,9 +39,9 @@ export const usePlantas = () => {
       console.log('✅ [USE PLANTAS] Plantas carregadas:', plantasData.length);
       console.log('🔍 [USE PLANTAS] Exemplo de planta com proprietário:', plantasData[0]);
       setPlantas(plantasData);
-    } catch (err: any) {
+    } catch (err) {
       console.error('❌ [USE PLANTAS] Erro:', err);
-      setError(err.message || 'Erro ao carregar plantas');
+      setError((err instanceof Error && err.message) || 'Erro ao carregar plantas');
     } finally {
       setLoading(false);
     }

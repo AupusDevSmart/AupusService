@@ -1,5 +1,5 @@
 // src/features/solicitacoes-servico/components/SolicitacoesPage.tsx
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -14,7 +14,7 @@ import { PropostaSection } from './PropostaSection';
 import { PropostaCorrenteProvider, comBotaoDePdf } from './BotaoGerarPdf';
 import { AbrirInstrucaoContext, ValoresDaPropostaContext, type ValoresDaProposta } from './proposta-contexto';
 import { EditarInstrucaoSheet } from '@/features/instrucoes/components/EditarInstrucaoSheet';
-import type { FormField } from '@/types/base';
+import type { FormField, FormFieldProps } from '@/types/base';
 
 /**
  * O que o BaseForm entrega a um campo customizado. So o que esta secao usa —
@@ -31,7 +31,9 @@ interface PropsDoCampo {
   formData?: { instrucoes_ids?: string[] };
 }
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { SolicitacaoServico, SolicitacaoServicoFormData } from '../types';
+import { useAbrirPelaUrl } from '@/hooks/useAbrirPelaUrl';
+import { SolicitacaoServico, SolicitacaoServicoFormData, SolicitacoesFilters } from '../types';
+import type { IconeDeAcao } from '@/core/types/base';
 import { solicitacoesTableColumns } from '../config/table-config';
 import { createSolicitacoesTableActions } from '../config/actions-config';
 import { useSolicitacoesApi } from '../hooks/useSolicitacoesApi';
@@ -39,6 +41,7 @@ import { useSolicitacoesFilters } from '../hooks/useSolicitacoesFilters';
 import { useSolicitacoesActions } from '../hooks/useSolicitacoesActions';
 import { ActionConfirmPanel } from './ActionConfirmPanel';
 import { AtalhoParaProgramacao } from '@/features/programacao-os/components/AtalhoParaProgramacao';
+import { ComentariosDoRegistro } from '@/features/comentarios/components/ComentariosDoRegistro';
 import { linkDeProgramacao } from '@/features/programacao-os/utils/link-de-programacao';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '@/store/useUserStore';
@@ -62,7 +65,7 @@ const initialStats: SolicitacoesStats = {
 
 export function SolicitacoesPage() {
   const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('solicitacoes-servico');
-  const [filters, setFilters] = useState(() => ({
+  const [filters, setFilters] = useState<SolicitacoesFilters>(() => ({
     ...initialFilters,
     limit: linhasPorPagina,
   }));
@@ -96,8 +99,12 @@ export function SolicitacoesPage() {
     onSuccess: reloadData,
   });
 
+  // A notificação leva para cá com ?solicitacaoId= (SN-47)
+  useAbrirPelaUrl('solicitacaoId', solicitacoesActions.abrirPorId);
+
   const navigate = useNavigate();
   const temPermissao = useUserStore((st) => st.hasPermission);
+  const ehCliente = useUserStore((st) => st.getUserRole()) === 'proprietario';
 
   const customActions = useMemo(() => {
     const tableActions = createSolicitacoesTableActions({
@@ -111,7 +118,7 @@ export function SolicitacoesPage() {
     return tableActions
       .filter((action) => action.label !== 'Visualizar' && action.label !== 'Editar')
       .map((action) => {
-        const Icon = action.icon as any;
+        const Icon = action.icon as IconeDeAcao | undefined;
         return {
           key: action.label.toLowerCase().replace(/\s+/g, '_'),
           label: action.label,
@@ -215,7 +222,7 @@ export function SolicitacoesPage() {
         campo.key === 'proposta'
           ? {
               ...campo,
-              render: ({ entity, mode, formData }: PropsDoCampo) => (
+              render: ({ entity, mode, formData }: FormFieldProps & PropsDoCampo) => (
                 <PropostaSection
                   solicitacaoId={entity?.id ?? null}
                   instrucoesIds={formData?.instrucoes_ids ?? []}
@@ -267,15 +274,19 @@ export function SolicitacoesPage() {
     }
   };
 
+  const rascunhoDoComentario = useRef(false);
   const handleClose = () => {
+    // Comentário digitado e não enviado não some calado ao fechar (SN-48)
+    if (rascunhoDoComentario.current && !window.confirm('Há um comentário não enviado. Fechar e descartar?')) return;
+    rascunhoDoComentario.current = false;
     closeModal();
     solicitacoesActions.clearPendingAction();
   };
 
-  const handleFilterChange = async (newFilters: any) => {
+  const handleFilterChange = async (newFilters: Partial<SolicitacoesFilters>) => {
     const cleanedFilters = { ...newFilters };
 
-    Object.keys(cleanedFilters).forEach((key) => {
+    (Object.keys(cleanedFilters) as Array<keyof SolicitacoesFilters>).forEach((key) => {
       if (cleanedFilters[key] === 'all' || cleanedFilters[key] === '') {
         cleanedFilters[key] = undefined;
       }
@@ -283,7 +294,7 @@ export function SolicitacoesPage() {
 
     setFilters((prev) => {
       const updated = { ...prev, ...cleanedFilters, page: 1 };
-      Object.keys(updated).forEach(key => {
+      (Object.keys(updated) as Array<keyof SolicitacoesFilters>).forEach(key => {
         if (updated[key] === undefined && key !== 'page' && key !== 'limit' && key !== 'search') {
           delete updated[key];
         }
@@ -386,7 +397,7 @@ export function SolicitacoesPage() {
               <BaseModal
                 isOpen={modalState.isOpen}
                 mode={modalState.mode}
-                entity={modalState.entity as any}
+                entity={modalState.entity}
                 title={getModalTitle()}
                 icon={<FilePenLine className="h-4 w-4 md:h-5 md:w-5 text-primary" />}
                 formFields={camposDoSheet}
@@ -405,6 +416,19 @@ export function SolicitacoesPage() {
                   ) : undefined
                 }
               >
+                {/* Conversa com quem pediu, no fim do sheet; o interno não aparece para o cliente (SN-48) */}
+                {modalState.mode !== 'create' && modalState.entity?.id && (
+                  <div className="mt-6 rounded-md border p-4">
+                    <ComentariosDoRegistro
+                      alvo="solicitacao_servico"
+                      registroId={modalState.entity.id}
+                      podeComentar={temPermissao('solicitacoes.manage', 'solicitacoes.create')}
+                      ehCliente={ehCliente}
+                      onRascunho={(tem) => (rascunhoDoComentario.current = tem)}
+                    />
+                  </div>
+                )}
+
                 {/* Painel de confirmação de ação - aparece no final do form em modo view */}
                 {solicitacoesActions.pendingAction && modalState.mode === 'view' && (
                   <ActionConfirmPanel

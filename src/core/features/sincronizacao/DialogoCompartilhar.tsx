@@ -5,7 +5,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/core/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
-import { formatApiError } from '@/utils/api-error';
+import { erroParaATela, formatApiError } from '@/utils/api-error';
 import { OUTRO_PRODUTO, PreviaDaCadeia } from './useSincronizacao';
 
 export interface AlvoDoCompartilhamento {
@@ -65,7 +65,7 @@ export function DialogoCompartilhar({
         // Sem previa nao da para pedir consentimento informado, entao o dialogo
         // mostra o erro e NAO oferece o botao de confirmar. Compartilhar no
         // escuro e exatamente o que este fluxo existe para impedir.
-        if (!cancelado) setErroPrevia(formatApiError(e));
+        if (!cancelado) setErroPrevia(erroParaATela(e));
       })
       .finally(() => { if (!cancelado) setCarregandoPrevia(false); });
 

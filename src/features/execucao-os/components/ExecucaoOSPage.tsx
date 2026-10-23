@@ -8,7 +8,7 @@ import { BaseTable } from '@/core';
 import { BaseFilters } from '@/core';
 import { BaseModal } from '@/core';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Download, Eye } from 'lucide-react';
+import { RefreshCw, Eye, ShieldCheck } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 
 // Hooks e configurações da feature
@@ -16,9 +16,15 @@ import { useExecucaoOSApi } from '../hooks/useExecucaoOSApi';
 import { useExecucaoOSFilters } from '../hooks/useExecucaoOSFilters';
 import { execucaoOSTableColumns } from '../config/table-config';
 import { createExecucaoOSTableActions } from '../config/actions-config';
-import { ActionConfirmPanel, type PendingAction } from './ActionConfirmPanel';
+import { ActionConfirmPanel, type PendingAction, type DadosDaConfirmacao } from './ActionConfirmPanel';
 import { AcoesDaOS } from './AcoesDaOS';
 import { OQueFoiFeito } from './OQueFoiFeito';
+import { CustosDaOS } from './CustosDaOS';
+import { AnexosDaOS } from './AnexosDaOS';
+import { BotaoPdfDaOS } from './BotaoPdfDaOS';
+import { BotaoExportarOS } from './BotaoExportarOS';
+import { ConferirCodigo } from './ConferirCodigo';
+import { ComentariosDoRegistro } from '@/features/comentarios/components/ComentariosDoRegistro';
 import {
   montarProgresso,
   tarefasPendentes,
@@ -28,7 +34,8 @@ import { statusDaExecucao } from '../config/actions-config';
 
 // Tipos
 import type { ExecucaoOS, ExecucaoOSFilters } from '../types';
-import { execucaoOSTransitionsService } from '@/services/execucao-os-transitions.service';
+import { execucaoOSTransitionsService, type ExecutarOSDto } from '@/services/execucao-os-transitions.service';
+import type { IconeDeAcao } from '@/core/types/base';
 import { toast } from '@/hooks/use-toast';
 import { formatApiError } from '@/utils/api-error';
 import { execucaoOSApi } from '@/services/execucao-os.service';
@@ -44,6 +51,10 @@ const initialFilters: ExecucaoOSFilters = {
   statusExecucao: 'all',
   tipo: 'all',
   prioridade: 'all',
+  planta: 'all',
+  equipamento: 'all',
+  dataInicio: '',
+  dataFim: '',
   page: 1,
   limit: LINHAS_POR_PAGINA_PADRAO,
 };
@@ -56,7 +67,10 @@ export function ExecucaoOSPage() {
     limit: linhasPorPagina,
   }));
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  // SN-62: a conferência do código do PDF, aberta pelo botão ou pelo link impresso (?conferir=)
+  const [conferencia, setConferencia] = useState<{ aberta: boolean; codigo: string | null }>({ aberta: false, codigo: null });
   const temPermissao = useUserStore((s) => s.hasPermission);
+  const ehCliente = useUserStore((s) => s.getUserRole()) === 'proprietario';
 
   // Tarefas e checklist da OS aberta, vivos: a seção "O que foi feito" grava
   // item a item, e o painel de Executar precisa saber o que ainda está pendente.
@@ -81,7 +95,7 @@ export function ExecucaoOSPage() {
   const { modalState, openModal, closeModal } = useGenericModal<ExecucaoOS>();
 
   useEffect(() => {
-    const os = modalState.entity as (ExecucaoOS & { checklist?: never[]; tarefas_os?: never[] }) | null;
+    const os = modalState.entity;
     setProgresso(montarProgresso(os?.tarefas_os ?? [], os?.checklist ?? []));
   }, [modalState.entity]);
 
@@ -124,7 +138,7 @@ export function ExecucaoOSPage() {
   };
 
   // Confirm action handler - recebe objeto com todos os campos do painel
-  const handleConfirmAction = async (data: Record<string, any>) => {
+  const handleConfirmAction = async (data: DadosDaConfirmacao) => {
     if (!pendingAction || !modalState.entity) return;
 
     const entity = modalState.entity;
@@ -144,7 +158,8 @@ export function ExecucaoOSPage() {
           await execucaoOSTransitionsService.retomar(entity.id, data);
           break;
         case 'executar':
-          await execucaoOSTransitionsService.executar(entity.id, data as any);
+          // resultado_servico é obrigatório no painel: não confirma sem ele
+          await execucaoOSTransitionsService.executar(entity.id, data as ExecutarOSDto);
           break;
         case 'auditar':
           await execucaoOSTransitionsService.auditar(entity.id, {
@@ -176,7 +191,7 @@ export function ExecucaoOSPage() {
         reabrir: 'OS reaberta',
         cancelar: 'OS cancelada',
       };
-      toast({ title: actionLabels[pendingAction] || 'Acao realizada' });
+      toast({ title: actionLabels[pendingAction] || 'Ação realizada' });
 
       closeModal();
       setPendingAction(null);
@@ -202,9 +217,23 @@ export function ExecucaoOSPage() {
   // A ref guarda o id já aberto: o fetchOne alterna `loading` (dependência do
   // efeito) antes de o parâmetro sair da URL, e isso refazia o GET a cada ~2s,
   // recriando o progresso e desfazendo o que a pessoa acabara de marcar.
+  // Sem o parâmetro, a ref zera: o mesmo link clicado de novo (a notificação
+  // da mesma OS) volta a abrir.
+  // O link impresso no PDF (?conferir=<código>) abre a conferência já com o código.
+  // O parâmetro sai da URL (replace), como o execucaoId, e o código fica no estado
+  useEffect(() => {
+    const codigo = searchParams.get('conferir');
+    if (!codigo) return;
+    setConferencia({ aberta: true, codigo });
+    const resto = new URLSearchParams(searchParams);
+    resto.delete('conferir');
+    setSearchParams(resto, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const abertoPelaUrl = useRef<string | null>(null);
   useEffect(() => {
     const execucaoIdParam = searchParams.get('execucaoId');
+    if (!execucaoIdParam) abertoPelaUrl.current = null;
 
     if (execucaoIdParam && abertoPelaUrl.current !== execucaoIdParam) {
       const abrirModalAutomatico = async () => {
@@ -217,10 +246,12 @@ export function ExecucaoOSPage() {
             openModal('view', execucaoEncontrada);
           }
 
-          setSearchParams({});
+          // replace: sem ele o Voltar caía de novo em ?execucaoId, reabria a OS e
+          // empilhava outra vez — quem veio do calendário não conseguia voltar
+          setSearchParams({}, { replace: true });
         } catch (error) {
           console.error('Erro ao buscar execução para abrir modal:', error);
-          setSearchParams({});
+          setSearchParams({}, { replace: true });
         }
       };
 
@@ -236,6 +267,8 @@ export function ExecucaoOSPage() {
     setFilters(prev => ({
       ...prev,
       ...partial,
+      // Outra planta: o equipamento escolhido era da anterior
+      ...('planta' in partial && partial.planta !== prev.planta && { equipamento: 'all' }),
       page: 1,
     }));
   };
@@ -261,12 +294,12 @@ export function ExecucaoOSPage() {
 
     const registros = registrosAlterados(
       {
-        materiais: (entity.materiaisConsumidos ?? []) as never[],
-        ferramentas: (entity.ferramentasUtilizadas ?? []) as never[],
+        materiais: entity.materiaisConsumidos ?? [],
+        ferramentas: entity.ferramentasUtilizadas ?? [],
       },
       {
-        materiais: (data.materiaisConsumidos ?? []) as never[],
-        ferramentas: (data.ferramentasUtilizadas ?? []) as never[],
+        materiais: data.materiaisConsumidos ?? [],
+        ferramentas: data.ferramentasUtilizadas ?? [],
       },
     );
 
@@ -287,7 +320,11 @@ export function ExecucaoOSPage() {
     }
   };
 
+  const rascunhoDoComentario = useRef(false);
   const handleCloseModal = () => {
+    // Comentário digitado e não enviado não some calado ao fechar (SN-48)
+    if (rascunhoDoComentario.current && !window.confirm('Há um comentário não enviado. Fechar e descartar?')) return;
+    rascunhoDoComentario.current = false;
     setPendingAction(null);
     closeModal();
   };
@@ -343,7 +380,8 @@ export function ExecucaoOSPage() {
               />
             </div>
 
-            <div className="flex gap-2 w-full sm:w-auto">
+            {/* Quebra a linha no celular: os três botões não cabem lado a lado em 360px (SN-68) */}
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
@@ -358,12 +396,15 @@ export function ExecucaoOSPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => alert('Funcionalidade em breve')}
+                onClick={() => setConferencia({ aberta: true, codigo: null })}
                 className="flex-1 sm:flex-none"
               >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar
+                <ShieldCheck className="h-4 w-4 mr-2" />
+                Conferir código
               </Button>
+
+              {/* Todas as OS do filtro, não só a página (SN-63) */}
+              <BotaoExportarOS filtro={toApiParams} valores={filters as unknown as Record<string, unknown>} filtros={filterConfigs} />
             </div>
           </div>
 
@@ -372,14 +413,17 @@ export function ExecucaoOSPage() {
             <BaseTable
               data={items}
               columns={execucaoOSTableColumns}
-              customActions={actions.map((action: any) => ({
-                key: action.label.toLowerCase().replace(' ', ''),
-                label: action.label,
-                handler: action.onClick,
-                condition: action.condition,
-                icon: action.icon ? <action.icon className="h-4 w-4" /> : undefined,
-                variant: action.variant,
-              }))}
+              customActions={actions.map((action) => {
+                const Icone = action.icon as IconeDeAcao | undefined;
+                return {
+                  key: action.label.toLowerCase().replace(' ', ''),
+                  label: action.label,
+                  handler: action.onClick,
+                  condition: action.condition,
+                  icon: Icone ? <Icone className="h-4 w-4" /> : undefined,
+                  variant: action.variant,
+                };
+              })}
               loading={loading}
               pagination={{
                 page: currentPage,
@@ -425,14 +469,19 @@ export function ExecucaoOSPage() {
                               onConfirm={handleConfirmAction}
                               onVoltar={() => setPendingAction(null)}
                               tarefasPendentes={tarefasPendentes(progresso).map((t) => ({ id: t.id, nome: t.nome }))}
+                              podeInformarValorDaHora={temPermissao('execucao_os.manage')}
                             />
                           ) : (
-                            <AcoesDaOS
-                              status={status}
-                              temPermissao={temPermissao}
-                              alteracoesPendentes={alteracoesPendentes}
-                              onAcao={setPendingAction}
-                            />
+                            <div className="space-y-3">
+                              <AcoesDaOS
+                                status={status}
+                                temPermissao={temPermissao}
+                                alteracoesPendentes={alteracoesPendentes}
+                                onAcao={setPendingAction}
+                              />
+                              {/* O PDF da OS (SN-62): prévia antes de finalizar, com o código depois */}
+                              <BotaoPdfDaOS os={modalState.entity!} />
+                            </div>
                           )}
                         </div>
 
@@ -441,13 +490,59 @@ export function ExecucaoOSPage() {
                         {(emExecucao || executada) && temProgresso && (
                           <div className="rounded-md border p-4">
                             <OQueFoiFeito
+                              status={status}
                               osId={modalState.entity!.id}
                               progresso={progresso}
-                              editavel={emExecucao && temPermissao('execucao_os.view')}
+                              editavel={emExecucao && temPermissao('execucao_os.manage', 'execucao_os.executar')}
                               onChange={setProgresso}
                             />
                           </div>
                         )}
+
+                        {/* SN-93: o custo com destaque, logo depois do que foi feito — o real contra o
+                            previsto, por natureza e por instrução; os outros custos se corrigem aqui */}
+                        {modalState.entity?.custos && (
+                          <div className="rounded-md border p-4">
+                            <CustosDaOS
+                              osId={modalState.entity.id}
+                              status={status ?? ''}
+                              custos={modalState.entity.custos}
+                              itensOrcamento={modalState.entity.itens_orcamento}
+                              // Na auditada, só quem gerencia: o auditor aprovou um custo (a API recusa igual)
+                              podeCorrigir={
+                                status === 'AUDITADA'
+                                  ? temPermissao('execucao_os.manage')
+                                  : temPermissao('execucao_os.manage', 'execucao_os.executar')
+                              }
+                              onCorrigido={async () => {
+                                // A lista da tabela também tem o custo real
+                                const [atual] = await Promise.all([fetchOne(modalState.entity!.id), fetchItems(toApiParams)]);
+                                if (atual) openModal(modalState.mode, atual);
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {/* A prova do que foi feito: fotos e documentos, com quem enviou e quando. */}
+                        <div className="rounded-md border p-4">
+                          <AnexosDaOS
+                            osId={modalState.entity!.id}
+                            status={status}
+                            soGerais={(emExecucao || executada) && temProgresso}
+                            podeEditar={temPermissao('execucao_os.manage', 'execucao_os.executar')}
+                          />
+                        </div>
+
+                        {/* Conversa da equipe sobre a OS; o interno não aparece para o cliente (SN-48) */}
+                        <div className="rounded-md border p-4">
+                          <ComentariosDoRegistro
+                            alvo="ordem_servico"
+                            registroId={modalState.entity!.id}
+                            podeComentar={temPermissao('execucao_os.manage', 'execucao_os.executar')}
+                            ehCliente={ehCliente}
+                            onRascunho={(tem) => (rascunhoDoComentario.current = tem)}
+                          />
+                        </div>
                       </div>
                     );
                   }
@@ -459,6 +554,15 @@ export function ExecucaoOSPage() {
             loading={loading}
           />
         )}
+        <ConferirCodigo
+          aberto={conferencia.aberta}
+          onAbertoChange={(aberta) => setConferencia((atual) => ({ ...atual, aberta }))}
+          codigoInicial={conferencia.codigo}
+          onAbrirOS={(osId) => {
+            setConferencia({ aberta: false, codigo: null });
+            setSearchParams({ execucaoId: osId.trim() });
+          }}
+        />
       </Layout.Main>
     </Layout>
   );

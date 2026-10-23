@@ -1,8 +1,6 @@
 // src/features/plantas/config/form-config.tsx - ATUALIZADO COM MÁSCARA CNPJ
 import React from 'react';
 import { FormField, FormFieldProps } from '@/core/types/base';
-import { Button } from '@/core/components/ui/button';
-import { Input } from '@/core/components/ui/input';
 import { CNPJInput, CNPJUtils } from '@/core/components/ui/cnpj-input'; // ✅ Import do novo componente
 import { Factory, Settings, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -12,7 +10,8 @@ import { useViaCEP } from '@/core/hooks/useViaCEP';
 import { cn } from '@/core/lib/utils';
 
 // ✅ COMPONENTE: CNPJ com máscara personalizada
-const CNPJFieldComponent = ({ value, onChange, disabled, hasError }: FormFieldProps) => {
+// A borda de erro vem de `error`, que e o que o BaseForm passa (lia `hasError`, que nunca chegava).
+const CNPJFieldComponent = ({ value, onChange, disabled, error }: FormFieldProps) => {
   const [displayValue, setDisplayValue] = React.useState(() => {
     // Inicializar com valor formatado se existir
     return value ? CNPJUtils.mask(value.toString()) : '';
@@ -39,7 +38,7 @@ const CNPJFieldComponent = ({ value, onChange, disabled, hasError }: FormFieldPr
         value={CNPJUtils.unmask(displayValue)}
         onChange={handleCNPJChange}
         disabled={disabled}
-        className={hasError ? 'border-red-500' : ''}
+        className={error ? 'border-red-500' : ''}
       />
       
       {/* ✅ Dica sobre validação */}
@@ -52,8 +51,20 @@ const CNPJFieldComponent = ({ value, onChange, disabled, hasError }: FormFieldPr
   );
 };
 
+/** O endereco da planta como o formulario guarda. */
+interface EnderecoDoFormulario {
+  uf?: string;
+  cidade?: string;
+  cep?: string;
+  logradouro?: string;
+  bairro?: string;
+}
+
 // ✅ COMPONENTE COMPLETO: UF, Cidade e CEP com busca automática
-const EnderecoCompleto = ({ onChange, disabled, entity, value }: FormFieldProps & { entity?: any }) => {
+const EnderecoCompleto = ({ onChange, disabled, entity, value }: FormFieldProps & {
+  value?: EnderecoDoFormulario | null;
+  entity?: { endereco?: EnderecoDoFormulario } | null;
+}) => {
   const [selectedUF, setSelectedUF] = React.useState<string>('');
   const [selectedCidade, setSelectedCidade] = React.useState<string>('');
   const [cep, setCep] = React.useState<string>('');
@@ -283,17 +294,18 @@ const EnderecoCompleto = ({ onChange, disabled, entity, value }: FormFieldProps 
 };
 
 // ✅ COMPONENTE ATUALIZADO: Gestão de Equipamentos com navegação inteligente (SEM MUDANÇAS)
-const GestaoEquipamentosButton = ({ entity, mode }: { entity?: any; mode?: 'create' | 'edit' | 'view' }) => {
+const GestaoEquipamentosButton = ({ entity, mode }: { entity?: { id?: string; nome?: string } | null; mode?: 'create' | 'edit' | 'view' }) => {
   const navigate = useNavigate();
 
   const handleOpenEquipamentos = () => {
     if (entity && entity.id && (mode === 'view' || mode === 'edit')) {
-      const plantaId = entity.id;
-      const plantaNome = encodeURIComponent(entity.nome || `Planta ${plantaId}`);
-      
-      navigate(`/equipamentos?plantaId=${plantaId}&plantaNome=${plantaNome}`);
+      const plantaId = entity.id.trim();
+      const plantaNome = entity.nome || `Planta ${plantaId}`;
+
+      // A rota é /cadastros/equipamentos: /equipamentos não existe (achado do SN-67)
+      navigate(`/cadastros/equipamentos?${new URLSearchParams({ plantaId, plantaNome })}`);
     } else {
-      navigate('/equipamentos');
+      navigate('/cadastros/equipamentos');
     }
   };
 
@@ -446,7 +458,7 @@ export const plantasFormFields: FormField[] = [
         return 'Endereço é obrigatório';
       }
 
-      const { logradouro, cidade, uf, cep } = value;
+      const { logradouro, cidade, uf, cep } = value as { logradouro?: string; cidade?: string; uf?: string; cep?: string };
 
       if (!logradouro || logradouro.trim().length < 5) {
         return 'Logradouro deve ter pelo menos 5 caracteres';

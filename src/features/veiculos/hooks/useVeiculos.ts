@@ -32,10 +32,10 @@ interface UseVeiculosReturn {
   // Actions
   fetchVeiculos: (params?: QueryVeiculosParams) => Promise<void>;
   createVeiculo: (data: CreateVeiculoRequest) => Promise<VeiculoResponse>;
-  updateVeiculo: (id: number, data: UpdateVeiculoRequest) => Promise<VeiculoResponse>;
-  updateStatus: (id: number, status: StatusVeiculo) => Promise<VeiculoResponse>;
-  updateQuilometragem: (id: number, kmAtual: number) => Promise<VeiculoResponse>;
-  deleteVeiculo: (id: number) => Promise<void>;
+  updateVeiculo: (id: string, data: UpdateVeiculoRequest) => Promise<VeiculoResponse>;
+  updateStatus: (id: string, status: StatusVeiculo) => Promise<VeiculoResponse>;
+  updateQuilometragem: (id: string, kmAtual: number) => Promise<VeiculoResponse>;
+  deleteVeiculo: (id: string) => Promise<void>;
 
   // Utils
   refetch: () => Promise<void>;
@@ -95,7 +95,7 @@ export const useVeiculos = (params: UseVeiculosParams = {}): UseVeiculosReturn =
   }, [fetchVeiculos]);
 
   // Update veiculo
-  const updateVeiculo = useCallback(async (id: number, data: UpdateVeiculoRequest): Promise<VeiculoResponse> => {
+  const updateVeiculo = useCallback(async (id: string, data: UpdateVeiculoRequest): Promise<VeiculoResponse> => {
     try {
       setError(null);
       const updatedVeiculo = await VeiculosService.updateVeiculo(id, data);
@@ -114,7 +114,7 @@ export const useVeiculos = (params: UseVeiculosParams = {}): UseVeiculosReturn =
   }, []);
 
   // Update status
-  const updateStatus = useCallback(async (id: number, status: StatusVeiculo): Promise<VeiculoResponse> => {
+  const updateStatus = useCallback(async (id: string, status: StatusVeiculo): Promise<VeiculoResponse> => {
     try {
       setError(null);
       const updatedVeiculo = await VeiculosService.updateVeiculoStatus(id, status);
@@ -133,7 +133,7 @@ export const useVeiculos = (params: UseVeiculosParams = {}): UseVeiculosReturn =
   }, []);
 
   // Update quilometragem
-  const updateQuilometragem = useCallback(async (id: number, kmAtual: number): Promise<VeiculoResponse> => {
+  const updateQuilometragem = useCallback(async (id: string, kmAtual: number): Promise<VeiculoResponse> => {
     try {
       setError(null);
       const updatedVeiculo = await VeiculosService.updateQuilometragem(id, kmAtual);
@@ -152,7 +152,7 @@ export const useVeiculos = (params: UseVeiculosParams = {}): UseVeiculosReturn =
   }, []);
 
   // Delete veiculo
-  const deleteVeiculo = useCallback(async (id: number): Promise<void> => {
+  const deleteVeiculo = useCallback(async (id: string): Promise<void> => {
     try {
       setError(null);
       await VeiculosService.deleteVeiculo(id);
@@ -222,7 +222,7 @@ interface UseVeiculoReturn {
   clearError: () => void;
 }
 
-export const useVeiculo = (id: number | null): UseVeiculoReturn => {
+export const useVeiculo = (id: string | null): UseVeiculoReturn => {
   // States
   const [veiculo, setVeiculo] = useState<VeiculoResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -485,7 +485,7 @@ interface UseMantencoesReturn {
   clearError: () => void;
 }
 
-export const useManutencoes = (veiculoId: number | null): UseMantencoesReturn => {
+export const useManutencoes = (veiculoId: string | null): UseMantencoesReturn => {
   // States
   const [manutencoes, setManutencoes] = useState<ManutencaoVeiculo[]>([]);
   const [loading, setLoading] = useState(false);

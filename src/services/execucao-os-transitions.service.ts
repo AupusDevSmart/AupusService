@@ -2,6 +2,7 @@
 // Service for handling OS status transitions
 
 import { api } from '@/config/api';
+import type { OutroCustoPedido } from '@/features/execucao-os/types/custos';
 
 export type StatusExecucaoOS =
   | 'PENDENTE'
@@ -21,6 +22,8 @@ export interface IniciarExecucaoDto {
   responsavel_execucao?: string;
   observacoes?: string;
   data_hora_inicio_real?: string; // ISO DateTime
+  /** Saída da viatura reservada (o painel só pede com reserva ativa) */
+  km_inicial?: number;
 }
 
 export interface PausarExecucaoDto {
@@ -41,6 +44,12 @@ export interface ExecutarOSDto {
   data_hora_fim_real?: string; // ISO DateTime
   resultado_servico: string;
   problemas_encontrados?: string;
+  /** SN-60: os dados de falha (ISO em UTC). Obrigatórios na corretiva */
+  parada_inicio?: string;
+  parada_fim?: string;
+  falha_sintoma?: string;
+  falha_causa?: string;
+  falha_acao?: string;
   recomendacoes?: string;
   observacoes_execucao?: string;
   materiais_consumidos?: { id: string; quantidade_consumida: number; observacoes?: string }[];
@@ -52,6 +61,14 @@ export interface ExecutarOSDto {
   custos_adicionais?: number;
   km_final?: number;
   observacoes_veiculo?: string;
+  /** Tarefa pendente ao executar: vira CANCELADA com o motivo e continua devendo */
+  tarefas_nao_feitas?: { id: string; motivo: string }[];
+  /** SN-61: horas de cada linha da equipe (obrigatório para todas; 0 = não foi) e quem entrou na hora */
+  horas_dos_tecnicos?: { id: string; horas: number }[];
+  /** SN-93: com o valor da hora de quem entrou (sem ele, o de quem tem a mesma especialidade na equipe) */
+  tecnicos_extras?: { tecnico_id: string; horas: number; custo_hora?: number | null }[];
+  /** SN-93: os outros custos conferidos (o previsto com o real) e os não previstos */
+  outros_custos?: OutroCustoPedido[];
 }
 
 export interface AuditarOSDto {
@@ -85,7 +102,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao iniciar execucao:', error);
       throw error;
     }
@@ -102,7 +119,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao pausar execucao:', error);
       throw error;
     }
@@ -119,7 +136,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao retomar execucao:', error);
       throw error;
     }
@@ -136,7 +153,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao executar OS:', error);
       throw error;
     }
@@ -153,7 +170,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao auditar OS:', error);
       throw error;
     }
@@ -170,7 +187,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao reabrir OS:', error);
       throw error;
     }
@@ -187,7 +204,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao finalizar OS:', error);
       throw error;
     }
@@ -204,7 +221,7 @@ export class ExecucaoOSTransitionsService {
         data
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao cancelar OS:', error);
       throw error;
     }

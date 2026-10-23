@@ -5,15 +5,15 @@ import { Button } from '@/core/components/ui/button';
 import {
   Factory,
   AlertCircle,
-  CheckCircle,
   Trash2
 } from 'lucide-react';
 import { ModalMode } from '@/core/types/base';
-import { UnidadeFormData, Unidade } from '../types';
+import { UnidadeFormData, Unidade, CreateUnidadeDto, UpdateUnidadeDto } from '../types';
 import { unidadesFormFields } from '../config/form-config';
 import { AnexosUnidadeField } from './AnexosUnidadeField';
 import { toast } from '@/core/hooks/use-toast';
-import { formDataToDto, unidadeToFormData } from '../types';
+import { formatApiError } from '@/utils/api-error';
+import { formDataToDto } from '../types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,8 +31,9 @@ interface UnidadeModalProps {
   unidade: Unidade | null;
   onClose: () => void;
   onSuccess: () => void;
-  createUnidade: (data: any) => Promise<any>;
-  updateUnidade: (params: { id: string; data: any }) => Promise<any>;
+  // O contrato do nucleo (useUnidades) ainda devolve `unknown`; a rota devolve a instalacao.
+  createUnidade: (data: CreateUnidadeDto) => Promise<Unidade>;
+  updateUnidade: (params: { id: string; data: UpdateUnidadeDto }) => Promise<Unidade>;
   deleteUnidade: (id: string) => Promise<void>;
   /**
    * Mostra subgrupo tarifario, demandas e os checkboxes de perfil. Sao detalhe
@@ -83,12 +84,13 @@ export function UnidadeModal({
     [],
   );
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: UnidadeFormData) => {
 
     setIsSubmitting(true);
 
     try {
-      let resultado;
+      // A rota devolve a instalacao salva (UnidadeResponse); o contrato ainda tipa como unknown.
+      let resultado: Unidade;
 
       // Converter formData para DTO
       const dto = formDataToDto(data);
@@ -100,37 +102,35 @@ export function UnidadeModal({
         // existir. Falha aqui nao invalida a instalacao, que ja foi criada —
         // por isso o erro e avisado sem desfazer nada.
         const novoId = resultado?.id?.trim?.() || resultado?.id;
+        const pendencias: string[] = [];
         if (novoId) {
-          const pendencias: string[] = [];
 
           for (const [chave, acao] of acoesPosCriacaoRef.current) {
             try {
               await acao(novoId);
-            } catch (erro: any) {
+            } catch (erro) {
               // Guarda o motivo, e nao so o nome da acao: "os anexos" sozinho
               // nao diz se foi tamanho, tipo, rede ou permissao.
-              const motivo =
-                erro?.response?.data?.error?.message ||
-                erro?.response?.data?.message ||
-                erro?.message ||
-                'erro desconhecido';
+              const motivo = formatApiError(erro);
               pendencias.push(`${chave}: ${motivo}`);
             }
           }
 
-          if (pendencias.length > 0) {
-            // A instalacao existe: nao adianta segurar o sheet aberto. O aviso
-            // diz o que faltou e o motivo, que e o que permite agir.
-            toast({
-              title: 'Instalação criada, mas os anexos não subiram',
-              description: pendencias.join(' | '),
-              variant: 'destructive',
-              duration: 8000,
-            });
-          }
         }
 
-        toast({ title: `Instalação ${resultado.nome} criada!` });
+        if (pendencias.length > 0) {
+          // A instalacao existe: nao adianta segurar o sheet aberto. O aviso
+          // diz o que faltou e o motivo, que e o que permite agir. Um aviso so:
+          // com o de sucesso logo depois, o TOAST_LIMIT = 1 descartava este
+          toast({
+            title: `Instalação ${resultado.nome} criada, mas os anexos não subiram`,
+            description: pendencias.join(' | '),
+            variant: 'destructive',
+            duration: 8000,
+          });
+        } else {
+          toast({ title: `Instalação ${resultado.nome} criada!` });
+        }
       } else if (isEditMode && unidade) {
         resultado = await updateUnidade({ id: unidade.id, data: dto });
         toast({ title: `Instalação ${resultado.nome} atualizada!` });
@@ -141,13 +141,10 @@ export function UnidadeModal({
       onSuccess();
       onClose();
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Erro no handleSubmit:', error);
       // Pegar a mensagem de erro da resposta da API se disponível
-      const errorMessage = error?.response?.data?.error?.message ||
-                          error?.response?.data?.message ||
-                          error?.message ||
-                          'Erro desconhecido ao salvar instalação';
+      const errorMessage = formatApiError(error);
       toast({
         title: 'Erro ao salvar instalação',
         description: errorMessage,
@@ -171,13 +168,10 @@ export function UnidadeModal({
       setShowDeleteDialog(false);
       onSuccess();
       onClose();
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Erro ao deletar unidade:', error);
       // Pegar a mensagem de erro da resposta da API se disponível
-      const errorMessage = error?.response?.data?.error?.message ||
-                          error?.response?.data?.message ||
-                          error?.message ||
-                          'Erro ao deletar instalação';
+      const errorMessage = formatApiError(error);
       toast({
         title: 'Erro ao remover instalação',
         description: errorMessage,
@@ -262,7 +256,7 @@ export function UnidadeModal({
     <BaseModal
       isOpen={isOpen}
       mode={mode}
-      entity={entityForModal as any}
+      entity={entityForModal}
       title={getModalTitle()}
       icon={getModalIcon()}
       formFields={unidadesFormFields}

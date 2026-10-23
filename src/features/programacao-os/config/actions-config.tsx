@@ -11,6 +11,8 @@ export type AcaoProgramacao = 'aprovar' | 'editar' | 'cancelar' | 'excluir' | 'a
 export interface ProgramacaoParaAcoes {
   status?: string | null;
   ordem_servico?: { id?: string | null; status?: string | null } | null;
+  /** Texto na linha da tabela; objeto `{ tipo }` na entidade do sheet */
+  origem?: string | { tipo?: string | null } | null;
 }
 
 export type TemPermissao = (...perms: Permissao[]) => boolean;
@@ -31,11 +33,22 @@ const statusDe = (p: ProgramacaoParaAcoes) => p.status?.toUpperCase();
 const temOS = (p: ProgramacaoParaAcoes) => Boolean(p.ordem_servico?.id);
 
 /**
+ * Avulsa (origem MANUAL), de antes da regra "toda OS tem origem" (SN-69): o
+ * backend recusa aprovar e editar. A tela não troca a origem na edição, então o
+ * caminho é cancelar e programar a partir de uma solicitação ou anomalia.
+ */
+export function ehAvulsaAntiga(p: ProgramacaoParaAcoes): boolean {
+  const origem = typeof p.origem === 'string' ? p.origem : p.origem?.tipo;
+  return origem === 'MANUAL';
+}
+
+/**
  * As ações da programação, na ordem em que aparecem. É a única fonte: a tabela
  * e a seção do topo do sheet leem daqui, e as regras espelham as guardas do
  * programacao-os.service.
  *
- *   PENDENTE  -> aprovar, editar, cancelar, excluir
+ *   PENDENTE  -> aprovar, editar, cancelar, excluir (a avulsa antiga: só
+ *               cancelar e excluir)
  *   APROVADA  -> abrir a OS; cancelar enquanto a OS não começou
  *               (o backend cancela a OS junto; se ela já começou, recusa)
  *   CANCELADA / FINALIZADA -> abrir a OS, se houver
@@ -44,12 +57,12 @@ export const ACOES_DA_PROGRAMACAO: AcaoDaProgramacao[] = [
   {
     acao: 'aprovar', label: 'Aprovar', descricao: 'Aprovar e gerar a OS', icon: CheckCircle,
     variant: 'default', permissoes: ['programacao_os.aprovar'],
-    disponivel: (p) => statusDe(p) === 'PENDENTE',
+    disponivel: (p) => statusDe(p) === 'PENDENTE' && !ehAvulsaAntiga(p),
   },
   {
     acao: 'editar', label: 'Editar', descricao: 'Editar a programação', icon: Edit,
     variant: 'default', permissoes: ['programacao_os.manage'],
-    disponivel: (p, modo) => modo === 'view' && statusDe(p) === 'PENDENTE',
+    disponivel: (p, modo) => modo === 'view' && statusDe(p) === 'PENDENTE' && !ehAvulsaAntiga(p),
   },
   {
     acao: 'abrir_os', label: 'Abrir OS', descricao: 'Abrir a ordem de serviço gerada', icon: ExternalLink,

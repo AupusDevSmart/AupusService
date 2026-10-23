@@ -2,8 +2,13 @@
 import { useMemo } from 'react';
 import { BaseModal } from '@/core';
 import { Layers } from 'lucide-react';
-import { PlanoManutencaoApiResponse } from '@/services/planos-manutencao.services';
+import { PlanoManutencaoApiResponse, type CreatePlanoManutencaoApiData } from '@/services/planos-manutencao.services';
 import { FormField } from '@/types/base';
+import type { DadosDoFormulario } from '@/core/types/base';
+
+/** O que o formulario do plano entrega: semeado com o plano (ou o vazio), mais o que foi editado. */
+export type FormularioDoPlano = Pick<CreatePlanoManutencaoApiData, 'categoria_id' | 'nome' | 'descricao' | 'versao'> &
+  DadosDoFormulario;
 
 interface PlanosModalProps {
   isOpen: boolean;
@@ -11,7 +16,7 @@ interface PlanosModalProps {
   entity: PlanoManutencaoApiResponse | null;
   formFields: FormField[];
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: FormularioDoPlano) => Promise<void>;
 }
 
 /**
@@ -68,7 +73,7 @@ export function PlanosModal({
     <BaseModal
       isOpen={isOpen}
       mode={mode}
-      entity={modalEntity as any}
+      entity={modalEntity}
       title={getModalTitle()}
       icon={<Layers className="h-5 w-5 text-muted-foreground" />}
       formFields={formFields}

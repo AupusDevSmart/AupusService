@@ -30,7 +30,7 @@ export type Veiculo = import('@/services/veiculos.services').VeiculoResponse;
 
 // Legacy types for backward compatibility (use API types for new code)
 export interface ReservaVeiculo extends BaseEntity {
-  veiculoId: number;
+  veiculoId: string;
   solicitanteId?: string;
   tipoSolicitante: import('@/services/reservas.services').TipoSolicitante;
   dataInicio: string;
@@ -49,7 +49,7 @@ export interface ReservaVeiculo extends BaseEntity {
 
 // Form data interfaces
 export interface ReservaFormData {
-  veiculoId?: number;
+  veiculoId?: string;
   solicitanteId?: string;
   tipoSolicitante: import('@/services/reservas.services').TipoSolicitante;
   dataInicio: string;
@@ -87,7 +87,7 @@ export interface VeiculoFormData {
 
 // Para o ViaturaSelector
 export interface ViaturaReservada {
-  veiculoId: number;
+  veiculoId: string;
   dataInicio: string;
   dataFim: string;
   horaInicio: string;
@@ -106,7 +106,7 @@ export interface FiltrosDisponibilidade {
 }
 
 export interface DisponibilidadeVeiculo {
-  veiculoId: number;
+  veiculoId: string;
   disponivel: boolean;
   conflitos: ReservaVeiculo[];
   proximaDisponibilidade?: {
@@ -152,8 +152,9 @@ export { type ModalMode };
 
 // Interface para ViaturaSelectorProps
 export interface ViaturaSelectorProps {
-  value: number | ViaturaReservada | null;
-  onChange: (value: number | ViaturaReservada | null) => void;
+  // No modo simples o valor e so o id da viatura (texto, como no backend)
+  value: string | ViaturaReservada | null;
+  onChange: (value: string | ViaturaReservada | null) => void;
   dataInicio: string;
   dataFim: string;
   horaInicio: string;

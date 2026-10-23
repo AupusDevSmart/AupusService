@@ -5,11 +5,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Receipt, Trash2 } from 'lucide-react';
 import { CardLista, CardLinha, campoCard, type ColunaCard } from './card-lista';
+import type { NaturezaDoOutroCusto } from '@/features/execucao-os/types/custos';
+import { formatCurrency } from '@/lib/utils';
+import { CampoDeNumero } from '@/components/common/CampoDeNumero';
+import { AVISO_DE_DINHEIRO, dinheiroNoCampo, lerDinheiroDigitado } from '@/utils/leitura';
 
 export interface ItemOrcamento {
   id?: string;
   descricao: string;
   valor: number;
+  /** SN-93: a natureza do custo (o item lançado à mão vai sem: a API usa o prefixo, ou OUTRO) */
+  natureza?: NaturezaDoOutroCusto;
 }
 
 interface OrcamentoCardManagerProps {
@@ -19,7 +25,14 @@ interface OrcamentoCardManagerProps {
   title?: string;
   custoMateriais?: number;
   custoEquipe?: number;
+  /**
+   * Algum valor ficou ilegível: o formulário não salva. Sem isso o aviso ficava
+   * no campo e o Salvar gravava calado o valor anterior
+   */
+  onIlegivel?: (ilegivel: boolean) => void;
 }
+
+const chaveDaLinha = (item: ItemOrcamento, index: number) => item.id?.trim() || `linha:${index}`;
 
 const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
   value = [],
@@ -27,9 +40,18 @@ const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
   disabled = false,
   title = "Orçamento",
   custoMateriais = 0,
-  custoEquipe = 0
+  custoEquipe = 0,
+  onIlegivel,
 }) => {
   const [itens, setItens] = useState<ItemOrcamento[]>(value);
+  const [ilegiveis, setIlegiveis] = useState<ReadonlySet<string>>(new Set());
+  const marcarIlegivel = (chave: string, ilegivel: boolean) => {
+    const proximas = new Set(ilegiveis);
+    if (ilegivel) proximas.add(chave);
+    else proximas.delete(chave);
+    setIlegiveis(proximas);
+    onIlegivel?.(proximas.size > 0);
+  };
 
   useEffect(() => {
     setItens(value);
@@ -50,10 +72,12 @@ const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
   };
 
   const removerItem = (index: number) => {
+    // O valor ilegível da linha que saiu não trava mais o Salvar
+    marcarIlegivel(chaveDaLinha(itens[index], index), false);
     updateItens(itens.filter((_, i) => i !== index));
   };
 
-  const atualizarItem = (index: number, campo: keyof ItemOrcamento, valor: any) => {
+  const atualizarItem = <K extends keyof ItemOrcamento>(index: number, campo: K, valor: ItemOrcamento[K]) => {
     const novosItens = [...itens];
     novosItens[index] = { ...novosItens[index], [campo]: valor };
     updateItens(novosItens);
@@ -95,7 +119,7 @@ const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
 
       {/* Lista de itens */}
       {itens.length > 0 && (
-        <CardLista colunas={colunas} larguraMinima="28rem">
+        <CardLista colunas={colunas}>
           {itens.map((item, index) => (
             <CardLinha key={item.id || index} colunas={colunas}>
               <Input
@@ -105,15 +129,20 @@ const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
                 disabled={disabled}
                 className={campoCard}
               />
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={item.valor || ''}
-                onChange={(e) => atualizarItem(index, 'valor', parseFloat(e.target.value) || 0)}
-                placeholder="0.00"
+              {/* Texto com vírgula, não type="number" (SN-58): o campo do navegador perdia "1.402,50"
+                  e mostrava "1081" em vez de "1.081,00" */}
+              <CampoDeNumero
+                value={item.valor || null}
+                onChange={(valor) => atualizarItem(index, 'valor', valor ?? 0)}
+                onIlegivel={(ilegivel) => marcarIlegivel(chaveDaLinha(item, index), ilegivel)}
+                ler={lerDinheiroDigitado}
+                mostrar={dinheiroNoCampo}
+                aviso={AVISO_DE_DINHEIRO}
+                avisoCurto
+                placeholder="R$"
+                aria-label={`Valor de ${item.descricao || 'outro custo'}`}
                 disabled={disabled}
-                className={`${campoCard} text-center`}
+                className={`${campoCard} text-right`}
               />
               {!disabled && (
                 <Button
@@ -138,24 +167,24 @@ const OrcamentoCardManager: React.FC<OrcamentoCardManagerProps> = ({
         {custoMateriais > 0 && (
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Materiais</span>
-            <span>R$ {custoMateriais.toFixed(2)}</span>
+            <span>{formatCurrency(custoMateriais)}</span>
           </div>
         )}
         {custoEquipe > 0 && (
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Equipe</span>
-            <span>R$ {custoEquipe.toFixed(2)}</span>
+            <span>{formatCurrency(custoEquipe)}</span>
           </div>
         )}
         {custoOutros > 0 && (
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Outros custos</span>
-            <span>R$ {custoOutros.toFixed(2)}</span>
+            <span>{formatCurrency(custoOutros)}</span>
           </div>
         )}
         <div className="flex justify-between text-sm font-medium text-foreground">
           <span>Orçamento previsto</span>
-          <span>R$ {custoTotal.toFixed(2)}</span>
+          <span>{formatCurrency(custoTotal)}</span>
         </div>
       </div>
     </div>

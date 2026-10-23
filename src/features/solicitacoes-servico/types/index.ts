@@ -85,18 +85,45 @@ export interface SolicitacaoServico extends BaseEntity {
   contato?: string;
 
   // Objetos relacionados
-  planta?: any;
-  unidade?: any;
-  proprietario?: any;
-  equipamento?: any;
-  usuario?: any;
+  planta?: PlantaDaSolicitacao | null;
+  unidade?: UnidadeDaSolicitacao | null;
+  proprietario?: PessoaDaSolicitacao | null;
+  equipamento?: EquipamentoDaSolicitacao | null;
+  usuario?: PessoaDaSolicitacao | null;
   historico?: HistoricoSolicitacao[];
-  comentarios?: ComentarioSolicitacao[];
+
+  /** Total da proposta (Decimal: o JSON traz texto). Ausente sem proposta montada. */
+  total_geral?: string | number | null;
 
   // Timestamps
   created_at?: string;
   updated_at?: string;
   deleted_at?: string;
+}
+
+// Relações que o GET da solicitação inclui (só o que a tela lê)
+export interface PlantaDaSolicitacao {
+  id: string;
+  nome?: string;
+}
+
+export interface UnidadeDaSolicitacao {
+  id: string;
+  nome?: string;
+  planta_id?: string | null;
+}
+
+export interface PessoaDaSolicitacao {
+  id: string;
+  nome?: string;
+  email?: string;
+}
+
+export interface EquipamentoDaSolicitacao {
+  id: string;
+  nome?: string;
+  tag?: string | null;
+  tipo_equipamento?: string | null;
 }
 
 // Interface para histórico
@@ -111,20 +138,7 @@ export interface HistoricoSolicitacao {
   // observacoes?: string; // Campo removido - backend não aceita
   status_anterior?: StatusSolicitacaoServico;
   status_novo?: StatusSolicitacaoServico;
-  dados_extras?: any;
-}
-
-// Interface para comentários
-export interface ComentarioSolicitacao {
-  id: string;
-  solicitacao_id: string;
-  comentario: string;
-  autor?: string;
-  autor_id?: string;
-  usuario_nome?: string;
-  usuario_id?: string;
-  created_at: string;
-  updated_at?: string;
+  dados_extras?: Record<string, unknown> | null;
 }
 
 // Form data para criação/edição
@@ -203,8 +217,3 @@ export type Pagination = {
   totalPages: number;
 };
 
-export interface AdicionarComentarioDto {
-  comentario: string;
-  usuario_nome: string;
-  usuario_id: string;
-}

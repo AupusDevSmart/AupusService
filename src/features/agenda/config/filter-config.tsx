@@ -1,46 +1,32 @@
 // src/features/agenda/config/filter-config.tsx
-import { useState, useEffect } from 'react';
 import { FilterConfig } from '@/types/base';
-import { PlantasService, PlantaResponse } from '@/services/plantas.services';
+import type { PlantaResponse } from '@/services/plantas.services';
 import { TIPOS_FERIADO, MESES } from '../types';
 
 // ============================================================================
-// HOOK PARA CARREGAR PLANTAS
+// PLANTA (as do escopo, num combobox: o cadastro cresce)
 // ============================================================================
 
-export function usePlantas() {
-  const [plantas, setPlantas] = useState<PlantaResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+type OpcaoDePlanta = { value: string; label: string };
 
-  useEffect(() => {
-    const fetchPlantas = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await PlantasService.getAllPlantas({ limit: 100 });
-        setPlantas(response.data);
-        console.log('✅ [AGENDA FILTERS] Plantas carregadas:', response.data.length);
-      } catch (err: any) {
-        console.error('❌ [AGENDA FILTERS] Erro ao carregar plantas:', err);
-        setError(err.message || 'Erro ao carregar plantas');
-        setPlantas([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPlantas();
-  }, []);
-
-  return { plantas, loading, error };
+function plantaDoFiltro(plantas: OpcaoDePlanta[], carregando: boolean): FilterConfig {
+  return {
+    key: 'plantaId',
+    type: 'combobox',
+    label: 'Planta',
+    placeholder: carregando ? 'Carregando plantas...' : 'Todas as plantas',
+    searchPlaceholder: 'Buscar planta...',
+    className: 'w-full sm:w-auto sm:min-w-[200px]',
+    options: plantas,
+  };
 }
 
 // ============================================================================
 // FERIADOS FILTER CONFIG
 // ============================================================================
 
-export function createFeriadosFilterConfig(plantas: PlantaResponse[]): FilterConfig[] {
+/** `plantas`: as opções de `usePlantasDoFiltro` (com "Todas as plantas"). */
+export function createFeriadosFilterConfig(plantas: OpcaoDePlanta[], carregandoPlantas = false, comAno = false): FilterConfig[] {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
 
@@ -64,19 +50,7 @@ export function createFeriadosFilterConfig(plantas: PlantaResponse[]): FilterCon
         }))
       ]
     },
-    {
-      key: 'plantaId',
-      type: 'select',
-      placeholder: 'Planta',
-      className: 'w-full sm:w-auto sm:min-w-[200px]',
-      options: [
-        { value: 'all', label: 'Todas as plantas' },
-        ...plantas.map(planta => ({
-          value: planta.id,
-          label: planta.nome
-        }))
-      ]
-    },
+    plantaDoFiltro(plantas, carregandoPlantas),
     {
       key: 'ano',
       type: 'select',
@@ -93,6 +67,8 @@ export function createFeriadosFilterConfig(plantas: PlantaResponse[]): FilterCon
     {
       key: 'mes',
       type: 'select',
+      // O mês é de um ano: sem ele, a API recusa
+      disabled: !comAno,
       placeholder: 'Mês',
       className: 'w-full sm:w-auto sm:min-w-[150px]',
       options: [
@@ -129,7 +105,7 @@ export function createFeriadosFilterConfig(plantas: PlantaResponse[]): FilterCon
 // CONFIGURAÇÕES DIAS ÚTEIS FILTER CONFIG
 // ============================================================================
 
-export function createConfiguracoesDiasUteisFilterConfig(plantas: PlantaResponse[]): FilterConfig[] {
+export function createConfiguracoesDiasUteisFilterConfig(plantas: OpcaoDePlanta[], carregandoPlantas = false): FilterConfig[] {
   return [
     {
       key: 'search',
@@ -137,19 +113,7 @@ export function createConfiguracoesDiasUteisFilterConfig(plantas: PlantaResponse
       placeholder: 'Buscar por nome ou descrição...',
       className: 'w-full lg:w-auto lg:min-w-[320px]'
     },
-    {
-      key: 'plantaId',
-      type: 'select',
-      placeholder: 'Planta',
-      className: 'w-full sm:w-auto sm:min-w-[200px]',
-      options: [
-        { value: 'all', label: 'Todas as plantas' },
-        ...plantas.map(planta => ({
-          value: planta.id,
-          label: planta.nome
-        }))
-      ]
-    },
+    plantaDoFiltro(plantas, carregandoPlantas),
     {
       key: 'geral',
       type: 'select',
@@ -246,7 +210,7 @@ export const configuracoesDiasUteisFilterPresets = {
 // FILTER HELPERS
 // ============================================================================
 
-export function getActiveFiltersCount(filters: Record<string, any>): number {
+export function getActiveFiltersCount(filters: Record<string, unknown>): number {
   return Object.entries(filters).filter(([key, value]) => {
     if (key === 'page' || key === 'limit') return false;
     if (value === 'all' || value === '' || value === null || value === undefined) return false;
@@ -286,8 +250,11 @@ export function formatFilterValue(key: string, value: string, plantas: PlantaRes
   }
 }
 
-export function buildApiFilters(filters: Record<string, any>) {
-  const apiFilters: Record<string, any> = {};
+/** Valor de um filtro da tela: texto ('all', 'true', o ano...) ou numero (pagina). */
+type ValorDoFiltro = string | number | null | undefined;
+
+export function buildApiFilters(filters: Record<string, ValorDoFiltro>) {
+  const apiFilters: Record<string, string | number | boolean> = {};
 
   Object.entries(filters).forEach(([key, value]) => {
     if (value && value !== 'all' && value !== '') {
@@ -301,7 +268,7 @@ export function buildApiFilters(filters: Record<string, any>) {
 
         case 'ano':
         case 'mes':
-          apiFilters[key] = parseInt(value);
+          apiFilters[key] = parseInt(String(value));
           break;
 
         default:

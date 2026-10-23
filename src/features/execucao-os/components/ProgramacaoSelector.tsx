@@ -23,6 +23,14 @@ import {
 import { programacaoOSApi } from '@/services/programacao-os.service';
 import type { ProgramacaoResponse, StatusProgramacao, PrioridadeProgramacao } from '@/services/programacao-os.service';
 
+/** A programação como o cartão lê: nome, número, data e contagem são campos antigos que a API não manda. */
+type ProgramacaoDaLista = ProgramacaoResponse & {
+  nome?: string;
+  numero_os?: string;
+  data_programada?: string;
+  tarefas_count?: number;
+};
+
 interface ProgramacaoSelectorProps {
   value?: string;
   onChange: (programacaoId: string, programacao: ProgramacaoResponse) => void;
@@ -54,7 +62,7 @@ export const ProgramacaoSelector: React.FC<ProgramacaoSelectorProps> = ({
         limit: 100
       };
 
-      const response = await programacaoOSApi.listar(filters as any);
+      const response = await programacaoOSApi.listar(filters);
       setProgramacoes(response.data || []);
     } catch (error) {
       console.error('Erro ao carregar programações:', error);
@@ -72,7 +80,7 @@ export const ProgramacaoSelector: React.FC<ProgramacaoSelectorProps> = ({
 
   // Filtrar programações baseado na busca
   const programacoesFiltradas = programacoes.filter((p) => {
-    const programacao = p as any;
+    const programacao: ProgramacaoDaLista = p;
     const searchLower = searchTerm.toLowerCase();
     return (
       programacao.nome?.toLowerCase().includes(searchLower) ||
@@ -172,8 +180,8 @@ export const ProgramacaoSelector: React.FC<ProgramacaoSelectorProps> = ({
 
       {/* Lista de Programações */}
       <div className="max-h-96 overflow-y-auto space-y-3">
-        {programacoesFiltradas.map((_programacao: any) => {
-          const programacao = _programacao as any;
+        {programacoesFiltradas.map((_programacao) => {
+          const programacao: ProgramacaoDaLista = _programacao;
           return (
           <Card
             key={programacao.id}
@@ -281,7 +289,7 @@ export const ProgramacaoSelector: React.FC<ProgramacaoSelectorProps> = ({
             </span>
           </div>
           {(() => {
-            const selectedProgramacao = programacoes.find(p => p.id === value) as any;
+            const selectedProgramacao: ProgramacaoDaLista | undefined = programacoes.find(p => p.id === value);
             return selectedProgramacao && (
               <p className="text-xs text-blue-700 mt-1">
                 {selectedProgramacao.nome} - {selectedProgramacao.status}

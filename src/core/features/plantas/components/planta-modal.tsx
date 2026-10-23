@@ -1,20 +1,18 @@
 // src/features/plantas/components/planta-modal.tsx
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BaseModal } from '@/core/components/common/base-modal/BaseModal';
 import { Button } from '@/core/components/ui/button';
 import {
   Factory,
   AlertCircle,
   CheckCircle,
-  Trash2,
-  MapPin,
-  Clock,
-  Building2
+  Trash2
 } from 'lucide-react';
-import { ModalMode, PlantaFormData } from '../types';
+import { ModalMode, PlantaFormData, type Endereco, type Planta } from '../types';
 import { plantasFormFields } from '../config/form-config';
 import { useHttpClient } from '@/core/context/hooks';
 import { CNPJUtils } from '@/core/components/ui/cnpj-input';
+import { erroParaATela, formatApiError } from '@/utils/api-error';
 import { PlantaOperadoresTab, type PlantaOperadoresTabHandle } from './PlantaOperadoresTab';
 import {
   AlertDialog,
@@ -30,23 +28,34 @@ import {
 interface PlantaModalProps {
   isOpen: boolean;
   mode: ModalMode;
-  planta: any | null;
+  planta?: Planta | null;
   onClose: () => void;
   onSuccess: () => void;
   proprietarioIdDefault?: string;
 }
 
+/** O corpo de POST/PUT /plantas. */
+interface PlantaParaApi {
+  nome: string;
+  cnpj: string;
+  proprietarioId?: string;
+  horarioFuncionamento: string;
+  localizacao: string;
+  endereco: Endereco;
+  numero_uc?: string;
+}
+
 // Helper: Transformar dados do formulário para API
-const transformFormDataToAPI = (data: any) => {
+const transformFormDataToAPI = (data: Partial<PlantaFormData>) => {
 
   // Validar CNPJ
   const cnpjFormatted = CNPJUtils.mask(data.cnpj || '');
   const cnpjClean = CNPJUtils.unmask(data.cnpj || '');
 
   // Validar endereço
-  const endereco = data.endereco || {};
+  const endereco: Partial<Endereco> = data.endereco || {};
 
-  const transformedData: any = {
+  const transformedData: PlantaParaApi = {
     nome: (data.nome || '').trim(),
     cnpj: cnpjFormatted, // Enviar formatado como a API espera
     proprietarioId: data.proprietarioId,
@@ -84,6 +93,11 @@ export function PlantaModal({
 
   // Estado local para feedback
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // O bloco do erro fica depois do formulário inteiro: sem rolar até ele, o motivo ficava abaixo da dobra
+  const erroRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (submitError) erroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [submitError]);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -93,7 +107,7 @@ export function PlantaModal({
   // pro backend depois do save da planta via tabRef.current.flush(plantaId).
   const operadoresTabRef = useRef<PlantaOperadoresTabHandle>(null);
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: Partial<PlantaFormData>) => {
 
     // Limpar erros anteriores
     setSubmitError(null);
@@ -101,17 +115,17 @@ export function PlantaModal({
     setIsSubmitting(true);
 
     try {
-      let resultado;
+      let resultado: Planta | undefined;
 
       // Transformar dados antes de enviar
       const transformedData = transformFormDataToAPI(data);
 
       if (isCreateMode) {
-        const response = await httpClient.post('/plantas', transformedData);
+        const response = await httpClient.post<Planta>('/plantas', transformedData);
         resultado = response.data;
         setSubmitSuccess(`Planta ${resultado.nome} criada com sucesso!`);
       } else if (isEditMode && planta) {
-        const response = await httpClient.put(`/plantas/${planta.id}`, transformedData);
+        const response = await httpClient.put<Planta>(`/plantas/${planta.id}`, transformedData);
         resultado = response.data;
         setSubmitSuccess(`Planta ${resultado.nome} atualizada com sucesso!`);
       }
@@ -122,11 +136,11 @@ export function PlantaModal({
       if (plantaIdParaFlush && operadoresTabRef.current?.hasPendingChanges()) {
         try {
           await operadoresTabRef.current.flush(plantaIdParaFlush);
-        } catch (opErr: any) {
+        } catch (opErr) {
           console.error('⚠️ Erro ao sincronizar operadores:', opErr);
           // Mostrar warning mas nao bloquear o save da planta
           setSubmitError(
-            `Planta salva, mas houve erro ao atualizar operadores: ${opErr?.response?.data?.message || opErr?.message || 'erro desconhecido'}`,
+            `Planta salva, mas houve erro ao atualizar operadores: ${formatApiError(opErr)}`,
           );
         }
       }
@@ -137,13 +151,10 @@ export function PlantaModal({
         onClose();
       }, 2000);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Erro no handleSubmit:', error);
       // Pegar a mensagem de erro da resposta da API se disponível
-      const errorMessage = error?.response?.data?.error?.message ||
-                          error?.response?.data?.message ||
-                          error?.message ||
-                          'Erro desconhecido ao salvar planta';
+      const errorMessage = erroParaATela(error);
       setSubmitError(errorMessage);
       // Não re-lançar o erro - já tratamos mostrando a mensagem
     } finally {
@@ -167,13 +178,10 @@ export function PlantaModal({
         onSuccess();
         onClose();
       }, 1500);
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Erro ao deletar planta:', error);
       // Pegar a mensagem de erro da resposta da API se disponível
-      const errorMessage = error?.response?.data?.error?.message ||
-                          error?.response?.data?.message ||
-                          error?.message ||
-                          'Erro ao deletar planta';
+      const errorMessage = erroParaATela(error);
       setSubmitError(errorMessage);
       setShowDeleteDialog(false);
     } finally {
@@ -218,9 +226,10 @@ export function PlantaModal({
   ];
 
   // Preparar entidade para o modal
+  // Na criacao o id vai vazio (o BaseModal trata vazio e null igual: e "novo").
   const entityForModal = isCreateMode
     ? {
-        id: null,
+        id: '',
         proprietarioId: proprietarioIdDefault || null
       }
     : planta;
@@ -229,7 +238,7 @@ export function PlantaModal({
     <BaseModal
       isOpen={isOpen}
       mode={mode}
-      entity={entityForModal as any}
+      entity={entityForModal}
       title={getModalTitle()}
       icon={getModalIcon()}
       formFields={plantasFormFields}
@@ -245,7 +254,7 @@ export function PlantaModal({
     >
       {/* FEEDBACK DE ERRO - Responsivo */}
       {submitError && (
-        <div className="mb-3 md:mb-4 p-3 md:p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-950 dark:border-red-800">
+        <div ref={erroRef} className="mb-3 md:mb-4 p-3 md:p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-950 dark:border-red-800">
           <div className="flex items-start gap-2 md:gap-3">
             <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-red-600 mt-0.5 shrink-0" />
             <div className="min-w-0 flex-1">

@@ -1,7 +1,16 @@
 // src/components/common/ItensOrdenaveisTable.tsx
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { GripVertical, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from 'lucide-react';
+import { useMaisEstreitoQue } from '@/hooks/useMaisEstreitoQue';
+
+/**
+ * Abaixo disso (a largura do sheet, não a da tela) cada item vira um cartão: a
+ * tabela rolava para o lado e espremia a descrição do passo em 58px no celular
+ * (SN-68). O arrastar do HTML5 não funciona com o dedo; no cartão a ordem muda
+ * por subir e descer.
+ */
+const LARGURA_DA_TABELA = '36rem';
 
 export interface ColunaItemOrdenavel<T> {
   key: string;
@@ -21,7 +30,8 @@ export interface ResumoItem {
 interface ItensOrdenaveisTableProps<T> {
   itens: T[];
   colunas: Array<ColunaItemOrdenavel<T>>;
-  onReordenar: (origem: number, destino: number) => void;
+  /** Sem ele a lista não se reordena (sem alça nem subir/descer): a que o banco guarda sem ordem (SN-85) */
+  onReordenar?: (origem: number, destino: number) => void;
   onRemover: (index: number) => void;
   onAdicionar: () => void;
   textoAdicionar: string;
@@ -53,7 +63,10 @@ export function ItensOrdenaveisTable<T>({
   const [alcaAtiva, setAlcaAtiva] = React.useState(false);
 
   const podeEditar = !disabled;
-  const totalColunas = colunas.length + (podeEditar ? 2 : 1);
+  const ordenavel = podeEditar && !!onReordenar;
+  // # + as colunas + a alça (se ordena) + as ações (se edita)
+  const totalColunas = colunas.length + 1 + (ordenavel ? 1 : 0) + (podeEditar ? 1 : 0);
+  const { ref, estreito } = useMaisEstreitoQue<HTMLDivElement>(LARGURA_DA_TABELA);
 
   const limparArraste = () => {
     setArrastando(null);
@@ -63,13 +76,27 @@ export function ItensOrdenaveisTable<T>({
 
   const handleDrop = (destino: number) => {
     if (arrastando !== null && arrastando !== destino) {
-      onReordenar(arrastando, destino);
+      onReordenar?.(arrastando, destino);
     }
     limparArraste();
   };
 
+  const linhaDoResumo = resumo && resumo.length > 0 && (
+    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
+      {resumo.map((item) => (
+        <span
+          key={item.label}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
+        >
+          <span className="text-muted-foreground/60">{item.icone}</span>
+          {item.label}: <span className="font-medium text-foreground">{item.valor}</span>
+        </span>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="space-y-2">
+    <div ref={ref} className="w-full min-w-0 space-y-2 [contain:inline-size]" data-empilhada={estreito || undefined}>
       {(podeEditar || titulo) && (
         <div className={titulo ? 'flex items-center justify-between' : 'flex justify-end'}>
           {titulo && (
@@ -103,7 +130,70 @@ export function ItensOrdenaveisTable<T>({
           ocupava altura para dizer o obvio, e num sheet com varias secoes isso
           vira um vazio grande no meio do formulario. O botao de adicionar ja
           comunica que da para incluir. */}
-      {itens.length === 0 ? null : (
+      {itens.length === 0 ? null : estreito ? (
+        <div className="space-y-2">
+          {itens.map((item, index) => (
+            <div key={index} className="rounded-md border border-border p-2">
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">#{index + 1}</span>
+                {podeEditar && (
+                  <div className="flex items-center">
+                    {ordenavel && (
+                      <>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onReordenar?.(index, index - 1)}
+                          disabled={index === 0}
+                          className="h-8 w-8 text-muted-foreground"
+                          title="Subir"
+                          aria-label="Subir"
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onReordenar?.(index, index + 1)}
+                          disabled={index === itens.length - 1}
+                          className="h-8 w-8 text-muted-foreground"
+                          title="Descer"
+                          aria-label="Descer"
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onRemover(index)}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      title="Remover"
+                      aria-label="Remover"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+              {/* A coluna que estica na tabela (a descrição) ocupa a linha toda; as de largura fixa, meia */}
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
+                {colunas.map((coluna) => (
+                  <div key={coluna.key} className={`min-w-0 ${coluna.width ? '' : 'col-span-2'}`}>
+                    <span className="mb-0.5 block text-xs text-muted-foreground">{coluna.header}</span>
+                    {coluna.render(item, index)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          {linhaDoResumo && <div className="rounded-md bg-muted px-3 py-2">{linhaDoResumo}</div>}
+        </div>
+      ) : (
         <div className="rounded-md overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -112,8 +202,9 @@ export function ItensOrdenaveisTable<T>({
                   dentro da caixa. O fundo do cabecalho e do rodape delimita o
                   corpo, e o hover diz em que linha se esta. */}
               <thead>
-                <tr className="bg-muted/50">
-                  {podeEditar && <th className="w-8" />}
+                {/* `bg-muted/50` não pintava nada (o token é var() sem canal alpha) */}
+                <tr className="bg-muted">
+                  {ordenavel && <th className="w-8" />}
                   <th className="w-10 px-2 py-2 text-center text-xs font-medium text-muted-foreground">#</th>
                   {colunas.map((coluna) => (
                     <th
@@ -136,7 +227,7 @@ export function ItensOrdenaveisTable<T>({
                 {itens.map((item, index) => (
                   <tr
                     key={index}
-                    draggable={alcaAtiva && podeEditar}
+                    draggable={alcaAtiva && ordenavel}
                     onDragStart={(event) => {
                       setArrastando(index);
                       event.dataTransfer.effectAllowed = 'move';
@@ -153,9 +244,9 @@ export function ItensOrdenaveisTable<T>({
                     onDragEnd={limparArraste}
                     className={`transition-colors ${
                       arrastando === index ? 'opacity-40' : ''
-                    } ${alvo === index && arrastando !== index ? 'bg-muted' : 'hover:bg-muted/30'}`}
+                    } ${alvo === index && arrastando !== index ? 'bg-muted' : 'hover:bg-muted'}`}
                   >
-                    {podeEditar && (
+                    {ordenavel && (
                       <td className="px-1 align-middle">
                         <span
                           onMouseDown={() => setAlcaAtiva(true)}
@@ -195,19 +286,9 @@ export function ItensOrdenaveisTable<T>({
               </tbody>
               {resumo && resumo.length > 0 && (
                 <tfoot>
-                  <tr className="bg-muted/30">
+                  <tr className="bg-muted">
                     <td colSpan={totalColunas} className="px-3 py-2">
-                      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
-                        {resumo.map((item) => (
-                          <span
-                            key={item.label}
-                            className="flex items-center gap-1.5 text-xs text-muted-foreground"
-                          >
-                            <span className="text-muted-foreground/60">{item.icone}</span>
-                            {item.label}: <span className="font-medium text-foreground">{item.valor}</span>
-                          </span>
-                        ))}
-                      </div>
+                      {linhaDoResumo}
                     </td>
                   </tr>
                 </tfoot>

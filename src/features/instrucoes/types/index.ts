@@ -1,5 +1,7 @@
 // src/features/instrucoes/types/index.ts
 import { type ModalMode } from '@/types/base';
+import type { InstrucaoApiResponse } from '@/services/instrucoes.services';
+import type { CategoriaRecurso } from '@/services/recursos.services';
 
 export type TipoManutencao = 'PREVENTIVA' | 'PREDITIVA' | 'CORRETIVA' | 'INSPECAO' | 'VISITA_TECNICA';
 export type CondicaoAtivo = 'PARADO' | 'FUNCIONANDO' | 'QUALQUER';
@@ -16,7 +18,7 @@ export interface SubInstrucao {
 
 export interface RecursoInstrucao {
   id: string;
-  tipo: 'INSTRUMENTO' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
+  tipo: CategoriaRecurso;
   descricao: string;
   quantidade?: number;
   unidade?: string;
@@ -34,7 +36,7 @@ export interface AnexoInstrucao {
 export interface ModalState {
   isOpen: boolean;
   mode: ModalMode;
-  instrucao: any | null;
+  instrucao: InstrucaoApiResponse | null;
 }
 
 export { type ModalMode };

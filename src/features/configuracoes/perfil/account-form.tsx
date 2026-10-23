@@ -12,6 +12,8 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { TelefoneInput } from '@/core/components/ui/telefone-input'
+import { telefoneE164 } from '@/core/lib/telefone'
 import { ImagePlus, User, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import {
@@ -47,13 +49,11 @@ const profileFormSchema = z.object({
     .email({
       message: 'Email invalido.',
     }),
+  // Mesma regra da API (SN-46): vazio ou um telefone que vira E.164
   phone: z
     .string()
-    .min(10, {
-      message: 'Telefone invalido.',
-    })
-    .max(15, {
-      message: 'Telefone invalido.',
+    .refine((v) => !v.trim() || telefoneE164(v) !== null, {
+      message: 'Telefone inválido: informe o DDD e o número, como (62) 99999-8888.',
     }),
   password: z
     .string()
@@ -116,8 +116,11 @@ export function AccountForm() {
     phone: user?.telefone || '',
   }
 
+  // raw: o submit recebe os valores do formulario (sem o transform da imagem,
+  // que o onSubmit nao le — a foto sobe por uploadedFile). Assim o form tem um
+  // tipo so, que e o que o FormField de components/ui/form aceita.
   const form = useForm<ProfileFormInput>({
-    resolver: zodResolver(profileFormSchema) as any,
+    resolver: zodResolver(profileFormSchema, undefined, { raw: true }),
     defaultValues: defaultValues as Partial<ProfileFormInput>,
   })
 
@@ -141,7 +144,7 @@ export function AccountForm() {
     }
   }, [user, form])
 
-  async function onSubmit(data: ProfileFormValues) {
+  async function onSubmit(data: ProfileFormInput) {
     if (!user?.id) return
 
     // 1. Upload de imagem primeiro (se houver)
@@ -195,7 +198,6 @@ export function AccountForm() {
       const url = URL.createObjectURL(file)
       setPreviewUrl(url)
       setUploadedFile(file)
-      //@ts-ignore
       form.setValue('image', e.target.files as FileList)
     }
   }
@@ -212,7 +214,7 @@ export function AccountForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit as any)} className="w-full">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
         <div className="flex flex-col gap-6">
           <div className="w-full">
             <Card>
@@ -224,7 +226,7 @@ export function AccountForm() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <FormField
-                  control={form.control as any}
+                  control={form.control}
                   name='image'
                   render={() => (
                     <FormItem>
@@ -283,7 +285,7 @@ export function AccountForm() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <FormField
-                    control={form.control as any}
+                    control={form.control}
                     name='name'
                     render={({ field }) => (
                       <FormItem>
@@ -300,7 +302,7 @@ export function AccountForm() {
                   />
 
                   <FormField
-                    control={form.control as any}
+                    control={form.control}
                     name='cpf'
                     render={({ field }) => (
                       <FormItem>
@@ -329,7 +331,7 @@ export function AccountForm() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <FormField
-                    control={form.control as any}
+                    control={form.control}
                     name='email'
                     render={({ field }) => (
                       <FormItem>
@@ -346,13 +348,13 @@ export function AccountForm() {
                   />
 
                   <FormField
-                    control={form.control as any}
+                    control={form.control}
                     name='phone'
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Telefone</FormLabel>
                         <FormControl>
-                          <Input placeholder='(11) 98765-4321' {...field} />
+                          <TelefoneInput {...field} />
                         </FormControl>
                         <FormDescription>
                           Seu telefone para contato.
@@ -376,7 +378,7 @@ export function AccountForm() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
-                  control={form.control as any}
+                  control={form.control}
                   name='password'
                   render={({ field }) => (
                     <FormItem>
@@ -407,7 +409,7 @@ export function AccountForm() {
                 />
 
                 <FormField
-                  control={form.control as any}
+                  control={form.control}
                   name='newPassword'
                   render={({ field }) => (
                     <FormItem>
@@ -438,7 +440,7 @@ export function AccountForm() {
                 />
 
                 <FormField
-                  control={form.control as any}
+                  control={form.control}
                   name='confirmPassword'
                   render={({ field }) => (
                     <FormItem>

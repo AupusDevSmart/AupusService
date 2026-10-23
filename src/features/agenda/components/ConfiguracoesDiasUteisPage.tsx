@@ -6,7 +6,7 @@ import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/core';
 import { BaseFilters } from '@/core';
 import { BaseModal } from '@/core';
-import { Plus, Clock, RefreshCw, Filter } from 'lucide-react';
+import { AlertTriangle, Plus, Clock, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { toast } from '@/hooks/use-toast';
 import { agendaService } from '@/services/agenda.services';
@@ -18,11 +18,13 @@ import {
   QueryConfiguracoesDiasUteisParams
 } from '../types';
 import { configuracoesDiasUteisTableColumns } from '../config/table-config';
-import { usePlantas, createConfiguracoesDiasUteisFilterConfig } from '../config/filter-config';
+import { createConfiguracoesDiasUteisFilterConfig } from '../config/filter-config';
+import { usePlantasDoFiltro } from '@/hooks/usePlantasDoFiltro';
 import {
   configuracoesDiasUteisFormFields,
   configuracoesDiasUteisFormGroups,
-  transformConfiguracaoDiasUteisFormData
+  transformConfiguracaoDiasUteisFormData,
+  type ConfiguracaoDiasUteisDoFormulario
 } from '../config/form-config';
 
 const initialFilters: ConfiguracoesDiasUteisFilters = {
@@ -47,23 +49,12 @@ export function ConfiguracoesDiasUteisPage() {
     limit: linhasPorPagina,
   }));
 
-  // Hook para plantas
-  const { plantas, loading: loadingPlantas, error: plantasError } = usePlantas();
-
-  // Configuração dinâmica dos filtros
-  const filterConfig = useMemo(() => {
-    if (loadingPlantas || plantasError) {
-      return [
-        {
-          key: 'search',
-          type: 'search' as const,
-          placeholder: 'Buscar por nome ou descrição...',
-          className: 'lg:min-w-80'
-        }
-      ];
-    }
-    return createConfiguracoesDiasUteisFilterConfig(plantas);
-  }, [plantas, loadingPlantas, plantasError]);
+  // As plantas do escopo; sem elas o filtro de planta fica só com "todas" e a tela diz por quê
+  const plantasDoFiltro = usePlantasDoFiltro();
+  const filterConfig = useMemo(
+    () => createConfiguracoesDiasUteisFilterConfig(plantasDoFiltro.opcoes, plantasDoFiltro.carregando),
+    [plantasDoFiltro.opcoes, plantasDoFiltro.carregando],
+  );
 
   // Modal state
   const {
@@ -94,11 +85,11 @@ export function ConfiguracoesDiasUteisPage() {
       setConfiguracoes(response.data);
       setTotalConfiguracoes(response.pagination.total);
 
-    } catch (error: any) {
-      console.error('❌ [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Erro ao carregar configurações:', error);
+    } catch (error) {
+      console.error('[CONFIGURAÇÕES DIAS ÚTEIS PAGE] Erro ao carregar configurações:', error);
       toast({
         title: "Erro ao carregar configurações",
-        description: error.message || "Não foi possível carregar a lista de configurações.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar a lista de configurações.",
         variant: "destructive",
       });
       setConfiguracoes([]);
@@ -148,11 +139,11 @@ export function ConfiguracoesDiasUteisPage() {
   const fetchConfiguracaoDetails = async (id: string): Promise<ConfiguracaoDiasUteisResponse | null> => {
     try {
       return await agendaService.getConfiguracaoDiasUteisById(id);
-    } catch (error: any) {
-      console.error('❌ [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Erro ao buscar detalhes da configuração:', error);
+    } catch (error) {
+      console.error('[CONFIGURAÇÕES DIAS ÚTEIS PAGE] Erro ao buscar detalhes da configuração:', error);
       toast({
         title: "Erro ao carregar configuração",
-        description: error.message || "Não foi possível carregar os detalhes da configuração.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar os detalhes da configuração.",
         variant: "destructive",
       });
       return null;
@@ -176,7 +167,7 @@ export function ConfiguracoesDiasUteisPage() {
   };
 
   // Handler: Submissão do formulário
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: ConfiguracaoDiasUteisDoFormulario) => {
     setIsSubmitting(true);
 
     try {
@@ -206,12 +197,12 @@ export function ConfiguracoesDiasUteisPage() {
       await fetchConfiguracoes(filters);
       closeModal();
 
-    } catch (error: any) {
-      console.error('❌ [CONFIGURAÇÕES DIAS ÚTEIS PAGE] Erro ao salvar configuração:', error);
+    } catch (error) {
+      console.error('[CONFIGURAÇÕES DIAS ÚTEIS PAGE] Erro ao salvar configuração:', error);
 
       toast({
         title: modalState.mode === 'create' ? "Erro ao cadastrar configuração" : "Erro ao atualizar configuração",
-        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        description: (error instanceof Error && error.message) || "Ocorreu um erro interno. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -286,8 +277,8 @@ export function ConfiguracoesDiasUteisPage() {
         <div className="flex flex-col w-full sm:h-full">
           {/* Header */}
           <TitleCard
-            title="Configurações de Dias Úteis"
-            description="Gerencie as configurações de dias úteis para as plantas"
+            title="Dias úteis"
+            description="Os dias da semana que contam como úteis em cada planta: a agenda e o gerador de preventivas usam esta regra"
           />
 
           {/* Filtros e Ações */}
@@ -331,11 +322,12 @@ export function ConfiguracoesDiasUteisPage() {
             </div>
           )}
 
-          {/* Status de carregamento das plantas */}
-          {plantasError && (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-              ⚠️ Erro ao carregar plantas para o filtro: {plantasError}
-            </div>
+          {/* O motivo que a API devolveu, no aviso padrão (era um emoji num quadro amarelo) */}
+          {plantasDoFiltro.erro && (
+            <p role="status" className="mb-4 flex items-start gap-2 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>Não foi possível carregar as plantas para o filtro dos dias úteis: {plantasDoFiltro.erro}.</span>
+            </p>
           )}
 
           {/* Tabela */}
@@ -364,7 +356,7 @@ export function ConfiguracoesDiasUteisPage() {
             modalState.mode === 'create' ? 'Nova Configuração' :
             modalState.mode === 'edit' ? 'Editar Configuração' : 'Visualizar Configuração'
           }
-          icon={<Clock className="h-5 w-5 text-purple-600" />}
+          icon={<Clock className="h-5 w-5 text-muted-foreground" />}
           formFields={configuracoesDiasUteisFormFields}
           groups={configuracoesDiasUteisFormGroups}
           onClose={closeModal}

@@ -6,10 +6,13 @@ import {
   CreateEquipamentoApiData, 
   UpdateEquipamentoApiData,
   EquipamentosQueryParams,
-  EstatisticasPlantaResponse,
   ItemDoLoteApi,
+  type CategoriaDoTipoApi,
+  type ComponentesGerenciamentoData,
 } from '@/services/equipamentos.services';
-import { 
+import { formatApiError } from '@/utils/api-error';
+import { avaliacaoDaApi } from '@/core/features/equipamentos/utils/criticidade-pela-matriz';
+import {
   Equipamento,
   EquipamentosFilters 
 } from '../types';
@@ -52,11 +55,11 @@ export const transformApiToFrontend = (apiEquipamento: EquipamentoApiResponse): 
     modelo: apiEquipamento.modelo,
     numeroSerie: apiEquipamento.numero_serie,
     criticidade: apiEquipamento.criticidade || '3',
-    tipo: ((apiEquipamento as any).tipo_equipamento_rel?.id || apiEquipamento.tipo_equipamento_id || apiEquipamento.tipo_equipamento)?.trim(),
-    tipoEquipamento: ((apiEquipamento as any).tipo_equipamento_rel?.id || apiEquipamento.tipo_equipamento_id || apiEquipamento.tipo_equipamento)?.trim(), // Alias para compatibilidade com modal
+    tipo: (apiEquipamento.tipo_equipamento_rel?.id || apiEquipamento.tipo_equipamento_id || apiEquipamento.tipo_equipamento)?.trim(),
+    tipoEquipamento: (apiEquipamento.tipo_equipamento_rel?.id || apiEquipamento.tipo_equipamento_id || apiEquipamento.tipo_equipamento)?.trim(), // Alias para compatibilidade com modal
 
     // Status
-    status: (apiEquipamento as any).status || 'Ativo',
+    status: (apiEquipamento.status || 'Ativo') as Equipamento['status'],
 
     // Estados operacionais
     emOperacao: apiEquipamento.em_operacao as 'sim' | 'nao' | undefined,
@@ -65,6 +68,9 @@ export const transformApiToFrontend = (apiEquipamento: EquipamentoApiResponse): 
     // Datas
     dataImobilizacao: safeDateFormat(apiEquipamento.data_imobilizacao),
     dataInstalacao: safeDateFormat(apiEquipamento.data_instalacao),
+    garantiaAte: safeDateFormat(apiEquipamento.garantia_ate ?? undefined),
+    // SN-64
+    ...avaliacaoDaApi(apiEquipamento),
     
     // Valores financeiros
     valorImobilizado: apiEquipamento.valor_imobilizado,
@@ -100,6 +106,12 @@ export const transformApiToFrontend = (apiEquipamento: EquipamentoApiResponse): 
     // Foto
     fotoUrl: apiEquipamento.foto_url,
 
+    // Automacao (PR3). Sem estes dois o sheet abria todo equipamento com
+    // automacao desligada e sem pontos — e o salvar mandava isso de volta:
+    // `automacao: false` e `pontos: []`, que o backend le como "apague os pontos".
+    automacao: apiEquipamento.automacao,
+    equipamento_pontos: apiEquipamento.equipamento_pontos,
+
     // Relacionamentos
     unidade: apiEquipamento.unidade ? {
       id: apiEquipamento.unidade.id,
@@ -128,7 +140,7 @@ export const transformApiToFrontend = (apiEquipamento: EquipamentoApiResponse): 
       nome: apiEquipamento.planta.nome || 'Planta não informada',
       cnpj: '',
       proprietarioId: apiEquipamento.proprietario_id || '',
-      localizacao: (apiEquipamento.planta as any).localizacao,
+      localizacao: apiEquipamento.planta.localizacao,
       criadoEm: apiEquipamento.created_at?.toString() || new Date().toISOString()
     } : undefined,
     
@@ -138,9 +150,9 @@ export const transformApiToFrontend = (apiEquipamento: EquipamentoApiResponse): 
       classificacao: 'UC',
       criticidade: apiEquipamento.equipamento_pai.criticidade as '1' | '2' | '3' | '4' | '5' || '3',
       criadoEm: apiEquipamento.created_at?.toString() || new Date().toISOString(),
-      fabricante: (apiEquipamento.equipamento_pai as any).fabricante,
-      modelo: (apiEquipamento.equipamento_pai as any).modelo,
-      localizacao: (apiEquipamento.equipamento_pai as any).localizacao
+      fabricante: apiEquipamento.equipamento_pai.fabricante,
+      modelo: apiEquipamento.equipamento_pai.modelo,
+      localizacao: apiEquipamento.equipamento_pai.localizacao
     } : undefined,
     
     componentesUAR: apiEquipamento.componentes_uar?.map(comp => ({
@@ -165,50 +177,94 @@ export const transformApiToFrontend = (apiEquipamento: EquipamentoApiResponse): 
     // O transform monta um objeto NOVO com campos explicitos: o que nao esta
     // listado aqui e descartado em silencio, por mais que a API devolva. Foi
     // assim que o historico da posicao nao aparecia no sheet de edicao.
-    ativo_funcional_id: (apiEquipamento as any).ativo_funcional_id?.trim(),
-    ativoFuncionalId: (apiEquipamento as any).ativo_funcional_id?.trim(),
-    ativo_funcional: (apiEquipamento as any).ativo_funcional,
-    nome_proprio: (apiEquipamento as any).nome_proprio,
+    ativo_funcional_id: apiEquipamento.ativo_funcional_id?.trim(),
+    ativoFuncionalId: apiEquipamento.ativo_funcional_id?.trim(),
+    ativo_funcional: apiEquipamento.ativo_funcional,
+    nome_proprio: apiEquipamento.nome_proprio,
 
     // Tipo de equipamento completo (relação com tipos_equipamentos)
-    tipoEquipamentoObj: (apiEquipamento as any).tipo_equipamento_rel ? {
-      id: (apiEquipamento as any).tipo_equipamento_rel.id?.trim(),
-      codigo: (apiEquipamento as any).tipo_equipamento_rel.codigo?.trim(),
+    tipoEquipamentoObj: apiEquipamento.tipo_equipamento_rel ? {
+      id: apiEquipamento.tipo_equipamento_rel.id?.trim(),
+      codigo: apiEquipamento.tipo_equipamento_rel.codigo?.trim(),
       // A categoria do tipo, para o sheet reabrir ja com ela selecionada sem
       // precisar consultar o servidor de novo.
-      categoriaId: (apiEquipamento as any).tipo_equipamento_rel.categoria_id?.trim(),
-      nome: (apiEquipamento as any).tipo_equipamento_rel.nome?.trim(),
+      categoriaId: apiEquipamento.tipo_equipamento_rel.categoria_id?.trim(),
+      nome: apiEquipamento.tipo_equipamento_rel.nome?.trim(),
       // ✅ CORRIGIDO: categoria é objeto, não string
-      categoria: (apiEquipamento as any).tipo_equipamento_rel.categoria?.nome ||
-                 (apiEquipamento as any).tipo_equipamento_rel.categoria || '',
-      fabricante: (apiEquipamento as any).tipo_equipamento_rel.fabricante,
-      larguraPadrao: (apiEquipamento as any).tipo_equipamento_rel.largura_padrao,
-      alturaPadrao: (apiEquipamento as any).tipo_equipamento_rel.altura_padrao,
-      iconeSvg: (apiEquipamento as any).tipo_equipamento_rel.icone_svg
+      categoria: nomeDaCategoria(apiEquipamento.tipo_equipamento_rel.categoria) ||
+                 apiEquipamento.tipo_equipamento_rel.categoria || '',
+      fabricante: apiEquipamento.tipo_equipamento_rel.fabricante,
+      larguraPadrao: apiEquipamento.tipo_equipamento_rel.largura_padrao,
+      alturaPadrao: apiEquipamento.tipo_equipamento_rel.altura_padrao,
+      iconeSvg: apiEquipamento.tipo_equipamento_rel.icone_svg
     } : undefined,
 
     // Prioridade: usar equipamentos_filhos (nome correto no backend) > totalComponentes > _count > componentes_uar
-    totalComponentes: (apiEquipamento as any).equipamentos_filhos?.length
+    totalComponentes: apiEquipamento.equipamentos_filhos?.length
       || apiEquipamento.totalComponentes
-      || (apiEquipamento as any)._count?.componentes_uar
+      || apiEquipamento._count?.componentes_uar
       || apiEquipamento.componentes_uar?.length
       || 0
   };
 };
 
+/** O nome da categoria quando ela vem como objeto (com a relacao incluida). */
+const nomeDaCategoria = (categoria: CategoriaDoTipoApi | undefined): string | undefined =>
+  typeof categoria === 'object' && categoria ? categoria.nome : undefined;
+
+/**
+ * O que o transform aceita: o formulario do modal (camelCase) ou o payload ja
+ * no formato da API (snake_case). Os dois nomes de cada campo valem.
+ */
+export type EquipamentoParaApi = Partial<CreateEquipamentoApiData> & {
+  unidadeId?: string;
+  plantaId?: string;
+  proprietarioId?: string;
+  equipamentoPaiId?: string;
+  numeroSerie?: string;
+  tipoEquipamento?: string;
+  tipo?: string;
+  emOperacao?: CreateEquipamentoApiData['em_operacao'];
+  tipoDepreciacao?: CreateEquipamentoApiData['tipo_depreciacao'];
+  dataImobilizacao?: string;
+  dataInstalacao?: string | null;
+  garantiaAte?: string | null;
+  criticidadeImpacto?: number | null;
+  criticidadeProbabilidade?: number | null;
+  criticidadeMotivo?: string | null;
+  valorImobilizado?: number;
+  valorDepreciacao?: number;
+  valorContabil?: number;
+  vidaUtil?: number;
+  centroCusto?: string | null;
+  planoManutencao?: string;
+  localizacaoEspecifica?: string;
+  mqttHabilitado?: boolean;
+  topicoMqtt?: string;
+  fotoUrl?: string;
+  dadosTecnicos?: CreateEquipamentoApiData['dados_tecnicos'];
+};
+
+/**
+ * O payload que o transform monta. O nome pode faltar — numa atualizacao
+ * parcial ele nao vem —, e no cadastro quem o exige e o DTO do backend.
+ */
+export type PayloadDoEquipamentoApi = Partial<CreateEquipamentoApiData> &
+  Pick<CreateEquipamentoApiData, 'classificacao' | 'criticidade'>;
+
 // NOVA TRANSFORMAÇÃO: Frontend -> API (SEM PERDER DADOS)
-export const transformFrontendToApi = (equipamento: any): CreateEquipamentoApiData => {
+export const transformFrontendToApi = (equipamento: EquipamentoParaApi): PayloadDoEquipamentoApi => {
   // console.log('TRANSFORM: Dados de entrada:', equipamento);
 
   // Se já vem no formato da API (do modal), usar direto
   // Verificar por unidade_id OU planta_id (nova estrutura ou antiga)
   if (equipamento.classificacao && (equipamento.unidade_id || equipamento.planta_id)) {
     // console.log('TRANSFORM: Dados já estão no formato da API');
-    return equipamento as CreateEquipamentoApiData;
+    return equipamento as PayloadDoEquipamentoApi;
   }
 
   // Senão, transformar do formato do frontend
-  const apiData: CreateEquipamentoApiData = {
+  const apiData: PayloadDoEquipamentoApi = {
     nome: equipamento.nome,
     classificacao: equipamento.classificacao || 'UC',
     criticidade: equipamento.criticidade || '3',
@@ -236,6 +292,13 @@ export const transformFrontendToApi = (equipamento: any): CreateEquipamentoApiDa
     // Datas
     data_imobilizacao: equipamento.data_imobilizacao || equipamento.dataImobilizacao,
     data_instalacao: equipamento.data_instalacao || equipamento.dataInstalacao,
+    // SN-66: null é "apagar", e não pode virar "não mexe" no ||
+    garantia_ate: equipamento.garantia_ate !== undefined ? equipamento.garantia_ate : equipamento.garantiaAte,
+    // SN-64: idem (null apaga a avaliação)
+    criticidade_impacto: equipamento.criticidade_impacto !== undefined ? equipamento.criticidade_impacto : equipamento.criticidadeImpacto,
+    criticidade_probabilidade:
+      equipamento.criticidade_probabilidade !== undefined ? equipamento.criticidade_probabilidade : equipamento.criticidadeProbabilidade,
+    criticidade_motivo: equipamento.criticidade_motivo !== undefined ? equipamento.criticidade_motivo : equipamento.criticidadeMotivo,
     
     // Valores financeiros
     valor_imobilizado: equipamento.valor_imobilizado || equipamento.valorImobilizado,
@@ -297,10 +360,10 @@ export interface UseEquipamentosReturn {
   total: number;
   
   // Operações CRUD
-  createEquipamento: (data: any) => Promise<Equipamento>;
+  createEquipamento: (data: EquipamentoParaApi) => Promise<Equipamento>;
   /** Cadastra varios equipamentos iguais de uma vez. */
   createEquipamentosLote: (
-    data: any,
+    data: EquipamentoParaApi,
     itens: ItemDoLoteApi[],
   ) => Promise<{ total: number; equipamentos: Equipamento[] }>;
   /** De onde continuar a numeração de nomes e TAGs. */
@@ -314,16 +377,12 @@ export interface UseEquipamentosReturn {
     origemId: string,
     destinoIds: string[],
   ) => Promise<{ total: number; anexos_por_equipamento: number }>;
-  updateEquipamento: (id: string, data: any) => Promise<Equipamento>;
+  updateEquipamento: (id: string, data: EquipamentoParaApi) => Promise<Equipamento>;
   deleteEquipamento: (id: string) => Promise<void>;
   getEquipamento: (id: string) => Promise<Equipamento>;
   
   // Operações de listagem
   fetchEquipamentos: (params?: EquipamentosFilters) => Promise<Equipamento[]>;
-  fetchEquipamentosByPlanta: (plantaId: string, params?: EquipamentosFilters) => Promise<{
-    equipamentos: Equipamento[];
-    planta: { id: string; nome: string; localizacao: string };
-  }>;
   
   // Operações específicas para componentes
   fetchComponentesByEquipamento: (equipamentoId: string) => Promise<Equipamento[]>;
@@ -337,16 +396,16 @@ export interface UseEquipamentosReturn {
   
   // Gerenciamento em lote de componentes
   fetchComponentesParaGerenciar: (ucId: string) => Promise<{
-    equipamentoUC: any;
+    /** Nulo quando a API nao o trouxe. Erro na consulta rejeita (nao vira vazio). */
+    equipamentoUC: ComponentesGerenciamentoData['equipamentoUC'] | null;
     componentes: Equipamento[];
   }>;
-  salvarComponentesUARLote: (ucId: string, componentes: any[]) => Promise<{
+  salvarComponentesUARLote: (ucId: string, componentes: (EquipamentoParaApi & { id?: string })[]) => Promise<{
     message: string;
     componentes: Equipamento[];
   }>;
   
   // Estatísticas
-  getEstatisticasPlanta: (plantaId: string) => Promise<EstatisticasPlantaResponse>;
   uploadFoto: (id: string, file: File) => Promise<{ fotoUrl: string }>;
   removeFoto: (id: string) => Promise<{ fotoUrl: null }>;
   
@@ -368,16 +427,8 @@ export function useEquipamentos(): UseEquipamentosReturn {
   const equipamentosUC = equipamentos.filter(eq => eq.classificacao === 'UC');
   const componentesUAR = equipamentos.filter(eq => eq.classificacao === 'UAR');
 
-  const handleError = useCallback((err: any, context?: string) => {
-    let message = 'Erro desconhecido';
-    
-    if (err?.response?.data?.message) {
-      message = err.response.data.message;
-    } else if (err?.message) {
-      message = err.message;
-    } else if (typeof err === 'string') {
-      message = err;
-    }
+  const handleError = useCallback((err: unknown, context?: string) => {
+    const message = formatApiError(err);
 
     console.error(`Erro na API de equipamentos${context ? ` (${context})` : ''}:`, err);
     setError(message);
@@ -397,7 +448,7 @@ export function useEquipamentos(): UseEquipamentosReturn {
   // OPERAÇÕES CRUD
   // ============================================================================
 
-  const createEquipamento = useCallback(async (data: any): Promise<Equipamento> => {
+  const createEquipamento = useCallback(async (data: EquipamentoParaApi): Promise<Equipamento> => {
     try {
       setLoading(true);
       setError(null);
@@ -407,7 +458,8 @@ export function useEquipamentos(): UseEquipamentosReturn {
       const apiData = transformFrontendToApi(data);
       // console.log('HOOK: Dados transformados para API:', apiData);
 
-      const response = await equipamentosApi.create(apiData);
+      // O nome obrigatorio quem confere e o DTO do backend: sem ele a API recusa com 400.
+      const response = await equipamentosApi.create(apiData as CreateEquipamentoApiData);
       // console.log('HOOK: Resposta da API:', response);
 
       const equipamento = transformApiToFrontend(response);
@@ -434,12 +486,12 @@ export function useEquipamentos(): UseEquipamentosReturn {
    * número de série — o que estivesse ali só confundiria a leitura do payload.
    */
   const createEquipamentosLote = useCallback(
-    async (data: any, itens: ItemDoLoteApi[]) => {
+    async (data: EquipamentoParaApi, itens: ItemDoLoteApi[]) => {
       try {
         setLoading(true);
         setError(null);
 
-        const apiData = transformFrontendToApi(data) as any;
+        const apiData = transformFrontendToApi(data);
         delete apiData.nome;
         delete apiData.tag;
         delete apiData.numero_serie;
@@ -491,13 +543,19 @@ export function useEquipamentos(): UseEquipamentosReturn {
     [handleError],
   );
 
-  const updateEquipamento = useCallback(async (id: string, data: any): Promise<Equipamento> => {
+  const updateEquipamento = useCallback(async (id: string, data: EquipamentoParaApi): Promise<Equipamento> => {
     try {
       setLoading(true);
       setError(null);
-      
-      const apiData = transformFrontendToApi(data);
-      const response = await equipamentosApi.update(id, apiData as UpdateEquipamentoApiData);
+
+      const apiData: UpdateEquipamentoApiData = transformFrontendToApi(data);
+      // Atualizacao parcial nao leva os padroes de cadastro do transform. Quem
+      // atualiza so a foto (`{ foto_url }`, no lote) mandava junto
+      // classificacao 'UC' e criticidade '3': o componente UAR virava UC e a
+      // criticidade escolhida voltava para 3.
+      if (data.classificacao === undefined) delete apiData.classificacao;
+      if (data.criticidade === undefined) delete apiData.criticidade;
+      const response = await equipamentosApi.update(id, apiData);
       const equipamento = transformApiToFrontend(response);
       
       // Atualizar lista local
@@ -596,7 +654,7 @@ export function useEquipamentos(): UseEquipamentosReturn {
 
       // Apos o interceptor desempacotar { success, data: X }, `response` = X = { data: [], pagination: {}, meta: {} }
       // response.data eh o array de equipamentos; response.pagination tem page/limit/total/pages.
-      const equipamentosArray = Array.isArray(response.data) ? response.data : ((response.data as any)?.data || []);
+      const equipamentosArray = Array.isArray(response.data) ? response.data : (response.data?.data || []);
 
       // DEBUG: Verificar primeiro equipamento UC para ver campos disponíveis
       // const primeiroUC = equipamentosArray.find((eq: any) => eq.classificacao === 'UC');
@@ -608,9 +666,11 @@ export function useEquipamentos(): UseEquipamentosReturn {
       //   console.log('📊 [DEBUG] Contagem FINAL que será usada:', primeiroUC.equipamentos_filhos?.length || primeiroUC.totalComponentes || 0);
       // }
 
-      const equipamentosFiltrados = response.data.map(transformApiToFrontend);
+      // A lista ja desembrulhada: `response.data.map` quebrava justo no caso
+      // de um embrulho a mais, que a linha acima existe para tratar.
+      const equipamentosFiltrados = equipamentosArray.map(transformApiToFrontend);
 
-      const pagination = (response as any).pagination || (response.data as any)?.pagination;
+      const pagination = response.pagination || (Array.isArray(response.data) ? undefined : response.data?.pagination);
       console.log('🔢 [DEBUG PAGINACAO] pagination:', pagination, 'array:', equipamentosArray.length, 'filtrado:', equipamentosFiltrados.length);
 
       setEquipamentos(equipamentosFiltrados);
@@ -623,49 +683,6 @@ export function useEquipamentos(): UseEquipamentosReturn {
     } catch (err) {
       handleError(err, 'fetchEquipamentos');
       return [];
-    } finally {
-      setLoading(false);
-    }
-  }, [handleError]);
-
-  const fetchEquipamentosByPlanta = useCallback(async (plantaId: string, filters?: EquipamentosFilters) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const params: EquipamentosQueryParams = {
-        page: filters?.page || 1,
-        limit: filters?.limit || 10,
-        search: filters?.search || undefined,
-        classificacao: (filters?.classificacao !== 'all' ? filters?.classificacao : undefined) as 'UC' | 'UAR' | undefined,
-        criticidade: (filters?.criticidade !== 'all' ? filters?.criticidade : undefined) as '1' | '2' | '3' | '4' | '5' | undefined,
-        // Esconder PONTO e BARRAMENTO e trabalho da consulta, nao da tela.
-        ocultarVirtuais: true,
-      };
-      
-      const response = await equipamentosApi.findByPlanta(plantaId, params);
-
-      // A API retorna: { success: true, data: { data: [], pagination: {}, planta: {} }, meta: {} }
-      const equipamentosFiltrados = response.data.data.map(transformApiToFrontend);
-
-      setEquipamentos(equipamentosFiltrados);
-      setTotalPages(response.data.pagination.pages);
-      setCurrentPage(response.data.pagination.page);
-      // O total e o do BACKEND: usar o tamanho da pagina filtrada limitava a
-      // contagem a 10 e tirava o sentido da paginacao.
-      setTotal(response.data.pagination.total ?? equipamentosFiltrados.length);
-
-      return {
-        equipamentos: equipamentosFiltrados,
-        planta: response.data.planta
-      };
-      
-    } catch (err) {
-      handleError(err, 'fetchEquipamentosByPlanta');
-      return {
-        equipamentos: [],
-        planta: { id: '', nome: '', localizacao: '' }
-      };
     } finally {
       setLoading(false);
     }
@@ -736,22 +753,24 @@ export function useEquipamentos(): UseEquipamentosReturn {
       };
 
     } catch (err) {
+      // Sobe para quem chamou, que avisa (inclusive o 403 do escopo). Devolver
+      // lista vazia mostrava "Componentes UAR (0)" sem aviso (revisao do SN-12)
       handleError(err, 'fetchComponentesParaGerenciar');
-      return {
-        equipamentoUC: null,
-        componentes: []
-      };
+      throw err;
     } finally {
       setLoading(false);
     }
   }, [handleError]);
 
-  const salvarComponentesUARLote = useCallback(async (ucId: string, componentes: any[]) => {
+  const salvarComponentesUARLote = useCallback(async (ucId: string, componentes: (EquipamentoParaApi & { id?: string })[]) => {
     try {
       setLoading(true);
       setError(null);
 
-      const componentesApi = componentes.map(comp => transformFrontendToApi(comp));
+      // O id diz ao backend quem ja existe (o novo vai com o temp_). O transform
+      // remontava o objeto sem ele, e o lote apagava cada componente e criava
+      // uma copia com id novo (revisao do SN-12)
+      const componentesApi = componentes.map(comp => ({ ...transformFrontendToApi(comp), id: comp.id?.trim() }));
 
       const response = await equipamentosApi.salvarComponentesUARLote(ucId, componentesApi);
 
@@ -762,21 +781,6 @@ export function useEquipamentos(): UseEquipamentosReturn {
 
     } catch (err) {
       handleError(err, 'salvarComponentesUARLote');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [handleError]);
-
-  const getEstatisticasPlanta = useCallback(async (plantaId: string): Promise<EstatisticasPlantaResponse> => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      return await equipamentosApi.getEstatisticasPlanta(plantaId);
-
-    } catch (err) {
-      handleError(err, 'getEstatisticasPlanta');
       throw err;
     } finally {
       setLoading(false);
@@ -835,8 +839,6 @@ export function useEquipamentos(): UseEquipamentosReturn {
     
     // Operações de listagem
     fetchEquipamentos,
-    fetchEquipamentosByPlanta,
-    
     // Operações específicas para componentes
     fetchComponentesByEquipamento,
     fetchEquipamentosUCDisponiveis,
@@ -846,8 +848,6 @@ export function useEquipamentos(): UseEquipamentosReturn {
     salvarComponentesUARLote,
     
     // Estatísticas
-    getEstatisticasPlanta,
-
     // Foto
     uploadFoto,
     removeFoto,

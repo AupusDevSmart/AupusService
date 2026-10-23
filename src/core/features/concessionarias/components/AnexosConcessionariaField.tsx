@@ -1,7 +1,6 @@
 // src/features/concessionarias/components/AnexosConcessionariaField.tsx
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/core/components/ui/button';
-import { Input } from '@/core/components/ui/input';
 import { Label } from '@/core/components/ui/label';
 import { Card } from '@/core/components/ui/card';
 import {
@@ -18,15 +17,16 @@ import {
 import { cn } from '@/core/lib/utils';
 import { useHttpClient } from '@/core/context/hooks';
 import { toast } from '@/core/hooks/use-toast';
-import { AnexoConcessionaria, AnexoTemporario, AnexoItem } from '../types';
+import { AnexoConcessionaria, AnexoTemporario, AnexoItem, ehAnexoTemporario } from '../types';
+import { formatApiError } from '@/utils/api-error';
 
 interface AnexosConcessionariaFieldProps {
   concessionariaId?: string;
-  value?: any; // Recebe o valor do formulário
-  onChange?: (value: any) => void; // Notifica mudanças para o formulário
+  value?: AnexoItem[]; // Recebe o valor do formulário
+  onChange?: (value: AnexoItem[]) => void; // Notifica mudanças para o formulário
   anexosExistentes?: AnexoConcessionaria[];
   disabled?: boolean;
-  mode?: 'create' | 'edit' | 'view';
+  mode?: string;
 }
 
 export function AnexosConcessionariaField({
@@ -79,10 +79,7 @@ export function AnexosConcessionariaField({
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  // Helper para verificar se é anexo temporário
-  const isTemporary = (anexo: AnexoItem): anexo is AnexoTemporario => {
-    return 'isTemporary' in anexo && anexo.isTemporary === true;
-  };
+  const isTemporary = ehAnexoTemporario;
 
   // Helper para notificar mudanças
   const notifyChange = (novosAnexos: AnexoItem[]) => {
@@ -134,7 +131,7 @@ export function AnexosConcessionariaField({
       if (!isCreateMode && concessionariaId) {
         const formData = new FormData();
         formData.append('file', file);
-        const response = await httpClient.post(`/concessionarias/${concessionariaId}/anexos`, formData, {
+        const response = await httpClient.post<AnexoConcessionaria>(`/concessionarias/${concessionariaId}/anexos`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         const novoAnexo = response.data;
@@ -172,11 +169,11 @@ export function AnexosConcessionariaField({
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao processar arquivo:', error);
       toast({
         title: "Erro ao adicionar arquivo",
-        description: error.message || "Não foi possível adicionar o arquivo.",
+        description: formatApiError(error) || "Não foi possível adicionar o arquivo.",
         variant: "destructive",
       });
     } finally {
@@ -207,7 +204,7 @@ export function AnexosConcessionariaField({
       }
 
       // Se for salvo, fazer download da API
-      const response = await httpClient.get(`/concessionarias/anexos/${anexo.id}/download`, {
+      const response = await httpClient.get<Blob>(`/concessionarias/anexos/${anexo.id}/download`, {
         responseType: 'blob'
       });
       const blob = response.data;
@@ -225,11 +222,11 @@ export function AnexosConcessionariaField({
         description: `Baixando "${anexo.nome_original}"...`,
         variant: "default",
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao fazer download:', error);
       toast({
         title: "Erro ao baixar arquivo",
-        description: error.message || "Não foi possível baixar o arquivo.",
+        description: formatApiError(error) || "Não foi possível baixar o arquivo.",
         variant: "destructive",
       });
     }
@@ -268,11 +265,11 @@ export function AnexosConcessionariaField({
         description: `O arquivo "${anexo.nome_original}" foi excluído.`,
         variant: "default",
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao excluir anexo:', error);
       toast({
         title: "Erro ao excluir arquivo",
-        description: error.message || "Não foi possível excluir o arquivo.",
+        description: formatApiError(error) || "Não foi possível excluir o arquivo.",
         variant: "destructive",
       });
     } finally {

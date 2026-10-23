@@ -1,5 +1,6 @@
 import { useSharedPages } from './SharedPagesContext';
-import type { LocationData } from '../types/contracts';
+import type { FiltrosDosEquipamentosDaUnidade, LocationData } from '../types/contracts';
+import type { UnidadeFilters } from '@/features/unidades/types';
 
 // ============================================================
 // STORES
@@ -43,7 +44,7 @@ export function useSelectionData() {
 // UNIDADES
 // ============================================================
 
-export function useUnidades(filters?: any) {
+export function useUnidades(filters?: UnidadeFilters) {
   const { hooks } = useSharedPages();
   return hooks.useUnidades(filters);
 }
@@ -63,7 +64,7 @@ export function useUnidadeEstatisticas(id?: string) {
   return hooks.useUnidadeEstatisticas(id);
 }
 
-export function useUnidadeEquipamentos(id?: string, filters?: any) {
+export function useUnidadeEquipamentos(id?: string, filters?: FiltrosDosEquipamentosDaUnidade) {
   const { hooks } = useSharedPages();
   return hooks.useUnidadeEquipamentos(id, filters);
 }

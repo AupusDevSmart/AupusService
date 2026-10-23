@@ -21,19 +21,26 @@ import { Component, Save, Wrench, X, AlertCircle, Loader2, Plus, Minus } from 'l
 import { normalizarTipoEquipamento } from '@/core/features/equipamentos/utils/tipo-equipamento';
 import { camposDaCategoria } from '@/core/features/equipamentos/config/campos-por-categoria';
 import React, { useEffect, useState } from 'react';
-import { Equipamento } from '../../types';
+import { Equipamento, idDoEquipamentoCriado } from '../../types';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/core/components/ui/tabs';
 import {
   useCategorias,
   useModelos,
-  useSelectionData,
   useHttpClient,
   useEquipamentos,
 } from '@/core/context/hooks';
 import { FotoEquipamentoField } from '../FotoEquipamentoField';
 import { ItensDoLoteField } from '../ItensDoLoteField';
 import { AnexosEquipamentoField } from '../AnexosEquipamentoField';
-import type { EquipamentoDoLote } from '@/core/types/contracts';
+import type { EquipamentoDoLote, UseModelosContract } from '@/core/types/contracts';
+import { mensagemDoBackend } from '@/utils/api-error';
+import { payloadDoComponente, type DadosDoComponenteUAR, type FormularioDoUAR } from '@/core/features/equipamentos/utils/payload-do-componente';
+import { rodarAcoesPosCriacao, useAcoesPosCriacao } from '@/core/features/equipamentos/utils/acoes-pos-criacao';
+import { InstalacaoEGarantia } from '@/core/features/equipamentos/components/InstalacaoEGarantia';
+import { CriticidadePelaMatriz } from '@/core/features/equipamentos/components/CriticidadePelaMatriz';
+import { EtiquetasDosEquipamentos } from '@/core/features/equipamentos/components/EtiquetasDosEquipamentos';
+import { dadosDoEquipamento } from '@/core/features/equipamentos/utils/etiqueta';
+import { problemaDaCriticidade, soAAvaliacao } from '@/core/features/equipamentos/utils/criticidade-pela-matriz';
 
 type AbaUAR = 'dados' | 'itens' | 'anexos';
 
@@ -47,23 +54,21 @@ interface CampoTecnicoSchema {
   nome?: string;
 }
 
-interface TipoEquipamentoModal {
-  value: string;
-  label: string;
-  categoria: string;
-  camposTecnicos: CampoTecnicoSchema[];
-}
-
 interface TipoEquipamento {
   id: string;
   codigo: string;
   nome: string;
   fabricante: string;
   categoriaId: string;
-  categoria?: { id: string; nome: string };
+  categoria?: { id: string; nome: string } | null;
   propriedadesSchema?: { campos: CampoTecnicoSchema[] };
   propriedades_schema?: { campos: CampoTecnicoSchema[] };
 }
+
+export type { DadosDoComponenteUAR };
+
+/** O bloco comum do lote: o que varia por exemplar vai nos itens. */
+type DadosComunsDoLoteUAR = Omit<DadosDoComponenteUAR, 'nome' | 'tag' | 'numero_serie' | 'localizacao_especifica'>;
 
 interface ComponenteUARModalProps {
   isOpen: boolean;
@@ -75,7 +80,7 @@ interface ComponenteUARModalProps {
    * Devolve o componente criado quando houver. A foto escolhida antes de o
    * componente existir precisa do id para subir, e e daqui que ele vem.
    */
-  onSubmit: (data: any) => any;
+  onSubmit: (data: DadosDoComponenteUAR) => unknown;
   /** Componente de origem quando o cadastro e uma duplicacao. */
   duplicarDe?: Equipamento | null;
   /**
@@ -97,7 +102,6 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   aoCriarEmLote,
 }) => {
   const httpClient = useHttpClient();
-  const { fetchTiposEquipamentos, getCamposTecnicosPorTipo } = useSelectionData();
   const {
     createEquipamentosLote,
     proximoSequencial,
@@ -122,26 +126,18 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   const [fotoPendente, setFotoPendente] = useState<File | null>(null);
   const [previewFoto, setPreviewFoto] = useState<string | null>(null);
 
-  /** O que os campos pediram para acontecer assim que o componente nascer. */
-  const acoesPosCriacaoRef = React.useRef<Map<string, (id: string) => Promise<void>>>(new Map());
-  const registrarAcaoPosCriacao = React.useCallback(
-    (chave: string, acao: (id: string) => Promise<void>) => {
-      acoesPosCriacaoRef.current.set(chave, acao);
-    },
-    [],
-  );
+  /** O que os campos pediram para acontecer assim que o componente nascer (vazio a cada abertura). */
+  const { acoes: acoesPosCriacaoRef, registrar: registrarAcaoPosCriacao } = useAcoesPosCriacao(isOpen);
 
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<FormularioDoUAR>({});
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Estados para tipos de equipamentos da API
-  const [tiposEquipamentos, setTiposEquipamentos] = useState<TipoEquipamentoModal[]>([]);
-  const [loadingTipos, setLoadingTipos] = useState(false);
 
   // Estados para seleção hierárquica Categoria -> Modelo
   const [categoriaIdSelecionada, setCategoriaIdSelecionada] = useState<string>('');
-  const [modeloSelecionado, setModeloSelecionado] = useState<TipoEquipamento | null>(null);
+  // Vem do normalizador (tipo local) ou da lista de modelos do useModelos.
+  const [modeloSelecionado, setModeloSelecionado] = useState<TipoEquipamento | UseModelosContract['modelos'][number] | null>(null);
 
   // Hooks para categorias e modelos (from context)
   const { categorias, loading: loadingCategorias, refetch: refetchCategorias } = useCategorias();
@@ -161,43 +157,6 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   const [novoModeloFabricante, setNovoModeloFabricante] = useState('');
   const [loadingNovoModelo, setLoadingNovoModelo] = useState(false);
 
-  // Helper para buscar tipo de equipamento
-  const getTipoEquipamento = (codigo: string): TipoEquipamentoModal | undefined => {
-    return tiposEquipamentos.find(t => t.value === codigo);
-  };
-
-  // Carregar tipos de equipamentos via context hook
-  useEffect(() => {
-    const loadTiposEquipamentos = async () => {
-      setLoadingTipos(true);
-      try {
-        const tipos = await fetchTiposEquipamentos();
-        const tiposFormatados = tipos.map((tipo: any) => ({
-          value: tipo.codigo,
-          label: tipo.nome,
-          categoria: tipo.categoria,
-          camposTecnicos: (tipo.propriedadesSchema?.campos || tipo.propriedades_schema?.campos || []).map((campo: any) => ({
-            campo: campo.campo || campo.nome,
-            tipo: campo.tipo === 'boolean' ? ('select' as const) : campo.tipo,
-            unidade: campo.unidade,
-            opcoes: campo.opcoes || (campo.tipo === 'boolean' ? ['Sim', 'Não'] : undefined),
-            obrigatorio: campo.obrigatorio,
-          })),
-        }));
-        setTiposEquipamentos(tiposFormatados);
-      } catch (err) {
-        console.error('[MODAL UAR] Erro ao carregar tipos de equipamentos:', err);
-        avisar('Erro ao carregar tipos de equipamentos');
-      } finally {
-        setLoadingTipos(false);
-      }
-    };
-
-    if (isOpen) {
-      loadTiposEquipamentos();
-    }
-  }, [isOpen, fetchTiposEquipamentos]);
-
   useEffect(() => {
     const initializeFormData = async () => {
       // Duplicar reaproveita o caminho da edicao: e a mesma leitura completa
@@ -212,7 +171,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
         // Extrair dados técnicos para o formData
         const dadosTecnicosObj: Record<string, string> = {};
         if (entity.dadosTecnicos && Array.isArray(entity.dadosTecnicos)) {
-          entity.dadosTecnicos.forEach((dt: any) => {
+          entity.dadosTecnicos.forEach((dt) => {
             dadosTecnicosObj[dt.campo] = dt.valor;
           });
         }
@@ -235,7 +194,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
          * certo. So se ele faltar e que sobra tentar o campo antigo, que nas
          * linhas anteriores ao relacionamento guardava mesmo um codigo.
          */
-        const tipoDaEntidade = (entity as any).tipoEquipamentoObj;
+        const tipoDaEntidade = entity.tipoEquipamentoObj;
         const codigoTipo = tipoDaEntidade?.codigo || entity.tipo || '';
 
         // O tipo ja vem junto do equipamento; consultar de novo so faz sentido
@@ -270,7 +229,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
           // O que identifica um exemplar nao se copia: sai em branco para ser
           // preenchido, e a TAG o backend gera se ficar assim.
           ...(duplicando
-            ? { id: undefined, nome: '', tag: '', numeroSerie: '', fotoUrl: undefined }
+            ? { id: undefined, nome: '', tag: '', numeroSerie: '', fotoUrl: undefined, dataInstalacao: '', garantiaAte: '' }
             : {}),
           equipamentoPaiId: equipamentoPai?.id ?? entity.equipamentoPaiId,
         });
@@ -291,8 +250,15 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     initializeFormData();
   }, [entity, mode, equipamentoPai, duplicarDe]);
 
-  const handleFieldChange = (field: string, value: any) => {
-    setFormData((prev: any) => ({ ...prev, [field]: value }));
+  // `field` e livre: os campos tecnicos entram pelo nome que o tipo ou a categoria da.
+  const handleFieldChange = (field: string, value: unknown) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  /** O valor de um campo tecnico como o input mostra. */
+  const valorDoCampo = (campo: string): string => {
+    const valor = formData[campo];
+    return typeof valor === 'string' ? valor : valor == null ? '' : String(valor);
   };
 
   /**
@@ -318,7 +284,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     const escolhida = categorias.find(cat => cat.id?.trim() === trimmedId);
     const sugestao = escolhida?.nome || '';
 
-    setFormData((prev: any) => {
+    setFormData((prev) => {
       const atual = (prev.nome || '').trim();
       const intocado = !atual || atual === (anterior?.nome || '').trim();
 
@@ -334,19 +300,11 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   };
 
   /**
-   * Os campos tecnicos a exibir: a CATEGORIA define o padrao, o tipo prevalece.
-   *
-   * A secao dependia so do tipo escolhido, e a maioria das categorias nao tem
-   * tipo com `propriedades_schema` — o formulario mostrava "nenhum campo tecnico
-   * definido" e quem cadastrava nao tinha como saber o que preencher.
-   *
-   * Quando o tipo traz schema proprio ele ganha, por ser mais especifico que a
-   * categoria; sem isso, vale o padrao da categoria.
+   * Os campos tecnicos a exibir: os da CATEGORIA (decisao do usuario,
+   * 2026-10-15, SN-42). Havia um caminho em que o modelo prevalecia, lendo uma
+   * lista fixa que nunca casava com os codigos reais — saiu.
    */
   const camposTecnicosVisiveis = (): CampoTecnicoSchema[] => {
-    const tipoEqp = getTipoEquipamento(formData.tipoComponente);
-    if (tipoEqp?.camposTecnicos?.length) return tipoEqp.camposTecnicos;
-
     const categoria = categorias.find(c => c.id?.trim() === categoriaIdSelecionada);
     return camposDaCategoria(categoria?.nome).map(c => ({
       campo: c.campo,
@@ -357,10 +315,8 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     }));
   };
 
-  /** Titulo da secao: o modelo quando houver, senao a categoria. */
+  /** Titulo da secao: a categoria. */
   const rotuloDosCampos = (): string => {
-    const tipoEqp = getTipoEquipamento(formData.tipoComponente);
-    if (tipoEqp?.camposTecnicos?.length) return tipoEqp.label;
     return categorias.find(c => c.id?.trim() === categoriaIdSelecionada)?.nome || "";
   };
 
@@ -370,7 +326,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     const modelo = modelos.find(m => m.id?.trim() === trimmedId);
     if (modelo) {
       setModeloSelecionado(modelo);
-      setFormData((prev: any) => ({
+      setFormData((prev) => ({
         ...prev,
         tipoComponente: modelo.codigo?.trim(),
         tipoEquipamentoId: modelo.id?.trim(),
@@ -401,7 +357,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
         setCategoriaIdSelecionada(novaCategoria.id);
 
         // Auto-preencher nome do componente
-        setFormData((prev: any) => ({
+        setFormData((prev) => ({
           ...prev,
           nome: novaCategoria.nome,
         }));
@@ -411,9 +367,9 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
         setPopoverCategoriaOpen(false);
 
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('❌ [MODAL UAR] Erro ao criar categoria:', err);
-      avisar(err.response?.data?.message || 'Erro ao criar nova categoria');
+      avisar(mensagemDoBackend(err) || 'Erro ao criar nova categoria');
     } finally {
       setLoadingNovaCategoria(false);
     }
@@ -459,7 +415,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
 
         // Selecionar automaticamente o novo modelo
         setModeloSelecionado(novoModelo);
-        setFormData((prev: any) => ({
+        setFormData((prev) => ({
           ...prev,
           tipoComponente: novoModelo.codigo,
           tipoEquipamentoId: novoModelo.id,
@@ -473,25 +429,13 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
         setPopoverModeloOpen(false);
 
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('❌ [MODAL UAR] Erro ao criar modelo:', err);
-      avisar(err.response?.data?.message || 'Erro ao criar novo modelo');
+      avisar(mensagemDoBackend(err) || 'Erro ao criar novo modelo');
     } finally {
       setLoadingNovoModelo(false);
     }
   };
-
-  // TEMPORÁRIO: Mostrar TODOS os tipos para testar
-  // TODO: Restaurar filtro após configurar categorias corretas no backend
-  const tiposComponentesUAR = tiposEquipamentos;
-
-  // Filtro original (comentado temporariamente):
-  // const tiposComponentesUAR = tiposEquipamentos.filter(tipo =>
-  //   ['sensor_temperatura', 'sensor_vibracao', 'bomba_oleo', 'filtro_ar', 'valvula_seguranca',
-  //    'rele_protecao', 'disjuntor', 'seccionadora', 'inversor_frequencia', 'clp', 'sensor_pressao',
-  //    'medidor_energia', 'analisador_qualidade', 'controlador_temperatura'].includes(tipo.value) ||
-  //   ['eletronica', 'instrumentacao', 'protecao'].includes(tipo.categoria)
-  // );
 
   const renderCamposTecnicos = () => {
     if (!formData.tipoComponente) {
@@ -526,11 +470,11 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
               </label>
               {isReadOnly ? (
                 <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border text-sm">
-                  {formData[campo.campo] || <span className="text-gray-400">Não informado</span>}
+                  {valorDoCampo(campo.campo) || <span className="text-gray-400">Não informado</span>}
                 </div>
               ) : campo.tipo === 'select' && campo.opcoes ? (
                 <Select
-                  value={formData[campo.campo] || ''}
+                  value={valorDoCampo(campo.campo)}
                   onValueChange={(value) => handleFieldChange(campo.campo, value)}
                 >
                   <SelectTrigger>
@@ -547,7 +491,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
                   className="input-minimal"
                   type={campo.tipo === 'number' ? 'number' : 'text'}
                   placeholder={`${campo.campo}${campo.unidade ? ` (${campo.unidade})` : ''}`}
-                  value={formData[campo.campo] || ''}
+                  value={valorDoCampo(campo.campo)}
                   onChange={(e) => handleFieldChange(campo.campo, e.target.value)}
                 />
               )}
@@ -561,7 +505,16 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
   const validateForm = (): boolean => {
     const errors: string[] = [];
 
-    if (!formData.nome?.trim()) {
+    // No lote o campo Nome some do formulário (o nome é de cada exemplar, na
+    // aba de itens): cobrar ali travava quem subiu a quantidade antes de
+    // digitar o nome, sem ter onde preenchê-lo. O sheet de UC já fazia assim.
+    if (modoLote) {
+      const semNome = itensDoLote.findIndex((item) => !item.nome?.trim());
+      if (semNome >= 0) {
+        setAbaAtiva('itens');
+        errors.push(`Informe o nome do componente da linha ${semNome + 1}`);
+      }
+    } else if (!formData.nome?.trim()) {
       errors.push('Nome é obrigatório');
     }
 
@@ -573,6 +526,10 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     if (!formData.tipoEquipamentoId) {
       errors.push('Modelo é obrigatório');
     }
+
+    // SN-64: a mesma conferência da API
+    const problemaNaCriticidade = problemaDaCriticidade(formData);
+    if (problemaNaCriticidade) errors.push(problemaNaCriticidade);
 
     // Validar campos técnicos obrigatórios — os exibidos, pela mesma razao da
     // coleta no submit.
@@ -636,7 +593,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     if (alvo <= 1) {
       const primeiro = itensDoLote[0];
       if (primeiro) {
-        setFormData((prev: any) => ({
+        setFormData((prev) => ({
           ...prev,
           nome: primeiro.nome || prev.nome,
           tag: primeiro.tag || prev.tag,
@@ -693,7 +650,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
     if (!entity?.id) return;
     try {
       const { fotoUrl } = await uploadFoto(entity.id.trim(), arquivo);
-      setFormData((prev: any) => ({ ...prev, fotoUrl }));
+      setFormData((prev) => ({ ...prev, fotoUrl }));
     } catch {
       avisar('Nao foi possivel enviar a foto.');
     }
@@ -706,7 +663,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
       setPreviewFoto(null);
       return;
     }
-    setFormData((prev: any) => ({ ...prev, fotoUrl: null }));
+    setFormData((prev) => ({ ...prev, fotoUrl: null }));
   };
 
   /**
@@ -717,10 +674,10 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
    * desfaz nada: os componentes ja existem, e o que faltou e dito com todas as
    * letras.
    */
-  const submeterLote = async (dadosComuns: any) => {
+  const submeterLote = async (dadosComuns: DadosComunsDoLoteUAR) => {
     const { total, equipamentos } = await createEquipamentosLote(dadosComuns, itensDoLote);
 
-    const ids = (equipamentos || []).map((e: any) => e?.id?.trim()).filter(Boolean);
+    const ids = (equipamentos || []).map((e) => e?.id?.trim()).filter((id): id is string => Boolean(id));
 
     if (ids.length === 0) {
       await aoCriarEmLote?.(total);
@@ -740,13 +697,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
       }
     }
 
-    for (const [chave, acao] of acoesPosCriacaoRef.current) {
-      try {
-        await acao(primeiro);
-      } catch {
-        pendencias.push(chave);
-      }
-    }
+    pendencias.push(...(await rodarAcoesPosCriacao(acoesPosCriacaoRef.current, primeiro)));
 
     // Numa duplicacao os documentos vem do componente de origem, e nao do
     // primeiro criado — que pode nem ter anexo nenhum.
@@ -809,47 +760,25 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
       // Pelos campos EXIBIDOS, nao pelos do tipo. Quando os campos vem da
       // categoria — o caso da maioria — ler do tipo devolvia lista vazia: a
       // pessoa preenchia a secao inteira e nada era gravado, sem erro nenhum.
-      const dadosTecnicos = camposTecnicosVisiveis()
+      const daCategoria = camposTecnicosVisiveis()
         .filter(campo => formData[campo.campo]) // Apenas campos preenchidos
         .map(campo => ({
           campo: campo.campo,
           valor: String(formData[campo.campo]), // Garantir que é string
           tipo: campo.tipo === 'select' ? 'string' : campo.tipo, // Normalizar tipo
           unidade: campo.unidade
-        })) || [];
+        }));
+      // O gravado que não é da categoria vai junto, como está. A tela não o
+      // mostra, e mandar só os da categoria apagava esses campos a cada salvar,
+      // sem aviso (achado no SN-42).
+      const visiveis = new Set(camposTecnicosVisiveis().map((c) => c.campo));
+      const moldeDosDados = entity && mode !== 'create' ? entity : duplicarDe;
+      const foraDaCategoria = (moldeDosDados?.dadosTecnicos ?? [])
+        .filter((dt) => dt.campo && !visiveis.has(dt.campo) && dt.valor)
+        .map((dt) => ({ campo: dt.campo, valor: String(dt.valor), tipo: dt.tipo || 'string', unidade: dt.unidade }));
+      const dadosTecnicos = [...daCategoria, ...foraDaCategoria];
 
-      // Formatar data de instalação para ISO-8601 DateTime se fornecida
-      const dataInstalacaoFormatted = formData.dataInstalacao
-        ? new Date(formData.dataInstalacao + 'T00:00:00.000Z').toISOString()
-        : undefined;
-
-      const submitData = {
-        // Dados básicos
-        nome: formData.nome,
-        tag: formData.tag || undefined,
-        classificacao: 'UAR',
-        equipamento_pai_id: formData.equipamentoPaiId,
-        unidade_id: formData.unidadeId, // Herdado do equipamento pai
-        fabricante: formData.fabricante,
-        fabricante_custom: formData.fabricanteCustom || undefined, // ✅ NOVO: Fabricante customizado se divergir do modelo
-        modelo: formData.modelo,
-        numero_serie: formData.numeroSerie,
-        criticidade: formData.criticidade,
-        tipo_equipamento: formData.tipoComponente,  // Código (compatibilidade)
-        tipo_equipamento_id: tipoEqpId,  // ID do tipo (correto)
-        data_instalacao: dataInstalacaoFormatted,
-        localizacao_especifica: formData.localizacaoEspecifica,
-        fornecedor: formData.fornecedor,
-        valor_imobilizado: formData.valorImobilizado ? parseFloat(formData.valorImobilizado) : undefined,
-        valor_depreciacao: formData.valorDepreciacao ? parseFloat(formData.valorDepreciacao) : undefined,
-        valor_contabil: formData.valorContabil ? parseFloat(formData.valorContabil) : undefined,
-        observacoes: formData.observacoes,
-        // Herdar do equipamento pai
-        planta_id: formData.plantaId,
-        proprietario_id: formData.proprietarioId,
-        // Dados técnicos
-        dados_tecnicos: dadosTecnicos
-      };
+      const submitData = payloadDoComponente(formData, tipoEqpId, dadosTecnicos);
 
 
       // O lote nao passa por onSubmit: ele cria os N de uma vez, por endpoint
@@ -867,7 +796,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
       const criado = await onSubmit(submitData);
 
       // Foto escolhida antes de o componente existir: sobe agora que ha id.
-      const idCriado = (criado as any)?.id?.trim?.();
+      const idCriado = idDoEquipamentoCriado(criado);
       if (mode === 'create' && idCriado) {
         if (fotoPendente) {
           try {
@@ -876,17 +805,16 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
             avisar('Componente criado, mas a foto nao pode ser enviada.');
           }
         }
-        for (const acao of acoesPosCriacaoRef.current.values()) {
-          try {
-            await acao(idCriado);
-          } catch {
-            /* o componente existe; o acessorio pode ser refeito na edicao */
-          }
+        // O componente existe; o que falhou pode ser refeito na edicao, mas
+        // a pessoa precisa saber (antes era um catch vazio)
+        const faltou = await rodarAcoesPosCriacao(acoesPosCriacaoRef.current, idCriado);
+        if (faltou.length > 0) {
+          avisar(`Componente criado, mas nao foi possivel salvar: ${faltou.join(', ')}.`, 'Abra o componente e complete o que faltou.');
         }
       }
     } catch (err) {
-      console.error('❌ [MODAL UAR] Erro ao salvar:', err);
-      avisar('Erro ao salvar componente UAR. Tente novamente.');
+      // A mensagem do backend diz o que recusou; sem ela, um 400 virava "tente de novo"
+      avisar('Erro ao salvar componente UAR.', mensagemDoBackend(err) ?? (err instanceof Error ? err.message : undefined));
     } finally {
       setIsSubmitting(false);
     }
@@ -919,6 +847,16 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
              mode === 'edit' ? 'Editar Componente UAR' :
              'Visualizar Componente UAR'}
           </SheetTitle>
+          {/* SN-67: a etiqueta com o QR que abre este cadastro */}
+          {mode === 'view' && entity?.id && (
+            <div className="flex flex-wrap gap-2">
+              <EtiquetasDosEquipamentos
+                carregar={async () => [dadosDoEquipamento(entity, equipamentoPai)]}
+                nomeDoArquivo={`etiqueta-${(entity.tag || entity.nome || 'componente').trim()}`}
+                className="btn-minimal-outline h-9 whitespace-nowrap text-sm sm:h-8"
+              />
+            </div>
+          )}
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
@@ -966,9 +904,9 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
                 onEscolher={escolherFoto}
                 onRemover={removerFoto}
               />
-              {/* min-w-0 deixa a fita encolher; sem isso ela força a largura do
-                  sheet e a linha estoura no celular. */}
-              <TabsList className="gap-1 w-full sm:w-auto sm:ml-auto min-w-0 max-w-full overflow-x-auto scrollbar-minimal">
+              {/* min-w-0 deixa a fita encolher; e ela quebra em linhas em vez de rolar
+                  para o lado no celular (SN-68). h-auto: a TabsList tem altura fixa. */}
+              <TabsList className="gap-1 w-full sm:w-auto sm:ml-auto min-w-0 max-w-full h-auto flex-wrap justify-start">
                 <TabsTrigger value="dados">Dados técnicos</TabsTrigger>
                 {modoLote && <TabsTrigger value="itens">Componentes ({quantidade})</TabsTrigger>}
                 <TabsTrigger value="anexos">Anexos</TabsTrigger>
@@ -1238,31 +1176,7 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
 
               {/* Coluna 2 */}
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Data de Instalação</label>
-                  <input
-                    className="input-minimal"
-                    type="date"
-                    value={formData.dataInstalacao || ''}
-                    onChange={(e) => handleFieldChange('dataInstalacao', e.target.value)}
-                    disabled={isReadOnly}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Criticidade</label>
-                  <Select value={formData.criticidade || ''} onValueChange={(value) => handleFieldChange('criticidade', value)} disabled={isReadOnly}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="1 a 5" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 (Muito Baixa)</SelectItem>
-                      <SelectItem value="2">2 (Baixa)</SelectItem>
-                      <SelectItem value="3">3 (Média)</SelectItem>
-                      <SelectItem value="4">4 (Alta)</SelectItem>
-                      <SelectItem value="5">5 (Muito Alta)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* A criticidade tem seção própria, com a matriz (SN-64) */}
                 {!modoLote && (
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium">Localização Específica</label>
@@ -1275,19 +1189,26 @@ export const ComponenteUARModal: React.FC<ComponenteUARModalProps> = ({
                     />
                   </div>
                 )}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Fornecedor</label>
-                  <input
-                    className="input-minimal"
-                    value={formData.fornecedor || ''}
-                    onChange={(e) => handleFieldChange('fornecedor', e.target.value)}
-                    disabled={isReadOnly}
-                    placeholder="Fornecedor do componente"
-                  />
-                </div>
               </div>
             </div>
           </div>
+
+          <CriticidadePelaMatriz
+            valores={soAAvaliacao(formData)}
+            // A escala só produz 1 a 5; valor antigo que ninguém tocou volta como veio
+            onChange={(avaliacao) =>
+              setFormData((prev) => ({ ...prev, ...avaliacao, criticidade: avaliacao.criticidade as FormularioDoUAR['criticidade'] }))
+            }
+            somenteLeitura={isReadOnly}
+          />
+
+          {/* Data de instalação e fornecedor estavam soltos nas colunas acima; a
+              seção é a mesma do sheet da UC, com a garantia e o centro de custo (SN-66) */}
+          <InstalacaoEGarantia
+            valores={formData}
+            onChange={(campo, valor) => handleFieldChange(campo, valor)}
+            somenteLeitura={isReadOnly}
+          />
 
           {/* ============================================================================ */}
           {/* DADOS TÉCNICOS DINÂMICOS DO COMPONENTE */}

@@ -99,7 +99,7 @@ export const DiasUteisSelector: React.FC<DiasUteisSelectorProps> = ({
             type="button"
             onClick={() => handlePresetSelect('uteis')}
             disabled={disabled}
-            className="px-3 py-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 rounded border border-blue-200 disabled:opacity-50"
+            className="px-3 py-1 text-xs bg-background text-foreground hover:bg-accent rounded border border-border disabled:opacity-50"
           >
             Dias Úteis (Seg-Sex)
           </button>
@@ -107,7 +107,7 @@ export const DiasUteisSelector: React.FC<DiasUteisSelectorProps> = ({
             type="button"
             onClick={() => handlePresetSelect('todos')}
             disabled={disabled}
-            className="px-3 py-1 text-xs bg-green-50 text-green-700 hover:bg-green-100 rounded border border-green-200 disabled:opacity-50"
+            className="px-3 py-1 text-xs bg-background text-foreground hover:bg-accent rounded border border-border disabled:opacity-50"
           >
             Todos os Dias
           </button>
@@ -115,7 +115,7 @@ export const DiasUteisSelector: React.FC<DiasUteisSelectorProps> = ({
             type="button"
             onClick={() => handlePresetSelect('limpar')}
             disabled={disabled}
-            className="px-3 py-1 text-xs bg-gray-50 text-gray-700 hover:bg-gray-100 rounded border border-gray-200 disabled:opacity-50"
+            className="px-3 py-1 text-xs bg-background text-foreground hover:bg-accent rounded border border-border disabled:opacity-50"
           >
             Limpar Seleção
           </button>
@@ -133,12 +133,12 @@ export const DiasUteisSelector: React.FC<DiasUteisSelectorProps> = ({
               key={dia.key}
               className={`
                 flex flex-col items-center p-3 border rounded-lg transition-colors
-                ${!isViewMode ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'}
+                ${!isViewMode ? 'cursor-pointer hover:bg-accent' : 'cursor-default'}
                 ${isSelected
                   ? isWeekend
-                    ? 'bg-orange-50 border-orange-200'
-                    : 'bg-blue-50 border-blue-200'
-                  : 'bg-white border-gray-200'
+                    ? 'bg-accent border-border'
+                    : 'bg-accent border-border'
+                  : 'bg-background border-border'
                 }
                 ${disabled ? 'opacity-50' : ''}
               `}
@@ -149,9 +149,9 @@ export const DiasUteisSelector: React.FC<DiasUteisSelectorProps> = ({
                 flex items-center justify-center w-5 h-5 border rounded mb-2
                 ${isSelected
                   ? isWeekend
-                    ? 'bg-orange-500 border-orange-500 text-white'
-                    : 'bg-blue-600 border-blue-600 text-white'
-                  : 'border-gray-300'
+                    ? 'bg-primary border-primary text-primary-foreground'
+                    : 'bg-primary border-primary text-primary-foreground'
+                  : 'border-border'
                 }
               `}>
                 {isSelected && <Check className="h-3 w-3" />}
@@ -162,9 +162,9 @@ export const DiasUteisSelector: React.FC<DiasUteisSelectorProps> = ({
                 text-sm font-medium text-center
                 ${isSelected
                   ? isWeekend
-                    ? 'text-orange-800'
-                    : 'text-blue-800'
-                  : 'text-gray-700'
+                    ? 'text-foreground'
+                    : 'text-foreground'
+                  : 'text-foreground'
                 }
               `}>
                 {dia.label.split('-')[0]}
@@ -172,7 +172,7 @@ export const DiasUteisSelector: React.FC<DiasUteisSelectorProps> = ({
 
               {/* Indicador de fim de semana */}
               {isWeekend && (
-                <span className="text-xs text-orange-600 mt-1">
+                <span className="text-xs text-muted-foreground mt-1">
                   Fim de semana
                 </span>
               )}
@@ -182,16 +182,16 @@ export const DiasUteisSelector: React.FC<DiasUteisSelectorProps> = ({
       </div>
 
       {/* Resumo da seleção */}
-      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+      <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
         <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-gray-500" />
+          <Calendar className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium">
             {totalDias} {totalDias === 1 ? 'dia útil' : 'dias úteis'} selecionados
           </span>
         </div>
 
         {totalDias > 0 && (
-          <div className="text-xs text-gray-600">
+          <div className="text-xs text-muted-foreground">
             {diasSelecionados.map(dia => dia.label.substring(0, 3)).join(', ')}
           </div>
         )}
@@ -200,7 +200,7 @@ export const DiasUteisSelector: React.FC<DiasUteisSelectorProps> = ({
       {/* Modo visualização - mostrar dias selecionados */}
       {isViewMode && totalDias > 0 && (
         <div className="mt-3">
-          <span className="text-sm font-medium text-gray-700 mb-2 block">
+          <span className="text-sm font-medium text-foreground mb-2 block">
             Dias úteis configurados:
           </span>
           <div className="flex flex-wrap gap-2">
@@ -212,8 +212,8 @@ export const DiasUteisSelector: React.FC<DiasUteisSelectorProps> = ({
                   className={`
                     inline-flex items-center gap-1 px-2 py-1 rounded text-xs
                     ${isWeekend
-                      ? 'bg-orange-100 text-orange-800'
-                      : 'bg-blue-100 text-blue-800'
+                      ? 'bg-accent text-foreground'
+                      : 'bg-accent text-foreground'
                     }
                   `}
                 >
@@ -228,16 +228,16 @@ export const DiasUteisSelector: React.FC<DiasUteisSelectorProps> = ({
 
       {/* Validação visual */}
       {!isViewMode && totalDias === 0 && (
-        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <span className="text-sm text-yellow-800">
-            ⚠️ Selecione pelo menos um dia da semana
+        <div className="p-3 bg-background border border-border rounded-lg">
+          <span className="text-sm text-foreground">
+            Selecione pelo menos um dia da semana
           </span>
         </div>
       )}
 
       {/* Debug info em development */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded">
+        <div className="text-xs bg-muted p-2 rounded">
           <div>Debug Dias Úteis Selector:</div>
           <div>Total dias: {totalDias}</div>
           <div>Segunda: {value.segunda ? 'Sim' : 'Não'}</div>

@@ -1,5 +1,6 @@
 // src/features/equipamentos/hooks/useLocationCascade.ts
 import { useState, useEffect, useCallback } from 'react';
+import { isAxiosError } from 'axios';
 import { PlantasService } from '@/services/plantas.services';
 import { getUnidadesByPlanta } from '@/services/unidades.services';
 import type { PlantaResponse, ProprietarioBasico } from '@/services/plantas.services';
@@ -38,8 +39,8 @@ export const useLocationCascade = (initialData?: LocationData) => {
 
       console.log('✅ [useLocationCascade] Proprietários carregados:', proprietariosList.length);
 
-    } catch (err: any) {
-      if (err?.response?.status === 403) {
+    } catch (err) {
+      if (isAxiosError(err) && err.response?.status === 403) {
         console.warn('[useLocationCascade] Sem permissao para listar proprietarios (403). Cascade fica vazio.');
       } else {
         console.error('❌ [useLocationCascade] Erro ao carregar proprietários:', err);
@@ -104,7 +105,7 @@ export const useLocationCascade = (initialData?: LocationData) => {
       setError(null);
 
       const unidadesData = await getUnidadesByPlanta(plantaId);
-      setUnidades((unidadesData || []) as any);
+      setUnidades(unidadesData || []);
 
     } catch (err) {
       console.error('Erro ao carregar unidades:', err);

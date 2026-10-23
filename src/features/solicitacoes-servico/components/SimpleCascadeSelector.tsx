@@ -1,25 +1,31 @@
 // src/features/solicitacoes-servico/components/SimpleCascadeSelector.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ComboboxField } from '@/components/ui/combobox-field';
 import { useSolicitacoesSelectData } from '../hooks/useSolicitacoesSelectData';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InfoIcon } from 'lucide-react';
+import type { FormFieldProps } from '@/types/base';
 
-interface SimpleCascadeSelectorProps {
-  value?: any;
-  onChange?: (value: any) => void;
-  onMultipleChange?: (updates: Record<string, unknown>) => void;
-  disabled?: boolean;
-  formData?: any;
-  entity?: any;
+/** Os campos de localização que o seletor lê do formulário e da entidade. */
+type CamposDeLocalizacao = {
+  id?: string;
+  proprietario_id?: string | null;
+  planta_id?: string | null;
+  unidade_id?: string | null;
+};
+
+// É o `render` do campo: recebe o fieldProps inteiro do BaseForm
+interface SimpleCascadeSelectorProps extends FormFieldProps {
+  formData?: CamposDeLocalizacao;
+  entity?: (CamposDeLocalizacao & { id: string }) | null;
 }
 
-export const SimpleCascadeSelector: React.FC<SimpleCascadeSelectorProps> = ({
+export const SimpleCascadeSelector = ({
   onMultipleChange,
   disabled = false,
   formData,
   entity
-}) => {
+}: SimpleCascadeSelectorProps) => {
 
   // Estado local para evitar loops
   const [localState, setLocalState] = useState({

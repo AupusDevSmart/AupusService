@@ -4,6 +4,7 @@ import { Button } from '@/core/components/ui/button';
 import { Combobox } from '@/core/components/ui/combobox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/core/components/ui/popover';
 import { useAtivosFuncionais, type AtivoFuncional } from '../hooks/useAtivosFuncionais';
+import { mensagemDoBackend } from '@/utils/api-error';
 
 interface Props {
   unidadeId?: string | null;
@@ -63,10 +64,10 @@ export function PosicaoSelector({
       onChange(criada);
       setAbrirNova(false);
       setNome(''); setCategoriaId(''); setLocalizacao('');
-    } catch (e: any) {
+    } catch (e) {
       // A instalacao nao aceita dois nomes iguais — o banco recusa, e a mensagem
       // precisa dizer isso, nao "erro ao salvar".
-      const msg = e?.response?.data?.message ?? '';
+      const msg = mensagemDoBackend(e) ?? '';
       setErro(/unique|duplicad/i.test(String(msg))
         ? 'Ja existe uma posicao com este nome nesta instalacao'
         : (msg || 'Nao foi possivel criar a posicao'));

@@ -1,4 +1,6 @@
 // src/features/equipamentos/config/table-config.tsx
+import { statusDoEquipamento } from '@/core/features/equipamentos/utils/status-do-equipamento';
+import { rotuloDaCriticidade } from '@/core/features/equipamentos/config/criticidade';
 import { Badge } from '@/core/components/ui/badge';
 import { TableColumn } from '@/core/types/base';
 import { Equipamento } from '../types';
@@ -55,14 +57,18 @@ export const getEquipamentosTableColumns = (): TableColumn<Equipamento>[] => [
   {
     key: 'status',
     label: 'Status',
-    render: (equipamento) => (
-      <Badge
-        variant="outline"
-        className={`text-xs ${equipamento.status === 'Ativo' ? 'border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-400' : 'border-red-300 text-red-700 dark:border-red-700 dark:text-red-400'}`}
-      >
-        {equipamento.status || 'Ativo'}
-      </Badge>
-    )
+    // A regra do sheet: 'NORMAL' (da sincronização com o NexOn) saía em vermelho
+    render: (equipamento) => {
+      const status = statusDoEquipamento(equipamento.status);
+      return (
+        <Badge
+          variant="outline"
+          className={`text-xs ${status === 'Ativo' ? 'border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-400' : 'border-red-300 text-red-700 dark:border-red-700 dark:text-red-400'}`}
+        >
+          {status}
+        </Badge>
+      );
+    }
   },
 
   {
@@ -89,8 +95,8 @@ export const getEquipamentosTableColumns = (): TableColumn<Equipamento>[] => [
     key: 'criticidade',
     label: 'Criticidade',
     render: (equipamento) => (
-      <Badge variant="outline" className="text-xs">
-        Crit. {equipamento.criticidade}
+      <Badge variant="outline" className="text-xs whitespace-nowrap">
+        {rotuloDaCriticidade(equipamento.criticidade)}
       </Badge>
     )
   },

@@ -2,6 +2,13 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, CalendarClock } from 'lucide-react';
 
+/**
+ * A origem é contexto: a anomalia ou a solicitação excluída (a programação
+ * cancelada devolve a origem, que pode ser excluída) não pode dar o toast de
+ * erro ao abrir a OS. A falha fica no console e a seção some.
+ */
+const SEM_AVISO = { semAvisoGlobal: true };
+
 interface PrazoDaOrigemProps {
   tipo?: string;
   anomaliaId?: string;
@@ -42,7 +49,7 @@ export function PrazoDaOrigem({
     const buscar = async (): Promise<string | null> => {
       if (tipo === 'ANOMALIA' && anomaliaId) {
         const { anomaliasService } = await import('@/services/anomalias.service');
-        const anomalia = await anomaliasService.findOne(anomaliaId.trim());
+        const anomalia = await anomaliasService.findOne(anomaliaId.trim(), SEM_AVISO);
         return (anomalia as { prazo?: string }).prazo ?? null;
       }
 
@@ -50,7 +57,7 @@ export function PrazoDaOrigem({
         const { solicitacoesServicoService } = await import(
           '@/services/solicitacoes-servico.service'
         );
-        const solicitacao = await solicitacoesServicoService.findOne(solicitacaoId.trim());
+        const solicitacao = await solicitacoesServicoService.findOne(solicitacaoId.trim(), SEM_AVISO);
         return (solicitacao as { data_necessidade?: string }).data_necessidade ?? null;
       }
 
@@ -59,7 +66,11 @@ export function PrazoDaOrigem({
 
     void buscar()
       // Prazo é contexto: falhar em buscá-lo não pode travar a programação.
-      .catch(() => null)
+      // Sem o log, a falha (e o aviso de prazo que some) não ficava em lugar nenhum
+      .catch((erro) => {
+        console.error('[PrazoDaOrigem] não foi possível buscar o prazo da origem', erro);
+        return null;
+      })
       .then((achado) => {
         if (!cancelado) setPrazo(achado);
       });

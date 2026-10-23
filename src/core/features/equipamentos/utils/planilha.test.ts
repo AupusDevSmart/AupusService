@@ -11,11 +11,20 @@ const inversor = {
   tag: 'INV-01',
   classificacao: 'UC',
   status: 'Ativo',
-  criticidade: '4',
+  criticidade: '5',
+  // SN-64
+  criticidade_impacto: 5,
+  criticidade_probabilidade: 1,
+  criticidade_motivo: 'Único da usina',
   numero_serie: 'SN-1',
   localizacao: 'Casa de inversores',
   valor_contabil: '15000.50',
   data_imobilizacao: '2026-03-15T00:00:00.000Z',
+  // SN-66
+  data_instalacao: '2026-04-01T00:00:00.000Z',
+  garantia_ate: '2031-04-01T00:00:00.000Z',
+  fornecedor: 'Distribuidora Solar',
+  centro_custo: 'CC-UFV1',
   mcpse: false,
   tuc: '',
   a1: null,
@@ -26,7 +35,10 @@ const inversor = {
   tipo_equipamento_rel: { id: 'm1', nome: 'Inversor 75kW', codigo: 'INV75', categoria: { nome: 'Inversor' } },
   dados_tecnicos: [{ campo: 'potencia', valor: '75', tipo: 'number', unidade: 'kW' }],
   equipamentos_filhos: [
-    { id: 'c1', nome: 'String 01', criticidade: 'B', tipo_equipamento_id: 'm2', data_instalacao: '2026-01-10T00:00:00.000Z', valor_contabil: null },
+    {
+      id: 'c1', nome: 'String 01', criticidade: 'B', tipo_equipamento_id: 'm2', data_instalacao: '2026-01-10T00:00:00.000Z',
+      garantia_ate: '2028-01-10T00:00:00.000Z', centro_custo: 'CC-STR', valor_contabil: null,
+    },
     { id: 'c2', nome: 'String velha', deleted_at: '2026-01-01T00:00:00.000Z' },
   ],
   plano: { nome: 'Plano do inversor', origemId: 'p1' },
@@ -36,7 +48,9 @@ const inversor = {
   modeloPorId: new Map([['m2', 'String fotovoltaica']]),
 } as never;
 
-describe('planilha de equipamentos', { timeout: 30_000 }, () => {
+// 120 s: o primeiro teste carrega o exceljs; sozinho leva ~3 s, mas na suíte inteira
+// (12 workers carregando ao mesmo tempo) passava dos 30 s e falhava sem defeito nenhum.
+describe('planilha de equipamentos', { timeout: 120_000 }, () => {
   it('ida e volta: criticidade em código (a antiga segue como está), tarefas do plano ficam de fora', async () => {
     const livro = await gravarEReabrir(await montarLivroDeFichas(definicaoDeEquipamentos, [inversor]));
     const { registros, erros } = lerEquipamentos(livro);
@@ -49,11 +63,18 @@ describe('planilha de equipamentos', { timeout: 30_000 }, () => {
       planta: 'Fazenda',
       unidade: 'UFV 1',
       modelo: 'Inversor 75kW',
-      criticidade: '4',
+      criticidade: '5',
+      criticidade_impacto: 5,
+      criticidade_probabilidade: 1,
+      criticidade_motivo: 'Único da usina',
       numero_serie: 'SN-1',
       localizacao: 'Casa de inversores',
       valor_contabil: 15000.5,
       data_imobilizacao: '2026-03-15',
+      data_instalacao: '2026-04-01',
+      garantia_ate: '2031-04-01',
+      fornecedor: 'Distribuidora Solar',
+      centro_custo: 'CC-UFV1',
       status: 'Ativo',
       mcpse: false,
       tuc: null,
@@ -76,9 +97,14 @@ describe('planilha de equipamentos', { timeout: 30_000 }, () => {
         modelo: 'String fotovoltaica',
         numero_serie: null,
         data_instalacao: '2026-01-10',
+        garantia_ate: '2028-01-10',
         criticidade: 'B',
+        criticidade_impacto: null,
+        criticidade_probabilidade: null,
+        criticidade_motivo: null,
         localizacao_especifica: null,
         fornecedor: null,
+        centro_custo: 'CC-STR',
         valor_imobilizado: null,
         valor_depreciacao: null,
         valor_contabil: null,

@@ -56,9 +56,9 @@ export function useEstadosIBGE() {
 
         const data = await response.json();
         setEstados(data);
-      } catch (err: any) {
+      } catch (err) {
         console.error('Erro ao buscar estados:', err);
-        setError(err.message || 'Erro ao carregar estados');
+        setError((err instanceof Error && err.message) || 'Erro ao carregar estados');
       } finally {
         setLoading(false);
       }
@@ -100,9 +100,9 @@ export function useCidadesIBGE(estadoId: number | null) {
 
         const data = await response.json();
         setCidades(data);
-      } catch (err: any) {
+      } catch (err) {
         console.error('Erro ao buscar cidades:', err);
-        setError(err.message || 'Erro ao carregar cidades');
+        setError((err instanceof Error && err.message) || 'Erro ao carregar cidades');
         setCidades([]);
       } finally {
         setLoading(false);
@@ -159,9 +159,9 @@ export function useViaCEP(cep: string, autoFetch: boolean = true) {
         }
 
         setData(responseData);
-      } catch (err: any) {
+      } catch (err) {
         console.error('Erro ao buscar CEP:', err);
-        setError(err.message || 'Erro ao buscar CEP');
+        setError((err instanceof Error && err.message) || 'Erro ao buscar CEP');
         setData(null);
       } finally {
         setLoading(false);

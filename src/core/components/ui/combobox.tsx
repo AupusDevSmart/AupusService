@@ -20,7 +20,39 @@ import {
 export interface ComboboxOption {
   value: string
   label: string
+  /** Titulo do bloco na lista. Opcoes sem grupo ficam num bloco sem titulo. */
+  grupo?: string
 }
+
+/** Agrupa mantendo a ordem em que cada grupo aparece pela primeira vez. */
+function emGrupos(options: ComboboxOption[]): [string | undefined, ComboboxOption[]][] {
+  const grupos = new Map<string | undefined, ComboboxOption[]>()
+  for (const option of options) {
+    const lista = grupos.get(option.grupo) ?? []
+    lista.push(option)
+    grupos.set(option.grupo, lista)
+  }
+  return [...grupos.entries()]
+}
+
+/**
+ * Cadastro que cresce: a busca vai para o servidor e a lista carrega a próxima
+ * página ao rolar até o fim — mostra TODAS as opções, sem obrigar a pesquisar.
+ */
+export interface PaginacaoDoCombobox {
+  /** O texto digitado (quem chama adia e busca); a lista não filtra de novo. */
+  onBuscar: (texto: string) => void
+  carregarMais: () => void
+  temMais: boolean
+  carregando: boolean
+  /** O rótulo do valor escolhido quando ele não está nas páginas carregadas. */
+  rotuloDoValor?: string
+  /** A lista abriu: quem chama só busca a primeira página quando alguém vai escolher. */
+  onAbrir?: () => void
+}
+
+/** Quantos pixels antes do fim a próxima página já começa a vir. */
+const PERTO_DO_FIM = 48
 
 interface ComboboxProps {
   options: ComboboxOption[]
@@ -31,6 +63,7 @@ interface ComboboxProps {
   emptyText?: string
   disabled?: boolean
   className?: string
+  paginacao?: PaginacaoDoCombobox
 }
 
 export function Combobox({
@@ -42,6 +75,7 @@ export function Combobox({
   emptyText = "Nenhum resultado encontrado.",
   disabled = false,
   className,
+  paginacao,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
@@ -51,15 +85,36 @@ export function Combobox({
     [options, value]
   )
 
+  const rotulo = selectedOption?.label ?? (value ? paginacao?.rotuloDoValor : undefined)
+
+  const buscar = (texto: string) => {
+    setSearch(texto)
+    paginacao?.onBuscar(texto)
+  }
+
+  const aoRolar = (e: React.UIEvent<HTMLDivElement>) => {
+    if (!paginacao?.temMais || paginacao.carregando) return
+    const lista = e.currentTarget
+    if (lista.scrollHeight - lista.scrollTop - lista.clientHeight < PERTO_DO_FIM) paginacao.carregarMais()
+  }
+
   const filteredOptions = React.useMemo(() => {
-    if (!search) return options
+    // Paginado, quem filtra é o servidor
+    if (!search || paginacao) return options
     return options.filter((option) =>
       option.label.toLowerCase().includes(search.toLowerCase())
     )
-  }, [options, search])
+  }, [options, search, paginacao])
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(aberto) => {
+        setOpen(aberto)
+        if (aberto) paginacao?.onAbrir?.()
+        if (!aberto && search) buscar("")
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -68,12 +123,12 @@ export function Combobox({
           disabled={disabled}
           className={cn(
             "w-full justify-between font-normal h-9 !rounded",
-            !selectedOption && "text-muted-foreground",
+            !rotulo && "text-muted-foreground",
             className
           )}
         >
           <span className="truncate">
-            {selectedOption ? selectedOption.label : placeholder}
+            {rotulo ?? placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -90,19 +145,20 @@ export function Combobox({
           <CommandInput
             placeholder={searchPlaceholder}
             value={search}
-            onValueChange={setSearch}
+            onValueChange={buscar}
           />
-          <CommandList className="max-h-[300px]">
-            <CommandEmpty>{emptyText}</CommandEmpty>
-            <CommandGroup>
-              {filteredOptions.map((option) => (
+          <CommandList className="max-h-[300px]" onScroll={paginacao ? aoRolar : undefined}>
+            <CommandEmpty>{paginacao?.carregando ? "Carregando..." : emptyText}</CommandEmpty>
+            {emGrupos(filteredOptions).map(([grupo, opcoes]) => (
+            <CommandGroup key={grupo ?? ''} heading={grupo}>
+              {opcoes.map((option) => (
                 <CommandItem
                   key={option.value}
                   value={option.value}
                   onSelect={() => {
                     onValueChange(option.value === value ? "" : option.value)
                     setOpen(false)
-                    setSearch("")
+                    if (search) buscar("")
                   }}
                 >
                   <Check
@@ -115,6 +171,10 @@ export function Combobox({
                 </CommandItem>
               ))}
             </CommandGroup>
+            ))}
+            {paginacao?.carregando && filteredOptions.length > 0 && (
+              <div className="py-2 text-center text-xs text-muted-foreground">Carregando...</div>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>

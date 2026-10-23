@@ -2,29 +2,33 @@
 import React, { useState, useEffect } from 'react';
 // Reutilizar o mesmo OrigemOSCard da programacao-os
 import { OrigemOSCard } from '@/features/programacao-os/components/OrigemOSCard';
-import { programacaoOSApi } from '@/services/programacao-os.service';
+import { programacaoOSApi, type ProgramacaoDetalhesResponse } from '@/services/programacao-os.service';
+import type {
+  AnomaliaDoCard,
+  DadosOrigemDoCard,
+  SolicitacaoDoCard,
+  TarefaDoCard,
+} from '@/features/programacao-os/components/OrigemOSCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, AlertTriangle, FileText } from 'lucide-react';
 
-interface OrigemOSCardWrapperProps {
-  value?: {
-    programacao_id?: string;
-    programacaoOrigem?: any;
-    anomalia?: any;
-    plano_manutencao?: any;
-    origem?: string;
-    dados_origem?: any;
-    [key: string]: any;
-  };
+/** A OS (ou o `origemCard` que o transform monta) como o card de origem lê. */
+export interface OSDaOrigem {
   programacao_id?: string;
-  programacaoOrigem?: any;
-  anomalia?: any;
-  plano_manutencao?: any;
+  programacaoOrigem?: { id?: string } | null;
+  anomalia?: AnomaliaDoCard | null;
+  plano_manutencao?: unknown;
   origem?: string;
-  dados_origem?: any;
+  dados_origem?: DadosOrigemDoCard | null;
+  tarefas_os?: TarefaDoCard[];
+  programacao?: { solicitacao_servico?: SolicitacaoDoCard | null } | null;
+}
+
+interface OrigemOSCardWrapperProps extends OSDaOrigem {
+  value?: OSDaOrigem;
   // Passar toda a entity da execução
-  formData?: any;
-  entity?: any;
+  formData?: OSDaOrigem;
+  entity?: OSDaOrigem | null;
 }
 
 /**
@@ -51,7 +55,7 @@ export const OrigemOSCardWrapper: React.FC<OrigemOSCardWrapperProps> = (props) =
 
   const programacaoId = data.programacao_id || data.programacaoOrigem?.id || execucaoData?.programacao_id;
 
-  const [programacao, setProgramacao] = useState<any>(null);
+  const [programacao, setProgramacao] = useState<ProgramacaoDetalhesResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -164,13 +168,13 @@ export const OrigemOSCardWrapper: React.FC<OrigemOSCardWrapperProps> = (props) =
   // Usar dados da programação se disponível
   if (programacao) {
     const origem = programacao.origem || programacao.dados_origem?.tipo || 'MANUAL';
+    // A programação não traz a anomalia nem o plano (o card busca pela origem),
+    // e as tarefas vêm em `tarefas_programacao` — `tarefas` não existe na resposta
     return (
       <OrigemOSCard
         origem={origem}
         dadosOrigem={programacao.dados_origem}
-        anomalia={programacao.anomalia}
-        tarefas={programacao.tarefas || []}
-        planoManutencao={programacao.plano_manutencao}
+        tarefas={programacao.tarefas_programacao || []}
         tarefasPorPlano={programacao.dados_origem?.tarefasPorPlano || {}}
         solicitacaoServico={programacao.solicitacao_servico}
       />

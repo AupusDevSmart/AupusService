@@ -9,7 +9,30 @@ export type StatusExecucaoOS = 'PENDENTE' | 'EM_EXECUCAO' | 'PAUSADA' | 'EXECUTA
 export type TipoOrdemServico = 'PREVENTIVA' | 'PREDITIVA' | 'CORRETIVA' | 'INSPECAO' | 'VISITA_TECNICA';
 export type PrioridadeExecucao = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA';
 export type StatusTarefaExecucao = 'PENDENTE' | 'EM_EXECUCAO' | 'PAUSADA' | 'FINALIZADA' | 'NAO_EXECUTADA';
-export type TipoAnexoExecucao = 'RELATORIO' | 'FOTO_ANTES' | 'FOTO_DEPOIS' | 'DOCUMENTO' | 'OUTROS';
+// Os tipos de anexo são os do backend (enum TipoAnexoOS); o contrato mora em features/execucao-os/types.
+export type { TipoAnexoOS as TipoAnexoExecucao, AnexoOS as AnexoExecucaoApiResponse } from '@/features/execucao-os/types';
+import type {
+  AnexoOS,
+  DestinoDoAnexo,
+  TipoAnexoOS,
+  ExecucaoOS,
+  TarefaOS,
+  MaterialOS,
+  FerramentaOS,
+  TecnicoOS,
+  ChecklistAtividadeOS,
+  ItemDeChecklistLegado,
+  RegistroTempoOS,
+  HistoricoOS,
+  CondicaoOS,
+  TipoOS,
+  PrioridadeOS,
+  OrigemOS,
+} from '@/features/execucao-os/types';
+import type { DadosOrigem, ItemOrcamento } from '@/features/programacao-os/types';
+import type { InstalacaoDaOrigem } from '@/utils/instalacao';
+import type { CategoriaRecurso } from '@/services/recursos.services';
+import type { OutroCustoPedido, ResumoDoCusto } from '@/features/execucao-os/types/custos';
 
 // ============================================================================
 // TIPOS DA API PARA EXECUCAO OS
@@ -204,7 +227,7 @@ export interface SubTarefaExecucaoApiResponse {
 export interface RecursoTarefaExecucaoApiResponse {
   id: string;
   tarefa_execucao_id: string;
-  tipo: 'INSTRUMENTO' | 'MATERIAL' | 'FERRAMENTA' | 'TECNICO' | 'VIATURA';
+  tipo: CategoriaRecurso;
   descricao: string;
   quantidade_prevista?: number;
   quantidade_utilizada?: number;
@@ -233,21 +256,6 @@ export interface PausaExecucaoApiResponse {
 
   usuario_pausou?: UsuarioResumoDto;
   usuario_retomou?: UsuarioResumoDto;
-}
-
-export interface AnexoExecucaoApiResponse {
-  id: string;
-  execucao_os_id: string;
-  nome: string;
-  tipo: TipoAnexoExecucao;
-  url: string;
-  tamanho?: number;
-  content_type?: string;
-  descricao?: string;
-  uploaded_by?: string;
-  created_at: Date;
-
-  usuario_upload?: UsuarioResumoDto;
 }
 
 export interface ExecucaoOSApiResponse {
@@ -289,7 +297,7 @@ export interface ExecucaoOSApiResponse {
   equipe_execucao?: EquipeExecucaoApiResponse[];
   tarefas?: TarefaExecucaoApiResponse[];
   pausas?: PausaExecucaoApiResponse[];
-  anexos?: AnexoExecucaoApiResponse[];
+  anexos?: AnexoOS[];
 
   // Contadores e estatísticas
   total_tarefas?: number;
@@ -299,6 +307,115 @@ export interface ExecucaoOSApiResponse {
   total_anexos?: number;
   custo_total_estimado?: number;
   custo_total_real?: number;
+}
+
+/**
+ * A OS como a API manda em GET /execucao-os (lista) e /execucao-os/:id — o
+ * OrdemServicoResponseDto do backend, com as datas em texto ISO. As chaves
+ * marcadas "antiga" o backend não manda mais; o transform ainda as aceita.
+ */
+export interface OrdemServicoDaApi {
+  instalacoes?: InstalacaoDaOrigem[];
+  id: string;
+  criado_em?: string;
+  atualizado_em?: string;
+  deletado_em?: string;
+  programacao_id: string;
+  numero_os: string;
+  /** Antiga: o código da programação */
+  codigo?: string;
+  descricao: string;
+  local: string;
+  ativo: string;
+  condicoes: CondicaoOS;
+  status: StatusExecucaoOS;
+  tipo: TipoOS;
+  prioridade: PrioridadeOS;
+  origem: OrigemOS;
+  planta_id?: string;
+  equipamento_id?: string;
+  anomalia_id?: string;
+  plano_manutencao_id?: string;
+  reserva_id?: string;
+  dados_origem?: DadosOrigem | null;
+  tempo_estimado: number;
+  duracao_estimada: number;
+  data_hora_programada: string;
+  responsavel: string;
+  responsavel_id?: string;
+  time_equipe?: string;
+  data_hora_inicio_real?: string;
+  data_hora_fim_real?: string;
+  equipe_presente?: string[];
+  orcamento_previsto?: number;
+  custo_real?: number;
+  observacoes?: string;
+  observacoes_programacao?: string;
+  observacoes_execucao?: string;
+  /** Antiga */
+  observacoes_inicio?: string;
+  /** Antiga */
+  observacoes_finalizacao?: string;
+  /** Antiga */
+  motivo_pausa?: string;
+  motivo_cancelamento?: string;
+  resultado_servico?: string;
+  problemas_encontrados?: string;
+  recomendacoes?: string;
+  proxima_manutencao?: string;
+  /** SN-60: dados de falha (ISO em UTC); minutos_parado calculado na API. Parou: null = não respondido */
+  equipamento_parou?: boolean | null;
+  parada_inicio?: string | null;
+  parada_fim?: string | null;
+  minutos_parado?: number | null;
+  falha_sintoma?: string | null;
+  falha_causa?: string | null;
+  falha_acao?: string | null;
+  /** SN-61: HH real (soma das horas registradas; null enquanto ninguém registrou) e tempo sem as pausas */
+  hh_real?: number | null;
+  hh_estimado?: number;
+  tempo_efetivo_minutos?: number | null;
+  /** SN-62: quando foi finalizada e o código impresso no PDF */
+  finalizada_em?: string | null;
+  codigo_verificacao?: string | null;
+  avaliacao_qualidade?: number;
+  observacoes_qualidade?: string;
+  atividades_realizadas?: string;
+  checklist_concluido?: number;
+  procedimentos_seguidos?: string;
+  equipamentos_seguranca?: string;
+  incidentes_seguranca?: string;
+  medidas_seguranca_adicionais?: string;
+  custos_adicionais?: number;
+  /** SN-93: o custo aberto, pela conta da API (a do PDF e do custo real gravado) */
+  custos?: ResumoDoCusto;
+  tarefas_os?: TarefaOS[];
+  materiais?: MaterialOS[];
+  ferramentas?: FerramentaOS[];
+  tecnicos?: TecnicoOS[];
+  itens_orcamento?: ItemOrcamento[];
+  checklist?: ChecklistAtividadeOS[];
+  /** Antiga: o checklist vinha aqui, com `descricao` no lugar de `atividade` */
+  checklist_atividades?: ItemDeChecklistLegado[];
+  anexos?: AnexoOS[];
+  registros_tempo?: RegistroTempoOS[];
+  historico?: HistoricoOS[];
+  criado_por?: string;
+  criado_por_id?: string;
+  programado_por?: string;
+  programado_por_id?: string;
+  finalizado_por?: string;
+  finalizado_por_id?: string;
+  aprovado_por?: string;
+  aprovado_por_id?: string;
+  data_aprovacao?: string;
+  programacao?: { id: string; codigo?: string; descricao?: string };
+  /** `data`: quando a anomalia aconteceu (o início provável da parada, SN-60) */
+  anomalia?: { id: string; descricao: string; prioridade?: string; status?: string; data?: string | null; condicao?: string | null };
+  plano_manutencao?: { id: string; nome: string; descricao?: string | null };
+  planta?: { id: string; nome: string };
+  equipamento?: { id: string; nome: string; tipo_equipamento?: string | null; fabricante?: string | null; modelo?: string | null };
+  reserva_veiculo?: ExecucaoOS['reserva_veiculo'];
 }
 
 export interface DashboardExecucaoOSDto {
@@ -344,27 +461,33 @@ export interface DashboardExecucaoOSDto {
 }
 
 // Parâmetros de consulta
+/**
+ * Os parâmetros que GET /execucao-os aceita — só esses: a API recusa (400) o que
+ * não declara. Aqui havia responsavel_id, ordem_servico_id, aprovacao_pendente
+ * e sort_by/sort_order, que dariam 400 no primeiro uso (SN-55).
+ */
 export interface QueryExecucaoOSApiParams {
   search?: string;
   status?: StatusExecucaoOS;
+  /** O equipamento e os componentes dele, pela regra da instalação da OS. */
   equipamento_id?: string;
   planta_id?: string;
-  ordem_servico_id?: string;
   tipo?: TipoOrdemServico;
   prioridade?: PrioridadeExecucao;
-  data_inicio?: string; // ISO DateTime string
-  data_fim?: string; // ISO DateTime string
-  responsavel_id?: string;
-  aprovacao_pendente?: boolean;
+  /** AAAA-MM-DD (dia de Brasília) ou ISO. */
+  data_inicio?: string;
+  data_fim?: string;
+  /** Texto: o nome do responsável contém. */
+  responsavel?: string;
   atrasadas?: boolean;
   page?: number;
   limit?: number;
-  sort_by?: string;
-  sort_order?: 'asc' | 'desc';
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface ExecucaoOSListApiResponse {
-  data: ExecucaoOSApiResponse[];
+  data: OrdemServicoDaApi[];
   pagination: {
     page: number;
     limit: number;
@@ -378,6 +501,163 @@ export interface ExecucaoOSListApiResponse {
 // SERVIÇO DE API PARA EXECUCAO OS
 // ============================================================================
 
+/**
+ * O conteúdo registrado da OS (SN-62), como a API grava na finalização e o PDF
+ * imprime. Espelha `conteudo-da-os.ts` do backend.
+ */
+export interface ConteudoDaOS {
+  versao: number;
+  os: {
+    numero_os: string;
+    tipo: string;
+    prioridade: string;
+    origem: string;
+    descricao: string | null;
+    local: string | null;
+    ativo: string | null;
+    condicoes: string | null;
+    data_hora_programada: string | null;
+    data_hora_inicio_real: string | null;
+    data_hora_fim_real: string | null;
+    /** Do início ao fim sem as pausas, pela trilha da OS: entra no código */
+    tempo_efetivo_minutos: number | null;
+    responsavel: string | null;
+    resultado_servico: string | null;
+    problemas_encontrados: string | null;
+    recomendacoes: string | null;
+    incidentes_seguranca: string | null;
+    /** Ausente = não respondido (o conteúdo das OS sem resposta não muda) */
+    equipamento_parou?: boolean;
+    parada_inicio: string | null;
+    parada_fim: string | null;
+    falha_sintoma: string | null;
+    falha_causa: string | null;
+    falha_acao: string | null;
+    custo_real: number | null;
+    avaliacao_qualidade: number | null;
+    observacoes_qualidade: string | null;
+    aprovado_por: string | null;
+    data_aprovacao: string | null;
+    finalizado_por: string | null;
+    finalizada_em: string | null;
+    /** Versão 2 (SN-93): o orçamento aprovado e os adicionais de antes do SN-93 */
+    orcamento_previsto?: number | null;
+    custos_adicionais?: number | null;
+  };
+  tarefas: {
+    id: string;
+    nome: string | null;
+    instrucao_tag: string | null;
+    instrucao_nome: string | null;
+    status: string;
+    data_conclusao: string | null;
+    concluida_por: string | null;
+    observacoes: string | null;
+    /** Versão 2 (na 1, o relatório completa pelo sistema): o equipamento e o valor da instrução */
+    equipamento?: string | null;
+    valor?: number | null;
+    valor_original?: number | null;
+  }[];
+  checklist: {
+    id: string;
+    tarefa_os_id: string | null;
+    atividade: string;
+    obrigatoria: boolean;
+    concluida: boolean;
+    concluida_em: string | null;
+    concluida_por: string | null;
+    tipo: string;
+    unidade: string | null;
+    valor_minimo: number | null;
+    valor_maximo: number | null;
+    valor_lido: number | null;
+    observacoes: string | null;
+  }[];
+  anexos: {
+    id: string;
+    nome_original: string;
+    tipo: TipoAnexoOS;
+    mime_type: string;
+    tamanho: number;
+    descricao: string | null;
+    tarefa_os_id: string | null;
+    checklist_item_id: string | null;
+    uploaded_at: string | null;
+    uploaded_by: string | null;
+    sha256: string | null;
+  }[];
+  equipe: {
+    id: string;
+    nome: string | null;
+    especialidade: string;
+    horas_estimadas: number;
+    horas_trabalhadas: number | null;
+    presente: boolean;
+    /** SN-93 (D3): o PDF mostra o valor/hora */
+    custo_hora?: number | null;
+  }[];
+  materiais: {
+    id: string;
+    descricao: string;
+    unidade: string;
+    quantidade_planejada: number;
+    quantidade_consumida: number | null;
+    observacoes: string | null;
+    /** SN-93 (D3): e o custo unitário */
+    custo_unitario?: number | null;
+  }[];
+  ferramentas: {
+    id: string;
+    descricao: string;
+    quantidade: number;
+    utilizada: boolean;
+    condicao_antes: string | null;
+    condicao_depois: string | null;
+    observacoes: string | null;
+  }[];
+  /** Versão 2 (SN-93): os outros custos, previsto e real (null = não conferido) */
+  outros_custos?: {
+    id: string;
+    descricao: string;
+    natureza: string;
+    previsto: number;
+    real: number | null;
+    nao_previsto: boolean;
+  }[];
+}
+
+/** GET /execucao-os/:id/relatorio (SN-62): o finalizado com o código; antes, a prévia */
+export interface RelatorioDaOS {
+  os_id: string;
+  numero_os: string;
+  status: string;
+  codigo: string | null;
+  finalizada_em: string | null;
+  previa: boolean;
+  conteudo: ConteudoDaOS;
+  /** SN-93: o custo aberto, pela mesma conta do sheet */
+  custos: ResumoDoCusto;
+}
+
+/** GET /execucao-os/conferencia?codigo= (SN-62) */
+export interface ConferenciaDoCodigo {
+  os_id: string;
+  numero_os: string;
+  finalizada_em: string | null;
+  finalizado_por: string | null;
+  confere: boolean;
+  diferencas: string[];
+  /** Os anexos que mudaram, um por um */
+  anexos: string[];
+  conferido_em: string;
+}
+
+/** GET /execucao-os/:id/pessoas (SN-61): sem e-mail nem papel, que a tela não usa */
+export interface PessoasDaOS {
+  equipe: { id: string; nome: string }[];
+  apoio: { id: string; nome: string }[];
+}
+
 export class ExecucaoOSApiService {
   private readonly baseEndpoint = '/execucao-os';
 
@@ -388,46 +668,31 @@ export class ExecucaoOSApiService {
   async findAll(params?: QueryExecucaoOSApiParams): Promise<ExecucaoOSListApiResponse> {
     // console.log('🔍 EXECUCAO-OS API: Listando execuções com parâmetros:', params);
 
-    try {
-      const response = await api.get<ExecucaoOSListApiResponse>(this.baseEndpoint, {
-        params: {
-          page: params?.page || 1,
-          limit: params?.limit || 10,
-          ...params
-        }
-      });
-      // console.log('✅ EXECUCAO-OS API: Execuções listadas:', response.data.pagination);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao listar execuções:', error);
-      throw error;
-    }
+    const response = await api.get<ExecucaoOSListApiResponse>(this.baseEndpoint, {
+      params: {
+        page: params?.page || 1,
+        limit: params?.limit || 10,
+        ...params
+      }
+    });
+    // console.log('✅ EXECUCAO-OS API: Execuções listadas:', response.data.pagination);
+    return response.data;
   }
 
-  async findOne(id: string): Promise<ExecucaoOSApiResponse> {
+  async findOne(id: string): Promise<OrdemServicoDaApi> {
     // console.log('🔍 EXECUCAO-OS API: Buscando execução por ID:', id);
 
-    try {
-      const response = await api.get<ExecucaoOSApiResponse>(`${this.baseEndpoint}/${id}`);
-      // console.log('✅ EXECUCAO-OS API: Execução encontrada:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao buscar execução:', error);
-      throw error;
-    }
+    const response = await api.get<OrdemServicoDaApi>(`${this.baseEndpoint}/${id}`);
+    // console.log('✅ EXECUCAO-OS API: Execução encontrada:', response.data);
+    return response.data;
   }
 
   async getDashboard(): Promise<DashboardExecucaoOSDto> {
     // console.log('📊 EXECUCAO-OS API: Obtendo dashboard');
 
-    try {
-      const response = await api.get<DashboardExecucaoOSDto>(`${this.baseEndpoint}/dashboard`);
-      // console.log('✅ EXECUCAO-OS API: Dashboard obtido:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter dashboard:', error);
-      throw error;
-    }
+    const response = await api.get<DashboardExecucaoOSDto>(`${this.baseEndpoint}/dashboard`);
+    // console.log('✅ EXECUCAO-OS API: Dashboard obtido:', response.data);
+    return response.data;
   }
 
   // ============================================================================
@@ -437,141 +702,96 @@ export class ExecucaoOSApiService {
   async iniciar(id: string, data: IniciarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
     // console.log('▶️ EXECUCAO-OS API: Iniciando execução:', id, data);
 
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/iniciar`,
-        data
-      );
-      // console.log('✅ EXECUCAO-OS API: Execução iniciada:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao iniciar execução:', error);
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/iniciar`,
+      data
+    );
+    // console.log('✅ EXECUCAO-OS API: Execução iniciada:', response.data);
+    return response.data;
   }
 
   async pausar(id: string, data: PausarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
     // console.log('⏸️ EXECUCAO-OS API: Pausando execução:', id, data);
 
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/pausar`,
-        data
-      );
-      // console.log('✅ EXECUCAO-OS API: Execução pausada:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao pausar execução:', error);
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/pausar`,
+      data
+    );
+    // console.log('✅ EXECUCAO-OS API: Execução pausada:', response.data);
+    return response.data;
   }
 
   async retomar(id: string, data: RetomarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
     // console.log('▶️ EXECUCAO-OS API: Retomando execução:', id, data);
 
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/retomar`,
-        data
-      );
-      // console.log('✅ EXECUCAO-OS API: Execução retomada:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao retomar execução:', error);
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/retomar`,
+      data
+    );
+    // console.log('✅ EXECUCAO-OS API: Execução retomada:', response.data);
+    return response.data;
   }
 
   async finalizar(id: string, data: FinalizarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
     // console.log('🏁 EXECUCAO-OS API: Finalizando execução:', id, data);
 
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/finalizar`,
-        data
-      );
-      // console.log('✅ EXECUCAO-OS API: Execução finalizada:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao finalizar execução:', error);
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/finalizar`,
+      data
+    );
+    // console.log('✅ EXECUCAO-OS API: Execução finalizada:', response.data);
+    return response.data;
   }
 
   async cancelar(id: string, data: CancelarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/cancelar`,
-        data
-      );
-      return response.data;
-    } catch (error: any) {
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/cancelar`,
+      data
+    );
+    return response.data;
   }
 
   async executar(id: string, data: ExecutarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/executar`,
-        data
-      );
-      return response.data;
-    } catch (error: any) {
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/executar`,
+      data
+    );
+    return response.data;
   }
 
   async auditar(id: string, data: AuditarExecucaoApiData): Promise<ExecucaoOSApiResponse> {
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/auditar`,
-        data
-      );
-      return response.data;
-    } catch (error: any) {
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/auditar`,
+      data
+    );
+    return response.data;
   }
 
   async reabrir(id: string, data: ReabrirExecucaoApiData): Promise<ExecucaoOSApiResponse> {
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/reabrir`,
-        data
-      );
-      return response.data;
-    } catch (error: any) {
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/reabrir`,
+      data
+    );
+    return response.data;
   }
 
   async finalizarOS(id: string, data: FinalizarExecucaoOSApiData): Promise<ExecucaoOSApiResponse> {
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/finalizar`,
-        data
-      );
-      return response.data;
-    } catch (error: any) {
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/finalizar`,
+      data
+    );
+    return response.data;
   }
 
   async atualizarProgresso(id: string, data: AtualizarProgressoApiData): Promise<ExecucaoOSApiResponse> {
     // console.log('📈 EXECUCAO-OS API: Atualizando progresso:', id, data);
 
-    try {
-      const response = await api.put<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/progresso`,
-        data
-      );
-      // console.log('✅ EXECUCAO-OS API: Progresso atualizado:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao atualizar progresso:', error);
-      throw error;
-    }
+    const response = await api.put<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/progresso`,
+      data
+    );
+    // console.log('✅ EXECUCAO-OS API: Progresso atualizado:', response.data);
+    return response.data;
   }
 
   // ============================================================================
@@ -581,39 +801,29 @@ export class ExecucaoOSApiService {
   async aprovar(id: string, observacoesAprovacao?: string, aprovadoPor?: string): Promise<ExecucaoOSApiResponse> {
     // console.log('✅ EXECUCAO-OS API: Aprovando execução:', id);
 
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/aprovar`,
-        {
-          observacoes_aprovacao: observacoesAprovacao,
-          aprovado_por: aprovadoPor
-        }
-      );
-      // console.log('✅ EXECUCAO-OS API: Execução aprovada:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao aprovar execução:', error);
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/aprovar`,
+      {
+        observacoes_aprovacao: observacoesAprovacao,
+        aprovado_por: aprovadoPor
+      }
+    );
+    // console.log('✅ EXECUCAO-OS API: Execução aprovada:', response.data);
+    return response.data;
   }
 
   async reprovar(id: string, motivoReprovacao: string, reprovadoPor?: string): Promise<ExecucaoOSApiResponse> {
     // console.log('❌ EXECUCAO-OS API: Reprovando execução:', id);
 
-    try {
-      const response = await api.post<ExecucaoOSApiResponse>(
-        `${this.baseEndpoint}/${id}/reprovar`,
-        {
-          motivo_reprovacao: motivoReprovacao,
-          reprovado_por: reprovadoPor
-        }
-      );
-      // console.log('✅ EXECUCAO-OS API: Execução reprovada:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao reprovar execução:', error);
-      throw error;
-    }
+    const response = await api.post<ExecucaoOSApiResponse>(
+      `${this.baseEndpoint}/${id}/reprovar`,
+      {
+        motivo_reprovacao: motivoReprovacao,
+        reprovado_por: reprovadoPor
+      }
+    );
+    // console.log('✅ EXECUCAO-OS API: Execução reprovada:', response.data);
+    return response.data;
   }
 
   // ============================================================================
@@ -623,30 +833,20 @@ export class ExecucaoOSApiService {
   async getTarefas(id: string): Promise<TarefaExecucaoApiResponse[]> {
     // console.log('📋 EXECUCAO-OS API: Obtendo tarefas da execução:', id);
 
-    try {
-      const response = await api.get<TarefaExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/tarefas`);
-      // console.log('✅ EXECUCAO-OS API: Tarefas obtidas:', response.data.length);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter tarefas:', error);
-      throw error;
-    }
+    const response = await api.get<TarefaExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/tarefas`);
+    // console.log('✅ EXECUCAO-OS API: Tarefas obtidas:', response.data.length);
+    return response.data;
   }
 
   async executarTarefa(id: string, tarefaId: string, data: ExecutarTarefaApiData): Promise<TarefaExecucaoApiResponse> {
     // console.log('🔧 EXECUCAO-OS API: Executando tarefa:', id, tarefaId, data);
 
-    try {
-      const response = await api.put<TarefaExecucaoApiResponse>(
-        `${this.baseEndpoint}/${id}/tarefas/${tarefaId}/executar`,
-        data
-      );
-      // console.log('✅ EXECUCAO-OS API: Tarefa executada:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao executar tarefa:', error);
-      throw error;
-    }
+    const response = await api.put<TarefaExecucaoApiResponse>(
+      `${this.baseEndpoint}/${id}/tarefas/${tarefaId}/executar`,
+      data
+    );
+    // console.log('✅ EXECUCAO-OS API: Tarefa executada:', response.data);
+    return response.data;
   }
 
   // ============================================================================
@@ -656,125 +856,90 @@ export class ExecucaoOSApiService {
   async getEquipe(id: string): Promise<EquipeExecucaoApiResponse[]> {
     // console.log('👥 EXECUCAO-OS API: Obtendo equipe da execução:', id);
 
-    try {
-      const response = await api.get<EquipeExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/equipe`);
-      // console.log('✅ EXECUCAO-OS API: Equipe obtida:', response.data.length);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter equipe:', error);
-      throw error;
-    }
+    const response = await api.get<EquipeExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/equipe`);
+    // console.log('✅ EXECUCAO-OS API: Equipe obtida:', response.data.length);
+    return response.data;
   }
 
   async adicionarMembro(id: string, tecnicoId: string, papel: 'RESPONSAVEL' | 'AUXILIAR' | 'SUPERVISOR'): Promise<EquipeExecucaoApiResponse> {
     // console.log('➕ EXECUCAO-OS API: Adicionando membro à equipe:', id, tecnicoId, papel);
 
-    try {
-      const response = await api.post<EquipeExecucaoApiResponse>(
-        `${this.baseEndpoint}/${id}/equipe`,
-        {
-          tecnico_id: tecnicoId,
-          papel: papel
-        }
-      );
-      // console.log('✅ EXECUCAO-OS API: Membro adicionado:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao adicionar membro:', error);
-      throw error;
-    }
+    const response = await api.post<EquipeExecucaoApiResponse>(
+      `${this.baseEndpoint}/${id}/equipe`,
+      {
+        tecnico_id: tecnicoId,
+        papel: papel
+      }
+    );
+    // console.log('✅ EXECUCAO-OS API: Membro adicionado:', response.data);
+    return response.data;
   }
 
   async removerMembro(id: string, membroId: string): Promise<void> {
     // console.log('➖ EXECUCAO-OS API: Removendo membro da equipe:', id, membroId);
 
-    try {
-      await api.delete(`${this.baseEndpoint}/${id}/equipe/${membroId}`);
-      // console.log('✅ EXECUCAO-OS API: Membro removido com sucesso');
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao remover membro:', error);
-      throw error;
-    }
+    await api.delete(`${this.baseEndpoint}/${id}/equipe/${membroId}`);
+    // console.log('✅ EXECUCAO-OS API: Membro removido com sucesso');
   }
 
   // ============================================================================
   // OPERAÇÕES DE ANEXOS
   // ============================================================================
 
-  async getAnexos(id: string): Promise<AnexoExecucaoApiResponse[]> {
-    // console.log('📎 EXECUCAO-OS API: Listando anexos da execução:', id);
-
-    try {
-      const response = await api.get<AnexoExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/anexos`);
-      // console.log('✅ EXECUCAO-OS API: Anexos listados:', response.data.length);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao listar anexos:', error);
-      throw error;
-    }
+  /** O conteúdo do PDF da OS (SN-62) */
+  async relatorio(id: string): Promise<RelatorioDaOS> {
+    const response = await api.get<RelatorioDaOS>(`${this.baseEndpoint}/${id.trim()}/relatorio`);
+    return response.data;
   }
 
-  async uploadAnexo(
-    id: string,
-    file: File,
-    tipo: TipoAnexoExecucao,
-    descricao?: string,
-    usuarioId?: string
-  ): Promise<AnexoExecucaoApiResponse> {
-    // console.log('📤 EXECUCAO-OS API: Fazendo upload de anexo para execução:', id);
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('tipo', tipo);
-      if (descricao) formData.append('descricao', descricao);
-      if (usuarioId) formData.append('usuario_id', usuarioId);
-
-      const response = await api.post<AnexoExecucaoApiResponse>(
-        `${this.baseEndpoint}/${id}/anexos/upload`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-      // console.log('✅ EXECUCAO-OS API: Anexo enviado:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao enviar anexo:', error);
-      throw error;
-    }
+  /** Confere o código de verificação de um PDF (SN-62) */
+  async conferir(codigo: string): Promise<ConferenciaDoCodigo> {
+    // O diálogo mostra a recusa ("código não encontrado") no lugar do resultado
+    const response = await api.get<ConferenciaDoCodigo>(`${this.baseEndpoint}/conferencia`, { params: { codigo }, semAvisoGlobal: true });
+    return response.data;
   }
 
-  async downloadAnexo(id: string, anexoId: string): Promise<Blob> {
-    // console.log('📥 EXECUCAO-OS API: Fazendo download de anexo:', anexoId);
+  /** Quem pode registrar horas sem estar escalado (SN-61): a equipe da planta da OS e o apoio, só id e nome */
+  async pessoas(id: string): Promise<PessoasDaOS> {
+    const response = await api.get<PessoasDaOS>(`${this.baseEndpoint}/${id.trim()}/pessoas`);
+    return response.data;
+  }
 
-    try {
-      const response = await api.get(
-        `${this.baseEndpoint}/${id}/anexos/${anexoId}/download`,
-        {
-          responseType: 'blob',
-        }
-      );
-      // console.log('✅ EXECUCAO-OS API: Download concluído');
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao fazer download:', error);
-      throw error;
-    }
+  async getAnexos(id: string): Promise<AnexoOS[]> {
+    const response = await api.get<AnexoOS[]>(`${this.baseEndpoint}/${id.trim()}/anexos`);
+    return response.data;
+  }
+
+  /**
+   * POST /execucao-os/:id/anexos — o tipo vai na query (é o contrato do
+   * controller); quem enviou o backend tira do token.
+   */
+  async uploadAnexo(id: string, file: File, tipo: TipoAnexoOS, descricao?: string, destino: DestinoDoAnexo = {}): Promise<AnexoOS> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (descricao) formData.append('descricao', descricao);
+    // A foto da tarefa ou do item do checklist (SN-59); sem os dois, anexo geral
+    if (destino.checklist_item_id) formData.append('checklist_item_id', destino.checklist_item_id.trim());
+    else if (destino.tarefa_os_id) formData.append('tarefa_os_id', destino.tarefa_os_id.trim());
+
+    const response = await api.post<AnexoOS>(`${this.baseEndpoint}/${id.trim()}/anexos`, formData, {
+      params: { tipo },
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  /** `semAvisoGlobal`: quem chama mostra a falha (o PDF da OS diz qual foto não entrou) */
+  async downloadAnexo(id: string, anexoId: string, opcoes: { semAvisoGlobal?: boolean } = {}): Promise<Blob> {
+    const response = await api.get(`${this.baseEndpoint}/${id.trim()}/anexos/${anexoId.trim()}/download`, {
+      responseType: 'blob',
+      semAvisoGlobal: opcoes.semAvisoGlobal,
+    });
+    return response.data;
   }
 
   async deleteAnexo(id: string, anexoId: string): Promise<void> {
-    // console.log('🗑️ EXECUCAO-OS API: Excluindo anexo:', anexoId);
-
-    try {
-      await api.delete(`${this.baseEndpoint}/${id}/anexos/${anexoId}`);
-      // console.log('✅ EXECUCAO-OS API: Anexo excluído com sucesso');
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao excluir anexo:', error);
-      throw error;
-    }
+    await api.delete(`${this.baseEndpoint}/${id.trim()}/anexos/${anexoId.trim()}`);
   }
 
   // ============================================================================
@@ -787,19 +952,14 @@ export class ExecucaoOSApiService {
     planta_id?: string;
     equipamento_id?: string;
     tipo?: TipoOrdemServico;
-  }): Promise<any> {
+  }): Promise<unknown> {
     // console.log('📊 EXECUCAO-OS API: Obtendo relatório de performance:', params);
 
-    try {
-      const response = await api.get(`${this.baseEndpoint}/relatorios/performance`, {
-        params
-      });
-      // console.log('✅ EXECUCAO-OS API: Relatório de performance obtido');
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter relatório:', error);
-      throw error;
-    }
+    const response = await api.get(`${this.baseEndpoint}/relatorios/performance`, {
+      params
+    });
+    // console.log('✅ EXECUCAO-OS API: Relatório de performance obtido');
+    return response.data;
   }
 
   async getRelatorioCustos(params?: {
@@ -807,19 +967,14 @@ export class ExecucaoOSApiService {
     data_fim?: string; // ISO DateTime string
     planta_id?: string;
     tipo?: TipoOrdemServico;
-  }): Promise<any> {
+  }): Promise<unknown> {
     // console.log('💰 EXECUCAO-OS API: Obtendo relatório de custos:', params);
 
-    try {
-      const response = await api.get(`${this.baseEndpoint}/relatorios/custos`, {
-        params
-      });
-      // console.log('✅ EXECUCAO-OS API: Relatório de custos obtido');
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter relatório:', error);
-      throw error;
-    }
+    const response = await api.get(`${this.baseEndpoint}/relatorios/custos`, {
+      params
+    });
+    // console.log('✅ EXECUCAO-OS API: Relatório de custos obtido');
+    return response.data;
   }
 
   async getRelatorioEficiencia(params?: {
@@ -827,19 +982,14 @@ export class ExecucaoOSApiService {
     data_fim?: string; // ISO DateTime string
     planta_id?: string;
     tecnico_id?: string;
-  }): Promise<any> {
+  }): Promise<unknown> {
     // console.log('⚡ EXECUCAO-OS API: Obtendo relatório de eficiência:', params);
 
-    try {
-      const response = await api.get(`${this.baseEndpoint}/relatorios/eficiencia`, {
-        params
-      });
-      // console.log('✅ EXECUCAO-OS API: Relatório de eficiência obtido');
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter relatório:', error);
-      throw error;
-    }
+    const response = await api.get(`${this.baseEndpoint}/relatorios/eficiencia`, {
+      params
+    });
+    // console.log('✅ EXECUCAO-OS API: Relatório de eficiência obtido');
+    return response.data;
   }
 
   // ============================================================================
@@ -849,18 +999,20 @@ export class ExecucaoOSApiService {
   async getPausas(id: string): Promise<PausaExecucaoApiResponse[]> {
     // console.log('⏸️ EXECUCAO-OS API: Obtendo pausas da execução:', id);
 
-    try {
-      const response = await api.get<PausaExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/pausas`);
-      // console.log('✅ EXECUCAO-OS API: Pausas obtidas:', response.data.length);
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter pausas:', error);
-      throw error;
-    }
+    const response = await api.get<PausaExecucaoApiResponse[]>(`${this.baseEndpoint}/${id}/pausas`);
+    // console.log('✅ EXECUCAO-OS API: Pausas obtidas:', response.data.length);
+    return response.data;
   }
 
   /** Marca/desmarca itens do checklist (grava na hora; OS em execução ou pausada) */
-  async atualizarChecklist(id: string, atividades: { id: string; concluida: boolean }[]): Promise<void> {
+  /**
+   * Verificação manda `concluida`; leitura manda `valor_lido` (null apaga) e a
+   * API marca pelo valor (SN-58). `observacoes` explica a leitura fora da faixa.
+   */
+  async atualizarChecklist(
+    id: string,
+    atividades: { id: string; concluida?: boolean; valor_lido?: number | null; observacoes?: string | null }[],
+  ): Promise<void> {
     await api.patch(`${this.baseEndpoint}/${id}/checklist`, { atividades });
   }
 
@@ -890,17 +1042,21 @@ export class ExecucaoOSApiService {
     await api.patch(`${this.baseEndpoint}/${id}/ferramentas`, { ferramentas });
   }
 
-  async getHistoricoCompleto(id: string): Promise<any> {
+  /**
+   * SN-93: os outros custos depois do Executar (PATCH :id/outros-custos). A lista
+   * inteira: o não previsto que não vem sai da OS. Na executada ou auditada, a API
+   * refaz o custo real.
+   */
+  async registrarOutrosCustos(id: string, outros_custos: OutroCustoPedido[]): Promise<void> {
+    await api.patch(`${this.baseEndpoint}/${id.trim()}/outros-custos`, { outros_custos });
+  }
+
+  async getHistoricoCompleto(id: string): Promise<unknown> {
     // console.log('📜 EXECUCAO-OS API: Obtendo histórico completo da execução:', id);
 
-    try {
-      const response = await api.get(`${this.baseEndpoint}/${id}/historico`);
-      // console.log('✅ EXECUCAO-OS API: Histórico obtido');
-      return response.data;
-    } catch (error: any) {
-      // console.error('💥 EXECUCAO-OS API: Erro ao obter histórico:', error);
-      throw error;
-    }
+    const response = await api.get(`${this.baseEndpoint}/${id}/historico`);
+    // console.log('✅ EXECUCAO-OS API: Histórico obtido');
+    return response.data;
   }
 }
 

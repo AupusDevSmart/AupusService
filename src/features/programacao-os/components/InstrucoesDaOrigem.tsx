@@ -1,34 +1,34 @@
 // src/features/programacao-os/components/InstrucoesDaOrigem.tsx
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
-import { InstrucaoExpandableCard } from '@/components/common/InstrucaoExpandableCard';
+import { toast } from 'sonner';
+import { formatApiError } from '@/utils/api-error';
+
+/**
+ * A origem é contexto: a anomalia ou a solicitação excluída (a programação
+ * cancelada devolve a origem, que pode ser excluída) não pode dar o toast de
+ * erro ao abrir a OS. A falha fica no console e a seção some.
+ */
+const SEM_AVISO = { semAvisoGlobal: true };
 
 type TipoDeOrigem = 'ANOMALIA' | 'PLANO_MANUTENCAO' | 'SOLICITACAO_SERVICO' | string;
 
-interface InstrucoesDaOrigemProps {
+export interface OrigemDasInstrucoes {
   tipo: TipoDeOrigem;
   anomaliaId?: string;
   solicitacaoId?: string;
   /** Só as tarefas escolhidas — cada uma aponta para uma instrução. */
   tarefaIds?: string[];
   planoId?: string;
-  /**
-   * Sobe os ids das instrucoes encontradas.
-   *
-   * Quem herda os recursos precisa das MESMAS instrucoes que aparecem aqui, e
-   * resolver o vinculo duas vezes daria duas listas que podem divergir.
-   */
-  onInstrucoes?: (ids: string[]) => void;
 }
 
-interface InstrucaoResumida {
+export interface InstrucaoResumida {
   id: string;
-  tag?: string;
+  codigo?: string;
   nome?: string;
 }
 
 /** Tira duplicatas e linhas sem id, preservando a ordem de chegada. */
-function distintas(lista: Array<InstrucaoResumida | null | undefined>): InstrucaoResumida[] {
+export function distintas(lista: Array<InstrucaoResumida | null | undefined>): InstrucaoResumida[] {
   const vistas = new Set<string>();
   const saida: InstrucaoResumida[] = [];
 
@@ -42,6 +42,24 @@ function distintas(lista: Array<InstrucaoResumida | null | undefined>): Instruca
   return saida;
 }
 
+export interface InstrucoesDaOrigemLidas {
+  /** As que vêm pelas tarefas escolhidas do plano: saem com a tarefa */
+  pelasTarefas: InstrucaoResumida[];
+  /** As vinculadas à anomalia ou à solicitação: a programação nasce com elas (SN-86) */
+  daOrigem: InstrucaoResumida[];
+  /** A chave da origem lida: muda quando a origem muda, e só depois de ler */
+  origemLida: string | null;
+  /**
+   * A anomalia ou solicitação lida (sem as tarefas): é ela que semeia a lista no
+   * cadastro. Marcar uma tarefa do plano relê a origem, mas não ressemeia — a
+   * avulsa acrescentada sumiria
+   */
+  semeaduraLida: string | null;
+  /** A leitura da origem falhou: as listas vazias não querem dizer "sem instrução" */
+  falhou: boolean;
+  carregando: boolean;
+}
+
 /**
  * As instruções que vêm da origem da OS.
  *
@@ -52,66 +70,99 @@ function distintas(lista: Array<InstrucaoResumida | null | undefined>): Instruca
  *   solicitação -> `instrucoes`, que o GET da solicitação já traz
  *   plano       -> `tarefa.instrucao`, uma por tarefa escolhida
  *
+ *   tarefas     -> `tarefa.instrucao` de cada uma (a programação do cron, de
+ *                  vários planos), para a tela não oferecer de novo a instrução
+ *                  que já vem por elas
+ *
  * A mesma instrução pode chegar por duas tarefas do mesmo plano; aparece uma vez
- * só. E o card busca o próprio detalhe pelo id, então basta o id daqui.
+ * só. A origem excluída (404) dá listas vazias sem toast: abrir a OS cancelada
+ * não é erro. Qualquer outra falha avisa, e `falhou` diz que as listas vazias
+ * não querem dizer "sem instrução".
  */
-export function InstrucoesDaOrigem({
-  tipo,
-  anomaliaId,
-  solicitacaoId,
-  tarefaIds = [],
-  planoId,
-  onInstrucoes,
-}: InstrucoesDaOrigemProps) {
-  const [instrucoes, setInstrucoes] = useState<InstrucaoResumida[]>([]);
+const statusDoErro = (erro: unknown) => (erro as { response?: { status?: number } } | null)?.response?.status;
+
+export function useInstrucoesDaOrigem({ tipo, anomaliaId, solicitacaoId, tarefaIds = [], planoId }: OrigemDasInstrucoes): InstrucoesDaOrigemLidas {
+  const [lidas, setLidas] = useState<Omit<InstrucoesDaOrigemLidas, 'carregando'>>({
+    pelasTarefas: [],
+    daOrigem: [],
+    origemLida: null,
+    semeaduraLida: null,
+    falhou: false,
+  });
   const [carregando, setCarregando] = useState(false);
 
   // Chaves em texto: o pai recria os arrays a cada render, e comparar por
   // referência dispararia a busca sem parar.
   const chaveTarefas = [...tarefaIds].map((t) => String(t).trim()).sort().join('|');
+  const chaveDaSemeadura = [tipo, anomaliaId?.trim(), solicitacaoId?.trim()].join('#');
+  const chaveDaOrigem = [chaveDaSemeadura, planoId?.trim(), chaveTarefas].join('#');
 
   useEffect(() => {
     let cancelado = false;
 
-    const buscar = async (): Promise<InstrucaoResumida[]> => {
+    const buscar = async (): Promise<Pick<InstrucoesDaOrigemLidas, 'pelasTarefas' | 'daOrigem'>> => {
       if (tipo === 'ANOMALIA' && anomaliaId) {
         const { anomaliasService } = await import('@/services/anomalias.service');
-        const anomalia = await anomaliasService.findOne(anomaliaId.trim());
+        const anomalia = await anomaliasService.findOne(anomaliaId.trim(), SEM_AVISO);
         const vinculos = (anomalia as { anomalias_instrucoes?: Array<{ instrucao?: InstrucaoResumida }> })
           .anomalias_instrucoes;
-        return distintas((vinculos ?? []).map((v) => v.instrucao));
+        return { pelasTarefas: [], daOrigem: distintas((vinculos ?? []).map((v) => v.instrucao)) };
       }
 
       if (tipo === 'SOLICITACAO_SERVICO' && solicitacaoId) {
         const { solicitacoesServicoService } = await import('@/services/solicitacoes-servico.service');
-        const solicitacao = await solicitacoesServicoService.findOne(solicitacaoId.trim());
+        const solicitacao = await solicitacoesServicoService.findOne(solicitacaoId.trim(), SEM_AVISO);
         const lista = (solicitacao as { instrucoes?: InstrucaoResumida[] }).instrucoes;
-        return distintas(lista ?? []);
+        return { pelasTarefas: [], daOrigem: distintas(lista ?? []) };
       }
 
       if (tipo === 'PLANO_MANUTENCAO' && planoId && chaveTarefas) {
         const escolhidas = new Set(chaveTarefas.split('|'));
         const { tarefasApi } = await import('@/services/tarefas.services');
         const tarefas = await tarefasApi.findByPlano(planoId.trim());
-        return distintas(
-          (tarefas ?? [])
-            .filter((t: { id: string }) => escolhidas.has(String(t.id).trim()))
-            .map((t: { instrucao?: InstrucaoResumida }) => t.instrucao),
-        );
+        return {
+          daOrigem: [],
+          pelasTarefas: distintas(
+            (tarefas ?? [])
+              .filter((t: { id: string }) => escolhidas.has(String(t.id).trim()))
+              .map((t: { instrucao?: InstrucaoResumida }) => t.instrucao),
+          ),
+        };
       }
 
-      return [];
+      if (chaveTarefas) {
+        // Sem plano (a do cron junta tarefas de vários): uma a uma. A cópia apagada
+        // do plano (404) só fica de fora; o servidor também não a acha
+        const { tarefasApi } = await import('@/services/tarefas.services');
+        const lidas = await Promise.allSettled(chaveTarefas.split('|').map((id) => tarefasApi.findOne(id, SEM_AVISO)));
+        const outraFalha = lidas.find((l) => l.status === 'rejected' && statusDoErro(l.reason) !== 404);
+        if (outraFalha?.status === 'rejected') throw outraFalha.reason;
+        return {
+          daOrigem: [],
+          pelasTarefas: distintas(
+            lidas.map((l) => (l.status === 'fulfilled' ? (l.value as { instrucao?: InstrucaoResumida }).instrucao : null)),
+          ),
+        };
+      }
+
+      return { pelasTarefas: [], daOrigem: [] };
     };
 
     setCarregando(true);
     void buscar()
       // Instrução é contexto, não bloqueio: se a busca falhar, a OS continua
-      // sendo criada sem esta seção.
-      .catch(() => [])
+      // sendo criada com o que o planejador acrescentar.
+      .then((achadas) => ({ ...achadas, falhou: false }))
+      .catch((erro: unknown) => {
+        // A origem excluída é contexto e fica calada; o resto avisa
+        if (!cancelado && statusDoErro(erro) !== 404) {
+          toast.error('Não foi possível ler as instruções da origem', { description: formatApiError(erro) });
+        }
+        return { pelasTarefas: [], daOrigem: [], falhou: true };
+      })
       .then((achadas) => {
         if (cancelado) return;
-        setInstrucoes(achadas);
-        onInstrucoes?.(achadas.map((i) => i.id));
+        setLidas({ ...achadas, origemLida: chaveDaOrigem, semeaduraLida: chaveDaSemeadura });
       })
       .finally(() => {
         if (!cancelado) setCarregando(false);
@@ -120,33 +171,9 @@ export function InstrucoesDaOrigem({
     return () => {
       cancelado = true;
     };
-  }, [tipo, anomaliaId, solicitacaoId, planoId, chaveTarefas]);
+    // A chave da origem resume as cinco
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaveDaOrigem]);
 
-  // Sem origem escolhida ainda, ou origem sem instrução: não ocupa espaço.
-  if (!carregando && instrucoes.length === 0) return null;
-
-  return (
-    <div className="space-y-2">
-      <span className="text-sm font-medium">Instruções</span>
-
-      {carregando ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Carregando...
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {instrucoes.map((instrucao) => (
-            <InstrucaoExpandableCard
-              key={instrucao.id}
-              id={instrucao.id}
-              tag={instrucao.tag}
-              nome={instrucao.nome}
-              disabled
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return { ...lidas, carregando: carregando || lidas.origemLida !== chaveDaOrigem };
 }

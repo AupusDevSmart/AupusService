@@ -10,16 +10,7 @@ import { useAcoesDeCompartilhamento } from '@/core/features/sincronizacao';
 import { BaseFilters } from '@/core/components/common/base-filters/BaseFilters';
 import { Button } from '@/core/components/ui/button';
 import { Alert, AlertDescription } from '@/core/components/ui/alert';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/core/components/ui/alert-dialog';
+import { ExcluirEquipamentoDialog } from '@/core/features/equipamentos/components/ExcluirEquipamentoDialog';
 import { Wrench, ArrowLeft, AlertCircle, Copy } from 'lucide-react';
 import { Equipamento, EquipamentosFilters } from '../types';
 import { getEquipamentosTableColumns } from '../config/table-config';
@@ -28,9 +19,14 @@ import { useEquipamentos, useEquipamentoFilters, useUserStore } from '@/core/con
 
 // Modais separados
 import { EquipamentoUCModal, type ContextoSlot } from './modals/EquipamentoUCModal';
-import { ComponenteUARModal } from './modals/ComponenteUARModal';
+import { ComponenteUARModal, type DadosDoComponenteUAR } from './modals/ComponenteUARModal';
+import type { DadosDoFormulario } from '@/core/types/base';
+import { formatApiError } from '@/utils/api-error';
 import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
 import { exportarEquipamentos, lerEquipamentos } from '../utils/planilha';
+import { EtiquetasDosEquipamentos } from './EtiquetasDosEquipamentos';
+import { equipamentosParaEtiqueta } from '../utils/equipamentos-para-etiqueta';
+import { useEquipamentoDaUrl } from '../hooks/useEquipamentoDaUrl';
 
 /**
  * O filtro da tela em parâmetros da exportação, com a mesma hierarquia da
@@ -113,7 +109,10 @@ interface EquipamentosPageProps {
 export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC, renderHistoricoUC, mostrarSupervisorio }: EquipamentosPageProps = {}) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAdmin } = useUserStore();
+  const { hasPermission } = useUserStore();
+  const podeGerenciar = hasPermission('equipamentos.manage');
+  const podeCompartilhar = hasPermission('sincronizacao.gerenciar');
+  const podeVerProprietarios = hasPermission('usuarios.view');
 
   // Hook da API
   const {
@@ -127,7 +126,6 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
     updateEquipamento,
     deleteEquipamento,
     fetchEquipamentos,
-    fetchEquipamentosByPlanta,
     salvarComponentesUARLote,
     getEquipamento
   } = useEquipamentos();
@@ -152,7 +150,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
   const compartilhamento = useAcoesDeCompartilhamento({
     recurso: 'equipamentos',
     registros: equipamentos,
-    habilitado: isAdmin(),
+    habilitado: podeCompartilhar,
   });
 
   // Estados locais
@@ -196,21 +194,17 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
   // ============================================================================
   // CARREGAR DADOS INICIAIS
   // ============================================================================
+  // A planta da URL entra pelo filtro (filtrosDaUrl), como a unidade; o nome,
+  // só no título. Era `findByPlanta`, numa rota que o backend não tem: o link
+  // "ver equipamentos" do cadastro de plantas dava 404 (achado do SN-67).
   const loadEquipamentos = useCallback(async (currentFilters: EquipamentosFilters) => {
     const urlParams = new URLSearchParams(location.search);
-    const plantaId = urlParams.get('plantaId');
+    const plantaId = urlParams.get('plantaId')?.trim();
     const plantaNome = urlParams.get('plantaNome');
 
-    if (plantaId && plantaNome) {
-      // Carregar equipamentos de uma planta específica
-      const result = await fetchEquipamentosByPlanta(plantaId, currentFilters); // PLANTAID JÁ É STRING
-      setPlantaInfo(result.planta);
-    } else {
-      // Carregar todos os equipamentos
-      await fetchEquipamentos(currentFilters);
-      setPlantaInfo(null);
-    }
-  }, [location.search, fetchEquipamentos, fetchEquipamentosByPlanta]);
+    await fetchEquipamentos(currentFilters);
+    setPlantaInfo(plantaId && plantaNome ? { id: plantaId, nome: plantaNome, localizacao: '' } : null);
+  }, [location.search, fetchEquipamentos]);
 
   // Carregar dados quando filtros mudam
   useEffect(() => {
@@ -255,8 +249,8 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
         // Sem isto, o setState no mount recriava o objeto e disparava a busca
         // de novo — a segunda ja com o filtro certo, mas concorrendo com a
         // primeira.
-        const igual = Object.entries(urlFilters).every(
-          ([chave, valor]) => (prev as unknown as Record<string, unknown>)[chave] === valor,
+        const igual = (Object.keys(urlFilters) as (keyof EquipamentosFilters)[]).every(
+          (chave) => prev[chave] === urlFilters[chave],
         );
         if (igual) return prev;
 
@@ -412,34 +406,31 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
 
   const closeUCModal = () => {
     setModalUC({ isOpen: false, mode: 'create', entity: null });
+    limparDaUrl();
     // Sem isso, o "Novo Equipamento" seguinte abriria preenchido com o que foi
     // duplicado antes.
     setDuplicarDe(null);
   };
 
-  const handleSubmitUC = async (data: any) => {
-    try {
+  // O erro de salvar sobe para o sheet, que mostra o motivo do backend e fica
+  // aberto. Antes era engolido aqui: o sheet seguia como se tivesse salvo
+  // (gravava a posicao e fechava, perdendo o que foi digitado) — revisao do SN-12.
+  const handleSubmitUC = async (data: DadosDoFormulario) => {
+    let criado: Equipamento | null = null;
 
-      let criado: Equipamento | null = null;
-
-      if (modalUC.mode === 'create') {
-        criado = await createEquipamento(data);
-      } else if (modalUC.mode === 'edit' && modalUC.entity) {
-        await updateEquipamento(modalUC.entity.id, data);
-      }
-
-      // Recarregar dados após salvar
-      await loadEquipamentos(filters);
-
-      // Quem fecha o sheet é o próprio sheet: depois de criar, ele ainda tem
-      // trabalho a fazer com o id novo (subir a foto, os anexos e vincular o
-      // plano). Fechar aqui o desmontaria no meio disso.
-      return criado;
-
-    } catch (error) {
-      console.error('❌ [EQUIPAMENTOS PAGE] Erro ao salvar equipamento UC:', error);
-      alert(`Erro ao salvar equipamento: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    if (modalUC.mode === 'create') {
+      criado = await createEquipamento(data);
+    } else if (modalUC.mode === 'edit' && modalUC.entity) {
+      await updateEquipamento(modalUC.entity.id, data);
     }
+
+    // Recarregar dados após salvar
+    await loadEquipamentos(filters);
+
+    // Quem fecha o sheet é o próprio sheet: depois de criar, ele ainda tem
+    // trabalho a fazer com o id novo (subir a foto, os anexos e vincular o
+    // plano). Fechar aqui o desmontaria no meio disso.
+    return criado;
   };
 
   // ============================================================================
@@ -451,29 +442,28 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
 
   const closeUARModal = () => {
     setModalUAR({ isOpen: false, mode: 'create', entity: null, equipamentoPai: null });
+    limparDaUrl();
     // Sem isto, o proximo "novo componente" abriria preenchido com o que foi
     // duplicado antes.
     setDuplicarDe(null);
   };
 
-  const handleSubmitUAR = async (data: any) => {
-    try {
-      let criado: Equipamento | null = null;
+  // Como no UC: o erro sobe para o sheet. Aqui ele so era logado, e o sheet
+  // ficava aberto sem aviso nenhum.
+  const handleSubmitUAR = async (data: DadosDoComponenteUAR) => {
+    let criado: Equipamento | null = null;
 
-      if (modalUAR.mode === 'create') {
-        criado = await createEquipamento(data);
-      } else if (modalUAR.mode === 'edit' && modalUAR.entity) {
-        await updateEquipamento(modalUAR.entity.id, data);
-      }
-
-      closeUARModal();
-      await loadEquipamentos(filters);
-
-      // Devolvido para o sheet subir a foto que ficou pendente ate existir id.
-      return criado;
-    } catch (error) {
-      console.error('Erro ao salvar componente UAR:', error);
+    if (modalUAR.mode === 'create') {
+      criado = await createEquipamento(data);
+    } else if (modalUAR.mode === 'edit' && modalUAR.entity) {
+      await updateEquipamento(modalUAR.entity.id, data);
     }
+
+    closeUARModal();
+    await loadEquipamentos(filters);
+
+    // Devolvido para o sheet subir a foto que ficou pendente ate existir id.
+    return criado;
   };
 
   /** O lote nao passa pelo onSubmit: cria os N por endpoint proprio. */
@@ -486,7 +476,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
   // HANDLER PARA SALVAR UARs (usado pelo EquipamentoUCModal)
   // ============================================================================
   const handleSalvarUARs = async (ucId: string, uars: Equipamento[]) => {
-    const result = await salvarComponentesUARLote(ucId, uars);
+    await salvarComponentesUARLote(ucId, uars);
     await loadEquipamentos(filters);
   };
 
@@ -511,6 +501,9 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
       openUARModal('view', equipamento, equipamentoPaiCompleto);
     }
   };
+
+  // SN-67: `?equipamento=<id>` (o QR da etiqueta) abre o sheet daquele equipamento
+  const { limparDaUrl } = useEquipamentoDaUrl(handleView);
 
   const handleEdit = (equipamento: Equipamento) => {
     if (equipamento.classificacao === 'UC') {
@@ -551,11 +544,8 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
       // Recarregar dados
       await loadEquipamentos(filters);
 
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.error?.message ||
-                          error?.response?.data?.message ||
-                          error?.message ||
-                          'Erro desconhecido ao remover equipamento';
+    } catch (error) {
+      const errorMessage = formatApiError(error);
 
       toast.error('Erro ao remover equipamento', {
         description: errorMessage,
@@ -569,13 +559,14 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
   // ============================================================================
   // NAVEGAÇÃO
   // ============================================================================
+  // As rotas são as de /cadastros: /plantas e /equipamentos não existem (achado do SN-67)
   const handleBackToPlantas = () => {
-    navigate('/plantas');
+    navigate('/cadastros/plantas');
   };
 
   // Tirar o filtro de planta nao e esquecer quantas linhas o usuario quer ver.
   const handleClearPlantaFilter = () => {
-    navigate('/equipamentos');
+    navigate('/cadastros/equipamentos');
     setFilters({ ...initialFilters, limit: linhasPorPagina });
   };
 
@@ -694,7 +685,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
                     loadingPlantas,
                     unidades,
                     loadingUnidades,
-                    isAdmin() // Mostrar filtro de proprietário apenas para admins
+                    podeVerProprietarios // o filtro de proprietário lista usuários
                   )}
                   onFilterChange={handleFilterChange}
                 />
@@ -702,16 +693,22 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
 
               {/* Botões de Ação */}
               <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                <EtiquetasDosEquipamentos
+                  carregar={() => equipamentosParaEtiqueta(filtrosDaExportacao(filters))}
+                  nomeDoArquivo="etiquetas-equipamentos"
+                  rotulo="Etiquetas"
+                  className="btn-minimal-outline w-full whitespace-nowrap lg:w-auto"
+                />
                 <PlanilhaDoCadastro
                   cadastro="equipamentos"
                   titulo="Equipamentos"
                   exportar={() => exportarEquipamentos(filtrosDaExportacao(filters))}
                   ler={lerEquipamentos}
                   aoImportar={() => void loadEquipamentos(filters)}
-                  podeImportar={isAdmin()}
+                  podeImportar={podeGerenciar}
                   aviso="Cada aba é uma UC com os seus componentes. Equipamento compartilhado com o NexOn: o que você confirmar aqui é replicado lá. Trocar o PLANO refaz a cópia do plano, como vincular na tela."
                 />
-                {isAdmin() && (
+                {podeGerenciar && (
                   <button
                     onClick={() => openUCModal('create')}
                     className="btn-minimal-primary w-full lg:w-auto whitespace-nowrap"
@@ -734,11 +731,12 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
               onPageChange={handlePageChange}
               onLimitChange={handleLimitChange}
               onView={handleView}
-              onEdit={isAdmin() ? handleEdit : undefined}
-              onDelete={isAdmin() ? handleDelete : undefined}
+              onEdit={podeGerenciar ? handleEdit : undefined}
+              onDelete={podeGerenciar ? handleDelete : undefined}
               customActions={
-                isAdmin()
-                  ? [
+                [
+                  ...(podeGerenciar
+                    ? [
                       {
                         key: 'duplicar',
                         label: 'Duplicar',
@@ -750,9 +748,10 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
                           equipamento.classificacao === 'UC' ||
                           Boolean(equipamento.equipamentoPaiId || equipamento.equipamentoPai),
                       },
-                      ...compartilhamento.acoes,
                     ]
-                  : []
+                    : []),
+                  ...compartilhamento.acoes,
+                ]
               }
               emptyMessage={
                 plantaInfo
@@ -783,7 +782,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
           }}
           onClose={closeUCModal}
           onSubmit={handleSubmitUC}
-          onDelete={handleDelete}
+          onDelete={podeGerenciar ? handleDelete : undefined}
           onSaveUARs={handleSalvarUARs}
           renderSecaoExtra={renderSecaoExtraUC}
           renderCampoDadosBasicos={renderCampoDadosBasicosUC}
@@ -803,37 +802,12 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
           duplicarDe={modalUAR.mode === 'create' ? duplicarDe : null}
         />
 
-        {/* AlertDialog para confirmação de exclusão */}
-        <AlertDialog open={deleteDialog.isOpen} onOpenChange={(open) => !open && setDeleteDialog({ isOpen: false, equipamento: null })}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tem certeza que deseja remover o equipamento <strong>{deleteDialog.equipamento?.nome}</strong>?
-                {deleteDialog.equipamento?.classificacao === 'UC' && (deleteDialog.equipamento?.totalComponentes ?? 0) > 0 && (
-                  <>
-                    <br /><br />
-                    <span className="text-amber-600 dark:text-amber-400 font-medium">
-                      Este equipamento possui {deleteDialog.equipamento.totalComponentes} componente(s) UAR vinculado(s).
-                      Eles também serão removidos.
-                    </span>
-                  </>
-                )}
-                <br /><br />
-                Esta ação não pode ser desfeita.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteConfirm}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Remover
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {/* Confirmação de exclusão */}
+        <ExcluirEquipamentoDialog
+          equipamento={deleteDialog.isOpen ? deleteDialog.equipamento : null}
+          onCancelar={() => setDeleteDialog({ isOpen: false, equipamento: null })}
+          onConfirmar={handleDeleteConfirm}
+        />
 
         {/* UM dialogo por pagina. Com 250+ equipamentos, um por linha seriam
             250 AlertDialogs no DOM para no maximo um aparecer. */}

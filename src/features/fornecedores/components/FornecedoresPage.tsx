@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Users } from 'lucide-react';
 import { useGenericTable } from '@/hooks/useGenericTable';
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { Fornecedor, FornecedoresFilters } from '../types';
+import { Fornecedor, FornecedoresFilters, type FornecedorFormData, type TipoFornecedor, type EnderecoFornecedor } from '../types';
 import { fornecedoresTableColumns } from '../config/table-config';
 import { fornecedoresFilterConfig } from '../config/filter-config';
 import { getFornecedoresFormFields, fornecedoresFormFields } from '../config/form-config';
@@ -23,6 +23,14 @@ const initialFilters: FornecedoresFilters = {
   limit: 10
 };
 
+/** O fornecedor como o formulario o recebe: os dados de PF/PJ achatados no nivel de cima. */
+type FornecedorDoFormulario = { id: string } & Partial<Omit<FornecedorFormData, 'endereco'>> & {
+  endereco?: Partial<EnderecoFornecedor>;
+};
+
+/** O que o formulario entrega ao salvar (a pagina ainda nao tem API: so registra). */
+type FormularioDoFornecedor = Partial<FornecedorFormData> & Record<string, unknown>;
+
 // ✅ WRAPPER CUSTOMIZADO PARA O MODAL - SOLUÇÃO DEFINITIVA
 const FornecedorModal = ({ 
   isOpen, 
@@ -33,26 +41,26 @@ const FornecedorModal = ({
 }: {
   isOpen: boolean;
   mode: 'create' | 'edit' | 'view';
-  entity: any;
+  entity: FornecedorDoFormulario | null;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: FormularioDoFornecedor) => void;
 }) => {
   const [modalKey, setModalKey] = useState(0);
   const [currentFormFields, setCurrentFormFields] = useState(fornecedoresFormFields);
   const [localEntity, setLocalEntity] = useState(entity);
 
   // ✅ Callback para mudança de tipo
-  const handleTypeChange = useCallback((novoTipo: string) => {
+  const handleTypeChange = useCallback((novoTipo: TipoFornecedor) => {
     console.log('Tipo mudou para:', novoTipo);
-    const newFields = getFornecedoresFormFields(novoTipo as any, handleTypeChange);
+    const newFields = getFornecedoresFormFields(novoTipo, handleTypeChange);
     setCurrentFormFields(newFields);
     setModalKey(prev => prev + 1); // ✅ Força re-render completo
     
     // ✅ Atualizar entidade local
-    setLocalEntity((prev: any) => ({
+    setLocalEntity((prev) => (prev ? {
       ...prev,
       tipo: novoTipo
-    }));
+    } : prev));
   }, []);
 
   // ✅ Inicializar campos quando modal abre
@@ -76,7 +84,7 @@ const FornecedorModal = ({
       icon={<Users className="h-5 w-5 text-blue-600" />}
       formFields={currentFormFields}
       onClose={onClose}
-      onSubmit={(data: any) => Promise.resolve(onSubmit(data))}
+      onSubmit={(data: FormularioDoFornecedor) => Promise.resolve(onSubmit(data))}
       width="w-[800px]"
     />
   );
@@ -108,16 +116,18 @@ export function FornecedoresPage() {
     closeModal();
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: FormularioDoFornecedor) => {
     console.log('Dados do fornecedor:', data);
     await new Promise(resolve => setTimeout(resolve, 1500));
     await handleSuccess();
   };
 
   // ✅ ENTIDADE LIMPA E CONSISTENTE
-  const getModalEntity = () => {
+  const getModalEntity = (): FornecedorDoFormulario | null => {
     if (modalState.mode === 'create') {
       return {
+        // Vazio: o cadastro ainda nao tem id e o BaseModal pede um (vazio vale "novo").
+        id: '',
         tipo: 'pessoa_juridica',
         status: 'ativo',
         endereco: {},

@@ -49,7 +49,7 @@ export interface Unidade {
 
   potencia: number;
   status: StatusUnidade;
-  pontosMedicao?: any; // JSON
+  pontosMedicao?: unknown; // JSON (a rota declara string[]; o formulario aceita qualquer JSON)
 
   // Novos campos
   irrigante?: boolean;
@@ -68,10 +68,9 @@ export interface Unidade {
   // Contadores
   totalEquipamentos?: number;
 
-  // Timestamps
-  createdAt: string;
-  updatedAt: string;
-  deletedAt?: string;
+  // Timestamps (a rota manda criadoEm/atualizadoEm, nao createdAt/updatedAt)
+  criadoEm: string;
+  atualizadoEm: string;
 
   // Relacionamentos
   planta?: {
@@ -103,7 +102,7 @@ export interface CreateUnidadeDto {
   longitude: number;
   potencia: number;
   status: StatusUnidade;
-  pontos_medicao?: any;
+  pontos_medicao?: unknown;
   irrigante?: boolean;
   grupo?: GrupoUnidade;
   subgrupo?: SubgrupoUnidade;
@@ -121,7 +120,7 @@ export interface CreateUnidadeDto {
 /**
  * DTO para atualizar unidade
  */
-export interface UpdateUnidadeDto extends Partial<CreateUnidadeDto> {}
+export type UpdateUnidadeDto = Partial<CreateUnidadeDto>;
 
 // ===== FILTROS E QUERIES =====
 
@@ -144,7 +143,7 @@ export interface UnidadeFilters {
 // ===== RESPOSTAS DA API =====
 
 /**
- * Response paginado da API de unidades
+ * Response paginado da API de unidades (GET /unidades)
  */
 export interface UnidadesResponse {
   data: Unidade[];
@@ -152,35 +151,33 @@ export interface UnidadesResponse {
     page: number;
     limit: number;
     total: number;
-    pages: number;
+    totalPages: number;
   };
 }
 
 /**
- * Estatísticas de uma unidade
+ * Estatísticas de uma unidade (GET /unidades/:id/estatisticas)
  */
 export interface UnidadeEstatisticas {
   unidade: {
     id: string;
     nome: string;
-    planta: {
-      id: string;
-      nome: string;
-      localizacao?: string;
-    };
+    tipo: string;
+    potencia: number;
   };
   totais: {
     equipamentos: number;
   };
+  /** Equipamentos por classificação (UC, UAR...). */
+  porTipo: Record<string, number>;
   porCriticidade: Record<string, number>;
-  financeiro?: Record<string, number>;
 }
 
 /**
  * Response de equipamentos de uma unidade
  */
 export interface UnidadeEquipamentosResponse {
-  data: any[]; // TODO: tipar com Equipamento quando disponível
+  data: unknown[]; // Os equipamentos no formato da listagem de /equipamentos (nenhuma tela le ainda)
   pagination: {
     page: number;
     limit: number;
@@ -238,7 +235,7 @@ export const formDataToDto = (formData: UnidadeFormData): CreateUnidadeDto => {
   // 🔍 LOG DETALHADO - FormData recebido
 
   // Helper to safely parse JSON or return undefined
-  const parsePontosMedicao = (value?: string | any) => {
+  const parsePontosMedicao = (value?: unknown): unknown => {
     // Se já é array ou objeto, retorna direto
     if (Array.isArray(value)) return value.length > 0 ? value : undefined;
     if (typeof value === 'object' && value !== null) return value;
@@ -261,7 +258,7 @@ export const formDataToDto = (formData: UnidadeFormData): CreateUnidadeDto => {
   }
 
 
-  const dto: any = {
+  const dto: CreateUnidadeDto = {
     planta_id: formData.plantaId,
     nome: formData.nome,
     tipo: formData.tipo,
@@ -302,7 +299,6 @@ export const formDataToDto = (formData: UnidadeFormData): CreateUnidadeDto => {
   // ✅ CRÍTICO: Só adicionar concessionaria_id se houver valor
   if (concessionariaId) {
     dto.concessionaria_id = concessionariaId;
-  } else {
   }
 
   // ✅ Adicionar numero_uc se houver valor
@@ -319,7 +315,7 @@ export const formDataToDto = (formData: UnidadeFormData): CreateUnidadeDto => {
  */
 export const unidadeToFormData = (unidade: Unidade): UnidadeFormData => {
   // Helper to safely stringify pontosMedicao
-  const stringifyPontosMedicao = (value: any) => {
+  const stringifyPontosMedicao = (value: unknown) => {
     if (!value) return '';
     try {
       // If it's already a string, return it

@@ -1,4 +1,5 @@
 // src/features/instrucoes/components/InstrucoesPage.tsx
+import { usePermission } from '@/components/common/Can';
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
@@ -16,7 +17,7 @@ import { useInstrucoesApi } from '../hooks/useInstrucoesApi';
 import { useInstrucoesFilters } from '../hooks/useInstrucoesFilters';
 import { InstrucoesBreadcrumb } from './InstrucoesBreadcrumb';
 import { InstrucoesDashboard } from './InstrucoesDashboard';
-import { InstrucoesModal } from './InstrucoesModal';
+import { InstrucoesModal, type FormularioDaInstrucao } from './InstrucoesModal';
 import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
 import { exportarInstrucoes, lerInstrucoes } from '../utils/planilha';
 
@@ -36,37 +37,15 @@ const initialDashboard: DashboardInstrucoesDto = {
   instrucoes_inativas: 0,
   instrucoes_em_revisao: 0,
   instrucoes_arquivadas: 0,
-  criticidade_muito_alta: 0,
-  criticidade_alta: 0,
-  criticidade_media: 0,
-  criticidade_baixa: 0,
-  criticidade_muito_baixa: 0,
-  distribuicao_tipos: {
-    preventiva: 0,
-    preditiva: 0,
-    corretiva: 0,
-    inspecao: 0,
-    visita_tecnica: 0
-  },
-  distribuicao_categorias: {
-    mecanica: 0,
-    eletrica: 0,
-    instrumentacao: 0,
-    lubrificacao: 0,
-    limpeza: 0,
-    inspecao: 0,
-    calibracao: 0,
-    outros: 0
-  },
-  tempo_total_estimado: 0,
-  media_tempo_por_instrucao: 0,
-  media_criticidade: 0,
   total_sub_instrucoes: 0,
   total_recursos: 0,
+  total_maquinarios: 0,
   total_tarefas_derivadas: 0
 };
 
 export function InstrucoesPage() {
+  // Ler: todos; escrever (nova, importar, editar, excluir): quem gerencia manutenção.
+  const podeGerenciar = usePermission('manutencao.manage');
   const { user } = useUserStore();
 
   const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('instrucoes');
@@ -131,43 +110,40 @@ export function InstrucoesPage() {
     await loadDashboard();
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: FormularioDaInstrucao) => {
     try {
-      const readOnlyFields = [
-        'id', 'created_at', 'updated_at', 'deleted_at',
-        'total_sub_instrucoes', 'total_recursos', 'total_anexos',
-        'total_tarefas_derivadas', 'usuario_criador', 'usuario_atualizador',
-        'criado_por', 'atualizado_por', 'anexos'
-      ];
-
-      const cleanData = { ...data };
-      readOnlyFields.forEach(field => delete cleanData[field]);
+      // O formulário vem com a instrução inteira; o service manda só o que o DTO aceita (lista branca)
+      const cleanData = data;
 
       let instrucaoId: string;
 
       if (modalState.mode === 'create') {
         if (!user?.id) {
-          alert('Erro: Usuario nao autenticado. Faca login para criar instrucoes.');
+          toast.error('Faça login para criar instruções.');
           return;
         }
 
-        const instrucaoData = {
-          ...cleanData,
-          criado_por: user.id
-        };
-
-        const novaInstrucao = await createInstrucao(instrucaoData);
+        // O autor sai do token no servidor
+        const novaInstrucao = await createInstrucao(cleanData);
         instrucaoId = novaInstrucao.id;
 
         if (pendingFiles.length > 0) {
+          // A instrução existe; o anexo que falhou pode ser enviado na edição,
+          // mas a pessoa precisa saber (antes só ia para o console)
+          const naoEnviados: string[] = [];
           for (const file of pendingFiles) {
             try {
               await uploadAnexo(instrucaoId, file, `Anexo: ${file.name}`);
             } catch (uploadError) {
-              console.error(`Erro no upload de ${file.name}:`, uploadError);
+              naoEnviados.push(`${file.name} (${formatApiError(uploadError)})`);
             }
           }
           setPendingFiles([]);
+          if (naoEnviados.length > 0) {
+            toast.warning(`Instrução criada, mas não foi possível enviar: ${naoEnviados.join(', ')}`, {
+              description: 'Abra a instrução e envie de novo.',
+            });
+          }
         }
       } else if (modalState.mode === 'edit' && modalState.entity) {
         await updateInstrucao(modalState.entity.id, cleanData);
@@ -175,14 +151,16 @@ export function InstrucoesPage() {
 
       await handleSuccess();
     } catch (error) {
-      console.error('Erro ao salvar instrucao:', error);
+      // O sheet continua aberto com o que foi digitado; antes o erro só ia
+      // para o console e o salvar parecia não fazer nada
+      toast.error('Não foi possível salvar a instrução', { description: formatApiError(error) });
     }
   };
 
   const handleExcluir = async (instrucao: InstrucaoApiResponse) => {
     try {
       await deleteInstrucao(instrucao.id.trim());
-      toast.success(`Instrução ${instrucao.tag} excluída.`);
+      toast.success(`Instrução ${instrucao.codigo} excluída.`);
       await handleSuccess();
     } catch (error) {
       // O hook já reporta; aqui só evitamos fechar o modal em cima do erro,
@@ -191,31 +169,26 @@ export function InstrucoesPage() {
     }
   };
 
-  const handleView = async (instrucao: InstrucaoApiResponse) => {
+  // Abre só com a instrução completa. A linha da lista traz só as contagens:
+  // aberta com ela, a edição mostrava zero passos e recursos, e salvar apagava
+  // os de verdade (revisão do SN-12). Como no EditarInstrucaoSheet.
+  const abrirCompleta = async (modo: 'view' | 'edit', instrucao: InstrucaoApiResponse) => {
     try {
-      const completa = await getInstrucao(instrucao.id);
-      openModal('view', completa);
+      openModal(modo, await getInstrucao(instrucao.id));
     } catch (error) {
-      console.error('Erro ao carregar dados completos da instrucao:', error);
-      openModal('view', instrucao);
+      toast.error('Não foi possível abrir a instrução', { description: formatApiError(error) });
     }
   };
 
-  const handleEdit = async (instrucao: InstrucaoApiResponse) => {
-    try {
-      const completa = await getInstrucao(instrucao.id);
-      openModal('edit', completa);
-    } catch (error) {
-      console.error('Erro ao carregar dados completos da instrucao:', error);
-      openModal('edit', instrucao);
-    }
-  };
+  const handleView = (instrucao: InstrucaoApiResponse) => abrirCompleta('view', instrucao);
+
+  const handleEdit = (instrucao: InstrucaoApiResponse) => abrirCompleta('edit', instrucao);
 
   const handleFilterChange = async (newFilters: Partial<QueryInstrucoesApiParams>) => {
     const cleanedFilters = { ...newFilters };
     Object.keys(cleanedFilters).forEach(key => {
       if (cleanedFilters[key as keyof typeof cleanedFilters] === 'all') {
-        cleanedFilters[key as keyof typeof cleanedFilters] = undefined as any;
+        cleanedFilters[key as keyof typeof cleanedFilters] = undefined;
       }
     });
     setFilters(prev => ({ ...prev, ...cleanedFilters, page: 1 }));
@@ -262,12 +235,15 @@ export function InstrucoesPage() {
                   void loadData();
                   void loadDashboard();
                 }}
+                podeImportar={podeGerenciar}
               />
-              <button onClick={() => openModal('create')} className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap">
-                <Plus className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Nova Instrução</span>
-                <span className="sm:hidden">Nova</span>
-              </button>
+              {podeGerenciar && (
+                <button onClick={() => openModal('create')} className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap">
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Nova Instrução</span>
+                  <span className="sm:hidden">Nova</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -285,7 +261,7 @@ export function InstrucoesPage() {
               onPageChange={handlePageChange}
               onLimitChange={handleLimitChange}
               onView={handleView}
-              onEdit={handleEdit}
+              onEdit={podeGerenciar ? handleEdit : undefined}
               emptyMessage="Nenhuma instrução encontrada."
               emptyIcon={<FileText className="h-8 w-8 text-muted-foreground/50" />}
             />
@@ -301,7 +277,7 @@ export function InstrucoesPage() {
           onClose={closeModal}
           onSubmit={handleSubmit}
           onFilesChange={setPendingFiles}
-          onExcluir={handleExcluir}
+          onExcluir={podeGerenciar ? handleExcluir : undefined}
         />
       </Layout.Main>
     </Layout>

@@ -1,7 +1,9 @@
 // src/features/anomalias/components/AnomaliasModal.tsx
 import { BaseModal } from '@/core';
 import { AlertTriangle } from 'lucide-react';
+import type { BaseEntity } from '@/core/types/base';
 import type { FormField, ModalMode } from '@/types/base';
+import type { AnomaliaFormData } from '../types';
 import { AtalhoParaProgramacao } from '@/features/programacao-os/components/AtalhoParaProgramacao';
 
 /**
@@ -31,14 +33,16 @@ const titulos: Record<string, string> = {
   view: 'Visualizar Anomalia',
 };
 
+/** O que o sheet le da anomalia aberta (na criacao, o rascunho da pagina). */
+type AnomaliaAberta = BaseEntity & { status?: string };
+
 interface AnomaliasModalProps {
   isOpen: boolean;
   mode: ModalMode;
-  entity: unknown;
+  entity?: AnomaliaAberta | null;
   formFields: FormField[];
   onClose: () => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onSubmit?: (data: any) => Promise<void> | void;
+  onSubmit?: (data: AnomaliaFormData) => Promise<void> | void;
   /**
    * "Programar" / "Ver programação" no topo. Só na tela de anomalias: aberto de
    * dentro da OS (anomalia de origem), o atalho levaria de volta para onde a
@@ -56,17 +60,19 @@ export function AnomaliasModal({
   onSubmit,
   mostrarAtalhoProgramacao = false,
 }: AnomaliasModalProps) {
-  const anomalia = entity as { id?: string; status?: string } | null;
+  const anomalia = entity;
   return (
     <BaseModal
       isOpen={isOpen}
       mode={mode}
-      entity={entity as never}
+      entity={entity}
       title={titulos[mode] || 'Anomalia'}
       icon={<AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-primary" />}
       formFields={formFields}
       onClose={onClose}
-      onSubmit={onSubmit as never}
+      onSubmit={async (data: AnomaliaFormData) => {
+        await onSubmit?.(data);
+      }}
       width="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[800px]"
       groups={grupos}
       topo={

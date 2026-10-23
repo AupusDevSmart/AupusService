@@ -1,27 +1,13 @@
 // src/features/programacao-os/components/origem-selector/ListaSelecionavel.test.ts
 import { describe, expect, it } from 'vitest';
-import type { OpcaoDaLista } from './ListaSelecionavel';
+import { filtrarOpcoes as filtrar, type OpcaoDaLista } from './filtrar-opcoes';
 
 /**
- * O filtro da lista, extraido do componente.
- *
- * Repetido aqui de proposito: o componente e visual e a regra e a mesma, mas
- * testar via render exigiria montar a arvore inteira para verificar uma
- * comparacao de texto. O que precisa ficar preso e QUE CAMPOS a busca alcanca —
- * ja aconteceu de a lista mostrar a planta e nao encontra-la na busca.
+ * O filtro da lista sem paginação. O que precisa ficar preso é QUE CAMPOS a
+ * busca alcança — já aconteceu de a lista mostrar a planta e não encontrá-la
+ * na busca. (Na lista paginada quem busca é o servidor: o mesmo vale lá, e o
+ * spec de banco `busca-das-origens.spec.ts` da API cobre.)
  */
-function filtrar(opcoes: OpcaoDaLista[], busca: string): OpcaoDaLista[] {
-  const termo = busca.trim().toLowerCase();
-  if (!termo) return opcoes;
-
-  return opcoes.filter((o) =>
-    [o.titulo, o.subtitulo, ...(o.etiquetas ?? []).map((e) => e.texto)]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase()
-      .includes(termo),
-  );
-}
 
 const planos: OpcaoDaLista[] = [
   {

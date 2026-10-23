@@ -19,6 +19,8 @@ export interface ValoresDaProposta {
   valores: Record<string, number>;
   definir: (instrucaoId: string, valor: number) => void;
   editavel: boolean;
+  /** As instruções com alguma linha sem preço no cadastro: a sugestão a contou como zero */
+  semPreco?: string[];
 }
 
 export const ValoresDaPropostaContext = createContext<ValoresDaProposta | null>(null);

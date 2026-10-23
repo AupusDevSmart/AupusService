@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { usePlanoDoEquipamento } from './PlanoDoEquipamentoContext';
 import { type ItemHistoricoOS, type SituacaoDaTarefa } from '@/services/historico-equipamento.services';
 import { Expandir } from '@/components/ui/expandir';
+import { ROTULO_FREQUENCIA } from '@/features/planos-manutencao/utils/frequencia';
 
 interface HistoricoDoEquipamentoSectionProps {
   equipamentoId: string;
@@ -87,19 +88,6 @@ const rotuloPrazo = (dias: number | null): string => {
   return `em ${dias} dia${dias === 1 ? '' : 's'}`;
 };
 
-/** Frequências do backend, sem acento e em maiúsculas. */
-const ROTULO_FREQUENCIA: Record<string, string> = {
-  DIARIA: 'Diária',
-  SEMANAL: 'Semanal',
-  QUINZENAL: 'Quinzenal',
-  MENSAL: 'Mensal',
-  BIMESTRAL: 'Bimestral',
-  TRIMESTRAL: 'Trimestral',
-  SEMESTRAL: 'Semestral',
-  ANUAL: 'Anual',
-  PERSONALIZADA: 'Personalizada',
-};
-
 const rotuloFrequencia = (frequencia: string | null) =>
   frequencia ? (ROTULO_FREQUENCIA[frequencia] ?? humanizar(frequencia)) : 'Sem periodicidade';
 
@@ -122,7 +110,7 @@ function LinhaDeSituacao({ situacao }: { situacao: SituacaoDaTarefa }) {
         <p className="text-xs text-muted-foreground">
           {rotuloFrequencia(situacao.frequencia)}
           {situacao.numero_execucoes > 0 &&
-            ` · ${situacao.numero_execucoes} execução${situacao.numero_execucoes === 1 ? '' : 'ões'}`}
+            ` · ${situacao.numero_execucoes} ${situacao.numero_execucoes === 1 ? 'execução' : 'execuções'}`}
         </p>
       </div>
 

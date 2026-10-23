@@ -15,9 +15,12 @@ import { veiculosFormFields } from '../config/form-config';
 import { veiculosTableColumns } from '../config/table-config';
 import { toast } from '@/hooks/use-toast';
 import { CreateVeiculoRequest, VeiculosFilters } from '../types';
-import type { StatusVeiculo, TipoCombustivel, TipoVeiculo } from '@/services/veiculos.services';
+import type { StatusVeiculo, TipoCombustivel, TipoVeiculo, UpdateVeiculoRequest, VeiculoResponse } from '@/services/veiculos.services';
+import type { UploadDocumentoDto } from '../types/documentos';
 import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
 import { exportarVeiculos, lerVeiculos } from '../utils/planilha';
+import { opcionaisApagaveis } from '../utils/payload-do-veiculo';
+import { diaDaquiA, diaDeCalendario } from '@/utils/dia-de-calendario';
 
 const initialFilters: VeiculosFilters = {
   search: '',
@@ -62,7 +65,7 @@ export function VeiculosPage() {
     clearError
   } = useVeiculos({ autoFetch: false });
 
-  const { modalState, openModal, closeModal } = useGenericModal<any>();
+  const { modalState, openModal, closeModal } = useGenericModal<VeiculoResponse>();
   const { uploadDocumento } = useDocumentosVeiculos();
 
   // Buscar veículos com filtros
@@ -142,7 +145,7 @@ export function VeiculosPage() {
         let documentosUploadados = 0;
         let totalDocumentos = 0;
 
-        const documentos = (data as CreateVeiculoRequest & { documentos?: Array<{ file: File; categoria: any; descricao?: string; dataVencimento?: string }> }).documentos;
+        const documentos = (data as CreateVeiculoRequest & { documentos?: UploadDocumentoDto[] }).documentos;
         if (documentos && Array.isArray(documentos) && documentos.length > 0) {
           totalDocumentos = documentos.length;
 
@@ -172,7 +175,7 @@ export function VeiculosPage() {
         });
 
       } else if (modalState.mode === 'edit' && modalState.entity) {
-        const updateData: Partial<any> = {
+        const updateData: UpdateVeiculoRequest = {
           nome: data.nome,
           placa: data.placa,
           marca: data.marca,
@@ -182,15 +185,10 @@ export function VeiculosPage() {
           capacidadePassageiros: data.capacidadePassageiros,
           capacidadeCarga: data.capacidadeCarga,
           localizacaoAtual: data.localizacaoAtual,
-          ...(data.cor && { cor: data.cor }),
           ...(data.quilometragem !== undefined && { quilometragem: data.quilometragem }),
-          ...(data.proximaRevisao && { proximaRevisao: data.proximaRevisao }),
-          ...(data.responsavel && { responsavel: data.responsavel }),
-          ...(data.observacoes && { observacoes: data.observacoes }),
-          ...(data.chassi && { chassi: data.chassi }),
-          ...(data.renavam && { renavam: data.renavam }),
-          ...(data.seguradora && { seguradora: data.seguradora }),
-          ...(data.vencimentoSeguro && { vencimentoSeguro: data.vencimentoSeguro })
+          // Apagar o campo apaga: só com valor, o campo vazio não ia e a data
+          // da revisão (ou a cor, as observações...) antiga continuava gravada
+          ...opcionaisApagaveis(data),
         };
 
         await updateVeiculo(modalState.entity.id, updateData);
@@ -204,12 +202,12 @@ export function VeiculosPage() {
 
       closeModal();
       fetchVeiculosWithFilters(filters);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao salvar veículo:', error);
 
       toast({
         title: modalState.mode === 'create' ? "Erro ao criar veículo" : "Erro ao atualizar veículo",
-        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        description: (error instanceof Error && error.message) || "Ocorreu um erro interno. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -223,7 +221,7 @@ export function VeiculosPage() {
 
     if (modalState.mode === 'create') {
       return {
-        id: 0,
+        id: '',
         nome: '',
         placa: '',
         marca: '',
@@ -236,7 +234,8 @@ export function VeiculosPage() {
         capacidadePassageiros: 5,
         capacidadeCarga: 0,
         quilometragem: 0,
-        proximaRevisao: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        // No fuso de quem está na tela (o dia UTC, depois das 21h, já era o seguinte)
+        proximaRevisao: diaDaquiA({ dias: 90 }),
         responsavel: '',
         localizacaoAtual: 'Garagem Principal',
         observacoes: '',
@@ -263,21 +262,19 @@ export function VeiculosPage() {
         capacidadePassageiros: entity.capacidadePassageiros || 5,
         capacidadeCarga: entity.capacidadeCarga || 0,
         quilometragem: entity.quilometragem || 0,
-        proximaRevisao: entity.proximaRevisao ?
-          new Date(entity.proximaRevisao).toISOString().split('T')[0] : '',
+        proximaRevisao: diaDeCalendario(entity.proximaRevisao),
         responsavel: entity.responsavel || '',
         localizacaoAtual: entity.localizacaoAtual || 'Garagem Principal',
         observacoes: entity.observacoes || '',
         chassi: entity.chassi || '',
         renavam: entity.renavam || '',
         seguradora: entity.seguradora || '',
-        vencimentoSeguro: entity.vencimentoSeguro ?
-          new Date(entity.vencimentoSeguro).toISOString().split('T')[0] : '',
+        vencimentoSeguro: diaDeCalendario(entity.vencimentoSeguro),
         documentos: []
       };
     }
 
-    return {};
+    return null;
   };
 
   // Paginação
@@ -348,14 +345,14 @@ export function VeiculosPage() {
           {/* Tabela */}
           <div className="sm:flex-1 sm:min-h-0">
             <BaseTable
-              data={veiculos as any}
-              columns={veiculosTableColumns as any}
+              data={veiculos}
+              columns={veiculosTableColumns}
               pagination={pagination}
               loading={loading}
               onPageChange={handlePageChange}
               onLimitChange={handleLimitChange}
-              onView={(v: any) => openModal('view', v)}
-              onEdit={(v: any) => openModal('edit', v)}
+              onView={(v) => openModal('view', v)}
+              onEdit={(v) => openModal('edit', v)}
               emptyMessage="Nenhum veículo encontrado"
               emptyIcon={<Car className="h-8 w-8 text-muted-foreground/50" />}
             />
@@ -366,7 +363,7 @@ export function VeiculosPage() {
         <BaseModal
           isOpen={modalState.isOpen}
           mode={modalState.mode}
-          entity={getModalEntity() as any}
+          entity={getModalEntity()}
           title={`${modalState.mode === 'create' ? 'Novo' : modalState.mode === 'edit' ? 'Editar' : 'Visualizar'} Veículo`}
           icon={<Car className="h-5 w-5 text-blue-600" />}
           formFields={veiculosFormFields}

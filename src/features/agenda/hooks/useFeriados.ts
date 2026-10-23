@@ -11,7 +11,8 @@ import {
   Pagination,
   AgendaLoadingState,
   FeriadoOperationResult,
-  UseFeriadosResult
+  UseFeriadosResult,
+  TipoFeriado
 } from '../types';
 
 const initialFilters: FeriadosFilters = {
@@ -51,7 +52,7 @@ export function useFeriados(): UseFeriadosResult {
         page: params?.page || filters.page,
         limit: params?.limit || filters.limit,
         search: params?.search || (filters.search !== '' ? filters.search : undefined),
-        tipo: params?.tipo || (filters.tipo !== 'all' ? filters.tipo as any : undefined),
+        tipo: params?.tipo || (filters.tipo !== 'all' ? filters.tipo as TipoFeriado : undefined),
         plantaId: params?.plantaId || (filters.plantaId !== 'all' ? filters.plantaId : undefined),
         ano: params?.ano || (filters.ano !== 'all' ? parseInt(filters.ano) : undefined),
         mes: params?.mes || (filters.mes !== 'all' ? parseInt(filters.mes) : undefined),
@@ -61,25 +62,25 @@ export function useFeriados(): UseFeriadosResult {
         orderDirection: params?.orderDirection || 'desc'
       };
 
-      console.log('🔍 [useFeriados] Buscando feriados:', queryParams);
+      console.log('[useFeriados] Buscando feriados:', queryParams);
 
       const response = await agendaService.getFeriados(queryParams);
 
       setFeriados(response.data);
       setPagination(response.pagination);
 
-      console.log('✅ [useFeriados] Feriados carregados:', {
+      console.log('[useFeriados] Feriados carregados:', {
         total: response.pagination.total,
         count: response.data.length
       });
 
-    } catch (error: any) {
-      console.error('❌ [useFeriados] Erro ao buscar feriados:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+    } catch (error) {
+      console.error('[useFeriados] Erro ao buscar feriados:', error);
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       toast({
         title: "Erro ao carregar feriados",
-        description: error.message || "Não foi possível carregar os feriados.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar os feriados.",
         variant: "destructive",
       });
     } finally {
@@ -92,27 +93,27 @@ export function useFeriados(): UseFeriadosResult {
     try {
       setLoading(prev => ({ ...prev, isCreating: true, error: undefined }));
 
-      console.log('➕ [useFeriados] Criando feriado:', data);
+      console.log('[useFeriados] Criando feriado:', data);
 
       const novoFeriado = await agendaService.createFeriado(data);
 
       // Recarregar lista
       await fetchFeriados();
 
-      console.log('✅ [useFeriados] Feriado criado:', novoFeriado.id);
+      console.log('[useFeriados] Feriado criado:', novoFeriado.id);
 
       return {
         success: true,
         data: novoFeriado
       };
 
-    } catch (error: any) {
-      console.error('❌ [useFeriados] Erro ao criar feriado:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+    } catch (error) {
+      console.error('[useFeriados] Erro ao criar feriado:', error);
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : undefined
       };
     } finally {
       setLoading(prev => ({ ...prev, isCreating: false }));
@@ -124,27 +125,27 @@ export function useFeriados(): UseFeriadosResult {
     try {
       setLoading(prev => ({ ...prev, isUpdating: true, error: undefined }));
 
-      console.log('✏️ [useFeriados] Atualizando feriado:', id, data);
+      console.log('[useFeriados] Atualizando feriado:', id, data);
 
       const feriadoAtualizado = await agendaService.updateFeriado(id, data);
 
       // Recarregar lista
       await fetchFeriados();
 
-      console.log('✅ [useFeriados] Feriado atualizado:', feriadoAtualizado.id);
+      console.log('[useFeriados] Feriado atualizado:', feriadoAtualizado.id);
 
       return {
         success: true,
         data: feriadoAtualizado
       };
 
-    } catch (error: any) {
-      console.error('❌ [useFeriados] Erro ao atualizar feriado:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+    } catch (error) {
+      console.error('[useFeriados] Erro ao atualizar feriado:', error);
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : undefined
       };
     } finally {
       setLoading(prev => ({ ...prev, isUpdating: false }));
@@ -156,14 +157,14 @@ export function useFeriados(): UseFeriadosResult {
     try {
       setLoading(prev => ({ ...prev, isDeleting: true, error: undefined }));
 
-      console.log('🗑️ [useFeriados] Deletando feriado:', id);
+      console.log('[useFeriados] Deletando feriado:', id);
 
       await agendaService.deleteFeriado(id);
 
       // Recarregar lista
       await fetchFeriados();
 
-      console.log('✅ [useFeriados] Feriado deletado:', id);
+      console.log('[useFeriados] Feriado deletado:', id);
 
       toast({
         title: "Feriado excluído",
@@ -171,13 +172,13 @@ export function useFeriados(): UseFeriadosResult {
         variant: "default",
       });
 
-    } catch (error: any) {
-      console.error('❌ [useFeriados] Erro ao deletar feriado:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+    } catch (error) {
+      console.error('[useFeriados] Erro ao deletar feriado:', error);
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       toast({
         title: "Erro ao excluir feriado",
-        description: error.message || "Não foi possível excluir o feriado.",
+        description: (error instanceof Error && error.message) || "Não foi possível excluir o feriado.",
         variant: "destructive",
       });
     } finally {

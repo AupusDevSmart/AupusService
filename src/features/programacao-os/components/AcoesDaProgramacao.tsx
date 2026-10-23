@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui/button';
 import {
   acoesDaProgramacao,
+  ehAvulsaAntiga,
   type AcaoProgramacao,
   type ProgramacaoParaAcoes,
   type TemPermissao,
@@ -45,6 +46,12 @@ export function AcoesDaProgramacao({
         </p>
       ) : (
         <>
+          {ehAvulsaAntiga(programacao) && programacao.status?.toUpperCase() === 'PENDENTE' && (
+            <p className="text-sm text-muted-foreground">
+              Programação avulsa, sem origem (de antes da regra): não pode ser aprovada nem editada. Cancele-a e
+              programe o serviço a partir de uma solicitação de serviço ou de uma anomalia.
+            </p>
+          )}
           {alteracoesPendentes && (
             <p className="text-sm text-muted-foreground">
               Salve as alterações antes de aprovar, cancelar ou excluir.

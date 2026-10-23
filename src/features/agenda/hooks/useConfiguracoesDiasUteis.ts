@@ -57,25 +57,25 @@ export function useConfiguracoesDiasUteis(): UseConfiguracoesDiasUteisResult {
         orderDirection: params?.orderDirection || 'asc'
       };
 
-      console.log('🔍 [useConfiguracoesDiasUteis] Buscando configurações:', queryParams);
+      console.log('[useConfiguracoesDiasUteis] Buscando configurações:', queryParams);
 
       const response = await agendaService.getConfiguracoesDiasUteis(queryParams);
 
       setConfiguracoes(response.data);
       setPagination(response.pagination);
 
-      console.log('✅ [useConfiguracoesDiasUteis] Configurações carregadas:', {
+      console.log('[useConfiguracoesDiasUteis] Configurações carregadas:', {
         total: response.pagination.total,
         count: response.data.length
       });
 
-    } catch (error: any) {
-      console.error('❌ [useConfiguracoesDiasUteis] Erro ao buscar configurações:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+    } catch (error) {
+      console.error('[useConfiguracoesDiasUteis] Erro ao buscar configurações:', error);
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       toast({
         title: "Erro ao carregar configurações",
-        description: error.message || "Não foi possível carregar as configurações.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar as configurações.",
         variant: "destructive",
       });
     } finally {
@@ -88,27 +88,27 @@ export function useConfiguracoesDiasUteis(): UseConfiguracoesDiasUteisResult {
     try {
       setLoading(prev => ({ ...prev, isCreating: true, error: undefined }));
 
-      console.log('➕ [useConfiguracoesDiasUteis] Criando configuração:', data);
+      console.log('[useConfiguracoesDiasUteis] Criando configuração:', data);
 
       const novaConfiguracao = await agendaService.createConfiguracaoDiasUteis(data);
 
       // Recarregar lista
       await fetchConfiguracoes();
 
-      console.log('✅ [useConfiguracoesDiasUteis] Configuração criada:', novaConfiguracao.id);
+      console.log('[useConfiguracoesDiasUteis] Configuração criada:', novaConfiguracao.id);
 
       return {
         success: true,
         data: novaConfiguracao
       };
 
-    } catch (error: any) {
-      console.error('❌ [useConfiguracoesDiasUteis] Erro ao criar configuração:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+    } catch (error) {
+      console.error('[useConfiguracoesDiasUteis] Erro ao criar configuração:', error);
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : undefined
       };
     } finally {
       setLoading(prev => ({ ...prev, isCreating: false }));
@@ -120,27 +120,27 @@ export function useConfiguracoesDiasUteis(): UseConfiguracoesDiasUteisResult {
     try {
       setLoading(prev => ({ ...prev, isUpdating: true, error: undefined }));
 
-      console.log('✏️ [useConfiguracoesDiasUteis] Atualizando configuração:', id, data);
+      console.log('[useConfiguracoesDiasUteis] Atualizando configuração:', id, data);
 
       const configuracaoAtualizada = await agendaService.updateConfiguracaoDiasUteis(id, data);
 
       // Recarregar lista
       await fetchConfiguracoes();
 
-      console.log('✅ [useConfiguracoesDiasUteis] Configuração atualizada:', configuracaoAtualizada.id);
+      console.log('[useConfiguracoesDiasUteis] Configuração atualizada:', configuracaoAtualizada.id);
 
       return {
         success: true,
         data: configuracaoAtualizada
       };
 
-    } catch (error: any) {
-      console.error('❌ [useConfiguracoesDiasUteis] Erro ao atualizar configuração:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+    } catch (error) {
+      console.error('[useConfiguracoesDiasUteis] Erro ao atualizar configuração:', error);
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : undefined
       };
     } finally {
       setLoading(prev => ({ ...prev, isUpdating: false }));
@@ -152,14 +152,14 @@ export function useConfiguracoesDiasUteis(): UseConfiguracoesDiasUteisResult {
     try {
       setLoading(prev => ({ ...prev, isDeleting: true, error: undefined }));
 
-      console.log('🗑️ [useConfiguracoesDiasUteis] Deletando configuração:', id);
+      console.log('[useConfiguracoesDiasUteis] Deletando configuração:', id);
 
       await agendaService.deleteConfiguracaoDiasUteis(id);
 
       // Recarregar lista
       await fetchConfiguracoes();
 
-      console.log('✅ [useConfiguracoesDiasUteis] Configuração deletada:', id);
+      console.log('[useConfiguracoesDiasUteis] Configuração deletada:', id);
 
       toast({
         title: "Configuração excluída",
@@ -167,13 +167,13 @@ export function useConfiguracoesDiasUteis(): UseConfiguracoesDiasUteisResult {
         variant: "default",
       });
 
-    } catch (error: any) {
-      console.error('❌ [useConfiguracoesDiasUteis] Erro ao deletar configuração:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+    } catch (error) {
+      console.error('[useConfiguracoesDiasUteis] Erro ao deletar configuração:', error);
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       toast({
         title: "Erro ao excluir configuração",
-        description: error.message || "Não foi possível excluir a configuração.",
+        description: (error instanceof Error && error.message) || "Não foi possível excluir a configuração.",
         variant: "destructive",
       });
     } finally {

@@ -56,6 +56,15 @@ export function useSolicitacoesActions({
     [openModal, clearPendingAction]
   );
 
+  /** Abre pelo id, vindo de um link (notificação). Sem a linha da lista para cair, o erro sobe. */
+  const abrirPorId = useCallback(
+    async (id: string) => {
+      clearPendingAction();
+      openModal('view', await solicitacoesServicoService.findOne(id.trim()));
+    },
+    [openModal, clearPendingAction]
+  );
+
   const handleEdit = useCallback(
     async (solicitacao: SolicitacaoServico) => {
       if (solicitacao.status !== 'REGISTRADA') {
@@ -107,6 +116,7 @@ export function useSolicitacoesActions({
 
   return {
     handleView,
+    abrirPorId,
     handleEdit,
     handleDelete,
     pendingAction,

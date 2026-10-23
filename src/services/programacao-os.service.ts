@@ -1,5 +1,6 @@
 // src/services/programacao-os.service.ts
 import { api } from '@/config/api';
+import type { DadosOrigem } from '@/features/programacao-os/types';
 
 // ============================================================================
 // ENUMS E TIPOS (alinhados com o backend)
@@ -8,7 +9,7 @@ import { api } from '@/config/api';
 export type StatusProgramacao = 'PENDENTE' | 'APROVADA' | 'FINALIZADA' | 'CANCELADA';
 export type TipoManutencao = 'PREVENTIVA' | 'PREDITIVA' | 'CORRETIVA' | 'INSPECAO';
 export type PrioridadeProgramacao = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA';
-export type OrigemProgramacao = 'ANOMALIA' | 'PLANO_MANUTENCAO' | 'TAREFA';
+export type OrigemProgramacao = 'ANOMALIA' | 'PLANO_MANUTENCAO' | 'TAREFA' | 'SOLICITACAO_SERVICO' | 'MANUAL';
 
 // ============================================================================
 // DTOs DE REQUEST (baseados no backend real)
@@ -37,12 +38,15 @@ export interface TecnicoProgramacaoDto {
 export interface ItemOrcamentoProgramacaoDto {
   descricao: string;
   valor: number;
+  /** SN-93: a natureza do custo (sem ela, a API tira do prefixo da descrição) */
+  natureza?: string;
 }
 
 export interface CreateProgramacaoDto {
   descricao: string;
-  local: string;
-  ativo: string;
+  // Opcionais no backend: a programação herda da origem
+  local?: string;
+  ativo?: string;
   condicoes?: string;
   tipo: TipoManutencao;
   prioridade: PrioridadeProgramacao;
@@ -51,7 +55,7 @@ export interface CreateProgramacaoDto {
   equipamento_id?: string;
   anomalia_id?: string;
   plano_manutencao_id?: string;
-  dados_origem?: any;
+  dados_origem?: DadosOrigem | null;
   tempo_estimado?: number;
   duracao_estimada?: number;
   data_previsao_inicio?: string; // ISO DateTime string
@@ -66,13 +70,17 @@ export interface CreateProgramacaoDto {
   observacoes?: string;
   justificativa?: string;
   tarefas_ids?: string[];
+  /** SN-86: as instruções avulsas, trocadas inteiras; ausente no cadastro, o servidor põe as da origem */
+  instrucoes_ids?: string[];
   materiais?: MaterialProgramacaoDto[];
   ferramentas?: FerramentaProgramacaoDto[];
   tecnicos?: TecnicoProgramacaoDto[];
   itens_orcamento?: ItemOrcamentoProgramacaoDto[];
+  /** SN-93: os valores das instruções ajustados nesta programação */
+  valores_das_instrucoes?: ValorDaInstrucaoDto[];
 }
 
-export interface UpdateProgramacaoDto extends Partial<CreateProgramacaoDto> {}
+export type UpdateProgramacaoDto = Partial<CreateProgramacaoDto>;
 
 export interface AprovarProgramacaoDto {
   observacoes?: string;
@@ -141,6 +149,12 @@ export interface TarefaProgramacaoResponse {
     id: string;
     nome: string;
   };
+  /** SN-93: o código da instrução e o nome congelados, o valor dela nesta programação e o equipamento */
+  instrucao_tag?: string;
+  nome_snapshot?: string;
+  valor?: number | null;
+  valor_original?: number | null;
+  equipamento_nome?: string | null;
 }
 
 export interface MaterialProgramacaoResponse {
@@ -203,13 +217,34 @@ export interface HistoricoProgramacaoResponse {
   observacoes?: string;
   status_anterior?: StatusProgramacao;
   status_novo?: StatusProgramacao;
-  dados_extras?: any;
+  dados_extras?: Record<string, unknown> | null;
 }
 
 /** Instalacao (`unidades`) derivada da origem — ver `instalacao.ts`. */
 export interface InstalacaoDaOrigem {
   id: string;
   nome: string;
+}
+
+/** A instrução avulsa da programação, congelada (SN-86) */
+export interface InstrucaoDaProgramacao {
+  id: string;
+  instrucao_id: string | null;
+  codigo: string | null;
+  nome: string | null;
+  descricao: string | null;
+  ordem: number;
+  /** SN-93: o valor nesta programação (o do cadastro no vínculo, ou o ajustado), o original e o equipamento */
+  valor?: number | null;
+  valor_original?: number | null;
+  equipamento_nome?: string | null;
+}
+
+/** SN-93 (D1): o valor de uma instrução só nesta programação; null volta ao do cadastro */
+export interface ValorDaInstrucaoDto {
+  tarefa_id?: string;
+  instrucao_id?: string;
+  valor: number | null;
 }
 
 export interface ProgramacaoResponse {
@@ -236,7 +271,7 @@ export interface ProgramacaoResponse {
   equipamento_id?: string;
   anomalia_id?: string;
   plano_manutencao_id?: string;
-  dados_origem?: any;
+  dados_origem?: DadosOrigem | null;
   data_previsao_inicio?: string; // ISO DateTime string
   data_previsao_fim?: string; // ISO DateTime string
   tempo_estimado: number;
@@ -262,6 +297,8 @@ export interface ProgramacaoResponse {
   data_programada_sugerida?: string;
   hora_programada_sugerida?: string;
   tarefas_programacao?: TarefaProgramacaoResponse[];
+  /** SN-86: as instruções avulsas (da anomalia, da solicitação ou acrescentadas); as das tarefas vêm por elas */
+  instrucoes?: InstrucaoDaProgramacao[];
   criado_por?: string;
   criado_por_id?: string;
   analisado_por?: string;
@@ -279,7 +316,7 @@ export interface ProgramacaoResponse {
   tecnicos?: TecnicoProgramacaoResponse[];
   itens_orcamento?: ItemOrcamentoProgramacaoResponse[];
   historico?: HistoricoProgramacaoResponse[];
-  ordem_servico?: any;
+  ordem_servico?: OrdemServicoDaProgramacao | null;
   /** Reserva de viatura da programação (a API manda; antes não estava no tipo) */
   reserva_id?: string | null;
   reserva_veiculo?: {
@@ -292,8 +329,39 @@ export interface ProgramacaoResponse {
     responsavel: string;
     finalidade: string;
     status: string;
-    veiculo?: any;
-  };
+    /** A linha da viatura inteira (o backend inclui a relação) */
+    veiculo?: {
+      id: string;
+      nome: string;
+      placa: string;
+      marca?: string;
+      modelo?: string;
+      tipo?: string;
+      capacidade_passageiros?: number;
+    };
+  } | null;
+  /** Coluna da programação; a solicitação também pode vir só em dados_origem */
+  solicitacao_servico_id?: string | null;
+  /** A solicitação de origem, resumida (null nas outras origens) */
+  solicitacao_servico?: {
+    id: string;
+    numero?: string;
+    titulo?: string;
+    descricao?: string;
+    tipo?: string;
+    prioridade?: string;
+    status?: string;
+    local?: string;
+    solicitante_nome?: string;
+    data_solicitacao?: string;
+  } | null;
+}
+
+/** A OS que a aprovação criou: só o que a tela lê (a linha da tabela não traz). */
+export interface OrdemServicoDaProgramacao {
+  id?: string | null;
+  status?: string | null;
+  numero_os?: string | null;
 }
 
 export interface ProgramacaoDetalhesResponse extends ProgramacaoResponse {
@@ -302,7 +370,7 @@ export interface ProgramacaoDetalhesResponse extends ProgramacaoResponse {
   tecnicos: TecnicoProgramacaoResponse[];
   itens_orcamento: ItemOrcamentoProgramacaoResponse[];
   historico: HistoricoProgramacaoResponse[];
-  ordem_servico?: any;
+  ordem_servico?: OrdemServicoDaProgramacao | null;
 }
 
 export interface ProgramacaoStatsResponse {
@@ -323,6 +391,21 @@ export interface ListarProgramacoesResponse {
   stats: ProgramacaoStatsResponse;
 }
 
+/** Quem pode ser responsável ou técnico (SN-31): GET /programacao-os/pessoas */
+export interface PessoaQuePodeAtuar {
+  id: string;
+  nome: string;
+  email: string | null;
+  papel: string;
+}
+
+export interface PessoasDaPlanta {
+  /** Técnicos de campo vinculados à planta */
+  equipe: PessoaQuePodeAtuar[];
+  /** Planejador, gerente e administrador: atuam em qualquer planta */
+  apoio: PessoaQuePodeAtuar[];
+}
+
 // ============================================================================
 // PARÂMETROS DE QUERY
 // ============================================================================
@@ -336,6 +419,9 @@ export interface ProgramacaoFiltersDto {
   prioridade?: PrioridadeProgramacao | 'all';
   origem?: OrigemProgramacao | 'all';
   planta_id?: string;
+  /** O equipamento e os componentes dele (SN-55). */
+  equipamento_id?: string;
+  /** AAAA-MM-DD: o período pela data da programação. */
   data_inicio?: string;
   data_fim?: string;
   criado_por_id?: string;
@@ -348,6 +434,17 @@ export interface ProgramacaoFiltersDto {
 // SERVIÇO DE API
 // ============================================================================
 
+/** "Todos" dos filtros de id: a API casaria 'all' como id e não traria nada. */
+const SEM_TODOS = new Set(['planta_id', 'equipamento_id']);
+
+/** O que o filtro não pediu não vai: vazio, e o "todos" dos filtros de id. */
+function semFiltroVazio(filters?: ProgramacaoFiltersDto): ProgramacaoFiltersDto | undefined {
+  if (!filters) return filters;
+  return Object.fromEntries(
+    Object.entries(filters).filter(([chave, valor]) => valor !== '' && valor !== undefined && !(SEM_TODOS.has(chave) && valor === 'all')),
+  ) as ProgramacaoFiltersDto;
+}
+
 export class ProgramacaoOSApiService {
   private readonly baseEndpoint = '/programacao-os';
 
@@ -358,23 +455,18 @@ export class ProgramacaoOSApiService {
   async listar(filters?: ProgramacaoFiltersDto): Promise<ListarProgramacoesResponse> {
     // // console.log('🔍 PROGRAMACAO-OS API: Listando programações com filtros:', filters);
 
-    try {
-      const response = await api.get<ListarProgramacoesResponse>(this.baseEndpoint, {
-        params: filters
-      });
-      // // console.log('✅ PROGRAMACAO-OS API: Programações listadas:', response.data.pagination);
-      return response.data;
-    } catch (error: any) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao listar programações:', error);
-      throw error;
-    }
+    const response = await api.get<ListarProgramacoesResponse>(this.baseEndpoint, {
+      params: semFiltroVazio(filters)
+    });
+    // // console.log('✅ PROGRAMACAO-OS API: Programações listadas:', response.data.pagination);
+    return response.data;
   }
 
   async buscarPorId(id: string): Promise<ProgramacaoDetalhesResponse> {
     try {
       const response = await api.get<ProgramacaoDetalhesResponse>(`${this.baseEndpoint}/${id}`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('💥 PROGRAMACAO-OS API: Erro ao buscar programação:', error);
       throw error;
     }
@@ -383,41 +475,25 @@ export class ProgramacaoOSApiService {
   async criar(data: CreateProgramacaoDto): Promise<ProgramacaoResponse> {
     // // console.log('🚀 PROGRAMACAO-OS API: Criando programação:', data);
 
-    try {
-      const response = await api.post<ProgramacaoResponse>(this.baseEndpoint, data);
-      // // console.log('✅ PROGRAMACAO-OS API: Programação criada com sucesso:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao criar programação:', error);
-      // // console.error('💥 PROGRAMACAO-OS API: Detalhes do erro:', error.response?.data);
-      throw error;
-    }
+    const response = await api.post<ProgramacaoResponse>(this.baseEndpoint, data);
+    // // console.log('✅ PROGRAMACAO-OS API: Programação criada com sucesso:', response.data);
+    return response.data;
   }
 
   async atualizar(id: string, data: UpdateProgramacaoDto): Promise<ProgramacaoResponse> {
     // // console.log('🔄 PROGRAMACAO-OS API: Atualizando programação:', id, data);
 
-    try {
-      const response = await api.patch<ProgramacaoResponse>(`${this.baseEndpoint}/${id}`, data);
-      // // console.log('✅ PROGRAMACAO-OS API: Programação atualizada:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao atualizar programação:', error);
-      throw error;
-    }
+    const response = await api.patch<ProgramacaoResponse>(`${this.baseEndpoint}/${id}`, data);
+    // // console.log('✅ PROGRAMACAO-OS API: Programação atualizada:', response.data);
+    return response.data;
   }
 
   async deletar(id: string): Promise<{ message: string }> {
     // // console.log('🗑️ PROGRAMACAO-OS API: Deletando programação:', id);
 
-    try {
-      const response = await api.delete<{ message: string }>(`${this.baseEndpoint}/${id}`);
-      // // console.log('✅ PROGRAMACAO-OS API: Programação deletada com sucesso');
-      return response.data;
-    } catch (error: any) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao deletar programação:', error);
-      throw error;
-    }
+    const response = await api.delete<{ message: string }>(`${this.baseEndpoint}/${id}`);
+    // // console.log('✅ PROGRAMACAO-OS API: Programação deletada com sucesso');
+    return response.data;
   }
 
   // ============================================================================
@@ -425,34 +501,21 @@ export class ProgramacaoOSApiService {
   // ============================================================================
 
   async aprovar(id: string, data: AprovarProgramacaoDto): Promise<{ message: string }> {
-    try {
-      const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/aprovar`, data);
-      return response.data;
-    } catch (error: any) {
-      throw error;
-    }
+    const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/aprovar`, data);
+    return response.data;
   }
 
   async finalizar(id: string, data: FinalizarProgramacaoDto): Promise<{ message: string }> {
-    try {
-      const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/finalizar`, data);
-      return response.data;
-    } catch (error: any) {
-      throw error;
-    }
+    const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/finalizar`, data);
+    return response.data;
   }
 
   async cancelar(id: string, data: CancelarProgramacaoDto): Promise<{ message: string }> {
     // // console.log('🚫 PROGRAMACAO-OS API: Cancelando programação:', id, data);
 
-    try {
-      const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/cancelar`, data);
-      // // console.log('✅ PROGRAMACAO-OS API: Programação cancelada:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao cancelar programação:', error);
-      throw error;
-    }
+    const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/cancelar`, data);
+    // // console.log('✅ PROGRAMACAO-OS API: Programação cancelada:', response.data);
+    return response.data;
   }
 
   // ============================================================================
@@ -462,33 +525,23 @@ export class ProgramacaoOSApiService {
   async criarDeAnomalia(anomaliaId: string, data: CreateProgramacaoAnomaliaDto): Promise<ProgramacaoResponse> {
     // // console.log('📥 PROGRAMACAO-OS API: Criando programação de anomalia:', anomaliaId, data);
 
-    try {
-      const response = await api.post<ProgramacaoResponse>(
-        `${this.baseEndpoint}/from-anomalia/${anomaliaId}`,
-        data
-      );
-      // // console.log('✅ PROGRAMACAO-OS API: Programação criada de anomalia:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao criar de anomalia:', error);
-      throw error;
-    }
+    const response = await api.post<ProgramacaoResponse>(
+      `${this.baseEndpoint}/from-anomalia/${anomaliaId}`,
+      data
+    );
+    // // console.log('✅ PROGRAMACAO-OS API: Programação criada de anomalia:', response.data);
+    return response.data;
   }
 
   async criarDeTarefas(data: CreateProgramacaoTarefasDto): Promise<ProgramacaoResponse> {
     // // console.log('📥 PROGRAMACAO-OS API: Criando programação de tarefas:', data);
 
-    try {
-      const response = await api.post<ProgramacaoResponse>(
-        `${this.baseEndpoint}/from-tarefas`,
-        data
-      );
-      // // console.log('✅ PROGRAMACAO-OS API: Programação criada de tarefas:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao criar de tarefas:', error);
-      throw error;
-    }
+    const response = await api.post<ProgramacaoResponse>(
+      `${this.baseEndpoint}/from-tarefas`,
+      data
+    );
+    // // console.log('✅ PROGRAMACAO-OS API: Programação criada de tarefas:', response.data);
+    return response.data;
   }
 
   // ============================================================================
@@ -498,40 +551,33 @@ export class ProgramacaoOSApiService {
   async adicionarTarefas(id: string, data: AdicionarTarefasDto): Promise<{ message: string }> {
     // // console.log('➕ PROGRAMACAO-OS API: Adicionando tarefas à programação:', id, data);
 
-    try {
-      const response = await api.post<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas`, data);
-      // // console.log('✅ PROGRAMACAO-OS API: Tarefas adicionadas:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao adicionar tarefas:', error);
-      throw error;
-    }
+    const response = await api.post<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas`, data);
+    // // console.log('✅ PROGRAMACAO-OS API: Tarefas adicionadas:', response.data);
+    return response.data;
   }
 
   async atualizarTarefas(id: string, data: AtualizarTarefasDto): Promise<{ message: string }> {
     // // console.log('🔄 PROGRAMACAO-OS API: Atualizando tarefas da programação:', id, data);
 
-    try {
-      const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas`, data);
-      // // console.log('✅ PROGRAMACAO-OS API: Tarefas atualizadas:', response.data);
-      return response.data;
-    } catch (error: any) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao atualizar tarefas:', error);
-      throw error;
-    }
+    const response = await api.patch<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas`, data);
+    // // console.log('✅ PROGRAMACAO-OS API: Tarefas atualizadas:', response.data);
+    return response.data;
+  }
+
+  /** Opções de responsável e técnico: a equipe da planta e o apoio. */
+  async pessoas(plantaId?: string | null): Promise<PessoasDaPlanta> {
+    const response = await api.get<PessoasDaPlanta>(`${this.baseEndpoint}/pessoas`, {
+      params: plantaId?.trim() ? { planta_id: plantaId.trim() } : undefined,
+    });
+    return response.data;
   }
 
   async removerTarefa(id: string, tarefaId: string): Promise<{ message: string }> {
     // // console.log('➖ PROGRAMACAO-OS API: Removendo tarefa da programação:', id, tarefaId);
 
-    try {
-      const response = await api.delete<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas/${tarefaId}`);
-      // // console.log('✅ PROGRAMACAO-OS API: Tarefa removida com sucesso');
-      return response.data;
-    } catch (error: any) {
-      // // console.error('💥 PROGRAMACAO-OS API: Erro ao remover tarefa:', error);
-      throw error;
-    }
+    const response = await api.delete<{ message: string }>(`${this.baseEndpoint}/${id}/tarefas/${tarefaId}`);
+    // // console.log('✅ PROGRAMACAO-OS API: Tarefa removida com sucesso');
+    return response.data;
   }
 }
 

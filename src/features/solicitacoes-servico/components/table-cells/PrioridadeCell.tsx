@@ -1,7 +1,7 @@
 // src/features/solicitacoes-servico/components/table-cells/PrioridadeCell.tsx
 import { Badge } from '@/components/ui/badge';
 import { PrioridadeSolicitacao } from '../../types';
-import { AlertTriangle, ArrowUp, Minus, ArrowDown } from 'lucide-react';
+import { AlertTriangle, ArrowUp, Minus, ArrowDown, type LucideIcon } from 'lucide-react';
 
 interface PrioridadeCellProps {
   prioridade: PrioridadeSolicitacao;
@@ -9,7 +9,7 @@ interface PrioridadeCellProps {
 
 const prioridadeConfig: Record<
   PrioridadeSolicitacao,
-  { label: string; variant: 'default' | 'secondary' | 'destructive'; icon: any }
+  { label: string; variant: 'default' | 'secondary' | 'destructive'; icon: LucideIcon }
 > = {
   URGENTE: { label: 'Urgente', variant: 'destructive', icon: AlertTriangle },
   ALTA: { label: 'Alta', variant: 'destructive', icon: ArrowUp },

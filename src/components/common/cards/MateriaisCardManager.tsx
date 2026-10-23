@@ -5,6 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Package, Trash2 } from 'lucide-react';
 import { CardLista, CardLinha, campoCard, type ColunaCard } from './card-lista';
+import { formatCurrency } from '@/lib/utils';
+import { CampoDeNumero } from '@/components/common/CampoDeNumero';
+import { AVISO_DE_DINHEIRO, AVISO_DE_QUANTIDADE, dinheiroNoCampo, lerDinheiroDigitado, lerQuantidadeDigitada } from '@/utils/leitura';
 
 export interface MaterialItem {
   id?: string;
@@ -65,7 +68,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
     updateMateriais(materiais.filter((_, i) => i !== index));
   };
 
-  const atualizarMaterial = (index: number, campo: keyof MaterialItem, valor: any) => {
+  const atualizarMaterial = <K extends keyof MaterialItem>(index: number, campo: K, valor: MaterialItem[K]) => {
     const novosMateriais = [...materiais];
     novosMateriais[index] = { ...novosMateriais[index], [campo]: valor };
 
@@ -79,8 +82,13 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
     updateMateriais(novosMateriais);
   };
 
+  // Na execução, o custo é o do CONSUMIDO: o `custo_total` da linha é o planejado, e o cartão
+  // "Materiais Consumidos" mostrava o custo de um consumo que não houve (SN-93)
+  const custoDaLinha = (material: MaterialItem) =>
+    somenteRegistro ? (material.quantidade_consumida ?? 0) * (material.custo_unitario ?? 0) : material.custo_total || 0;
+
   const calcularCustoTotal = () => {
-    return materiais.reduce((total, material) => total + (material.custo_total || 0), 0);
+    return materiais.reduce((total, material) => total + custoDaLinha(material), 0);
   };
 
   const colunas: ColunaCard[] = [
@@ -135,7 +143,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
 
       {/* Lista */}
       {materiais.length > 0 && (
-        <CardLista colunas={colunas} larguraMinima="40rem">
+        <CardLista colunas={colunas}>
           {materiais.map((material, index) => (
             <CardLinha key={material.id || index} colunas={colunas}>
               <Input
@@ -145,13 +153,15 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
                 disabled={planejadoTravado}
                 className={campoCard}
               />
-              <Input
-                type="number"
-                min="0"
-                step="0.001"
-                value={material.quantidade_planejada}
-                onChange={(e) => atualizarMaterial(index, 'quantidade_planejada', parseFloat(e.target.value) || 0)}
+              {/* Texto com vírgula, não type="number" (SN-58): o campo do navegador perdia o "0,375" */}
+              <CampoDeNumero
+                value={material.quantidade_planejada ?? null}
+                onChange={(valor) => atualizarMaterial(index, 'quantidade_planejada', valor ?? 0)}
+                ler={lerQuantidadeDigitada}
+                aviso={AVISO_DE_QUANTIDADE}
+                avisoCurto
                 placeholder="Qtd"
+                aria-label={`Quantidade planejada de ${material.descricao || 'material'}`}
                 disabled={planejadoTravado}
                 className={`${campoCard} text-center`}
               />
@@ -163,31 +173,34 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
                 className={`${campoCard} text-center`}
               />
               {mode === 'execucao' && (
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  value={material.quantidade_consumida || ''}
-                  onChange={(e) => atualizarMaterial(index, 'quantidade_consumida', parseFloat(e.target.value) || 0)}
+                <CampoDeNumero
+                  value={material.quantidade_consumida || null}
+                  onChange={(valor) => atualizarMaterial(index, 'quantidade_consumida', valor ?? 0)}
+                  ler={lerQuantidadeDigitada}
+                  aviso={AVISO_DE_QUANTIDADE}
+                  avisoCurto
                   placeholder="Consumido"
+                  aria-label={`Quantidade consumida de ${material.descricao || 'material'}`}
                   disabled={disabled}
                   className={`${campoCard} text-center`}
                 />
               )}
               {showCustos && (
                 <>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={material.custo_unitario || ''}
-                    onChange={(e) => atualizarMaterial(index, 'custo_unitario', parseFloat(e.target.value) || 0)}
+                  <CampoDeNumero
+                    value={material.custo_unitario || null}
+                    onChange={(valor) => atualizarMaterial(index, 'custo_unitario', valor ?? 0)}
+                    ler={lerDinheiroDigitado}
+                    mostrar={dinheiroNoCampo}
+                    aviso={AVISO_DE_DINHEIRO}
+                    avisoCurto
                     placeholder="R$/un"
+                    aria-label={`Custo unitário de ${material.descricao || 'material'}`}
                     disabled={planejadoTravado}
-                    className={`${campoCard} text-center`}
+                    className={`${campoCard} text-right`}
                   />
                   <span className="text-sm text-muted-foreground text-right truncate">
-                    R$ {(material.custo_total || 0).toFixed(2)}
+                    {formatCurrency(custoDaLinha(material))}
                   </span>
                 </>
               )}
@@ -210,7 +223,7 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
       {/* Resumo */}
       {showCustos && materiais.length > 0 && (
         <div className="text-xs text-muted-foreground text-right pr-1">
-          Custo total: R$ {calcularCustoTotal().toFixed(2)}
+          {somenteRegistro ? 'Custo do consumido' : 'Custo total'}: {formatCurrency(calcularCustoTotal())}
         </div>
       )}
 

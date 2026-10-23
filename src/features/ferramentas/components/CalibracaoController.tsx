@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, CheckCircle, History } from 'lucide-react';
 import { Ferramenta, HistoricoCalibracao } from '../types';
+import { hojeNaTela } from '@/utils/dia-de-calendario';
 
 // ✅ COMPONENTE SIMPLIFICADO: Controle de Calibração
 export const CalibracaoController = ({ onChange, disabled, entity, mode }: FormFieldProps & { entity?: Ferramenta | null; mode?: string }) => {
@@ -112,7 +113,7 @@ export const CalibracaoController = ({ onChange, disabled, entity, mode }: FormF
               onChange={(e) => handleDataChange(e.target.value)}
               disabled={disabled}
               className="w-full"
-              min={new Date().toISOString().split('T')[0]}
+              min={hojeNaTela()}
             />
             
             {/* Alertas de vencimento */}

@@ -256,9 +256,8 @@ export const definicaoDeVeiculos: PlanilhaPlana<VeiculoDaApi> = {
 };
 
 export async function exportarVeiculos(filtros: Omit<QueryVeiculosParams, 'page' | 'limit'>) {
-  const veiculos = await todasAsPaginas(async (page, limit) => {
-    const resposta = await VeiculosService.getAllVeiculos({ ...filtros, page, limit });
-    return resposta as unknown as { data: VeiculoDaApi[]; pagination: { totalPages: number } };
+  const veiculos = await todasAsPaginas<VeiculoDaApi>(async (page, limit) => {
+    return VeiculosService.getAllVeiculos({ ...filtros, page, limit });
   });
   await exportarPlana(definicaoDeVeiculos, veiculos);
 }

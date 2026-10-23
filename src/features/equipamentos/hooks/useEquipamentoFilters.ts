@@ -1,8 +1,10 @@
 // src/features/equipamentos/hooks/useEquipamentoFilters.ts - FILTROS DINÂMICOS
 import { useState, useEffect, useCallback } from 'react';
+import { isAxiosError } from 'axios';
 import { selectionDataService } from '@/services/selection-data.services';
-import { PlantasService } from '@/services/plantas.services';
+import { PlantasService, type PlantaResponse } from '@/services/plantas.services';
 import { getUnidadesByPlanta, getAllUnidades, getUnidadesByProprietario } from '@/services/unidades.services';
+import type { Unidade } from '@/features/unidades/types';
 
 export interface FilterOption {
   value: string;
@@ -78,10 +80,10 @@ export function useEquipamentoFilters(): UseEquipamentoFiltersReturn {
       setProprietarios(options);
       console.log('✅ [FILTERS] Proprietários carregados:', options.length - 1); // -1 para não contar "Todos"
       
-    } catch (error: any) {
+    } catch (error) {
       // 403 e esperado para roles sem `usuarios.view` (ex: operador). Nao reportar
       // como erro no banner - filtro de proprietario simplesmente fica so com "Todos".
-      if (error?.response?.status === 403) {
+      if (isAxiosError(error) && error.response?.status === 403) {
         console.warn('[FILTERS] Sem permissao para listar usuarios (403). Filtro de proprietario fica vazio.');
       } else {
         console.error('❌ [FILTERS] Erro ao carregar proprietários:', error);
@@ -104,7 +106,7 @@ export function useEquipamentoFilters(): UseEquipamentoFiltersReturn {
       setError(null);
       
       // Carregar todas as plantas paginadas
-      let todasPlantas: any[] = [];
+      let todasPlantas: PlantaResponse[] = [];
       let page = 1;
       let hasMore = true;
       
@@ -136,7 +138,7 @@ export function useEquipamentoFilters(): UseEquipamentoFiltersReturn {
       setPlantas(options);
       console.log('✅ [FILTERS] Todas as plantas carregadas:', options.length - 1); // -1 para não contar "Todas"
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [FILTERS] Erro ao carregar plantas:', error);
       setError('Erro ao carregar plantas');
       setPlantas([{ value: 'all', label: 'Todas as Plantas' }]);
@@ -176,7 +178,7 @@ export function useEquipamentoFilters(): UseEquipamentoFiltersReturn {
       setPlantas(options);
       console.log('✅ [FILTERS] Plantas do proprietário carregadas:', options.length - 1); // -1 para não contar "Todas"
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [FILTERS] Erro ao carregar plantas do proprietário:', error);
       setError('Erro ao carregar plantas do proprietário');
       setPlantas([{ value: 'all', label: 'Todas as Plantas' }]);
@@ -204,7 +206,7 @@ export function useEquipamentoFilters(): UseEquipamentoFiltersReturn {
       setError(null);
 
       // Carregar todas as unidades paginadas
-      let todasUnidades: any[] = [];
+      let todasUnidades: Unidade[] = [];
       let page = 1;
       let hasMore = true;
 
@@ -236,7 +238,7 @@ export function useEquipamentoFilters(): UseEquipamentoFiltersReturn {
       setUnidades(options);
       console.log('✅ [FILTERS] Todas as unidades carregadas:', options.length - 1);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [FILTERS] Erro ao carregar todas as unidades:', error);
       setError('Erro ao carregar unidades');
       setUnidades([{ value: 'all', label: 'Todas as Unidades' }]);
@@ -277,7 +279,7 @@ export function useEquipamentoFilters(): UseEquipamentoFiltersReturn {
       setUnidades(options);
       console.log('✅ [FILTERS] Unidades da planta carregadas:', options.length - 1);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [FILTERS] Erro ao carregar unidades da planta:', error);
       setError('Erro ao carregar unidades da planta');
       setUnidades([{ value: 'all', label: 'Todas as Unidades' }]);
@@ -321,7 +323,7 @@ export function useEquipamentoFilters(): UseEquipamentoFiltersReturn {
       setUnidades(options);
       console.log('✅ [FILTERS] Unidades do proprietário carregadas:', options.length - 1);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [FILTERS] Erro ao carregar unidades do proprietário:', error);
       setError('Erro ao carregar unidades do proprietário');
       setUnidades([{ value: 'all', label: 'Todas as Unidades' }]);

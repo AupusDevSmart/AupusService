@@ -47,7 +47,7 @@ export function BaseFilters<T extends BaseFiltersType>({
   config,
   onFilterChange
 }: BaseFiltersProps<T>) {
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: string, value: unknown) => {
     onFilterChange({ [key]: value } as Partial<T>);
   };
 
@@ -59,7 +59,7 @@ export function BaseFilters<T extends BaseFiltersType>({
     <div className="grid w-full gap-3 grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]">
       {/* Todos os filtros na mesma linha responsiva */}
       {config.map((filterConfig) => {
-        const IconComponent = (filterConfig as any).icon;
+        const IconComponent = filterConfig.icon;
 
         // Renderizar filtro de busca/text
         if (filterConfig.type === 'search' || filterConfig.type === 'text') {
@@ -140,7 +140,7 @@ export function BaseFilters<T extends BaseFiltersType>({
             <div key={filterConfig.key} className={`w-full min-w-0 ${semLarguraMinima(filterConfig.className)}`}>
               {filterConfig.render({
                 value: filters[filterConfig.key as keyof T],
-                onChange: (value: any) => handleFilterChange(filterConfig.key, value),
+                onChange: (value: unknown) => handleFilterChange(filterConfig.key, value),
                 disabled: filterConfig.disabled || false
               })}
             </div>

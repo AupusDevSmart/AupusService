@@ -18,6 +18,16 @@ export interface ConcessionariasFilters {
 
 export type SubgrupoTipo = 'A4_VERDE' | 'A3a_VERDE' | 'B';
 
+/** Valores das tarifas de um subgrupo, por campo (tusd_d, te_p, tusd_valor...). */
+export type ValoresDasTarifas = Record<string, number | undefined>;
+
+/** As tarifas como o formulario guarda: um bloco por subgrupo. */
+export interface TarifasDoFormulario {
+  a4_verde?: ValoresDasTarifas;
+  a3a_verde?: ValoresDasTarifas;
+  b?: ValoresDasTarifas;
+}
+
 // Tipo para anexos temporários (arquivos ainda não enviados ao servidor)
 export interface AnexoTemporario {
   id: string;
@@ -30,6 +40,10 @@ export interface AnexoTemporario {
 
 // Union type para anexos (salvos ou temporários)
 export type AnexoItem = AnexoConcessionaria | AnexoTemporario;
+
+/** Arquivo escolhido antes de a concessionária existir: sobe depois de salvar. */
+export const ehAnexoTemporario = (anexo: AnexoItem): anexo is AnexoTemporario =>
+  'isTemporary' in anexo && anexo.isTemporary === true;
 
 export interface SubgrupoInfo {
   id: SubgrupoTipo;

@@ -1,6 +1,7 @@
 // src/services/veiculos.services.ts
 import { api } from '@/config/api';
 import { PaginatedResponse, BaseFilters } from '@/types/base';
+import { mensagemDoBackend } from '@/utils/api-error';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -54,7 +55,8 @@ export interface BaseVeiculo {
 
 // Response interface
 export interface VeiculoResponse extends BaseVeiculo {
-  id: number;
+  // Texto: o backend usa cuid ("vei_..."); o tipo dizia number e nao batia com nada
+  id: string;
   status: StatusVeiculo;
   criadoEm: string;
   atualizadoEm: string;
@@ -76,9 +78,13 @@ export interface VeiculoResponse extends BaseVeiculo {
 }
 
 // Create/Update interfaces
-export interface CreateVeiculoRequest extends BaseVeiculo {}
+export type CreateVeiculoRequest = BaseVeiculo;
 
-export interface UpdateVeiculoRequest extends Partial<BaseVeiculo> {}
+/** Os opcionais que o editar apaga: vazio vai como null (SN-78; sem o campo, a API não apagava) */
+export type CampoApagavelDoVeiculo = 'cor' | 'proximaRevisao' | 'responsavel' | 'observacoes' | 'chassi' | 'renavam' | 'seguradora' | 'vencimentoSeguro';
+export type UpdateVeiculoRequest = Omit<Partial<BaseVeiculo>, CampoApagavelDoVeiculo> & {
+  [K in CampoApagavelDoVeiculo]?: string | null;
+};
 
 // Query parameters
 export interface QueryVeiculosParams extends BaseFilters {
@@ -143,7 +149,7 @@ export interface DashboardVeiculosResponse {
 // Maintenance record types
 export interface ManutencaoVeiculo {
   id: string;
-  veiculoId: number;
+  veiculoId: string;
   tipo: 'preventiva' | 'corretiva' | 'revisao' | 'troca_oleo' | 'outros';
   descricao: string;
   dataInicio: string;
@@ -311,7 +317,7 @@ export class VeiculosService {
   }
 
   // PUT /veiculos/:id - Update vehicle
-  static async updateVeiculo(id: number, data: UpdateVeiculoRequest): Promise<VeiculoResponse> {
+  static async updateVeiculo(id: string, data: UpdateVeiculoRequest): Promise<VeiculoResponse> {
     try {
       // console.log('📡 [VEÍCULOS SERVICE] Atualizando veículo:', id, data);
 
@@ -326,7 +332,7 @@ export class VeiculosService {
   }
 
   // PUT /veiculos/:id/status - Update vehicle status
-  static async updateVeiculoStatus(id: number, status: StatusVeiculo): Promise<VeiculoResponse> {
+  static async updateVeiculoStatus(id: string, status: StatusVeiculo): Promise<VeiculoResponse> {
     try {
       // console.log('📡 [VEÍCULOS SERVICE] Atualizando status do veículo:', id, status);
 
@@ -341,7 +347,7 @@ export class VeiculosService {
   }
 
   // PUT /veiculos/:id/quilometragem - Update vehicle mileage
-  static async updateQuilometragem(id: number, kmAtual: number): Promise<VeiculoResponse> {
+  static async updateQuilometragem(id: string, kmAtual: number): Promise<VeiculoResponse> {
     try {
       // console.log('📡 [VEÍCULOS SERVICE] Atualizando quilometragem:', id, kmAtual);
 
@@ -356,7 +362,7 @@ export class VeiculosService {
   }
 
   // DELETE /veiculos/:id - Delete vehicle (soft delete)
-  static async deleteVeiculo(id: number): Promise<void> {
+  static async deleteVeiculo(id: string): Promise<void> {
     try {
       // console.log('📡 [VEÍCULOS SERVICE] Excluindo veículo:', id);
 
@@ -374,7 +380,7 @@ export class VeiculosService {
   // ============================================================================
 
   // GET /veiculos/:id/manutencoes - Get vehicle maintenance history
-  static async getManutencoesByVeiculo(id: number): Promise<ManutencaoVeiculo[]> {
+  static async getManutencoesByVeiculo(id: string): Promise<ManutencaoVeiculo[]> {
     try {
       // console.log('📡 [VEÍCULOS SERVICE] Buscando manutenções do veículo:', id);
 
@@ -389,7 +395,7 @@ export class VeiculosService {
   }
 
   // POST /veiculos/:id/manutencoes - Create maintenance record
-  static async createManutencao(veiculoId: number, data: CreateManutencaoRequest): Promise<ManutencaoVeiculo> {
+  static async createManutencao(veiculoId: string, data: CreateManutencaoRequest): Promise<ManutencaoVeiculo> {
     try {
       // console.log('📡 [VEÍCULOS SERVICE] Criando manutenção:', veiculoId, data);
 
@@ -404,7 +410,7 @@ export class VeiculosService {
   }
 
   // PUT /veiculos/:id/manutencoes/:manutencaoId - Update maintenance record
-  static async updateManutencao(veiculoId: number, manutencaoId: string, data: Partial<CreateManutencaoRequest>): Promise<ManutencaoVeiculo> {
+  static async updateManutencao(veiculoId: string, manutencaoId: string, data: Partial<CreateManutencaoRequest>): Promise<ManutencaoVeiculo> {
     try {
       // console.log('📡 [VEÍCULOS SERVICE] Atualizando manutenção:', veiculoId, manutencaoId, data);
 
@@ -419,7 +425,7 @@ export class VeiculosService {
   }
 
   // DELETE /veiculos/:id/manutencoes/:manutencaoId - Delete maintenance record
-  static async deleteManutencao(veiculoId: number, manutencaoId: string): Promise<void> {
+  static async deleteManutencao(veiculoId: string, manutencaoId: string): Promise<void> {
     try {
       // console.log('📡 [VEÍCULOS SERVICE] Excluindo manutenção:', veiculoId, manutencaoId);
 
@@ -433,16 +439,15 @@ export class VeiculosService {
   }
 
   // Private method to handle errors
-  private static handleError(error: any, defaultMessage: string): Error {
-    if (error.response?.data?.message) {
-      if (Array.isArray(error.response.data.message)) {
-        return new Error(error.response.data.message.join(', '));
-      }
-      return new Error(error.response.data.message);
-    }
+  private static handleError(error: unknown, defaultMessage: string): Error {
+    // A mensagem do backend vem em error.message (envelope do HttpExceptionFilter);
+    // lendo só data.message, a tela mostrava "Request failed with status code 400"
+    const mensagemDaApi = mensagemDoBackend(error);
+    if (mensagemDaApi) return new Error(mensagemDaApi);
+    const { message } = (error ?? {}) as { message?: unknown };
 
-    if (error.message) {
-      return new Error(error.message);
+    if (message) {
+      return new Error(String(message));
     }
 
     return new Error(defaultMessage);

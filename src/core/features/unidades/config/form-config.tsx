@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { FormField, FormFieldProps } from '@/core/types/base';
+import type { PlantaOption } from '@/core/types/contracts';
 import { usePlantasForUnidades } from '@/core/context/hooks';
-import { TipoUnidade, StatusUnidade, GrupoUnidade, SubgrupoUnidade } from '../types';
+import { TipoUnidade, StatusUnidade, GrupoUnidade, SubgrupoUnidade, type Unidade } from '../types';
 import { X, Plus } from 'lucide-react';
 import { Button } from '@/core/components/ui/button';
 import { Input } from '@/core/components/ui/input';
@@ -11,16 +12,22 @@ import { ConcessionariaSelectField } from '../components/ConcessionariaSelectFie
 import { Combobox } from '@/core/components/ui/combobox-minimal';
 import { Checkbox } from '@/core/components/ui/checkbox';
 
+/** A entidade do modal: a Unidade, ou o registro no formato do banco (`planta_id`). */
+type UnidadeDoModal = Unidade & { planta_id?: string };
+
+/** A planta da lista pode trazer o endereco aninhado, alem de uf/cidade achatados. */
+type PlantaComEndereco = PlantaOption & { endereco?: { uf?: string; cidade?: string } };
+
 /**
  * Componente para selecionar/exibir Proprietário
  */
-const ProprietarioSelector = ({ value, onChange, mode, entity, formData }: FormFieldProps) => {
+const ProprietarioSelector = ({ value, onChange, mode, entity, formData }: FormFieldProps & { entity?: UnidadeDoModal | null }) => {
   const { plantas, loading: loadingPlantas } = usePlantasForUnidades();
 
   // O proprietário NÃO é escolhido aqui: a instalação pertence à PLANTA, e a planta a um
   // proprietário. Então o dono é SEMPRE derivado da planta selecionada e exibido read-only
   // (não faz sentido trocar o proprietário da instalação). Ver decisão do usuário 2026-07-08.
-  const plantaIdSel = (formData?.plantaId as string) || (entity as any)?.planta_id || '';
+  const plantaIdSel = (formData?.plantaId as string) || entity?.planta_id || '';
   const plantaSel = plantas.find(p => p.id === plantaIdSel);
   const proprietario = plantaSel?.proprietario ?? entity?.planta?.proprietario ?? null;
 
@@ -123,7 +130,7 @@ const PlantaSelector = ({ value, onChange, disabled, mode, formData, onMultipleC
   const handlePlantaChange = (plantaId: string) => {
     const planta = plantas.find(p => p.id === plantaId);
     if (planta && onMultipleChange) {
-      const endereco = (planta as any)?.endereco || {};
+      const endereco = (planta as PlantaComEndereco).endereco || {};
       onMultipleChange({
         plantaId: plantaId,
         estado: String(endereco.uf ?? planta.uf ?? '').trim(),
@@ -389,16 +396,16 @@ export const unidadesFormFields: FormField[] = [
     required: false,
     colSpan: 2,
     render: ({ value, onChange, disabled, mode, formData, onMultipleChange }: FormFieldProps) => {
-      const irrigante = formData?.irrigante || false;
-      const sazonal = formData?.sazonal || false;
-      const industrial = formData?.industrial || false;
-      const geracao = formData?.geracao || false;
+      const irrigante = (formData?.irrigante as boolean | undefined) || false;
+      const sazonal = (formData?.sazonal as boolean | undefined) || false;
+      const industrial = (formData?.industrial as boolean | undefined) || false;
+      const geracao = (formData?.geracao as boolean | undefined) || false;
       const isView = mode === 'view';
 
       const handleCheck = (field: string, checked: boolean) => {
         if (!onMultipleChange) return;
 
-        const updates: Record<string, any> = { [field]: checked };
+        const updates: Record<string, boolean> = { [field]: checked };
 
         // Se marcar industrial, desmarcar sazonal
         if (field === 'industrial' && checked) {
@@ -489,10 +496,10 @@ export const unidadesFormFields: FormField[] = [
     type: 'select',
     required: false,
     options: [],
-    conditionalRender: (formData: any) => {
+    conditionalRender: (formData) => {
       return !!formData.grupo;
     },
-    getOptions: (formData: any) => {
+    getOptions: (formData) => {
       if (formData.grupo === GrupoUnidade.B) {
         return [
           { value: SubgrupoUnidade.B, label: 'Subgrupo B' },
@@ -556,7 +563,7 @@ export const unidadesFormFields: FormField[] = [
           value={value as string}
           onChange={onChange}
           disabled={disabled || mode === 'view'}
-          estado={formData?.estado}
+          estado={formData?.estado as string | undefined}
         />
       );
     },

@@ -7,7 +7,6 @@ import {
 } from 'react';
 import {
   Trash2,
-  UserPlus,
   AlertCircle,
   Loader2,
   Search,
@@ -17,6 +16,7 @@ import {
 import { Button } from '@/core/components/ui/button';
 import { Input } from '@/core/components/ui/input';
 import { useHttpClient } from '@/core/context/hooks';
+import { formatApiError } from '@/utils/api-error';
 
 interface PlantaOperadoresTabProps {
   /** Em CREATE mode passar `null` — flush(plantaId) recebera o id criado depois. */
@@ -43,6 +43,15 @@ interface UsuarioBusca {
   id: string;
   nome: string;
   email: string | null;
+}
+
+/** A API devolve a lista em `[...]`, `{ data: [...] }` ou `{ data: { data: [...] } }`. */
+function listaDaResposta<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) return payload as T[];
+  const data = (payload as { data?: unknown } | null)?.data;
+  if (Array.isArray(data)) return data as T[];
+  const interna = (data as { data?: unknown } | null)?.data;
+  return Array.isArray(interna) ? (interna as T[]) : [];
 }
 
 export interface PlantaOperadoresTabHandle {
@@ -82,10 +91,9 @@ export const PlantaOperadoresTab = forwardRef<
     setError(null);
     try {
       const resp = await httpClient.get(`/plantas/${plantaId!.trim()}/operadores`);
-      const data = Array.isArray(resp.data) ? resp.data : resp.data?.data ?? [];
-      setVinculosOriginais(data);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Erro ao carregar operadores vinculados');
+      setVinculosOriginais(listaDaResposta<VinculoOperador>(resp.data));
+    } catch (err) {
+      setError(`Erro ao carregar a equipe da planta: ${formatApiError(err)}`);
     } finally {
       setLoading(false);
     }
@@ -98,19 +106,11 @@ export const PlantaOperadoresTab = forwardRef<
       const resp = await httpClient.get('/usuarios', {
         params: { role: 'operador', limit: 100 },
       });
-      // Backend retorna em formato aninhado variavel:
-      //   { data: [...] }                  ou
-      //   { data: { data: [...], pagination } }  ou
-      //   [...]                            (raro)
-      // Extracao tolerante:
-      const payload: any = resp.data;
-      let lista: any[] = [];
-      if (Array.isArray(payload)) lista = payload;
-      else if (Array.isArray(payload?.data)) lista = payload.data;
-      else if (Array.isArray(payload?.data?.data)) lista = payload.data.data;
-      setTodosOperadores(lista);
-    } catch (err: any) {
+      setTodosOperadores(listaDaResposta<UsuarioBusca>(resp.data));
+    } catch (err) {
+      // Antes engolia o erro e a lista ficava vazia como se não houvesse técnico
       setTodosOperadores([]);
+      setError(`Erro ao listar os técnicos de campo: ${formatApiError(err)}`);
     } finally {
       setLoadingOperadores(false);
     }
@@ -219,12 +219,12 @@ export const PlantaOperadoresTab = forwardRef<
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-sm font-semibold mb-2">Operadores vinculados</h3>
+        <h3 className="text-sm font-semibold mb-2">Equipe da planta</h3>
         <p className="text-xs text-muted-foreground">
-          Usuarios com role &quot;operador&quot; vinculados a esta planta. Apenas plantas vinculadas aparecem para o operador no app.
+          Técnicos de campo que atendem esta planta. Eles veem as OS daqui e podem ser escalados como técnico ou responsável.
           {hasPendingChanges() && !readOnly && (
             <span className="ml-1 text-amber-700 dark:text-amber-400 font-medium">
-              · alteracoes pendentes (salvas no &quot;Salvar Alteracoes&quot;)
+              · alterações pendentes (salvas ao salvar a planta)
             </span>
           )}
         </p>
@@ -240,7 +240,7 @@ export const PlantaOperadoresTab = forwardRef<
       {/* VINCULADOS */}
       <div className="space-y-1">
         <div className="text-xs font-medium text-muted-foreground">
-          Vinculados ({vinculadosEfetivos.length})
+          Na equipe ({vinculadosEfetivos.length})
         </div>
         {loading ? (
           <div className="text-sm text-muted-foreground flex items-center gap-2 py-2">
@@ -249,7 +249,7 @@ export const PlantaOperadoresTab = forwardRef<
           </div>
         ) : vinculadosEfetivos.length === 0 ? (
           <div className="text-sm text-muted-foreground italic py-2">
-            Nenhum operador vinculado.
+            Nenhum técnico na equipe.
           </div>
         ) : (
           <ul className="border rounded-md divide-y">
@@ -267,7 +267,7 @@ export const PlantaOperadoresTab = forwardRef<
                       {v.usuario.nome}
                       {pendingAdd && (
                         <span className="text-[10px] uppercase tracking-wide bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300 px-1.5 py-0.5 rounded">
-                          a adicionar
+                          a incluir
                         </span>
                       )}
                     </div>
@@ -327,7 +327,7 @@ export const PlantaOperadoresTab = forwardRef<
                       size="sm"
                       onClick={() => desfazerRemover(uid)}
                       className="text-muted-foreground hover:text-foreground shrink-0"
-                      title="Desfazer remocao"
+                      title="Desfazer remoção"
                     >
                       <Undo2 className="h-3.5 w-3.5" />
                     </Button>
@@ -344,7 +344,7 @@ export const PlantaOperadoresTab = forwardRef<
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-xs font-medium text-muted-foreground">
-              Disponiveis ({disponiveis.length})
+              Técnicos para incluir ({disponiveis.length})
             </label>
             {loadingOperadores && (
               <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
@@ -353,7 +353,7 @@ export const PlantaOperadoresTab = forwardRef<
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder="Filtrar por nome ou email..."
+              placeholder="Buscar técnico por nome ou e-mail..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               disabled={loadingOperadores}
@@ -369,10 +369,10 @@ export const PlantaOperadoresTab = forwardRef<
             ) : disponiveis.length === 0 ? (
               <div className="px-3 py-2 text-xs text-muted-foreground">
                 {todosOperadores.length === 0
-                  ? 'Nenhum usuario com role "operador" encontrado.'
+                  ? 'Nenhum técnico de campo cadastrado.'
                   : busca.trim()
-                  ? 'Nenhum operador bate com o filtro.'
-                  : 'Todos os operadores ja estao vinculados a esta planta.'}
+                  ? 'Nenhum técnico bate com a busca.'
+                  : 'Todos os técnicos de campo já estão na equipe.'}
               </div>
             ) : (
               disponiveis.map((u) => (

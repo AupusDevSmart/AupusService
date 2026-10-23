@@ -34,6 +34,9 @@ const acaoLabels: Record<string, string> = {
   ATUALIZACAO_CHECKLIST: 'Checklist atualizado',
   CONSUMO_MATERIAIS: 'Materiais registrados',
   USO_FERRAMENTAS: 'Ferramentas registradas',
+  // SN-93
+  OUTROS_CUSTOS: 'Outros custos',
+  CUSTO_REAL: 'Custo real refeito',
 };
 
 // O histórico da programação chega junto, com o prefixo "[PROGRAMAÇÃO] "
@@ -48,6 +51,7 @@ const acaoDaProgramacaoLabels: Record<string, string> = {
   ADICAO_TAREFAS: 'Tarefas adicionadas',
   ATUALIZACAO_TAREFAS: 'Tarefas atualizadas',
   REMOCAO_TAREFA: 'Tarefa removida',
+  VALOR_DA_INSTRUCAO: 'Valor da instrução ajustado',
 };
 
 const legivel = (codigo: string) => {

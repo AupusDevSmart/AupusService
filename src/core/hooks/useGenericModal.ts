@@ -14,7 +14,7 @@ interface UseGenericModalReturn<T> {
  * Generic hook for managing modal state
  * Handles open/close state, mode (create/edit/view), and entity data
  */
-export function useGenericModal<T = any>(): UseGenericModalReturn<T> {
+export function useGenericModal<T = unknown>(): UseGenericModalReturn<T> {
   const [modalState, setModalState] = useState<ModalState<T>>({
     isOpen: false,
     mode: 'create',

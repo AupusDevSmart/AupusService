@@ -23,6 +23,8 @@ export type TipoDeCampo =
   | 'numero'
   | 'inteiro'
   | 'moeda'
+  /** A fração no sistema (0,10), o número do percentual na planilha (10): como no AupusProject */
+  | 'percentual'
   | 'simnao'
   | 'opcao'
   | 'data';
@@ -45,6 +47,12 @@ export type Campo<T> = {
   obrigatorio?: string;
   /** Vazio não manda nada e o sistema mantém o valor (ou usa o padrão) — em vez de limpar o campo. */
   vazioEhPadrao?: boolean;
+  /**
+   * Coluna que só este sistema tem (SN-85): na planilha que veio do Smart
+   * Project (AupusProject) ela falta, e isso não é erro — o item entra com o
+   * padrão. No arquivo daqui, faltar continua sendo erro.
+   */
+  soDesteSistema?: boolean;
   /**
    * Preenchido pelo sistema e lido de volta (o ID do registro ou do item
    * referenciado): sai em cinza como o calculado, mas a importação usa. Não se
@@ -72,6 +80,8 @@ export function paraPlanilha<T>(campo: Campo<T>, registro: T): string | number |
       return v ? 'SIM' : 'NÃO';
     case 'opcao':
       return campo.rotulos?.[String(v)] ?? String(v);
+    case 'percentual':
+      return Math.round(Number(v) * 100 * 10000) / 10000;
     case 'numero':
     case 'inteiro':
     case 'moeda':
@@ -145,6 +155,15 @@ export function daPlanilha<T>(campo: Campo<T>, celula: Cell): LeituraDoCampo {
         : { valor: v, erro: null };
     }
 
+    case 'percentual': {
+      const v = numero(celula);
+      // "15%" digitado no Excel vira 0,15 com formato de %: já é a fração, e dividir por 100 daria 0,15%
+      if (typeof v === 'number' && (celula.numFmt ?? '').includes('%')) return { valor: Math.round(v * 1e6) / 1e6, erro: null };
+      return v === undefined
+        ? { valor: null, erro: `${campo.titulo}: esperava o percentual em número (10 para 10%).` }
+        : { valor: v === null ? null : Math.round((v / 100) * 1e6) / 1e6, erro: null };
+    }
+
     case 'inteiro': {
       const v = numero(celula);
       return v === undefined || (v !== null && !Number.isInteger(v))
@@ -184,6 +203,12 @@ export function daPlanilha<T>(campo: Campo<T>, celula: Cell): LeituraDoCampo {
  * fica com o servidor, que sabe se o registro é novo.
  */
 export function lerCampo<T>(campo: Campo<T>, celula: Cell): LeituraDoCampo {
+  // A fórmula sem o resultado guardado (arquivo montado por script, nunca aberto
+  // no Excel) era lida como vazia e limpava o campo calada
+  const valor = celula.value as { formula?: unknown; sharedFormula?: unknown; result?: unknown } | null;
+  if (valor && typeof valor === 'object' && ('formula' in valor || 'sharedFormula' in valor) && valor.result === undefined) {
+    return { valor: null, erro: `${campo.titulo}: a célula tem uma fórmula sem o valor calculado. Cole o valor (Colar especial > Valores).` };
+  }
   const lido = daPlanilha(campo, celula);
   if (!lido.erro && lido.valor === null && campo.obrigatorio === 'Sim') {
     return { valor: null, erro: `${campo.titulo}: obrigatório.` };
@@ -215,6 +240,8 @@ export function valoresAceitos<T>(campo: Campo<T>): string {
       return 'Número em reais, sem "R$" (ex.: 1250,50)';
     case 'inteiro':
       return 'Número inteiro';
+    case 'percentual':
+      return 'Número do percentual (10 = 10%)';
     case 'numero':
       return 'Número (vírgula ou ponto decimal)';
     case 'data':

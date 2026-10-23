@@ -104,9 +104,9 @@ export function ConcessionariaSelect({
       <div className="flex items-center gap-2">
         <Avatar className="h-6 w-6">
           <AvatarFallback className="bg-green-100 text-green-700 text-xs">
-            {selectedConcessionaria.logoUrl ? (
+            {selectedConcessionaria.logo_url ? (
               <img
-                src={selectedConcessionaria.logoUrl} 
+                src={selectedConcessionaria.logo_url} 
                 alt={selectedConcessionaria.nome}
                 className="h-6 w-6 object-cover rounded-full"
               />

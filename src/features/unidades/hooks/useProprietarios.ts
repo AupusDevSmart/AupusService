@@ -1,11 +1,21 @@
 // src/features/unidades/hooks/useProprietarios.ts
 
 import { useState, useEffect } from 'react';
+import { isAxiosError } from 'axios';
 import { api } from '@/config/api';
+import { mensagemDoBackend } from '@/utils/api-error';
 
 export interface ProprietarioOption {
   id: string;
   nome: string;
+}
+
+/** Usuario da listagem /usuarios, no que este hook le. */
+interface UsuarioDaListagem {
+  id: string;
+  nome: string;
+  /** O papel vem como nome ou como objeto { name }. */
+  roles?: Array<string | { name?: string } | null>;
 }
 
 interface UseProprietariosReturn {
@@ -43,15 +53,15 @@ export function useProprietarios(): UseProprietariosReturn {
         console.log('📨 [useProprietarios] Resposta da API:', response.data);
 
         // Extrair dados da resposta
-        const data = response.data?.data?.data || response.data?.data || response.data || [];
+        const data: UsuarioDaListagem[] = response.data?.data?.data || response.data?.data || response.data || [];
 
         console.log('🔍 [useProprietarios] Total de usuários retornados:', Array.isArray(data) ? data.length : 0);
 
         // Filtrar usuários com roles: proprietario, admin, super_admin
-        const proprietariosFiltrados = data.filter((usuario: any) => {
+        const proprietariosFiltrados = data.filter((usuario) => {
           const roles = usuario.roles || [];
 
-          const hasRole = roles.some((role: any) => {
+          const hasRole = roles.some((role) => {
             const roleName = typeof role === 'string' ? role : role?.name || '';
             return ['proprietario', 'admin', 'super_admin'].includes(roleName.toLowerCase());
           });
@@ -62,21 +72,22 @@ export function useProprietarios(): UseProprietariosReturn {
         console.log('✅ [useProprietarios] Proprietários filtrados:', proprietariosFiltrados.length);
 
         // Mapear para formato esperado
-        const proprietariosFormatados: ProprietarioOption[] = proprietariosFiltrados.map((usuario: any) => ({
+        const proprietariosFormatados: ProprietarioOption[] = proprietariosFiltrados.map((usuario) => ({
           id: usuario.id,
           nome: usuario.nome,
         }));
 
         setProprietarios(proprietariosFormatados);
-      } catch (err: any) {
+      } catch (err) {
+        const resposta = isAxiosError<{ message?: string }>(err) ? err.response : undefined;
         // 403 e esperado para roles sem `usuarios.view` (ex: operador). Nao reportar
         // como erro - o filtro de proprietario simplesmente nao aparece preenchido.
-        if (err?.response?.status === 403) {
+        if (resposta?.status === 403) {
           console.warn('[useProprietarios] Sem permissao para listar usuarios (403). Filtro de proprietario ficara vazio.');
           setError(null);
         } else {
           console.error('❌ [useProprietarios] Erro ao buscar proprietários:', err);
-          setError(err.response?.data?.message || 'Erro ao carregar proprietários');
+          setError(mensagemDoBackend(err) || 'Erro ao carregar proprietários');
         }
         setProprietarios([]);
       } finally {

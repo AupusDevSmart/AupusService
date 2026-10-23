@@ -3,8 +3,19 @@ import axios, { InternalAxiosRequestConfig } from 'axios';
 import { env } from '@/config/env';
 import { useUserStore } from '@/store/useUserStore';
 import { toast } from '@/hooks/use-toast';
+import { avisoGlobalDeErro } from '@/lib/aviso-de-erro';
 import { AuthService } from '@/services/auth.service';
 import qs from 'qs';
+
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    /**
+     * Requisição de fundo (o contador do sininho, a cada minuto): quem chamou
+     * mostra a falha do seu jeito, e o toast global não se repete a cada rodada.
+     */
+    semAvisoGlobal?: boolean;
+  }
+}
 
 /**
  * Flag para controlar se já está fazendo refresh
@@ -17,13 +28,13 @@ let isRefreshing = false;
  */
 let failedQueue: Array<{
   resolve: (token: string | null) => void;
-  reject: (error: any) => void;
+  reject: (error: unknown) => void;
 }> = [];
 
 /**
  * Processa a fila de requisições após refresh bem-sucedido ou falha
  */
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
@@ -93,6 +104,16 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Senha provisória ainda não trocada (SN-34): o backend recusa tudo menos a
+    // troca. Leva para a tela de troca em vez de mostrar erro solto.
+    const corpo = error.response?.data;
+    const codigo = corpo?.code ?? corpo?.error?.code ?? corpo?.message?.code;
+    if (error.response?.status === 403 && codigo === 'TROCAR_SENHA') {
+      useUserStore.getState().updateUser({ deve_trocar_senha: true });
+      if (window.location.pathname !== '/trocar-senha') window.location.assign('/trocar-senha');
+      return Promise.reject(error);
+    }
+
     // Se erro 401 e não é tentativa de login ou refresh
     if (
       error.response?.status === 401 &&
@@ -143,7 +164,8 @@ api.interceptors.response.use(
 
         const currentPath = window.location.pathname;
         if (currentPath !== '/login') {
-          window.location.href = `/login?redirectTo=${currentPath}`;
+          // Com a busca (o ?conferir= do PDF da OS), codificada
+          window.location.href = `/login?redirectTo=${encodeURIComponent(currentPath + window.location.search)}`;
         }
 
         toast({
@@ -168,13 +190,19 @@ api.interceptors.response.use(
       || error.response?.status
       || 'UNKNOWN_ERROR';
 
-    // Mostrar toast com o erro (exceto para erros 401 que são tratados acima)
-    if (error.response?.status !== 401) {
-      toast({
-        variant: 'destructive',
-        title: `Erro ${errorCode}`,
-        description: errorMessage,
-      });
+    // O aviso global é a rede de segurança (SN-43): espera um instante e não aparece se a tela avisar
+    // o erro do jeito dela, com contexto. Eram dois avisos com a mesma mensagem. O código fica no console
+    if (error.response?.status !== 401 && !originalRequest?.semAvisoGlobal) {
+      avisoGlobalDeErro(
+        () =>
+          toast({
+            variant: 'destructive',
+            title: 'Não foi possível concluir',
+            description: errorMessage,
+          }),
+        undefined,
+        error,
+      );
     }
 
     // Log detalhado no console para debug

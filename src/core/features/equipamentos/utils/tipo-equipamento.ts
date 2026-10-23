@@ -18,14 +18,25 @@ export interface TipoEquipamentoNormalizado {
   nome: string;
   fabricante: string;
   categoriaId: string;
-  categoria?: { id: string; nome: string };
+  categoria?: { id: string; nome: string } | null;
+}
+
+/** O tipo como pode chegar: achatado pelo transform (categoria em texto) ou como a rota devolve. */
+export interface TipoEquipamentoBruto {
+  id?: string;
+  codigo?: string;
+  nome?: string;
+  fabricante?: string;
+  categoriaId?: string;
+  categoria_id?: string;
+  categoria?: string | { id: string; nome: string } | null;
 }
 
 export function normalizarTipoEquipamento(
-  bruto: any,
+  bruto: TipoEquipamentoBruto | null | undefined,
 ): TipoEquipamentoNormalizado | null {
   const id = bruto?.id?.trim?.() || bruto?.id;
-  if (!id) return null;
+  if (!id || !bruto) return null;
 
   const categoriaId = (bruto.categoriaId ?? bruto.categoria_id)?.trim?.() ?? '';
   const categoria =

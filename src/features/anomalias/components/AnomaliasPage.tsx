@@ -1,6 +1,7 @@
 // src/features/anomalias/components/AnomaliasPage.tsx - REFATORADA
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useUserStore } from '@/store/useUserStore';
 import { linkDeProgramacao } from '@/features/programacao-os/utils/link-de-programacao';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
@@ -11,14 +12,16 @@ import { BaseFilters } from '@/core';
 import { AnomaliasModal } from './AnomaliasModal';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
-import { Anomalia, AnomaliaFormData } from '../types';
+import { useAbrirPelaUrl } from '@/hooks/useAbrirPelaUrl';
+import { Anomalia, AnomaliaFormData, AnomaliasFilters } from '../types';
+import type { IconeDeAcao } from '@/core/types/base';
 import { anomaliasTableColumns } from '../config/table-config';
 import { createAnomaliasTableActions } from '../config/actions-config';
 import { useAnomaliasApi } from '../hooks/useAnomaliasApi';
 import { useAnomaliasFilters } from '../hooks/useAnomaliasFilters';
 import { useAnomaliasActions } from '../hooks/useAnomaliasActions';
 import { AnomaliasDashboard } from './AnomaliasDashboard';
-import { AnomaliasStats } from '@/services/anomalias.service';
+import { anomaliasService, AnomaliasStats } from '@/services/anomalias.service';
 
 const initialFilters = {
   search: '',
@@ -37,7 +40,7 @@ const initialStats: AnomaliasStats = {
 export function AnomaliasPage() {
   // Estados
   const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('anomalias');
-  const [filters, setFilters] = useState(() => ({
+  const [filters, setFilters] = useState<Partial<AnomaliasFilters>>(() => ({
     ...initialFilters,
     limit: linhasPorPagina,
   }));
@@ -80,6 +83,13 @@ export function AnomaliasPage() {
     onSuccess: reloadData,
   });
 
+  // A notificação leva para cá com ?anomaliaId= (SN-47)
+  const abrirAnomaliaPorId = useCallback(
+    async (id: string) => openModal('view', await anomaliasService.findOne(id)),
+    [openModal],
+  );
+  useAbrirPelaUrl('anomaliaId', abrirAnomaliaPorId);
+
   const navigate = useNavigate();
   const temPermissao = useUserStore((st) => st.hasPermission);
 
@@ -97,7 +107,7 @@ export function AnomaliasPage() {
     return tableActions
       .filter((action) => action.label !== 'Visualizar' && action.label !== 'Editar')
       .map((action) => {
-        const Icon = action.icon as any;
+        const Icon = action.icon as IconeDeAcao | undefined;
         return {
           key: action.label.toLowerCase().replace(/\s+/g, '_'),
           label: action.label,
@@ -155,12 +165,16 @@ export function AnomaliasPage() {
       }
 
       // Transformar para o formato que o backend espera
-      const transformedData: any = {
+      const transformedData: AnomaliaFormData = {
         descricao: data.descricao,
+        local: local.trim(),
+        ativo: ativo.trim(),
         condicao: data.condicao,
         origem: data.origem,
         prioridade: data.prioridade,
         observacoes: data.observacoes || '',
+        // Vazio apaga (null); o service converte para ISO com o fuso
+        prazo: data.prazo ?? null,
         localizacao: {
           local: local.trim(),
           ativo: ativo.trim(),
@@ -192,11 +206,16 @@ export function AnomaliasPage() {
       await reloadData();
     } catch (error) {
       console.error('Erro ao salvar anomalia:', error);
+      // O erro da API o interceptor já mostrou; o daqui ("Local é obrigatório",
+      // data inválida) o BaseModal só registrava no console, e o salvar parecia não fazer nada
+      if (!(error as { isAxiosError?: boolean } | null)?.isAxiosError) {
+        toast.error('Não foi possível salvar a anomalia', { description: error instanceof Error ? error.message : undefined });
+      }
       throw error;
     }
   };
 
-  const handleFilterChange = async (newFilters: any) => {
+  const handleFilterChange = async (newFilters: Partial<AnomaliasFilters>) => {
     // Se mudou a planta, recarregar unidades
     if ('planta' in newFilters) {
       const plantaId = newFilters.planta === 'all' ? undefined : newFilters.planta;
@@ -212,7 +231,7 @@ export function AnomaliasPage() {
 
     // Limpar filtros com valor 'all'
     const cleanedFilters = { ...newFilters };
-    Object.keys(cleanedFilters).forEach((key) => {
+    (Object.keys(cleanedFilters) as Array<keyof AnomaliasFilters>).forEach((key) => {
       if (cleanedFilters[key] === 'all') {
         cleanedFilters[key] = undefined;
       }
@@ -287,7 +306,8 @@ export function AnomaliasPage() {
           local: entity.local || '',
           ativo: entity.ativo || '',
         },
-        anexos: (entity as any).anexos || [],
+        // A anomalia nao traz anexos: o AnexosUpload busca os existentes pelo id
+        anexos: [],
       };
     }
 
@@ -324,7 +344,7 @@ export function AnomaliasPage() {
           <div className="flex flex-col gap-3 mb-4 md:mb-6">
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-start">
               <div className="flex-1 min-w-0">
-                <BaseFilters
+                <BaseFilters<Partial<AnomaliasFilters>>
                   filters={filters}
                   config={filterConfigs}
                   onFilterChange={handleFilterChange}

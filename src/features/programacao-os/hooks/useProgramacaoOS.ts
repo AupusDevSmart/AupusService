@@ -1,8 +1,16 @@
 // src/features/programacao-os/hooks/useProgramacaoOS.ts
 import { useState, useCallback } from 'react';
-import { programacaoOSApi, type ProgramacaoResponse, type ProgramacaoDetalhesResponse, type CreateProgramacaoDto } from '@/services/programacao-os.service';
+import {
+  programacaoOSApi,
+  type ProgramacaoResponse,
+  type ProgramacaoDetalhesResponse,
+  type CreateProgramacaoDto,
+  type CreateProgramacaoAnomaliaDto,
+  type CreateProgramacaoTarefasDto,
+  type ProgramacaoFiltersDto,
+} from '@/services/programacao-os.service';
 import { api } from '@/config/api';
-import { formatApiError } from '@/utils/api-error';
+import { formatApiError, mensagemDoBackend } from '@/utils/api-error';
 
 interface IniciarExecucaoData {
   equipePresente: string[];
@@ -15,7 +23,7 @@ export const useProgramacaoOS = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Função para lidar com erros
-  const handleError = useCallback((error: any, defaultMessage: string): never => {
+  const handleError = useCallback((error: unknown, defaultMessage: string): never => {
     // A API manda a mensagem em `error.message` ({ success: false, error: {...} });
     // ler só `data.message` caía no "Request failed with status code 409"
     const errorMessage = (error ? formatApiError(error) : '') || defaultMessage;
@@ -54,7 +62,7 @@ export const useProgramacaoOS = () => {
   }, [handleError]);
 
   // Listar programações
-  const listarProgramacoes = useCallback(async (filters: any) => {
+  const listarProgramacoes = useCallback(async (filters: ProgramacaoFiltersDto) => {
     setLoading(true);
     setError(null);
 
@@ -147,7 +155,7 @@ export const useProgramacaoOS = () => {
   }, [handleError]);
 
   // Criar de anomalia
-  const criarDeAnomalia = useCallback(async (anomaliaId: string, ajustes?: any) => {
+  const criarDeAnomalia = useCallback(async (anomaliaId: string, ajustes?: CreateProgramacaoAnomaliaDto['ajustes']) => {
     setLoading(true);
     setError(null);
 
@@ -162,7 +170,7 @@ export const useProgramacaoOS = () => {
   }, [handleError]);
 
   // Criar de tarefas
-  const criarDeTarefas = useCallback(async (data: any) => {
+  const criarDeTarefas = useCallback(async (data: CreateProgramacaoTarefasDto) => {
     setLoading(true);
     setError(null);
 
@@ -191,28 +199,14 @@ export const useProgramacaoOS = () => {
     }
   }, [handleError]);
 
-  // Funções de compatibilidade para transição (simulam execução de OS)
-  const planejarOS = useCallback(async (_id: string, _dados: any) => {
-    // console.log('🔧 Planejando OS:', id, dados);
-    // Aqui você chamaria a API de execução de OS quando ela estiver pronta
-    // Por enquanto, simula o comportamento
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // console.log('✅ OS Planejada com sucesso');
-      return { success: true, message: 'OS planejada com sucesso' };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // Inicia a execução pela programação (chama a API de execução)
   const iniciarExecucao = useCallback(async (programacaoId: string, dados: IniciarExecucaoData) => {
     console.log('▶️ Iniciando execução da OS a partir da programação:', programacaoId, dados);
     setLoading(true);
 
     try {
       // ✅ Chamada real para a API de execução-os
-      const response = await api.post(
+      const response = await api.post<{ message?: string; os_id?: string }>(
         `/execucao-os/iniciar-de-programacao/${programacaoId}`,
         {
           responsavel_execucao: dados.responsavelExecucao,
@@ -229,54 +223,10 @@ export const useProgramacaoOS = () => {
         message: response.data.message || 'Execução iniciada com sucesso!',
         execucaoId: response.data.os_id
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Erro ao iniciar execução:', error);
-      setError(error.response?.data?.message || 'Erro ao iniciar execução');
+      setError(mensagemDoBackend(error) || 'Erro ao iniciar execução');
       throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const finalizarOS = useCallback(async (_id: string, _observacoes?: string) => {
-    // console.log('🏁 Finalizando OS:', id, observacoes);
-    setLoading(true);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // console.log('✅ OS Finalizada com sucesso');
-      return { success: true, message: 'OS finalizada com sucesso' };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const cancelarOS = useCallback(async (_id: string, _motivo: string) => {
-    // console.log('🚫 Cancelando OS:', id, 'Motivo:', motivo);
-    setLoading(true);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // console.log('✅ OS Cancelada com sucesso');
-      return { success: true, message: 'OS cancelada com sucesso' };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const exportarOS = useCallback(async (_filters: any) => {
-    // console.log('📄 Exportando OS com filtros:', filters);
-    setLoading(true);
-    
-    try {
-      // Simula geração de CSV
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const csvContent = `OS,Descrição,Status,Data\nOS-001,Manutenção preventiva,FINALIZADA,2024-08-01`;
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      
-      // console.log('✅ Exportação concluída');
-      return blob;
     } finally {
       setLoading(false);
     }
@@ -299,11 +249,9 @@ export const useProgramacaoOS = () => {
     criarDeTarefas,
     deletarProgramacao,
 
-    // Funções de compatibilidade (simulando execução)
-    planejarOS,
+    // Planejar, finalizar, cancelar e exportar daqui eram simulações (esperavam
+    // e respondiam "sucesso" sem chamar a API) e saíram: as de verdade são as da
+    // execução da OS. A exportação da lista é a do SN-63, na Execução de OS
     iniciarExecucao,
-    finalizarOS,
-    cancelarOS,
-    exportarOS
   };
 };

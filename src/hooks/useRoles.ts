@@ -2,11 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/config/api';
+import { formatApiError } from '@/utils/api-error';
 
 export interface Role {
+  /** Nome técnico (operador, analista...). */
   value: string;
+  /** Como a tela mostra (Técnico de campo, Planejador PCM...). */
   label: string;
   description?: string;
+  /** O que o papel enxerga (só as plantas vinculadas, todas...). */
+  escopo?: string;
+  /** Posição na hierarquia; papel fora da matriz (legado) vem depois. */
+  ordem?: number;
   permissions?: string[];
 }
 
@@ -16,109 +23,63 @@ interface UseRolesReturn {
   error: string | null;
 }
 
+interface PapelDaApi {
+  name: string;
+  nome_exibido?: string;
+  descricao?: string;
+  escopo?: string;
+  ordem?: number;
+  permissions?: Array<string | { name?: string }>;
+  role_has_permissions?: Array<{ permissions?: { name?: string } }>;
+}
+
+/**
+ * A lista de `GET /roles` como a tela usa: nome e descrição vindos da matriz
+ * do backend, um item por papel (o mesmo nome pode existir em dois guards) e
+ * na ordem da hierarquia.
+ */
+export function papeisDaApi(dados: PapelDaApi[]): Role[] {
+  const porNome = new Map<string, Role>();
+  for (const papel of dados) {
+    const permissoes = [
+      ...(papel.role_has_permissions ?? []).map((v) => v.permissions?.name),
+      ...(papel.permissions ?? []).map((p) => (typeof p === 'string' ? p : p?.name)),
+    ].filter((n): n is string => !!n);
+    const anterior = porNome.get(papel.name);
+    porNome.set(papel.name, {
+      value: papel.name,
+      label: papel.nome_exibido ?? papel.name,
+      description: papel.descricao,
+      escopo: papel.escopo,
+      ordem: papel.ordem,
+      permissions: [...new Set([...(anterior?.permissions ?? []), ...permissoes])],
+    });
+  }
+  return [...porNome.values()].sort((a, b) => (a.ordem ?? 99) - (b.ordem ?? 99) || a.label.localeCompare(b.label));
+}
+
 export function useRoles(): UseRolesReturn {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchRoles = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        console.log('🔍 [useRoles] Iniciando busca de roles...');
-
-        // Try to fetch roles from the backend
-        const response = await api.get('/roles');
-
-        console.log('📨 [useRoles] Resposta raw da API:', {
-          status: response.status,
-          dataType: typeof response.data,
-          dataKeys: response.data ? Object.keys(response.data) : [],
-          hasSuccess: !!response.data.success,
-          hasData: !!response.data.data,
-          dataPreview: response.data
-        });
-
-        const data = response.data?.data || response.data || [];
-
-        console.log('🔍 [useRoles] Dados extraídos:', {
-          isArray: Array.isArray(data),
-          length: Array.isArray(data) ? data.length : 0,
-          firstItem: Array.isArray(data) ? data[0] : data
-        });
-
-        // Mapeamento de nomes técnicos para labels amigáveis
-        const labelMapping: Record<string, string> = {
-          'super_admin': 'Super Administrador',
-          'admin': 'Administrador',
-          'gerente': 'Gerente',
-          'analista': 'Analista',
-          'operador': 'Operador',
-          'vendedor': 'Vendedor',
-          'consultor': 'Consultor',
-          'proprietario': 'Proprietário',
-          'propietario': 'Proprietário',
-          'corretor': 'Corretor',
-          'cativo': 'Cativo',
-          'associado': 'Associado',
-        };
-
-        // Transform backend data to expected format
-        const formattedRoles = data.map((role: any) => {
-          const rolePermissions: string[] = [];
-
-          if (Array.isArray(role.role_has_permissions)) {
-            role.role_has_permissions.forEach((rhp: any) => {
-              const name = rhp?.permissions?.name;
-              if (name) rolePermissions.push(name);
-            });
-          }
-          if (rolePermissions.length === 0 && Array.isArray(role.permissions)) {
-            role.permissions.forEach((p: any) => {
-              if (typeof p === 'string') rolePermissions.push(p);
-              else if (p?.name) rolePermissions.push(p.name);
-            });
-          }
-
-          return {
-            value: role.name || role.value || role.id,
-            label: role.label || role.display_name || labelMapping[role.name] || role.name || role.value,
-            description: role.description || `Role ${role.name}`,
-            permissions: rolePermissions,
-          };
-        });
-
-        console.log('✅ [useRoles] Roles formatados:', formattedRoles);
-
-        setRoles(formattedRoles);
-      } catch (err: any) {
-        console.error('❌ [useRoles] Erro ao buscar roles:', err);
-        console.error('❌ [useRoles] Detalhes do erro:', {
-          message: err.message,
-          response: err.response?.data,
-          status: err.response?.status
-        });
-
-        // Fallback to default roles if API fails
-        const defaultRoles: Role[] = [
-          { value: 'admin', label: 'Administrador', description: 'Acesso total ao sistema' },
-          { value: 'gerente', label: 'Gerente', description: 'Gerenciamento de equipes e projetos' },
-          { value: 'vendedor', label: 'Vendedor', description: 'Acesso a vendas e clientes' },
-          { value: 'consultor', label: 'Consultor', description: 'Acesso de consulta' },
-        ];
-
-        setRoles(defaultRoles);
-        setError(err.response?.data?.message || 'Usando roles padrão');
-
-        console.warn('⚠️ [useRoles] Usando roles padrão como fallback');
-      } finally {
-        setLoading(false);
-      }
+    let ativo = true;
+    api
+      .get<PapelDaApi[]>('/roles')
+      .then((resposta) => {
+        if (ativo) setRoles(papeisDaApi(Array.isArray(resposta.data) ? resposta.data : []));
+      })
+      .catch((erro) => {
+        // Sem lista inventada: um papel que não existe no banco viraria usuário sem papel.
+        if (ativo) setError(formatApiError(erro));
+      })
+      .finally(() => {
+        if (ativo) setLoading(false);
+      });
+    return () => {
+      ativo = false;
     };
-
-    fetchRoles();
   }, []);
 
   return { roles, loading, error };

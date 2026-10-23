@@ -34,21 +34,21 @@ export function useCalendario(): UseCalendarioResult {
     try {
       setLoading(prev => ({ ...prev, isLoadingVerificacao: true, error: undefined }));
 
-      console.log('🔍 [useCalendario] Verificando dia útil:', { data, plantaId });
+      console.log('[useCalendario] Verificando dia útil:', { data, plantaId });
 
       const resultado = await agendaService.verificarDiaUtil(data, plantaId);
 
-      console.log('✅ [useCalendario] Verificação concluída:', resultado);
+      console.log('[useCalendario] Verificação concluída:', resultado);
 
       return resultado;
 
-    } catch (error: any) {
-      console.error('❌ [useCalendario] Erro ao verificar dia útil:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+    } catch (error) {
+      console.error('[useCalendario] Erro ao verificar dia útil:', error);
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       toast({
         title: "Erro ao verificar dia útil",
-        description: error.message || "Não foi possível verificar se o dia é útil.",
+        description: (error instanceof Error && error.message) || "Não foi possível verificar se o dia é útil.",
         variant: "destructive",
       });
 
@@ -67,21 +67,21 @@ export function useCalendario(): UseCalendarioResult {
     try {
       setLoading(prev => ({ ...prev, isLoadingProximosDias: true, error: undefined }));
 
-      console.log('🔍 [useCalendario] Buscando próximos dias úteis:', { quantidade, dataInicio, plantaId });
+      console.log('[useCalendario] Buscando próximos dias úteis:', { quantidade, dataInicio, plantaId });
 
       const resultado = await agendaService.getProximosDiasUteis(quantidade, dataInicio, plantaId);
 
-      console.log('✅ [useCalendario] Próximos dias úteis encontrados:', resultado);
+      console.log('[useCalendario] Próximos dias úteis encontrados:', resultado);
 
       return resultado;
 
-    } catch (error: any) {
-      console.error('❌ [useCalendario] Erro ao buscar próximos dias úteis:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+    } catch (error) {
+      console.error('[useCalendario] Erro ao buscar próximos dias úteis:', error);
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       toast({
         title: "Erro ao buscar próximos dias úteis",
-        description: error.message || "Não foi possível buscar os próximos dias úteis.",
+        description: (error instanceof Error && error.message) || "Não foi possível buscar os próximos dias úteis.",
         variant: "destructive",
       });
 
@@ -100,21 +100,21 @@ export function useCalendario(): UseCalendarioResult {
     try {
       setLoading(prev => ({ ...prev, isLoadingCalendarioMes: true, error: undefined }));
 
-      console.log('🔍 [useCalendario] Carregando calendário do mês:', { ano, mes, plantaId });
+      console.log('[useCalendario] Carregando calendário do mês:', { ano, mes, plantaId });
 
       const resultado = await agendaService.getCalendarioMes(ano, mes, plantaId);
 
-      console.log('✅ [useCalendario] Calendário carregado:', resultado.length, 'dias');
+      console.log('[useCalendario] Calendário carregado:', resultado.length, 'dias');
 
       return resultado;
 
-    } catch (error: any) {
-      console.error('❌ [useCalendario] Erro ao carregar calendário:', error);
-      setLoading(prev => ({ ...prev, error: error.message }));
+    } catch (error) {
+      console.error('[useCalendario] Erro ao carregar calendário:', error);
+      setLoading(prev => ({ ...prev, error: error instanceof Error ? error.message : undefined }));
 
       toast({
         title: "Erro ao carregar calendário",
-        description: error.message || "Não foi possível carregar o calendário do mês.",
+        description: (error instanceof Error && error.message) || "Não foi possível carregar o calendário do mês.",
         variant: "destructive",
       });
 

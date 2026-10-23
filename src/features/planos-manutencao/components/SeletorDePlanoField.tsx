@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Combobox } from '@/core';
 import { Link2, Unlink, AlertTriangle } from 'lucide-react';
 import { usePlanoDoEquipamento } from './PlanoDoEquipamentoContext';
+import { InicioDoPlano } from '@/features/planos-manutencao/components/InicioDoPlano';
 import {
   planosManutencaoApi,
   type PlanoManutencaoApiResponse,
 } from '@/services/planos-manutencao.services';
+import { hojeEmBrasilia } from '@/utils/brasilia';
 
 interface SeletorDePlanoFieldProps {
   /** Nulo no cadastro, quando o equipamento ainda não existe. */
@@ -53,6 +55,8 @@ export function SeletorDePlanoField({
   } = usePlanoDoEquipamento(equipamentoId ?? '', classificacao);
 
   const [selecionado, setSelecionado] = React.useState('');
+  // O dia em que o plano começa a contar (SN-53): hoje, se ninguém disser outro
+  const [dataInicio, setDataInicio] = React.useState(hojeEmBrasilia);
   const [templatesDaCategoria, setTemplatesDaCategoria] = React.useState<
     PlanoManutencaoApiResponse[]
   >([]);
@@ -112,9 +116,9 @@ export function SeletorDePlanoField({
 
     registrarAcaoPosCriacao('o plano de manutenção', async (novoId: string) => {
       if (!selecionado) return;
-      await planosManutencaoApi.vincular({ equipamento_id: novoId, plano_id: selecionado });
+      await planosManutencaoApi.vincular({ equipamento_id: novoId, plano_id: selecionado, data_inicio: dataInicio });
     });
-  }, [criando, selecionado, registrarAcaoPosCriacao]);
+  }, [criando, selecionado, dataInicio, registrarAcaoPosCriacao]);
 
   if (!ehUC) return null;
 
@@ -141,8 +145,8 @@ export function SeletorDePlanoField({
           <div className="flex items-center gap-1">
             <Button
               type="button"
-              onClick={() => vincular(selecionado)}
-              disabled={!podeAplicar || salvando}
+              onClick={() => vincular(selecionado, dataInicio)}
+              disabled={!podeAplicar || salvando || !dataInicio}
               variant="ghost"
               size="icon"
               className="h-6 w-6 -my-0.5"
@@ -207,6 +211,23 @@ export function SeletorDePlanoField({
           emptyText="Nenhum plano encontrado"
           disabled={salvando}
         />
+      )}
+
+      {/* Antes de vincular: de quando o plano conta e o primeiro vencimento de cada tarefa */}
+      {!somenteLeitura && !ocupado && selecionado && (criando || podeAplicar) && (
+        <InicioDoPlano
+          planoId={selecionado}
+          equipamentoId={criando ? undefined : equipamentoId}
+          dataInicio={dataInicio}
+          onDataInicio={setDataInicio}
+          disabled={salvando}
+        />
+      )}
+
+      {!criando && !somenteLeitura && !ocupado && podeAplicar && (
+        <Button type="button" size="sm" onClick={() => vincular(selecionado, dataInicio)} disabled={salvando || !dataInicio}>
+          {planoAtual ? 'Substituir plano' : 'Vincular plano'}
+        </Button>
       )}
 
       {criando && selecionado && (

@@ -26,6 +26,23 @@ describe('AcoesDaProgramacao', () => {
     expect(botoes()).toEqual(esperado);
   });
 
+  // SN-69: toda OS tem origem; a avulsa de antes da regra só se cancela ou exclui
+  it.each([
+    ['linha da tabela', 'MANUAL'],
+    ['entidade do sheet', { tipo: 'MANUAL' }],
+  ])('avulsa antiga pendente (%s): sem Aprovar nem Editar, e diz o caminho', (_onde, origem) => {
+    render(<AcoesDaProgramacao programacao={{ ...programacao('PENDENTE'), origem }} modo="view" onAcao={() => {}} />);
+
+    expect(botoes()).toEqual(['Cancelar', 'Excluir']);
+    expect(screen.getByText(/programe o serviço a partir de uma solicitação/)).toBeInTheDocument();
+  });
+
+  it('com origem, a pendente segue aprovável', () => {
+    render(<AcoesDaProgramacao programacao={{ ...programacao('PENDENTE'), origem: 'ANOMALIA' }} modo="view" onAcao={() => {}} />);
+
+    expect(botoes()).toEqual(['Aprovar', 'Editar', 'Cancelar', 'Excluir']);
+  });
+
   it('no editar não oferece Editar', () => {
     render(<AcoesDaProgramacao programacao={programacao('PENDENTE')} modo="edit" onAcao={() => {}} />);
 

@@ -34,7 +34,9 @@ const fazenda = {
   ],
 } as never;
 
-describe('planilha de plantas', { timeout: 30_000 }, () => {
+// 120 s: o primeiro teste carrega o exceljs; sozinho leva ~3 s, mas na suíte inteira
+// (12 workers carregando ao mesmo tempo) passava dos 30 s e falhava sem defeito nenhum.
+describe('planilha de plantas', { timeout: 120_000 }, () => {
   it('ida e volta: endereço volta aninhado; unidade com a concessionária pelo nome e o ID ao lado', async () => {
     const livro = await gravarEReabrir(await montarLivroDeFichas(definicaoDePlantas, [fazenda]));
     const { registros, erros } = lerPlantas(livro);

@@ -4,6 +4,8 @@ import { profileService } from '@/services/profile.service';
 import { useUserStore } from '@/store/useUserStore';
 import { UpdateUsuarioDto, ChangePasswordDto } from '@/types/dtos/usuarios-dto';
 import { AuthService } from '@/services/auth.service';
+import { mensagemDoBackend } from '@/utils/api-error';
+
 
 /**
  * Hook for managing user profile updates
@@ -33,9 +35,9 @@ export function useUpdateProfile() {
 
       toast.success('Perfil atualizado com sucesso!');
       return { success: true, data: updatedUser };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
-      const errorMessage = error?.response?.data?.message || 'Erro ao atualizar perfil';
+      const errorMessage = mensagemDoBackend(error) || 'Erro ao atualizar perfil';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -58,9 +60,9 @@ export function useUpdateProfile() {
 
       toast.success('Senha alterada com sucesso!');
       return { success: true };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao alterar senha:', error);
-      const errorMessage = error?.response?.data?.message || 'Erro ao alterar senha';
+      const errorMessage = mensagemDoBackend(error) || 'Erro ao alterar senha';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -110,9 +112,9 @@ export function useUpdateProfile() {
 
       toast.success('Foto de perfil atualizada com sucesso!');
       return { success: true, imageUrl: result.imageUrl };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao fazer upload da imagem:', error);
-      const errorMessage = error?.response?.data?.message || 'Erro ao fazer upload da imagem';
+      const errorMessage = mensagemDoBackend(error) || 'Erro ao fazer upload da imagem';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
     } finally {

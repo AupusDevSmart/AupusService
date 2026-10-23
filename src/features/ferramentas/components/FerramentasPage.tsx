@@ -13,6 +13,7 @@ import { Ferramenta, FerramentasFilters, StatusFerramenta } from '../types';
 import { ferramentasTableColumns } from '../config/table-config';
 import { ferramentasFilterConfig } from '../config/filter-config';
 import { ferramentasFormFields } from '../config/form-config';
+import { hojeNaTela } from '@/utils/dia-de-calendario';
 
 const initialFilters: FerramentasFilters = {
   search: '',
@@ -165,12 +166,13 @@ export function FerramentasPage() {
   };
 
   // Preparar dados para o modal
-  const getModalEntity = () => {
+  const getModalEntity = (): Ferramenta | null => {
     const entity = modalState.entity;
-    
+
     if (modalState.mode === 'create') {
       return {
-        id: 0, // Add a temporary ID
+        // Vazio: o cadastro ainda nao tem id e o BaseModal pede um (vazio vale "novo").
+        id: '',
         nome: '',
         tipo: 'ferramenta',
         codigoPatrimonial: '',
@@ -182,7 +184,7 @@ export function FerramentasPage() {
         valorDiaria: 0,
         localizacaoAtual: '',
         responsavel: '',
-        dataAquisicao: new Date().toISOString().split('T')[0],
+        dataAquisicao: hojeNaTela(),
         status: 'disponivel',
         criadoEm: new Date().toISOString(),
         atualizadoEm: new Date().toISOString(),
@@ -403,7 +405,7 @@ export function FerramentasPage() {
         <BaseModal
           isOpen={modalState.isOpen}
           mode={modalState.mode}
-          entity={getModalEntity() as any}
+          entity={getModalEntity()}
           title={getModalTitle()}
           icon={getModalIcon()}
           formFields={ferramentasFormFields}

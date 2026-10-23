@@ -1,13 +1,30 @@
 // src/components/common/InstrucaoExpandableCard.tsx
 import React, { useState, useCallback, useEffect } from 'react';
-import { FileText, ChevronRight, X, Clock, Wrench, ListChecks, AlertCircle, SquarePen } from 'lucide-react';
+import { FileText, ChevronRight, X, Clock, Wrench, ListChecks, AlertCircle, SquarePen, Construction } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Expandir } from '@/components/ui/expandir';
-import { instrucoesApi, InstrucaoApiResponse, SubInstrucaoApiResponse, RecursoInstrucaoApiResponse } from '@/services/instrucoes.services';
+import {
+  instrucoesApi,
+  ROTULO_DA_DISCIPLINA,
+  type InstrucaoApiResponse,
+  type SubInstrucaoApiResponse,
+} from '@/services/instrucoes.services';
+import { descreverFaixa, numeroOuNulo } from '@/utils/leitura';
+import { formatarHoras } from '@/utils/horas';
+import { rotuloCategoria } from '@/services/recursos.services';
+import { descreverUso } from '@/features/instrucoes/utils/custo-da-linha';
+
+/** "leitura 580 a 620 V", "leitura em V", "leitura" (SN-58) */
+function rotuloDaLeitura(sub: SubInstrucaoApiResponse) {
+  const faixa = descreverFaixa({ minimo: numeroOuNulo(sub.valor_minimo), maximo: numeroOuNulo(sub.valor_maximo), unidade: sub.unidade });
+  if (faixa) return `leitura ${faixa}`;
+  return sub.unidade ? `leitura em ${sub.unidade}` : 'leitura';
+}
 
 interface InstrucaoExpandableCardProps {
   id: string;
-  tag?: string;
+  /** O código da instrução (SN-85: era tag) */
+  codigo?: string | null;
   nome?: string;
   onRemove?: () => void;
   disabled?: boolean;
@@ -20,45 +37,15 @@ interface InstrucaoExpandableCardProps {
   valor?: number;
   onValor?: (valor: number) => void;
   valorEditavel?: boolean;
+  /** O valor sugerido contou como zero alguma linha sem preço no cadastro (SN-86) */
+  semPrecoNoCadastro?: boolean;
 }
 
-const tipoRecursoLabels: Record<string, string> = {
-  INSTRUMENTO: 'Instrumento',
-  MATERIAL: 'Material',
-  FERRAMENTA: 'Ferramenta',
-  TECNICO: 'Tecnico',
-  VIATURA: 'Viatura',
-};
-
-const categoriaLabels: Record<string, string> = {
-  MECANICA: 'Mecanica',
-  ELETRICA: 'Eletrica',
-  INSTRUMENTACAO: 'Instrumentacao',
-  CIVIL: 'Civil',
-  PINTURA: 'Pintura',
-  LUBRIFICACAO: 'Lubrificacao',
-  LIMPEZA: 'Limpeza',
-  GERAL: 'Geral',
-};
-
-const tipoManutencaoLabels: Record<string, string> = {
-  PREVENTIVA: 'Preventiva',
-  CORRETIVA: 'Corretiva',
-  PREDITIVA: 'Preditiva',
-  INSPECAO: 'Inspecao',
-};
-
-function formatMinutos(minutos?: number): string {
-  if (!minutos) return '-';
-  if (minutos < 60) return `${minutos}min`;
-  const h = Math.floor(minutos / 60);
-  const m = minutos % 60;
-  return m > 0 ? `${h}h ${m}min` : `${h}h`;
-}
+const moeda = (valor: number) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export function InstrucaoExpandableCard({
   id,
-  tag,
+  codigo,
   nome,
   onRemove,
   disabled,
@@ -66,6 +53,7 @@ export function InstrucaoExpandableCard({
   valor,
   onValor,
   valorEditavel = true,
+  semPrecoNoCadastro = false,
 }: InstrucaoExpandableCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [details, setDetails] = useState<InstrucaoApiResponse | null>(null);
@@ -96,7 +84,7 @@ export function InstrucaoExpandableCard({
     setExpanded(true);
   }, [expanded, details, loading, id]);
 
-  const label = `${tag ? tag + ' - ' : ''}${nome || 'Instrucao'}`;
+  const label = `${codigo ? codigo + ' - ' : ''}${nome || 'Instrucao'}`;
 
   return (
     <div className="overflow-hidden">
@@ -119,6 +107,14 @@ export function InstrucaoExpandableCard({
               para ser precificada. */}
           {valor !== undefined && (
             <>
+              {semPrecoNoCadastro && (
+                <span
+                  className="text-xs text-muted-foreground"
+                  title="Alguma linha desta instrução não tem preço no cadastro: o valor sugerido a conta como zero."
+                >
+                  sem preço
+                </span>
+              )}
               <span className="text-xs text-muted-foreground">R$</span>
               <div className="w-20">
                 <ValorDaInstrucao
@@ -176,16 +172,22 @@ export function InstrucaoExpandableCard({
 
           {details && (
             <>
-              {/* Info grid */}
+              {/* Os campos do AupusProject (SN-85): a frente e o D+X, a duração dos passos e o valor */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <InfoItem label="Categoria" value={categoriaLabels[details.categoria] || details.categoria} />
-                <InfoItem label="Tipo" value={tipoManutencaoLabels[details.tipo_manutencao] || details.tipo_manutencao} />
+                <InfoItem label="Frente" value={details.frente || '-'} />
                 <InfoItem
-                  label="Duracao Estimada"
-                  value={formatMinutos(details.duracao_estimada)}
+                  label="Cronograma"
+                  value={`D+${details.prazo_inicio_relativo ?? 0}, ${details.duracao_dias ?? 1} ${details.duracao_dias === 1 ? 'dia' : 'dias'}`}
+                />
+                <InfoItem
+                  label="Duração dos passos"
+                  value={details.horas_dos_passos ? formatarHoras(details.horas_dos_passos) : '-'}
                   icon={<Clock className="h-3.5 w-3.5" />}
                 />
-                <InfoItem label="Criticidade" value={details.criticidade ? `${details.criticidade}/5` : '-'} />
+                <InfoItem
+                  label="Valor da instrução"
+                  value={details.custo === null ? 'falta preço' : details.custo === undefined ? '-' : moeda(details.custo)}
+                />
               </div>
 
               {/* Descricao */}
@@ -220,14 +222,22 @@ export function InstrucaoExpandableCard({
                           {sub.ordem || idx + 1}.
                         </span>
                         <span className="flex-1">{sub.descricao}</span>
+                        {sub.tipo && (
+                          <span className="text-xs text-muted-foreground flex-shrink-0">{ROTULO_DA_DISCIPLINA[sub.tipo]}</span>
+                        )}
+                        {sub.registro === 'LEITURA' && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
+                            {rotuloDaLeitura(sub)}
+                          </span>
+                        )}
                         {sub.obrigatoria && (
                           <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
                             obrigatoria
                           </span>
                         )}
-                        {sub.tempo_estimado ? (
+                        {sub.duracao_horas ? (
                           <span className="text-xs text-muted-foreground flex-shrink-0">
-                            {formatMinutos(sub.tempo_estimado)}
+                            {formatarHoras(sub.duracao_horas)}
                           </span>
                         ) : null}
                       </div>
@@ -246,23 +256,34 @@ export function InstrucaoExpandableCard({
                     </p>
                   </div>
                   <div className="space-y-1">
-                    {details.recursos.map((rec: RecursoInstrucaoApiResponse) => (
-                      <div key={rec.id} className="flex items-center gap-2 text-sm pl-1">
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
-                          {tipoRecursoLabels[rec.tipo] || rec.tipo}
-                        </span>
-                        <span className="flex-1">{rec.descricao}</span>
-                        {rec.quantidade ? (
-                          <span className="text-xs text-muted-foreground flex-shrink-0">
-                            {rec.quantidade}{rec.unidade ? ` ${rec.unidade}` : ''}
-                          </span>
-                        ) : null}
-                        {rec.obrigatorio && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
-                            obrigatorio
-                          </span>
-                        )}
-                      </div>
+                    {details.recursos.map((rec) => (
+                      <LinhaDeCusto
+                        key={rec.id}
+                        rotulo={rotuloCategoria(rec.recurso.categoria)}
+                        nome={rec.recurso.nome}
+                        uso={descreverUso(rec.recurso, rec)}
+                        subtotal={rec.fornecido_pelo_cliente ? 'do cliente' : rec.subtotal}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Maquinário (SN-85) */}
+              {details.maquinarios && details.maquinarios.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Construction className="h-3.5 w-3.5 text-muted-foreground" />
+                    <p className="text-xs font-medium text-muted-foreground">Maquinário ({details.maquinarios.length})</p>
+                  </div>
+                  <div className="space-y-1">
+                    {details.maquinarios.map((maq) => (
+                      <LinhaDeCusto
+                        key={maq.id}
+                        nome={maq.maquinario.nome}
+                        uso={descreverUso(maq.maquinario, maq)}
+                        subtotal={maq.subtotal}
+                      />
                     ))}
                   </div>
                 </div>
@@ -271,6 +292,7 @@ export function InstrucaoExpandableCard({
               {/* Empty state if no sub-instrucoes and no recursos */}
               {(!details.sub_instrucoes || details.sub_instrucoes.length === 0) &&
                (!details.recursos || details.recursos.length === 0) &&
+               (!details.maquinarios || details.maquinarios.length === 0) &&
                !details.descricao && (
                 <p className="text-sm text-muted-foreground">Nenhum detalhe adicional disponivel.</p>
               )}
@@ -329,6 +351,22 @@ function ValorDaInstrucao({
         }
       }}
     />
+  );
+}
+
+/** Uma linha de recurso ou maquinário: o que é, quanto se usa e quanto custa (do servidor) */
+function LinhaDeCusto({ rotulo, nome, uso, subtotal }: { rotulo?: string; nome: string; uso: string; subtotal: number | null | string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm pl-1">
+      {rotulo && (
+        <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">{rotulo}</span>
+      )}
+      <span className="min-w-0 flex-1">{nome}</span>
+      <span className="text-xs text-muted-foreground flex-shrink-0">{uso}</span>
+      <span className="text-xs text-foreground flex-shrink-0">
+        {typeof subtotal === 'string' ? subtotal : subtotal === null ? 'sem preço' : moeda(subtotal)}
+      </span>
+    </div>
   );
 }
 

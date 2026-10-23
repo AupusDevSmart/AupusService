@@ -5,6 +5,7 @@ import { useAnomaliasFilters } from '../hooks/useAnomaliasFilters';
 import { anomaliasService } from '@/services/anomalias.service';
 import { toast } from '@/hooks/use-toast';
 import { formatApiError } from '@/utils/api-error';
+import type { Anomalia } from '../types';
 
 /**
  * Abre uma anomalia em modo leitura a partir do id, para ser usado de fora da
@@ -23,7 +24,7 @@ interface AnomaliaViewSheetProps {
 
 export function AnomaliaViewSheet({ anomaliaId, isOpen, onClose }: AnomaliaViewSheetProps) {
   const { formFields } = useAnomaliasFilters({});
-  const [anomalia, setAnomalia] = useState<unknown>(null);
+  const [anomalia, setAnomalia] = useState<Anomalia | null>(null);
   const [carregando, setCarregando] = useState(false);
 
   useEffect(() => {

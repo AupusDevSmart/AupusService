@@ -1,7 +1,7 @@
 // src/features/anomalias/hooks/useAnomaliasApi.ts
 import { useState, useCallback } from 'react';
 import { anomaliasService, AnomaliasResponse, AnomaliasStats } from '@/services/anomalias.service';
-import { Anomalia, AnomaliaFormData } from '../types';
+import { Anomalia, AnomaliaFormData, AnomaliasFilters } from '../types';
 
 export function useAnomaliasApi() {
   const [anomalias, setAnomalias] = useState<Anomalia[]>([]);
@@ -10,7 +10,7 @@ export function useAnomaliasApi() {
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchAnomalias = useCallback(async (params: any = {}) => {
+  const fetchAnomalias = useCallback(async (params: Partial<AnomaliasFilters> = {}) => {
     try {
       setLoading(true);
       const response: AnomaliasResponse = await anomaliasService.findAll(params);

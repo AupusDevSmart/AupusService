@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, Loader2, Factory } from 'lucide-react';
 import { useHttpClient } from '@/core/context/hooks';
+import { erroParaATela } from '@/utils/api-error';
 
 interface UsuarioPlantasTabProps {
   usuarioId: string;
@@ -31,13 +32,13 @@ export function UsuarioPlantasTab({ usuarioId }: UsuarioPlantasTabProps) {
       setLoading(true);
       setError(null);
       try {
-        const resp = await httpClient.get(`/usuarios/${usuarioId.trim()}/plantas-operadas`);
+        const resp = await httpClient.get<VinculoPlanta[] | { data?: VinculoPlanta[] }>(`/usuarios/${usuarioId.trim()}/plantas-operadas`);
         if (cancel) return;
         const data = Array.isArray(resp.data) ? resp.data : resp.data?.data ?? [];
         setVinculos(data);
-      } catch (err: any) {
+      } catch (err) {
         if (cancel) return;
-        setError(err?.response?.data?.message || err?.message || 'Erro ao carregar plantas atribuidas');
+        setError(erroParaATela(err));
       } finally {
         if (!cancel) setLoading(false);
       }

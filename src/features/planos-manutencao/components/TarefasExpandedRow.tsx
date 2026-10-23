@@ -14,7 +14,7 @@ import {
 } from '@/services/instrucoes.services';
 import { type SituacaoDaTarefa } from '@/services/historico-equipamento.services';
 import { toast } from '@/hooks/use-toast';
-import { formatApiError } from '@/utils/api-error';
+import { erroParaATela, formatApiError } from '@/utils/api-error';
 
 const frequenciaOptions: Array<{ value: FrequenciaTarefa; label: string }> = [
   { value: 'DIARIA', label: 'Diária' },
@@ -216,7 +216,8 @@ export function TarefasExpandedRow({
       await carregarTarefas();
       onTarefasChange?.();
     } catch (error) {
-      setErro(formatApiError(error));
+      // Aviso, e não o bloco do topo da lista: a linha em edição pode estar lá embaixo (SN-43)
+      toast({ title: 'Não foi possível salvar a tarefa', description: formatApiError(error), variant: 'destructive' });
     } finally {
       setSalvando(false);
     }
@@ -325,7 +326,7 @@ export function TarefasExpandedRow({
       await carregarTarefas();
       onTarefasChange?.();
     } catch (error) {
-      setErro(formatApiError(error));
+      setErro(erroParaATela(error));
     } finally {
       setSalvando(false);
     }

@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { formatApiError } from '@/utils/api-error';
 import { instrucoesApi, type InstrucaoApiResponse } from '@/services/instrucoes.services';
 import { useInstrucoesFilters } from '../hooks/useInstrucoesFilters';
-import { InstrucoesModal } from './InstrucoesModal';
+import { InstrucoesModal, type FormularioDaInstrucao } from './InstrucoesModal';
 
 interface EditarInstrucaoSheetProps {
   /** A instrução a abrir. Nulo mantém o sheet fechado. */
@@ -67,32 +67,13 @@ export function EditarInstrucaoSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instrucaoId]);
 
-  const salvar = async (dados: any) => {
+  const salvar = async (dados: FormularioDaInstrucao) => {
     if (!instrucao) return;
 
-    // O BaseModal semeia o formData com a entidade inteira, e o
-    // `forbidNonWhitelisted` do backend rejeita o que não está no DTO.
-    const somenteLeitura = [
-      'id',
-      'created_at',
-      'updated_at',
-      'deleted_at',
-      'total_sub_instrucoes',
-      'total_recursos',
-      'total_anexos',
-      'total_tarefas_derivadas',
-      'usuario_criador',
-      'usuario_atualizador',
-      'criado_por',
-      'atualizado_por',
-      'anexos',
-    ];
-
-    const limpo = { ...dados };
-    somenteLeitura.forEach((campo) => delete limpo[campo]);
-
+    // O BaseModal semeia o formData com a entidade inteira; o service manda só o
+    // que o DTO aceita (lista branca), senão o `forbidNonWhitelisted` recusaria
     try {
-      await instrucoesApi.update(instrucao.id.trim(), limpo);
+      await instrucoesApi.update(instrucao.id.trim(), dados);
       toast.success('Instrução atualizada');
       onSalvo?.();
       onClose();

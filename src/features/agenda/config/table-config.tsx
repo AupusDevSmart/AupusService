@@ -3,14 +3,17 @@ import {
   Calendar,
   Building2,
   Clock,
-  Badge,
   Repeat,
   Globe,
   CheckCircle,
   XCircle
 } from 'lucide-react';
 import { TableColumn } from '@/types/base';
+import { formatarDiaDeCalendario } from '@/utils/dia-de-calendario';
 import { FeriadoResponse, ConfiguracaoDiasUteisResponse } from '../types';
+
+/** Marca neutra (o padrão da casa: cor só para o que pede atenção). */
+const CHIP = 'flex items-center gap-1 rounded border border-border px-2 py-0.5 text-xs text-muted-foreground';
 
 // ============================================================================
 // FERIADOS TABLE CONFIG
@@ -25,13 +28,13 @@ export const feriadosTableColumns: TableColumn<FeriadoResponse>[] = [
     render: (feriado) => (
       <div className="space-y-1">
         <div className="flex items-center gap-2 font-medium text-foreground">
-          <Calendar className="h-4 w-4 text-blue-600 shrink-0" />
+          <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
           <span className="truncate" title={feriado.nome}>
             {feriado.nome}
           </span>
         </div>
         <div className="text-xs text-muted-foreground">
-          {formatDate(feriado.data)}
+          {formatarDiaDeCalendario(feriado.data)}
         </div>
       </div>
     )
@@ -43,10 +46,7 @@ export const feriadosTableColumns: TableColumn<FeriadoResponse>[] = [
     render: (feriado) => {
       const typeConfig = getTipoConfig(feriado.tipo);
       return (
-        <div className="flex items-center gap-2">
-          <Badge className={`h-3 w-3 shrink-0 ${typeConfig.color}`} />
-          <span className="text-sm truncate">{typeConfig.label}</span>
-        </div>
+        <span className="text-sm truncate">{typeConfig.label}</span>
       );
     }
   },
@@ -57,13 +57,13 @@ export const feriadosTableColumns: TableColumn<FeriadoResponse>[] = [
     render: (feriado) => (
       <div className="flex gap-1 flex-wrap">
         {feriado.geral && (
-          <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded text-xs">
+          <div className={CHIP}>
             <Globe className="h-3 w-3" />
             <span>Geral</span>
           </div>
         )}
         {feriado.recorrente && (
-          <div className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded text-xs">
+          <div className={CHIP}>
             <Repeat className="h-3 w-3" />
             <span>Recorrente</span>
           </div>
@@ -94,13 +94,13 @@ export const feriadosTableColumns: TableColumn<FeriadoResponse>[] = [
       <div className="flex items-center gap-2">
         {feriado.ativo ? (
           <>
-            <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-            <span className="text-sm text-green-700 dark:text-green-400">Ativo</span>
+            <CheckCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm text-foreground">Ativo</span>
           </>
         ) : (
           <>
-            <XCircle className="h-4 w-4 text-red-600 shrink-0" />
-            <span className="text-sm text-red-700 dark:text-red-400">Inativo</span>
+            <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm text-muted-foreground">Inativo</span>
           </>
         )}
       </div>
@@ -144,7 +144,7 @@ export const configuracoesDiasUteisTableColumns: TableColumn<ConfiguracaoDiasUte
     render: (config) => (
       <div className="space-y-1">
         <div className="flex items-center gap-2 font-medium text-foreground">
-          <Clock className="h-4 w-4 text-purple-600 shrink-0" />
+          <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
           <span className="truncate" title={config.nome}>
             {config.nome}
           </span>
@@ -173,7 +173,7 @@ export const configuracoesDiasUteisTableColumns: TableColumn<ConfiguracaoDiasUte
           {config.dias_uteis_semana.map((dia) => (
             <span
               key={dia}
-              className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded text-xs"
+              className={CHIP}
             >
               {getDiaAbreviado(dia)}
             </span>
@@ -191,12 +191,12 @@ export const configuracoesDiasUteisTableColumns: TableColumn<ConfiguracaoDiasUte
       <div className="space-y-1">
         <div className="flex gap-1 flex-wrap">
           {config.sabado && (
-            <div className="flex items-center gap-1 px-2 py-1 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 rounded text-xs">
+            <div className={CHIP}>
               <span>Sáb</span>
             </div>
           )}
           {config.domingo && (
-            <div className="flex items-center gap-1 px-2 py-1 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 rounded text-xs">
+            <div className={CHIP}>
               <span>Dom</span>
             </div>
           )}
@@ -216,7 +216,7 @@ export const configuracoesDiasUteisTableColumns: TableColumn<ConfiguracaoDiasUte
       <div className="flex items-center gap-2">
         {config.geral ? (
           <>
-            <Globe className="h-3 w-3 text-blue-600 shrink-0" />
+            <Globe className="h-3 w-3 text-muted-foreground shrink-0" />
             <span className="text-sm truncate">Geral</span>
           </>
         ) : (
@@ -237,13 +237,13 @@ export const configuracoesDiasUteisTableColumns: TableColumn<ConfiguracaoDiasUte
       <div className="flex items-center gap-2">
         {config.ativo ? (
           <>
-            <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-            <span className="text-sm text-green-700 dark:text-green-400">Ativo</span>
+            <CheckCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm text-foreground">Ativo</span>
           </>
         ) : (
           <>
-            <XCircle className="h-4 w-4 text-red-600 shrink-0" />
-            <span className="text-sm text-red-700 dark:text-red-400">Inativo</span>
+            <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm text-muted-foreground">Inativo</span>
           </>
         )}
       </div>
@@ -293,12 +293,12 @@ function formatDate(dateString: string): string {
 
 function getTipoConfig(tipo: string) {
   const configs = {
-    NACIONAL: { label: 'Nacional', color: 'text-blue-600' },
-    ESTADUAL: { label: 'Estadual', color: 'text-green-600' },
-    MUNICIPAL: { label: 'Municipal', color: 'text-orange-600' },
-    PERSONALIZADO: { label: 'Personalizado', color: 'text-purple-600' }
+    NACIONAL: { label: 'Nacional' },
+    ESTADUAL: { label: 'Estadual' },
+    MUNICIPAL: { label: 'Municipal' },
+    PERSONALIZADO: { label: 'Personalizado' }
   };
-  return configs[tipo as keyof typeof configs] || { label: tipo, color: 'text-gray-600' };
+  return configs[tipo as keyof typeof configs] || { label: tipo };
 }
 
 function getDiaAbreviado(dia: string): string {

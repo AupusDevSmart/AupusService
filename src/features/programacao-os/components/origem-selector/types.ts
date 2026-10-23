@@ -1,4 +1,5 @@
 // src/features/programacao-os/components/origem-selector/types.ts
+import type { TarefasPorPlano } from '@/features/programacao-os/types';
 
 /**
  * Tipo de origem da ordem de serviço
@@ -17,7 +18,7 @@ export interface OrigemOSValue {
   plantaId?: string;
   unidadeId?: string;
   planosSelecionados?: string[];
-  tarefasPorPlano?: any;
+  tarefasPorPlano?: TarefasPorPlano;
   /**
    * Origem pedida pelo atalho "Programar" de outra tela (`?origem=&id=`). O
    * seletor resolve, escolhe pela mesma função do clique e remove este campo —
@@ -133,17 +134,17 @@ export interface TarefaDisponivel {
   ordem?: number;
   instrucao?: {
     id?: string;
-    tag?: string;
+    /** SN-85: era tag */
+    codigo?: string;
     nome?: string;
-    categoria?: string;
-    tipo_manutencao?: string;
-    descricao?: string;
+    descricao?: string | null;
     sub_instrucoes?: Array<{
       id?: string;
       descricao: string;
       obrigatoria?: boolean;
       ordem?: number;
-      tempo_estimado?: number | null;
+      /** SN-85: em horas (era tempo_estimado, em minutos) */
+      duracao_horas?: number | null;
     }>;
   };
 }

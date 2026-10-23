@@ -21,6 +21,9 @@ export default mergeConfig(
     test: {
       globals: true,
       environment: 'happy-dom',
+      // O fuso de quem usa: em UTC, mostrar meia-noite UTC no fuso local (o bug do
+      // feriado um dia antes) passaria verde
+      env: { TZ: 'America/Sao_Paulo' },
       setupFiles: './src/test-setup.ts',
       include: ['**/*.{test,spec}.{ts,tsx}'],
       exclude: ['node_modules', 'dist', 'e2e'],

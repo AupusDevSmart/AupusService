@@ -3,7 +3,7 @@ import React from 'react';
 import { Car, Calendar, User, FileText, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { formatarDiaDaReserva } from '@/features/reservas/utils/dia-da-reserva';
 
-interface ReservaVinculada {
+export interface ReservaVinculada {
   id: string;
   veiculo_id: string;
   data_inicio: string;

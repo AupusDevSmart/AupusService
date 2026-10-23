@@ -221,10 +221,21 @@ export function PropostaSection({
     [],
   );
 
+  // Salva, a lista é a da leitura do servidor; no rascunho, a marca de cada item montado aqui
+  const semPreco = useMemo(
+    () => [
+      ...new Set([
+        ...(proposta.instrucoes_sem_preco ?? []).map((id) => id.trim()),
+        ...proposta.itens.filter((i) => i.sem_preco_no_cadastro && i.instrucao_id).map((i) => String(i.instrucao_id).trim()),
+      ]),
+    ],
+    [proposta.instrucoes_sem_preco, proposta.itens],
+  );
+
   useEffect(() => {
-    onValoresChange?.({ valores, definir, editavel });
+    onValoresChange?.({ valores, definir, editavel, semPreco });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [valores, definir, editavel]);
+  }, [valores, definir, editavel, semPreco]);
 
   const bdi = calcularBdi(proposta) * 100;
 

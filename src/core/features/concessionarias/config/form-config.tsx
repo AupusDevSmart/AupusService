@@ -3,7 +3,9 @@ import { FormField } from '@/core/types/base';
 import { TarifasFormField } from '../components/TarifasFormField';
 import { EstadoSelectField } from '../components/EstadoSelectField';
 import { AnexosConcessionariaField } from '../components/AnexosConcessionariaField';
+import type { AnexoItem } from '../types';
 import { HoraField } from '../components/HoraField';
+import { horarioObrigatorio } from '@/core/features/concessionarias/utils/formulario';
 
 export const concessionariasFormFields: FormField[] = [
   {
@@ -19,7 +21,7 @@ export const concessionariasFormFields: FormField[] = [
     type: 'custom',
     component: EstadoSelectField,
     required: true,
-  } as any,
+  },
   {
     key: 'numero_reh',
     label: 'REH (Resolucao Homologatoria)',
@@ -51,45 +53,60 @@ export const concessionariasFormFields: FormField[] = [
     label: 'Ponta — Início',
     type: 'custom',
     component: HoraField,
+    validation: horarioObrigatorio,
     group: 'horarios',
     defaultValue: 18,
-  } as any,
+  },
   {
     key: 'hora_fim_ponta',
     label: 'Ponta — Fim',
     type: 'custom',
     component: HoraField,
+    validation: horarioObrigatorio,
     group: 'horarios',
     defaultValue: 21,
-  } as any,
+  },
   {
     key: 'hora_inicio_reservado',
     label: 'Reservado — Início',
     type: 'custom',
     component: HoraField,
+    validation: horarioObrigatorio,
     group: 'horarios',
     defaultValue: 21.5,
-  } as any,
+  },
   {
     key: 'hora_fim_reservado',
     label: 'Reservado — Fim (dia seguinte)',
     type: 'custom',
     component: HoraField,
+    validation: horarioObrigatorio,
     group: 'horarios',
     defaultValue: 6,
-  } as any,
+  },
   {
     key: 'tarifas',
     label: 'Tarifas por Subgrupo',
     type: 'custom',
     component: TarifasFormField,
     colSpan: 2, // Ocupa 2 colunas
-  } as any,
+  },
   {
     key: 'anexos',
     label: 'Anexos',
     type: 'custom',
-    component: AnexosConcessionariaField,
+    // render, e não component: o campo precisa do id e do modo. Com component
+    // eles não chegavam, todo arquivo virava "pendente" e nada subia, nem na
+    // edição (achado no SN-36).
+    render: ({ value, onChange, disabled, mode, entity }) => (
+      <AnexosConcessionariaField
+        concessionariaId={entity?.id ? String(entity.id).trim() : undefined}
+        mode={mode}
+        value={Array.isArray(value) ? (value as AnexoItem[]) : []}
+        onChange={onChange}
+        disabled={disabled}
+      />
+    ),
     colSpan: 2, // Ocupa 2 colunas
-  } as any
+  }
 ];

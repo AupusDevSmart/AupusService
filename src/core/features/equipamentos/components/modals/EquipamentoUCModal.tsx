@@ -1,5 +1,7 @@
 // src/features/equipamentos/components/modals/EquipamentoUCModal.tsx - LAYOUT LIMPO
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { statusDoEquipamento } from '@/core/features/equipamentos/utils/status-do-equipamento';
+import React, { useState, useEffect, useRef } from 'react';
+import { isAxiosError } from 'axios';
 import {
   Select,
   SelectContent,
@@ -17,22 +19,29 @@ import { Badge } from '@/core/components/ui/badge';
 import { Button } from '@/core/components/ui/button';
 import { Alert, AlertDescription } from '@/core/components/ui/alert';
 import { toast } from 'sonner';
+import { formatApiError, mensagemDoBackend } from '@/utils/api-error';
 import { Separator } from '@/core/components/ui/separator';
 import { normalizarTipoEquipamento } from '@/core/features/equipamentos/utils/tipo-equipamento';
 import { PosicaoSelector } from '@/core/features/equipamentos/components/PosicaoSelector';
 import { HistoricoDaPosicao } from '@/core/features/equipamentos/components/HistoricoDaPosicao';
+import { InstalacaoEGarantia } from '@/core/features/equipamentos/components/InstalacaoEGarantia';
+import { CriticidadePelaMatriz } from '@/core/features/equipamentos/components/CriticidadePelaMatriz';
+import { EtiquetasDosEquipamentos } from '@/core/features/equipamentos/components/EtiquetasDosEquipamentos';
+import { dadosDoEquipamento } from '@/core/features/equipamentos/utils/etiqueta';
+import { avaliacaoDaApi, avaliacaoParaApi, problemaDaCriticidade, soAAvaliacao } from '@/core/features/equipamentos/utils/criticidade-pela-matriz';
 import type { AtivoFuncional } from '@/core/features/equipamentos/hooks/useAtivosFuncionais';
-import { camposDaCategoria } from '@/core/features/equipamentos/config/campos-por-categoria';
+import { separarDadosTecnicos } from '@/core/features/equipamentos/utils/dados-tecnicos';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/core/components/ui/tabs';
 import { Checkbox } from '@/core/components/ui/checkbox';
 import { Combobox } from '@/core/components/ui/combobox';
-import { Wrench, Save, X, AlertCircle, Loader2, Eye, Edit2, Plus, Minus, Trash2, Component, History, ArrowLeft } from 'lucide-react';
+import { Wrench, Save, X, AlertCircle, Loader2, Eye, Edit2, Plus, Minus, Trash2, History, ArrowLeft } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/core/components/ui/popover";
-import { Equipamento } from '../../types';
+import { Equipamento, idDoEquipamentoCriado, type PontoEquipamento } from '../../types';
+import type { DadosDoFormulario } from '@/core/types/base';
 
 type AbaSheet = 'dados' | 'itens' | 'tarefas' | 'posicao' | 'historico' | 'anexos';
 
@@ -49,13 +58,14 @@ export interface ContextoSlot {
   categoriaId: string;
   registrarAcaoPosCriacao: (chave: string, acao: (equipamentoId: string) => Promise<void>) => void;
 }
-import { ComponenteUARModal } from './ComponenteUARModal';
+import { ComponenteUARModal, type DadosDoComponenteUAR } from './ComponenteUARModal';
 import { FotoEquipamentoField } from '../FotoEquipamentoField';
 import { AnexosEquipamentoField } from '../AnexosEquipamentoField';
 import { ItensDoLoteField } from '../ItensDoLoteField';
-import type { EquipamentoDoLote } from '@/core/types/contracts';
+import type { EquipamentoDoLote, UseModelosContract } from '@/core/types/contracts';
 import { PontosSection, type PontoFormItem } from '../PontosSection';
-import { useSelectionData, useEquipamentos, useLocationCascade, useCategorias, useModelos, useHttpClient } from '@/core/context/hooks';
+import { useEquipamentos, useLocationCascade, useCategorias, useModelos, useHttpClient } from '@/core/context/hooks';
+import { rodarAcoesPosCriacao, useAcoesPosCriacao } from '@/core/features/equipamentos/utils/acoes-pos-criacao';
 
 // Local type definitions (previously from @/services/tipos-equipamentos.services)
 interface CampoTecnicoSchema {
@@ -67,28 +77,86 @@ interface CampoTecnicoSchema {
   nome?: string;
 }
 
-interface TipoEquipamentoModal {
-  value: string;
-  label: string;
-  categoria: string;
-  camposTecnicos: CampoTecnicoSchema[];
-}
-
 interface TipoEquipamento {
   id: string;
   codigo: string;
   nome: string;
   fabricante: string;
   categoriaId: string;
-  categoria?: { id: string; nome: string };
+  categoria?: { id: string; nome: string } | null;
   propriedadesSchema?: { campos: CampoTecnicoSchema[] };
   propriedades_schema?: { campos: CampoTecnicoSchema[] };
 }
 
-// Local type aliases (previously from service imports)
-type Unidade = any;
-type PlantaResponse = any;
-type ProprietarioBasico = any;
+// Local type aliases (previously from service imports) — a localizacao em
+// view/edit, no que o sheet le: so o nome e exibido.
+type Unidade = { id?: string; nome?: string; plantaId?: string };
+type ProprietarioBasico = { id?: string; nome?: string };
+type PlantaResponse = { id?: string; nome?: string; proprietario?: ProprietarioBasico };
+
+/** O que o Checkbox (Radix) devolve em `onCheckedChange`. */
+type Marcado = boolean | 'indeterminate';
+
+/** O formulario do sheet de UC: o equipamento em camelCase, como os inputs guardam. */
+interface FormularioDoUC {
+  nome?: string;
+  fabricante?: string;
+  fabricanteCustom?: string;
+  modelo?: string;
+  numeroSerie?: string;
+  tag?: string;
+  criticidade?: string;
+  /** SN-64: a avaliação pela matriz */
+  criticidadeImpacto?: number | null;
+  criticidadeProbabilidade?: number | null;
+  criticidadeMotivo?: string | null;
+  /** O CODIGO do tipo escolhido. */
+  tipoEquipamento?: string;
+  tipoEquipamentoId?: string;
+  /** A posicao (ativo funcional) onde o equipamento esta. */
+  ativoFuncionalId?: string;
+  plantaId?: string;
+  unidadeId?: string;
+  proprietarioId?: string;
+  localizacao?: string;
+  localizacaoEspecifica?: string;
+  valorContabil?: number | string;
+  dataImobilizacao?: string;
+  /** SN-66: instalação (a data), garantia, fornecedor e centro de custo */
+  dataInstalacao?: string;
+  garantiaAte?: string;
+  fornecedor?: string;
+  centroCusto?: string;
+  status?: string;
+  emOperacao?: string;
+  mqttHabilitado?: Marcado;
+  topicoMqtt?: string;
+  automacao?: Marcado;
+  mcpse?: boolean;
+  mcpseAtivo?: Marcado;
+  tuc?: string;
+  a1?: string;
+  a2?: string;
+  a3?: string;
+  a4?: string;
+  a5?: string;
+  a6?: string;
+  fotoUrl?: string;
+  tipoEquipamentoObj?: Equipamento['tipoEquipamentoObj'];
+}
+
+/** Um dado tecnico no formulario: o predefinido (do modelo ou da categoria) ou o personalizado. */
+interface DadoTecnicoDoFormulario {
+  id?: string;
+  campo: string;
+  /** Rotulo legivel (campos da categoria); sem ele a tela mostra `campo`. */
+  rotulo?: string;
+  valor: string;
+  tipo: string;
+  unidade?: string;
+  opcoes?: string[];
+  obrigatorio?: boolean;
+}
 
 interface EquipamentoUCModalProps {
   isOpen: boolean;
@@ -100,7 +168,7 @@ interface EquipamentoUCModalProps {
    * permite terminar o cadastro (foto, anexos, plano) sem uma segunda visita
    * ao sheet.
    */
-  onSubmit: (data: any) => any;
+  onSubmit: (data: DadosDoFormulario) => unknown;
   onDelete?: (equipamento: Equipamento) => void;
   onSaveUARs?: (ucId: string, uars: Equipamento[]) => Promise<void>;
   /**
@@ -169,7 +237,6 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   mostrarSupervisorio = false
 }) => {
   const httpClient = useHttpClient();
-  const { fetchTiposEquipamentos } = useSelectionData();
   const duplicandoDeId = duplicarDe?.id?.trim() || null;
 
   const {
@@ -184,7 +251,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     proximoSequencial,
   } = useEquipamentos();
 
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<FormularioDoUC>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -228,7 +295,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     if (alvo <= 1) {
       const primeiro = itensDoLote[0];
       if (primeiro) {
-        setFormData((prev: any) => ({
+        setFormData((prev) => ({
           ...prev,
           nome: primeiro.nome || prev.nome,
           tag: primeiro.tag || prev.tag,
@@ -272,30 +339,13 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
 
   /**
    * O que os slots pediram para acontecer assim que o equipamento nascer.
-   * Ref e nao estado: e lido uma vez no submit e nao deve provocar render.
+   * Recomeça a cada abertura e a cada troca do modo lote: é assim que o plano
+   * escolhido com quantidade 1 deixa de estar registrado quando o campo some no
+   * lote, e que os anexos de um cadastro não sobem no seguinte.
    */
-  const acoesPosCriacaoRef = useRef<Map<string, (equipamentoId: string) => Promise<void>>>(new Map());
-
-  /**
-   * A identidade muda junto com o modo, de propósito: quem continua montado se
-   * registra de novo, e quem saiu de cena não. É assim que o plano escolhido
-   * com quantidade 1 deixa de estar registrado quando o campo some no lote.
-   */
-  const registrarAcaoPosCriacao = useCallback(
-    (chave: string, acao: (equipamentoId: string) => Promise<void>) => {
-      acoesPosCriacaoRef.current.set(chave, acao);
-    },
-    [modoLote],
-  );
-
-  // Limpa durante o render, e não num efeito: os efeitos dos filhos rodam antes
-  // do efeito do pai, então limpar depois apagaria o registro que eles acabaram
-  // de refazer.
-  const modoLoteAnteriorRef = useRef(modoLote);
-  if (modoLoteAnteriorRef.current !== modoLote) {
-    modoLoteAnteriorRef.current = modoLote;
-    acoesPosCriacaoRef.current.clear();
-  }
+  const { acoes: acoesPosCriacaoRef, registrar: registrarAcaoPosCriacao } = useAcoesPosCriacao(isOpen, modoLote);
+  /** A posicao com que o sheet abriu: o salvar compara para saber se instala, transfere ou remove. */
+  const posicaoOriginalRef = useRef('');
 
   // Sempre abrir em Dados técnicos: é onde estão os campos obrigatórios, e
   // abrir noutra aba esconderia o que o usuário veio editar.
@@ -305,8 +355,8 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     setItensDoLote([]);
   }, [isOpen, entity?.id]);
 
-  const [dadosTecnicos, setDadosTecnicos] = useState<any[]>([]);
-  const [dadosTecnicosPersonalizados, setDadosTecnicosPersonalizados] = useState<any[]>([]);
+  const [dadosTecnicos, setDadosTecnicos] = useState<DadoTecnicoDoFormulario[]>([]);
+  const [dadosTecnicosPersonalizados, setDadosTecnicosPersonalizados] = useState<DadoTecnicoDoFormulario[]>([]);
   /** Pontos de automacao (PR3) — gerenciado localmente, persistido junto com equipamento. */
   const [pontos, setPontos] = useState<PontoFormItem[]>([]);
 
@@ -317,7 +367,8 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
 
   // Estados para seleção de categoria e modelo
   const [categoriaIdSelecionada, setCategoriaIdSelecionada] = useState<string>('');
-  const [modeloSelecionado, setModeloSelecionado] = useState<TipoEquipamento | null>(null);
+  // Vem do normalizador (tipo local) ou da lista de modelos do useModelos.
+  const [modeloSelecionado, setModeloSelecionado] = useState<TipoEquipamento | UseModelosContract['modelos'][number] | null>(null);
 
   // Hooks para buscar categorias e modelos
   const { categorias, loading: loadingCategorias, refetch: refetchCategorias } = useCategorias();
@@ -347,8 +398,6 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   const [loadingNovoModelo, setLoadingNovoModelo] = useState(false);
 
   // Estados para tipos de equipamentos da API (manter para compatibilidade)
-  const [tiposEquipamentos, setTiposEquipamentos] = useState<TipoEquipamentoModal[]>([]);
-  const [loadingTipos, setLoadingTipos] = useState(false);
 
   // Hook de seleção cascateada para modo create
   const locationCascade = useLocationCascade();
@@ -405,52 +454,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
    * com uma das opções — vazio, 'ativo' minúsculo ou 'Ativo ' com espaço
    * sobrando davam um campo em branco, sem opção nenhuma marcada.
    */
-  const statusAtual =
-    String(formData.status || '').trim().toLowerCase() === 'inativo' ? 'Inativo' : 'Ativo';
-
-  // ============================================================================
-  // CARREGAR TIPOS DE EQUIPAMENTOS DA API
-  // ============================================================================
-  useEffect(() => {
-    const loadTiposEquipamentos = async () => {
-      setLoadingTipos(true);
-      try {
-        const tipos = await fetchTiposEquipamentos();
-
-        const tiposFormatados = tipos.map((tipo: any) => {
-          const campos = tipo.propriedadesSchema?.campos || tipo.propriedades_schema?.campos || [];
-
-          return {
-            value: tipo.codigo,
-            label: tipo.nome,
-            categoria: tipo.categoria,
-            camposTecnicos: campos.map((campo: any) => ({
-              campo: campo.campo || campo.nome,
-              tipo: campo.tipo === 'boolean' ? ('select' as const) : campo.tipo,
-              unidade: campo.unidade,
-              opcoes: campo.opcoes || (campo.tipo === 'boolean' ? ['Sim', 'Nao'] : undefined),
-              obrigatorio: campo.obrigatorio,
-            })),
-          };
-        });
-        setTiposEquipamentos(tiposFormatados);
-      } catch (err) {
-        console.error('[MODAL] Erro ao carregar tipos de equipamentos:', err);
-        avisar('Erro ao carregar tipos de equipamentos');
-      } finally {
-        setLoadingTipos(false);
-      }
-    };
-
-    if (isOpen) {
-      loadTiposEquipamentos();
-    }
-  }, [isOpen, fetchTiposEquipamentos]);
-
-  // Helper para buscar tipo de equipamento
-  const getTipoEquipamento = (codigo: string): TipoEquipamentoModal | undefined => {
-    return tiposEquipamentos.find(t => t.value === codigo);
-  };
+  const statusAtual = statusDoEquipamento(formData.status as string | undefined);
 
   // ============================================================================
   // INICIALIZAÇÃO
@@ -458,13 +462,10 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   /**
    * O que já foi inicializado nesta abertura do sheet.
    *
-   * Sem isso o efeito abaixo roda mais de uma vez por abertura: `tiposEquipamentos`
-   * está nas dependências e troca de identidade quando a lista termina de
-   * carregar. A segunda passagem chamava `initializeForCreate` de novo, que
-   * termina em `locationCascade.reset()` — apagando a localização que a cascata
-   * já tinha pré-selecionado. Era por isso que o proprietário aparecia vazio
-   * mesmo com o filtro preenchido: ele chegava a ser selecionado e era limpo
-   * meio segundo depois, quando os tipos respondiam.
+   * Sem isso o efeito abaixo roda mais de uma vez por abertura (as dependências
+   * trocam de identidade). A segunda passagem chamava `initializeForCreate` de
+   * novo, que termina em `locationCascade.reset()` — apagando a localização que
+   * a cascata já tinha pré-selecionado.
    */
   const inicializadoRef = useRef<string | null>(null);
 
@@ -478,10 +479,6 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     }
 
     if (entidadeEfetiva && (modoEfetivo === 'edit' || modoEfetivo === 'view')) {
-      // Edição depende da lista: é dela que sai o código do tipo do
-      // equipamento e a lista de campos técnicos.
-      if (loadingTipos || tiposEquipamentos.length === 0) return;
-
       // A chave carrega o id EFETIVO, entao visitar um equipamento anterior
       // recarrega o formulario pelo mesmo caminho de sempre — sem duplicar a
       // logica de hidratacao so para a visita.
@@ -499,8 +496,6 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       // equipamento, só que sem o que identifica um exemplar — nome, TAG e
       // número de série saem em branco para serem preenchidos.
       if (duplicarDe?.id) {
-        if (loadingTipos || tiposEquipamentos.length === 0) return;
-
         const chave = `duplicar:${duplicarDe.id}`;
         if (inicializadoRef.current === chave) return;
         inicializadoRef.current = chave;
@@ -515,21 +510,17 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       // acusaria "já inicializado".
       const chave = [
         'create',
-        (entity as any)?.proprietarioId ?? '',
-        (entity as any)?.plantaId ?? '',
-        (entity as any)?.unidadeId ?? '',
+        entity?.proprietarioId ?? '',
+        entity?.plantaId ?? '',
+        entity?.unidadeId ?? '',
       ].join(':');
       if (inicializadoRef.current === chave) return;
       inicializadoRef.current = chave;
 
-      // Cadastro não depende: a lista só serve aos campos técnicos, que só
-      // aparecem depois de escolher o modelo. Esperar por ela significava que
-      // uma falha na chamada deixava o formulário como objeto vazio — sem
-      // status, sem criticidade, sem nenhum padrão.
       setError(null);
       initializeForCreate();
     }
-  }, [isOpen, entidadeEfetiva, modoEfetivo, loadingTipos, tiposEquipamentos, duplicarDe?.id]);
+  }, [isOpen, entidadeEfetiva, modoEfetivo, duplicarDe?.id]);
 
   /**
    * Preenche a cascata de localização quando o sheet abre em modo create já
@@ -553,9 +544,9 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   useEffect(() => {
     if (!isOpen || mode !== 'create') return;
 
-    const proprietarioId = (entity as any)?.proprietarioId?.trim();
-    const plantaId = (entity as any)?.plantaId?.trim();
-    const unidadeId = (entity as any)?.unidadeId?.trim();
+    const proprietarioId = entity?.proprietarioId?.trim();
+    const plantaId = entity?.plantaId?.trim();
+    const unidadeId = entity?.unidadeId?.trim();
     if (!proprietarioId && !plantaId && !unidadeId) return;
 
     let cancelado = false;
@@ -601,7 +592,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       cancelado = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, mode, (entity as any)?.proprietarioId, (entity as any)?.plantaId, (entity as any)?.unidadeId]);
+  }, [isOpen, mode, entity?.proprietarioId, entity?.plantaId, entity?.unidadeId]);
 
   useEffect(() => {
     const pendente = pendenteLocalizacaoRef.current;
@@ -639,7 +630,6 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       let dadosCompletos = equipamento;
       if (getEquipamento && equipamento.id) {
         dadosCompletos = await getEquipamento(equipamento.id);
-      } else {
       }
 
 
@@ -662,6 +652,12 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         setModeloSelecionado(tipoCompleto);
       }
 
+      // Duplicar nao leva a posicao: ela tem um ocupante so
+      const posicaoAtual = paraDuplicar
+        ? ''
+        : (dadosCompletos.ativo_funcional_id ?? dadosCompletos.ativoFuncionalId ?? dadosCompletos.ativo_funcional?.id)?.toString().trim() || '';
+      posicaoOriginalRef.current = posicaoAtual;
+
       setFormData({
         // Duplicar copia tudo menos o que identifica o exemplar: dois
         // equipamentos não dividem nome, TAG nem número de série.
@@ -672,20 +668,29 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         numeroSerie: paraDuplicar ? '' : dadosCompletos.numeroSerie || '',
         tag: paraDuplicar ? '' : dadosCompletos.tag || '',
         criticidade: dadosCompletos.criticidade || '3',
+        // Duplicar leva a avaliação, como a criticidade: é da função, não do exemplar
+        ...avaliacaoDaApi({
+          criticidade_impacto: dadosCompletos.criticidadeImpacto,
+          criticidade_probabilidade: dadosCompletos.criticidadeProbabilidade,
+          criticidade_motivo: dadosCompletos.criticidadeMotivo,
+        }),
         tipoEquipamento: codigoTipo?.trim() || '',
         tipoEquipamentoId: tipoCompleto?.id?.trim() || '',
         // A posicao onde este equipamento esta. Sem isto o historico nunca
         // aparece em edicao, e o campo de posicao volta em branco num
         // equipamento que ja tem uma.
-        ativoFuncionalId: (dadosCompletos.ativo_funcional_id
-          ?? dadosCompletos.ativoFuncionalId
-          ?? dadosCompletos.ativo_funcional?.id)?.toString().trim() || '',
+        ativoFuncionalId: posicaoAtual,
         plantaId: dadosCompletos.unidade?.plantaId || '',
         unidadeId: dadosCompletos.unidadeId || dadosCompletos.unidade?.id || '',  // ✅ CORRIGIDO: pegar unidade.id se unidadeId não existir
         proprietarioId: dadosCompletos.proprietarioId || '',
         localizacao: dadosCompletos.localizacao || '',
         valorContabil: dadosCompletos.valorContabil || '',
         dataImobilizacao: dadosCompletos.dataImobilizacao || '',
+        // A instalação e a garantia são da máquina: duplicar não as leva (como o número de série)
+        dataInstalacao: paraDuplicar ? '' : dadosCompletos.dataInstalacao || '',
+        garantiaAte: paraDuplicar ? '' : dadosCompletos.garantiaAte || '',
+        fornecedor: dadosCompletos.fornecedor || '',
+        centroCusto: dadosCompletos.centroCusto || '',
         status: dadosCompletos.status || 'Ativo',
         emOperacao: dadosCompletos.emOperacao || '',
         // Campos MQTT
@@ -710,13 +715,13 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       });
 
       // Hidratar pontos de automacao (PR3) — dadosCompletos.equipamento_pontos vem do backend findOne
-      const pontosRaw =
-        (dadosCompletos as any).equipamento_pontos ??
-        (dadosCompletos as any).pontos ??
+      const pontosRaw: PontoEquipamento[] =
+        dadosCompletos.equipamento_pontos ??
+        dadosCompletos.pontos ??
         [];
       setPontos(
         Array.isArray(pontosRaw)
-          ? pontosRaw.map((p: any, idx: number) => ({
+          ? pontosRaw.map((p, idx) => ({
               id: p.id?.trim?.() ?? p.id,
               tipo: p.tipo,
               nome: p.nome ?? '',
@@ -729,38 +734,16 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
 
       // Separar dados técnicos em pré-definidos e personalizados
 
-      if (dadosCompletos.dadosTecnicos && dadosCompletos.dadosTecnicos.length > 0) {
-        const codigoTipo = dadosCompletos.tipoEquipamentoObj?.codigo || dadosCompletos.tipoEquipamento || dadosCompletos.tipo || '';
-        const tipoEqp = getTipoEquipamento(codigoTipo);
-
-        if (tipoEqp) {
-          const camposPredefinidos = tipoEqp.camposTecnicos.map(campo => campo.campo);
-
-          // Inicializar campos predefinidos com valores do banco ou vazios
-          const predefinidosComValores = tipoEqp.camposTecnicos.map(campo => {
-            const dadoExistente = dadosCompletos.dadosTecnicos?.find(d => d.campo === campo.campo);
-            return {
-              campo: campo.campo,
-              valor: dadoExistente?.valor || '',
-              tipo: campo.tipo,
-              unidade: campo.unidade || '',
-              obrigatorio: campo.obrigatorio || false
-            };
-          });
-
-          // Campos personalizados são apenas os que NÃO são predefinidos
-          const personalizados = dadosCompletos.dadosTecnicos.filter(dado =>
-            !camposPredefinidos.includes(dado.campo)
-          );
-
-
-          setDadosTecnicos(predefinidosComValores);
-          setDadosTecnicosPersonalizados(personalizados);
-        } else {
-          setDadosTecnicosPersonalizados(dadosCompletos.dadosTecnicos);
-        }
-      } else {
-      }
+      // Os campos técnicos vêm da categoria (SN-42): os padrão dela preenchidos
+      // com o gravado, e o gravado fora do padrão como personalizado.
+      const categoriaDoTipo = dadosCompletos.tipoEquipamentoObj?.categoria;
+      const nomeDaCategoria =
+        (typeof categoriaDoTipo === 'string' ? categoriaDoTipo : categoriaDoTipo?.nome) ||
+        tipoCompleto?.categoria?.nome ||
+        categorias.find((c) => c.id?.trim() === tipoCompleto?.categoriaId?.trim())?.nome;
+      const { padrao, personalizados } = separarDadosTecnicos(nomeDaCategoria, dadosCompletos.dadosTecnicos ?? []);
+      setDadosTecnicos(padrao);
+      setDadosTecnicosPersonalizados(personalizados);
 
       // Buscar hierarquia completa recursivamente (Unidade → Planta → Proprietário)
       if (mode === 'view' || mode === 'edit') {
@@ -784,9 +767,12 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
                   setProprietarioDetalhes(planta.proprietario);
                 }
               } catch (err) {
+                // Antes era engolido: o sheet abria sem planta e sem proprietário, calado
+                avisar('Não foi possível carregar a planta deste equipamento', formatApiError(err));
               }
             }
           } catch (err) {
+            avisar('Não foi possível carregar a instalação deste equipamento', formatApiError(err));
           }
         }
 
@@ -796,21 +782,21 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
             setLoadingUARs(true);
             const result = await fetchComponentesParaGerenciar(dadosCompletos.id);
             setUarsLista(result.componentes || []);
-          } catch (err: any) {
+          } catch (err) {
             setUarsLista([]);
             // Falhar calado aqui produz o pior sintoma possivel: a secao diz
             // "Componentes UAR (0)" e o equipamento parece nao ter nenhum,
-            // quando na verdade a consulta nem completou. O 403 e o caso
-            // comum -- a rota exige equipamentos.manage, que o operador nao
-            // tem -- e sem aviso ninguem descobre isso pela tela.
-            const status = err?.response?.status;
+            // quando na verdade a consulta nem completou. Desde o SN-57 o
+            // escopo responde 404 (planta fora do acesso = "não existe"); o
+            // 403 é a permissão que falta.
+            const status = isAxiosError(err) ? err.response?.status : undefined;
             avisar(
               status === 403
                 ? 'Sem permissão para ver os componentes deste equipamento'
-                : 'Não foi possível carregar os componentes',
-              status === 403
-                ? 'A lista exige a permissão equipamentos.manage.'
-                : undefined,
+                : status === 404
+                  ? 'Componentes não encontrados'
+                  : 'Não foi possível carregar os componentes',
+              status === 404 ? 'O equipamento não existe ou não está nas suas plantas.' : undefined,
             );
           } finally {
             setLoadingUARs(false);
@@ -841,6 +827,10 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       localizacao: '',
       valorContabil: '',
       dataImobilizacao: '',
+      dataInstalacao: '',
+      garantiaAte: '',
+      fornecedor: '',
+      centroCusto: '',
       status: 'Ativo',
       emOperacao: 'sim',
       // Campos MQTT
@@ -879,8 +869,8 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   // ============================================================================
   // HANDLERS
   // ============================================================================
-  const handleInputChange = (field: string, value: any) => {
-    setFormData((prev: any) => ({
+  const handleInputChange = <K extends keyof FormularioDoUC>(field: K, value: FormularioDoUC[K]) => {
+    setFormData((prev) => ({
       ...prev,
       [field]: value
     }));
@@ -922,7 +912,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       setFotoUploading(true);
       setError(null);
       const result = await uploadFoto(entity.id.trim(), file);
-      setFormData((prev: any) => ({ ...prev, fotoUrl: result.fotoUrl }));
+      setFormData((prev) => ({ ...prev, fotoUrl: result.fotoUrl }));
     } catch {
       avisar('Falha ao enviar foto. Tente novamente.');
     } finally {
@@ -944,7 +934,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       setFotoUploading(true);
       setError(null);
       await removeFoto(entity.id.trim());
-      setFormData((prev: any) => ({ ...prev, fotoUrl: '' }));
+      setFormData((prev) => ({ ...prev, fotoUrl: '' }));
     } catch {
       avisar('Falha ao remover foto.');
     } finally {
@@ -972,7 +962,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     const escolhida = categorias.find(cat => cat.id?.trim() === trimmedId);
     const sugestao = escolhida?.nome || '';
 
-    setFormData((prev: any) => {
+    setFormData((prev) => {
       const atual = (prev.nome || '').trim();
       const intocado = !atual || atual === (anterior?.nome || '').trim();
 
@@ -994,18 +984,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     // vazia e nao havia como saber o que preencher.
     //
     // O mapeamento por categoria nao depende de tipo nenhum existir.
-    const padrao = camposDaCategoria(escolhida?.nome);
-    setDadosTecnicos(
-      padrao.map(c => ({
-        campo: c.campo,
-        rotulo: c.rotulo,
-        valor: "",
-        tipo: c.tipo,
-        unidade: c.unidade || "",
-        opcoes: c.opcoes,
-        obrigatorio: false,
-      })),
-    );
+    setDadosTecnicos(separarDadosTecnicos(escolhida?.nome).padrao);
   };
 
   // Handler para mudança de modelo - preenche fabricante automaticamente
@@ -1018,51 +997,13 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       setModeloSelecionado(modelo);
 
       // Preencher tipo de equipamento e fabricante
-      setFormData((prev: any) => ({
+      setFormData((prev) => ({
         ...prev,
         tipoEquipamento: modelo.codigo?.trim(),
         tipoEquipamentoId: modelo.id?.trim(),
         fabricante: modelo.fabricante, // Auto-preencher do modelo
       }));
-
-      // Carregar campos técnicos se existirem
-      const tipoFormatado = tiposEquipamentos.find(t => t.value === modelo.codigo);
-      if (tipoFormatado && tipoFormatado.camposTecnicos && tipoFormatado.camposTecnicos.length > 0) {
-        const dadosIniciais = tipoFormatado.camposTecnicos.map(campo => ({
-          campo: campo.campo,
-          valor: '',
-          tipo: campo.tipo,
-          unidade: campo.unidade || '',
-          obrigatorio: campo.obrigatorio || false
-        }));
-        setDadosTecnicos(dadosIniciais);
-      }
-    }
-  };
-
-  const handleTipoEquipamentoChange = (value: string) => {
-    handleInputChange('tipoEquipamento', value);
-
-    // Quando muda o tipo, carregar campos técnicos pré-definidos
-    const tipoEqp = getTipoEquipamento(value);
-
-    if (tipoEqp && tipoEqp.camposTecnicos && tipoEqp.camposTecnicos.length > 0) {
-      const dadosIniciais = tipoEqp.camposTecnicos.map(campo => ({
-        campo: campo.campo,
-        valor: '',
-        tipo: campo.tipo,
-        unidade: campo.unidade || '',
-        obrigatorio: campo.obrigatorio || false
-      }));
-      setDadosTecnicos(dadosIniciais);
-
-      // Remover campos predefinidos dos personalizados para evitar duplicação
-      const camposPredefinidos = tipoEqp.camposTecnicos.map(c => c.campo);
-      setDadosTecnicosPersonalizados(prev =>
-        prev.filter(p => !camposPredefinidos.includes(p.campo))
-      );
-    } else {
-      setDadosTecnicos([]);
+      // Os campos técnicos são os da categoria: escolher o modelo não os troca
     }
   };
 
@@ -1118,7 +1059,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         setCategoriaIdSelecionada(novaCategoria.id);
 
         // Auto-preencher nome do equipamento
-        setFormData((prev: any) => ({
+        setFormData((prev) => ({
           ...prev,
           nome: novaCategoria.nome,
         }));
@@ -1128,9 +1069,9 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         setPopoverCategoriaOpen(false);
 
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('❌ [MODAL] Erro ao criar categoria:', err);
-      avisar(err.response?.data?.message || 'Erro ao criar nova categoria');
+      avisar(mensagemDoBackend(err) || 'Erro ao criar nova categoria');
     } finally {
       setLoadingNovaCategoria(false);
     }
@@ -1176,7 +1117,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
 
         // Selecionar automaticamente o novo modelo
         setModeloSelecionado(novoModelo);
-        setFormData((prev: any) => ({
+        setFormData((prev) => ({
           ...prev,
           tipoEquipamento: novoModelo.codigo,
           tipoEquipamentoId: novoModelo.id,
@@ -1190,9 +1131,9 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         setPopoverModeloOpen(false);
 
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('❌ [MODAL] Erro ao criar modelo:', err);
-      avisar(err.response?.data?.message || 'Erro ao criar novo modelo');
+      avisar(mensagemDoBackend(err) || 'Erro ao criar novo modelo');
     } finally {
       setLoadingNovoModelo(false);
     }
@@ -1209,12 +1150,12 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
    * Falha aqui não desfaz nada: os equipamentos já existem. O erro é dito com
    * todas as letras para que a pessoa saiba o que ainda falta.
    */
-  const submeterLote = async (submitData: any) => {
+  const submeterLote = async (submitData: DadosDoFormulario) => {
     const { total, equipamentos } = await createEquipamentosLote(submitData, itensDoLote);
 
     const ids = (equipamentos || [])
-      .map((e: any) => e?.id?.trim())
-      .filter(Boolean);
+      .map((e) => e?.id?.trim())
+      .filter((id): id is string => Boolean(id));
 
     if (ids.length === 0) {
       await aoCriarEmLote?.(total);
@@ -1236,13 +1177,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       }
     }
 
-    for (const [chave, acao] of acoesPosCriacaoRef.current) {
-      try {
-        await acao(primeiro);
-      } catch {
-        pendencias.push(chave);
-      }
-    }
+    pendencias.push(...(await rodarAcoesPosCriacao(acoesPosCriacaoRef.current, primeiro)));
 
     // Numa duplicacao em lote os documentos vem do equipamento de origem, e
     // nao do primeiro criado — que pode nem ter anexo nenhum.
@@ -1308,6 +1243,13 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         }
       }
 
+      // SN-64: a mesma conferência da API, antes de mandar
+      const problemaNaCriticidade = problemaDaCriticidade(formData);
+      if (problemaNaCriticidade) {
+        avisar(problemaNaCriticidade);
+        return;
+      }
+
       // Validar MQTT: se habilitado, tópico é obrigatório
       if (formData.mqttHabilitado && !formData.topicoMqtt?.trim()) {
         avisar('Tópico MQTT é obrigatório quando MQTT está habilitado');
@@ -1363,20 +1305,24 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         nome: formData.nome,
         classificacao: 'UC',
         unidade_id: isCreating ? locationCascade.selectedUnidadeId : formData.unidadeId,
-        // A posicao onde este equipamento fica instalado.
-        ativo_funcional_id: formData.ativoFuncionalId || undefined,
         fabricante: formData.fabricante,
         fabricante_custom: formData.fabricanteCustom || undefined, // ✅ NOVO: Fabricante customizado se divergir do modelo
         modelo: formData.modelo,
         numero_serie: formData.numeroSerie,
         tag: formData.tag,
         criticidade: formData.criticidade,
+        ...avaliacaoParaApi(formData),
         tipo_equipamento: formData.tipoEquipamento,  // Código (compatibilidade)
         tipo_equipamento_id: tipoEqpId,  // ID do tipo (correto)
         status: statusAtual,
         em_operacao: formData.emOperacao,
         data_imobilizacao: dataImobilizacaoFormatted,
-        valor_contabil: formData.valorContabil ? parseFloat(formData.valorContabil) : undefined,
+        // SN-66: vazio vai null (apagar é apagar). A API aceita AAAA-MM-DD (@DiaDeCalendario)
+        data_instalacao: formData.dataInstalacao || null,
+        garantia_ate: formData.garantiaAte || null,
+        fornecedor: formData.fornecedor?.trim() || null,
+        centro_custo: formData.centroCusto?.trim() || null,
+        valor_contabil: formData.valorContabil ? parseFloat(String(formData.valorContabil)) : undefined,
         localizacao: formData.localizacao,
         // Campos MQTT
         mqtt_habilitado: formData.mqttHabilitado,
@@ -1425,12 +1371,25 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
 
       const criado = await onSubmit(submitData);
 
+      // A posicao vai pelas rotas proprias (instalar, transferir, remover): o
+      // equipamento nao aceita ativo_funcional_id, e manda-lo junto dava 400 em
+      // todo salvar de equipamento com posicao (achado no SN-36).
+      const equipamentoId = mode === 'create' ? idDoEquipamentoCriado(criado) : entity?.id ? String(entity.id).trim() : null;
+      let falhaNaPosicao: string | null = null;
+      if (equipamentoId) {
+        try {
+          await gravarPosicao(equipamentoId, posicaoOriginalRef.current, formData.ativoFuncionalId?.trim() || '');
+        } catch (erro) {
+          falhaNaPosicao = formatApiError(erro);
+        }
+      }
+
       // Cadastro em uma visita so: com o id em maos, sobe a foto escolhida
       // antes de existir equipamento e executa o que os slots registraram
       // (vincular plano, enviar anexos). Falha aqui nao invalida o
       // equipamento, que ja foi criado — por isso o erro e avisado sem
       // desfazer nada.
-      const novoId = mode === 'create' ? (criado as any)?.id?.trim() : null;
+      const novoId = mode === 'create' ? idDoEquipamentoCriado(criado) : null;
       if (novoId) {
         const pendencias: string[] = [];
 
@@ -1442,13 +1401,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
           }
         }
 
-        for (const [chave, acao] of acoesPosCriacaoRef.current) {
-          try {
-            await acao(novoId);
-          } catch {
-            pendencias.push(chave);
-          }
-        }
+        pendencias.push(...(await rodarAcoesPosCriacao(acoesPosCriacaoRef.current, novoId)));
 
         // Duplicar leva junto os documentos: manual e datasheet sao os mesmos
         // entre equipamentos iguais, e refaze-los a mao seria o trabalho que a
@@ -1461,6 +1414,8 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
           }
         }
 
+        if (falhaNaPosicao) pendencias.push(`a posição (${falhaNaPosicao})`);
+
         if (pendencias.length > 0) {
           setError(
             `Equipamento criado, mas não foi possível salvar: ${pendencias.join(', ')}. ` +
@@ -1470,12 +1425,18 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         }
       }
 
+      if (mode !== 'create' && falhaNaPosicao) {
+        setError(`Equipamento salvo, mas a posição não mudou: ${falhaNaPosicao}`);
+        return;
+      }
+
       onClose();
     } catch (error) {
       // Volta para Dados técnicos: o erro e os campos que o causaram estão lá,
       // e salvar de outra aba mostraria um alerta sobre algo fora da vista.
       setAbaAtiva('dados');
-      avisar('Erro ao salvar equipamento');
+      // Com o motivo: so "Erro ao salvar" escondia o que o backend recusou
+      avisar('Erro ao salvar equipamento', formatApiError(error));
     } finally {
       setLoading(false);
     }
@@ -1499,15 +1460,27 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
 
     return (
       <SheetHeader className="space-y-3">
-        <SheetTitle className="flex items-center gap-2 text-lg">
+        {/* flex-wrap: no celular o nome ia espremido ao lado do título, uma letra por linha (SN-68) */}
+        <SheetTitle className="flex flex-wrap items-center gap-2 pr-8 text-lg">
           {icons[modoEfetivo]}
           {titles[modoEfetivo]}
           {modoEfetivo === 'view' && formData.nome && (
-            <Badge variant="outline" className="ml-2">
+            <Badge variant="outline" className="whitespace-nowrap">
               {formData.nome}
             </Badge>
           )}
         </SheetTitle>
+
+        {/* SN-67: a etiqueta com o QR que abre este cadastro */}
+        {modoEfetivo === 'view' && !visitando && entidadeEfetiva?.id && (
+          <div className="flex flex-wrap gap-2">
+            <EtiquetasDosEquipamentos
+              carregar={async () => [dadosDoEquipamento(entidadeEfetiva)]}
+              nomeDoArquivo={`etiqueta-${(entidadeEfetiva.tag || entidadeEfetiva.nome || 'equipamento').trim()}`}
+              className="btn-minimal-outline h-9 whitespace-nowrap text-sm sm:h-8"
+            />
+          </div>
+        )}
 
         {/* Visitando um equipamento ANTERIOR da posicao.
             A faixa existe porque sem ela o sheet fica indistinguivel do sheet
@@ -1568,8 +1541,25 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
    * modelo, serie e fabricante. Trocar de posicao troca a categoria, e por isso
    * limpa o modelo: um modelo de outra categoria nao serve na posicao nova.
    */
+  /**
+   * Leva a posicao escolhida no sheet ao vinculo, pelas rotas do ativo
+   * funcional: sem posicao antes -> instalar; trocou -> transferir (fecha a
+   * origem e abre o destino numa transacao); tirou -> remover.
+   */
+  const gravarPosicao = async (equipamentoId: string, antes: string, depois: string) => {
+    if (antes === depois) return;
+    if (!antes) {
+      await httpClient.post(`/ativos-funcionais/${depois}/instalar`, { equipamento_id: equipamentoId });
+    } else if (depois) {
+      await httpClient.post(`/ativos-funcionais/equipamentos/${equipamentoId}/transferir`, { ativo_funcional_id: depois });
+    } else {
+      await httpClient.post(`/ativos-funcionais/${antes}/remover`, {});
+    }
+    posicaoOriginalRef.current = depois;
+  };
+
   const handlePosicaoChange = (posicao: AtivoFuncional | null) => {
-    setFormData((prev: any) => ({
+    setFormData((prev) => ({
       ...prev,
       ativoFuncionalId: posicao?.id?.trim() ?? "",
       nome: prev.nome?.trim() ? prev.nome : (posicao?.nome ?? prev.nome),
@@ -1579,7 +1569,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     if (categoria !== categoriaIdSelecionada) {
       setCategoriaIdSelecionada(categoria);
       setModeloSelecionado(null);
-      setFormData((prev: any) => ({ ...prev, tipoEquipamento: "", tipoEquipamentoId: "" }));
+      setFormData((prev) => ({ ...prev, tipoEquipamento: "", tipoEquipamentoId: "" }));
     }
   };
 
@@ -1916,33 +1906,10 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
           </div>
         )}
 
-        {/* Criticidade */}
-        <div className="space-y-2">
-          <div className="linha-rotulo">
-            <label className="text-sm font-medium">
-              Criticidade <span className="text-red-500">*</span>
-            </label>
-          </div>
-          <Select
-            value={formData.criticidade || '3'}
-            onValueChange={(value) => handleInputChange('criticidade', value)}
-            disabled={isReadonly}
-          >
-            <SelectTrigger className="rounded">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">1 (Muito Baixa)</SelectItem>
-              <SelectItem value="2">2 (Baixa)</SelectItem>
-              <SelectItem value="3">3 (Média)</SelectItem>
-              <SelectItem value="4">4 (Alta)</SelectItem>
-              <SelectItem value="5">5 (Muito Alta)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* A criticidade saiu daqui para a seção própria, com a matriz (SN-64). */}
 
         {/* Campo do consumidor (o plano de manutenção, no AupusService). Ocupa
-            uma coluna como os demais, caindo ao lado da criticidade.
+            uma coluna como os demais.
             Em create não há equipamento ainda, então nada que dependa do id
             pode ser renderizado. */}
         {/* O plano não é replicado: vinculá-lo cria uma cópia própria dele, com
@@ -2098,7 +2065,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   );
 
   const renderDadosTecnicos = () => {
-    const tipoEqp = getTipoEquipamento(formData.tipoEquipamento);
+    const nomeDaCategoria = categorias.find((c) => c.id?.trim() === categoriaIdSelecionada)?.nome;
     const temDadosPredefinidos = dadosTecnicos.length > 0;
     const temDadosPersonalizados = dadosTecnicosPersonalizados.length > 0;
 
@@ -2124,10 +2091,10 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         {/* Dados Técnicos Pré-definidos por Tipo */}
         {temDadosPredefinidos && (
           <div className="space-y-4">
-            {tipoEqp && (
+            {nomeDaCategoria && (
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="text-xs">
-                  {tipoEqp.label}
+                  {nomeDaCategoria}
                 </Badge>
                 <span className="text-xs text-gray-500">
                   Campos técnicos padrão
@@ -2136,7 +2103,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
             )}
 
             <div className="grid-equal-cols-2 gap-x-2 gap-y-4">
-              {dadosTecnicos.map((dado: any, index: number) => (
+              {dadosTecnicos.map((dado, index) => (
                 <div key={index} className="space-y-2">
                   <label className="text-sm font-medium">
                     {/* O rotulo legivel quando existe. Os campos vindos da
@@ -2154,7 +2121,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
                     </div>
                   ) : (
                     <>
-                      {dado.tipo === 'select' && tipoEqp ? (
+                      {dado.tipo === 'select' && dado.opcoes?.length ? (
                         <Select
                           value={dado.valor}
                           onValueChange={(value) => handleDadoTecnicoChange(index, 'valor', value)}
@@ -2163,9 +2130,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
                             <SelectValue placeholder="Selecione..." />
                           </SelectTrigger>
                           <SelectContent>
-                            {tipoEqp.camposTecnicos
-                              .find(c => c.campo === dado.campo)
-                              ?.opcoes?.map(opcao => (
+                            {dado.opcoes.map(opcao => (
                                 <SelectItem key={opcao} value={opcao}>
                                   {opcao}
                                 </SelectItem>
@@ -2202,7 +2167,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
             </div>
             
             <div className="space-y-4">
-              {dadosTecnicosPersonalizados.map((dado: any, index: number) => (
+              {dadosTecnicosPersonalizados.map((dado, index) => (
                 <div key={index} className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:items-end">
                   <div className="sm:col-span-3">
                     <label className="text-sm font-medium">Campo</label>
@@ -2572,7 +2537,8 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
   // ============================================================================
   // HANDLERS UAR
   // ============================================================================
-  const handleSubmitUARModal = async (data: any) => {
+  // Tambem aceita o codigo do tipo em camelCase, como os itens da lista guardam.
+  const handleSubmitUARModal = async (data: DadosDoComponenteUAR & { tipoEquipamento?: string }) => {
     if (modalUARDetalhes.mode === 'create') {
       const novoUAR: Equipamento = {
         id: `temp_${Date.now()}`,
@@ -2584,7 +2550,15 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         fabricante: data.fabricante,
         numeroSerie: data.numero_serie,
         criticidade: data.criticidade,
+        // SN-64: sem estes, o componente criado aqui perdia a avaliação ao salvar o lote
+        criticidadeImpacto: data.criticidade_impacto,
+        criticidadeProbabilidade: data.criticidade_probabilidade,
+        criticidadeMotivo: data.criticidade_motivo,
         dataInstalacao: data.data_instalacao,
+        // Sem estes, o componente criado aqui perdia o fornecedor ao salvar o lote
+        garantiaAte: data.garantia_ate,
+        fornecedor: data.fornecedor,
+        centroCusto: data.centro_custo,
         localizacaoEspecifica: data.localizacao_especifica,
         dadosTecnicos: data.dados_tecnicos,
         equipamentoPaiId: entity!.id,
@@ -2609,12 +2583,21 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       setUarsLista(prev => prev.map(uar => {
         if (uar.id !== modalUARDetalhes.entity?.id) return uar;
 
-        const codigoNovo = data.tipo_equipamento || (uar as any).tipo;
-        const trocouTipo = codigoNovo !== (uar as any).tipo;
+        const codigoNovo = data.tipo_equipamento || uar.tipo;
+        const trocouTipo = codigoNovo !== uar.tipo;
 
         return {
           ...uar,
           ...data,
+          // O sheet devolve snake_case e quem reabre o componente le o
+          // camelCase: sem isto, reabrir antes de salvar o lote mostrava a
+          // data, a garantia e a avaliacao antigas (o lote gravava o certo)
+          dataInstalacao: data.data_instalacao?.slice(0, 10) ?? null,
+          garantiaAte: data.garantia_ate?.slice(0, 10) ?? null,
+          centroCusto: data.centro_custo ?? null,
+          criticidadeImpacto: data.criticidade_impacto ?? null,
+          criticidadeProbabilidade: data.criticidade_probabilidade ?? null,
+          criticidadeMotivo: data.criticidade_motivo ?? null,
           id: uar.id, // o sheet nao muda a identidade do item na lista
           // Enquanto nao foi salvo, o componente carrega o CODIGO do tipo: e o
           // que o backend aceita nos dois formatos e o que permite reabrir o
@@ -2622,7 +2605,7 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
           tipo: codigoNovo,
           tipoEquipamento: codigoNovo,
           // Objeto do tipo antigo com codigo novo mostraria o modelo errado.
-          tipoEquipamentoObj: trocouTipo ? undefined : (uar as any).tipoEquipamentoObj,
+          tipoEquipamentoObj: trocouTipo ? undefined : uar.tipoEquipamentoObj,
           updatedAt: new Date().toISOString(),
         };
       }));
@@ -2641,7 +2624,17 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
     try {
       await onSaveUARs(entity.id, uarsLista);
     } catch (err) {
-      console.error('Erro ao salvar UARs:', err);
+      // Antes so ia para o console: o botao parecia nao fazer nada
+      avisar('Erro ao salvar os componentes', formatApiError(err));
+      return;
+    }
+    // Recarrega do servidor: o componente novo ficava com o id provisorio na
+    // lista, e salvar de novo o criava outra vez (revisao do SN-12)
+    toast.success('Componentes salvos');
+    try {
+      setUarsLista((await fetchComponentesParaGerenciar(entity.id)).componentes || []);
+    } catch (err) {
+      avisar('Componentes salvos, mas não foi possível recarregar a lista', formatApiError(err));
     }
   };
 
@@ -2780,6 +2773,15 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
 
       <Separator />
 
+      {/* No lote vale para todos os equipamentos, como a criticidade valia */}
+      <CriticidadePelaMatriz
+        valores={soAAvaliacao(formData)}
+        onChange={(avaliacao) => setFormData((prev) => ({ ...prev, ...avaliacao }))}
+        somenteLeitura={isReadonly}
+      />
+
+      <Separator />
+
       {renderLocalizacao()}
 
       <Separator />
@@ -2789,6 +2791,12 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
       <Separator />
 
       {renderInformacoesComplementares()}
+
+      <InstalacaoEGarantia
+        valores={formData}
+        onChange={(campo, valor) => handleInputChange(campo, valor)}
+        somenteLeitura={isReadonly}
+      />
 
       <Separator />
 
@@ -2952,9 +2960,9 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
                   retrato ela nao cabe e virava arrasto lateral. */}
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 {renderFoto()}
-                {/* min-w-0 deixa a fita encolher; sem isso ela força a largura
-                    do sheet e a linha inteira estoura no celular. */}
-                <TabsList className="gap-1 w-full sm:w-auto sm:ml-auto min-w-0 max-w-full overflow-x-auto scrollbar-minimal">
+                {/* min-w-0 deixa a fita encolher; e ela quebra em linhas em vez de rolar
+                    para o lado no celular (SN-68). h-auto: a TabsList tem altura fixa. */}
+                <TabsList className="gap-1 w-full sm:w-auto sm:ml-auto min-w-0 max-w-full h-auto flex-wrap justify-start">
                   <TabsTrigger value="dados">Dados técnicos</TabsTrigger>
                   {modoLote && <TabsTrigger value="itens">Equipamentos ({quantidade})</TabsTrigger>}
                   {temAbaTarefas && <TabsTrigger value="tarefas">Tarefas</TabsTrigger>}
@@ -2964,7 +2972,11 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
                 </TabsList>
               </div>
 
-              <TabsContent value="dados">{renderConteudoDados()}</TabsContent>
+              {/* Montada sempre: o Radix desmonta a aba inativa, e quem ia conferir as
+                  tarefas e voltava perdia o plano e a data de início escolhidos no cadastro */}
+              <TabsContent value="dados" forceMount className="data-[state=inactive]:hidden">
+                {renderConteudoDados()}
+              </TabsContent>
 
               {modoLote && (
                 <TabsContent value="itens">
@@ -3003,7 +3015,9 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
                     // da ficha de quem ja saiu dela.
                     readOnly={isReadonly || !!visitando}
                     onVerEquipamento={(eq) => {
-                      setVisitando(eq as any);
+                      // So o id importa: a ficha completa sai de getEquipamento
+                      // quando o sheet se reinicializa com o visitado.
+                      setVisitando({ id: eq.id, nome: eq.nome });
                       // Volta para Dados: quem clica quer ver a ficha, e ficar
                       // na aba de historico esconderia justamente o que abriu.
                       setAbaAtiva('dados');
@@ -3051,8 +3065,12 @@ export const EquipamentoUCModal: React.FC<EquipamentoUCModalProps> = ({
         aoCriarEmLote={async () => {
           setModalUARDetalhes({ isOpen: false, mode: 'view', entity: null });
           if (entity?.id) {
-            const result = await fetchComponentesParaGerenciar(entity.id);
-            setUarsLista(result.componentes || []);
+            try {
+              const result = await fetchComponentesParaGerenciar(entity.id);
+              setUarsLista(result.componentes || []);
+            } catch (err) {
+              avisar('Componentes criados, mas não foi possível recarregar a lista', formatApiError(err));
+            }
           }
         }}
       />

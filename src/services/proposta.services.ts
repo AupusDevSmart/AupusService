@@ -20,6 +20,11 @@ export interface ItemProposta {
   preco_unitario_original?: number | null;
   preco_unitario: number;
   ordem?: number;
+  /**
+   * Só na tela (o payload é montado campo a campo): a sugestão contou como zero
+   * alguma linha sem preço no cadastro. No rascunho é daqui; salva, da leitura
+   */
+  sem_preco_no_cadastro?: boolean;
 }
 
 export interface OutroCusto {
@@ -34,6 +39,8 @@ export interface OutroCusto {
 export interface Proposta {
   itens: ItemProposta[];
   outros_custos: OutroCusto[];
+  /** As instruções cujo valor sugerido conta como zero alguma linha sem preço no cadastro (SN-86) */
+  instrucoes_sem_preco?: string[];
   /** SEM_REIDI ou COM_REIDI. O REIDI desonera PIS e COFINS. */
   bdi_regime: string;
   bdi_administracao_central: number;
@@ -290,32 +297,31 @@ export async function montarDeInstrucoes(
       continue;
     }
 
-    // `recurso` (o do catalogo, com preco) so existe nas linhas vinculadas;
-    // as antigas, digitadas antes do catalogo, vem sem preco.
-    const soma = (instrucao.recursos ?? []).reduce((total, recurso) => {
-      const doCatalogo = (recurso as { recurso?: { preco_medio?: number | string } }).recurso;
-      const preco = Number(doCatalogo?.preco_medio ?? 0) || 0;
-      const quantidade = Number(recurso.quantidade ?? 1) || 1;
-      return total + preco * quantidade;
-    }, 0);
+    // O custo de cada linha vem pronto do servidor (`subtotal`, a conta do
+    // AupusProject, SN-85): a mesma da proposta do backend, recursos e
+    // maquinário. A linha sem preço entra como zero: é sugestão, e a pessoa ajusta
+    const linhas = [...(instrucao.recursos ?? []), ...(instrucao.maquinarios ?? [])];
+    const soma = linhas.reduce((total, linha) => total + (Number(linha.subtotal ?? 0) || 0), 0);
 
     const valor = Math.round(soma * 100) / 100;
 
     itens.push({
       instrucao_id: id,
-      descricao: rotuloInstrucao(instrucao.tag, instrucao.nome),
+      descricao: rotuloInstrucao(instrucao.codigo, instrucao.nome),
       quantidade: 1,
       preco_unitario_original: valor,
       preco_unitario: valor,
+      // A linha sem preço entrou como zero: a tela avisa, senão o valor parece completo
+      ...(linhas.some((linha) => linha.subtotal == null) && { sem_preco_no_cadastro: true }),
     });
   }
 
   return itens;
 }
 
-/** "INST-003 - Troca de rolamento", ou só o nome quando não há tag. */
-export function rotuloInstrucao(tag: string | null | undefined, nome: string): string {
-  const limpa = tag?.trim();
+/** "INST-003 - Troca de rolamento", ou só o nome quando não há código. */
+export function rotuloInstrucao(codigo: string | null | undefined, nome: string): string {
+  const limpa = codigo?.trim();
   return limpa ? `${limpa} - ${nome}` : nome;
 }
 

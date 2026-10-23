@@ -1,3 +1,5 @@
+import { erroLido, telaAvisouErro } from '@/lib/aviso-de-erro';
+
 /**
  * Normaliza erro do axios em mensagem legivel para toast.
  *
@@ -37,6 +39,8 @@ function textoDaMensagem(valor: unknown): string | null {
 
 export function formatApiError(err: unknown): string {
   if (!err) return 'Erro desconhecido';
+  // O aviso que a tela mostrar em seguida é deste erro (SN-43): sai o aviso global dele
+  erroLido(err);
 
   const { response, message } = err as AxiosErrorLike;
 
@@ -67,4 +71,45 @@ export function formatApiError(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (typeof err === 'string') return err;
   return 'Erro desconhecido';
+}
+
+/**
+ * A mensagem que o backend mandou no erro, quando mandou. `undefined` quando
+ * não veio nenhuma (rede, status sem corpo): quem chama mostra o próprio texto
+ * ("Nao foi possivel remover"), que diz mais do que um status HTTP.
+ *
+ * Lê os mesmos dois formatos do `formatApiError`: o do Nest (`data.message`) e
+ * o do HttpExceptionFilter deste backend (`data.error.message`), por onde passa
+ * todo erro da API. As cópias que liam só o primeiro devolviam sempre
+ * undefined, e a tela nunca mostrava o motivo (achado no SN-12).
+ */
+/**
+ * Regra de nova tentativa do React Query: só falha de rede (sem resposta)
+ * repete, até duas vezes. Erro com resposta (400, 403, 500) não melhora
+ * tentando, e o interceptor dá um toast a cada tentativa — o padrão do TanStack
+ * repete três vezes: quatro toasts e a tela de erro uns 7 s atrasada.
+ */
+export const soRepeteFalhaDeRede = (tentativas: number, err: unknown): boolean =>
+  !(err as AxiosErrorLike | null | undefined)?.response && tentativas < 2;
+
+/**
+ * A mensagem do erro para a tela mostrar no próprio formulário (o bloco vermelho do sheet, a linha
+ * abaixo do campo). Marca o erro como avisado: o aviso global do interceptor, que ainda espera, não
+ * aparece (SN-43). Usar só onde a mensagem vai mesmo para a tela; para log ou para relançar, os
+ * outros dois, que não marcam nada.
+ */
+export function erroParaATela(err: unknown, padrao?: string): string {
+  const mensagem = mensagemDoBackend(err) ?? padrao ?? formatApiError(err);
+  telaAvisouErro(err);
+  return mensagem;
+}
+
+export function mensagemDoBackend(err: unknown): string | undefined {
+  erroLido(err);
+  const data = (err as AxiosErrorLike | null | undefined)?.response?.data;
+  return (
+    textoDaMensagem(data?.message) ??
+    textoDaMensagem((data?.error as { message?: unknown } | undefined)?.message) ??
+    undefined
+  );
 }

@@ -21,6 +21,8 @@ export interface UsuarioDTO {
   role_details?: { id: number; name: string; guard_name: string } | null;
   all_permissions: Permissao[];
   plantas_vinculadas?: string[];
+  /** Entrou com senha provisória: só usa o sistema depois de trocá-la (SN-34). */
+  deve_trocar_senha?: boolean;
 
   roles?: Role[];
 
@@ -68,23 +70,28 @@ export interface ChangePasswordDto {
 }
 
 /**
- * Permissoes do sistema - sincronizadas com o backend (permissions-structure.ts).
- * Total: 28 permissoes.
+ * As permissões do sistema — as mesmas da matriz do backend
+ * (aupus-service-api/src/core/modules/permissions/matriz-de-permissoes.ts).
+ * Leitura (.view) separada da escrita (.manage), mais verbos pontuais.
  */
 export type Permissao =
   | 'dashboard.view'
   | 'plantas.view' | 'plantas.manage' | 'plantas.manage_operadores'
   | 'unidades.view' | 'unidades.manage'
   | 'equipamentos.view' | 'equipamentos.manage'
-  | 'anomalias.view' | 'anomalias.manage'
-  | 'usuarios.view' | 'usuarios.manage'
-  | 'usuarios.create_operador' | 'usuarios.create_proprietario'
-  | 'usuarios.create_analista' | 'usuarios.create_admin'
+  | 'concessionarias.manage'
+  | 'manutencao.view' | 'manutencao.manage'
+  | 'agenda.view' | 'agenda.manage'
+  | 'anomalias.view' | 'anomalias.report' | 'anomalias.manage_own' | 'anomalias.manage'
+  | 'solicitacoes.view' | 'solicitacoes.create' | 'solicitacoes.manage'
   | 'programacao_os.view' | 'programacao_os.manage'
   | 'programacao_os.aprovar' | 'programacao_os.cancelar'
-  | 'execucao_os.view' | 'execucao_os.manage'
-  | 'execucao_os.aprovar' | 'execucao_os.cancelar' | 'execucao_os.executar'
-  | 'manutencao.manage'
+  | 'execucao_os.view' | 'execucao_os.executar' | 'execucao_os.manage'
+  | 'execucao_os.aprovar' | 'execucao_os.cancelar'
   | 'recursos.manage'
-  | 'agenda.manage'
-  | 'admin.impersonate';
+  | 'equipes.manage'
+  | 'usuarios.view' | 'usuarios.manage'
+  | 'usuarios.create_operador' | 'usuarios.create_proprietario'
+  | 'usuarios.create_analista' | 'usuarios.create_gerente' | 'usuarios.create_admin'
+  | 'sincronizacao.gerenciar'
+  | 'sistema.monitorar';

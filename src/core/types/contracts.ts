@@ -1,5 +1,49 @@
 import type { AxiosInstance } from 'axios';
-import type { Pagination } from './base';
+import type { DadosDoFormulario, Pagination } from './base';
+import type {
+  ComponentesGerenciamento,
+  Equipamento,
+  EquipamentosFilters,
+} from '@/core/features/equipamentos/types';
+import type {
+  Usuario,
+  UsuarioFormData,
+  UsuariosFilters,
+} from '@/core/features/usuarios/types';
+// Os contratos abaixo descrevem os hooks do proprio AupusService que o adapter
+// (src/shared-pages-adapter.tsx) entrega ao nucleo. Os tipos de dado vem de onde
+// esses hooks os definem.
+import type {
+  ConcessionariaResponse,
+  CreateConcessionariaDto,
+  UpdateConcessionariaDto,
+} from '@/services/concessionarias.services';
+import type { PlantaResponse } from '@/services/plantas.services';
+import type {
+  PlantaSelection,
+  ProprietarioSelection,
+} from '@/services/selection-data.services';
+import type { CategoriaEquipamento, TipoEquipamento } from '@/services/tipos-equipamentos.services';
+import type {
+  UserPermission,
+  UserPermissionsResponse,
+  UserPermissionsSummary,
+  UserRole,
+} from '@/services/user-permissions.service';
+import type { PermissaoOption } from '@/hooks/usePermissoes';
+import type { Role as PapelDoSistema } from '@/hooks/useRoles';
+import type { OrganizacaoDTO } from '@/types/dtos/organizacao-dto';
+import type { ConcessionariaDTO } from '@/types/dtos/concessionaria-dto';
+import type { UsuarioDTO } from '@/types/dtos/usuarios-dto';
+import type { SelectionOption as OpcaoDaSelecao } from '@/services/selection-data.services';
+import type {
+  CreateUnidadeDto as CreateUnidadeDoApp,
+  UnidadeFilters as UnidadeFiltersDoApp,
+  UpdateUnidadeDto as UpdateUnidadeDoApp,
+  Unidade as UnidadeDoApp,
+  UnidadeEstatisticas,
+  UnidadeEquipamentosResponse,
+} from '@/features/unidades/types';
 
 // ============================================================
 // STORES
@@ -14,12 +58,22 @@ export interface UserBasic {
   all_permissions: string[];
 }
 
+/** O store de usuario do app (src/store/useUserStore), no que o nucleo le. */
 export interface UserStoreContract {
-  user: UserBasic | null;
+  user: UsuarioDTO | null;
   acessivel: string[];
   getUserRole: () => string;
   isSuperAdmin: () => boolean;
   isAdmin: () => boolean;
+  /**
+   * Qualquer uma das permissões basta (como o @Permissions do backend).
+   *
+   * Metodo, e nao propriedade-funcao, de proposito: o nucleo monta nomes em
+   * tempo de execucao (`usuarios.create_${papel}`) e o store do app tipa o
+   * parametro como a lista fechada `Permissao`. Em runtime e comparacao de
+   * texto; o metodo aceita os dois lados.
+   */
+  hasPermission(...permissoes: string[]): boolean;
 }
 
 export interface ConcessionariaBasic {
@@ -30,14 +84,15 @@ export interface ConcessionariaBasic {
   documento?: string;
 }
 
+/** O store de concessionarias do app (src/store/useConcessionariasStore). */
 export interface ConcessionariasStoreContract {
-  concessionarias: ConcessionariaBasic[] | null;
-  concessionariaAtual: ConcessionariaBasic | null;
-  selectedConcessionarias: ConcessionariaBasic[];
+  concessionarias: ConcessionariaDTO[] | null;
+  concessionariaAtual: ConcessionariaDTO | null;
+  selectedConcessionarias: ConcessionariaDTO[];
   selectAllConcessionarias: boolean;
-  setConcessionarias: (items: ConcessionariaBasic[]) => void;
+  setConcessionarias: (items: ConcessionariaDTO[]) => void;
   setConcessionariaAtual: (id: string) => void;
-  toggleConcessionaria: (item: ConcessionariaBasic) => void;
+  toggleConcessionaria: (item: ConcessionariaDTO) => void;
   setSelectAllConcessionarias: (selectAll: boolean) => void;
   clearConcessionarias: () => void;
   clearConcessionaria: () => void;
@@ -100,35 +155,37 @@ export interface SelectionOption {
 // EQUIPAMENTOS CONTRACTS
 // ============================================================
 
+/** UC que ainda pode receber componentes (para o seletor de equipamento pai). */
+export interface EquipamentoUCDisponivel {
+  id: string;
+  nome: string;
+  fabricante?: string;
+  modelo?: string;
+  planta?: { id: string; nome: string };
+}
+
 export interface UseEquipamentosContract {
   loading: boolean;
   error: string | null;
-  equipamentos: any[];
-  equipamentosUC: any[];
-  componentesUAR: any[];
+  equipamentos: Equipamento[];
+  equipamentosUC: Equipamento[];
+  componentesUAR: Equipamento[];
   totalPages: number;
   currentPage: number;
   total: number;
-  createEquipamento: (data: any) => Promise<any>;
-  updateEquipamento: (id: string, data: any) => Promise<any>;
+  /** `data` e o formulario do equipamento (o hook converte para a API). */
+  createEquipamento: (data: DadosDoFormulario) => Promise<Equipamento>;
+  updateEquipamento: (id: string, data: DadosDoFormulario) => Promise<Equipamento>;
   deleteEquipamento: (id: string) => Promise<void>;
-  getEquipamento: (id: string) => Promise<any>;
-  fetchEquipamentos: (params?: any) => Promise<any[]>;
-  fetchEquipamentosByPlanta: (plantaId: string, params?: any) => Promise<{
-    equipamentos: any[];
-    planta: { id: string; nome: string; localizacao: string };
-  }>;
-  fetchComponentesByEquipamento: (equipamentoId: string) => Promise<any[]>;
-  fetchEquipamentosUCDisponiveis: () => Promise<any[]>;
-  fetchComponentesParaGerenciar: (ucId: string) => Promise<{
-    equipamentoUC: any;
-    componentes: any[];
-  }>;
-  salvarComponentesUARLote: (ucId: string, componentes: any[]) => Promise<{
+  getEquipamento: (id: string) => Promise<Equipamento>;
+  fetchEquipamentos: (params?: EquipamentosFilters) => Promise<Equipamento[]>;
+  fetchComponentesByEquipamento: (equipamentoId: string) => Promise<Equipamento[]>;
+  fetchEquipamentosUCDisponiveis: () => Promise<EquipamentoUCDisponivel[]>;
+  fetchComponentesParaGerenciar: (ucId: string) => Promise<ComponentesGerenciamento>;
+  salvarComponentesUARLote: (ucId: string, componentes: Partial<Equipamento>[]) => Promise<{
     message: string;
-    componentes: any[];
+    componentes: Equipamento[];
   }>;
-  getEstatisticasPlanta: (plantaId: string) => Promise<any>;
   uploadFoto: (id: string, file: File) => Promise<{ fotoUrl: string }>;
   removeFoto: (id: string) => Promise<{ fotoUrl: null }>;
   /**
@@ -136,9 +193,9 @@ export interface UseEquipamentosContract {
    * todos; `itens` traz o que muda entre eles.
    */
   createEquipamentosLote: (
-    data: any,
+    data: DadosDoFormulario,
     itens: EquipamentoDoLote[],
-  ) => Promise<{ total: number; equipamentos: any[] }>;
+  ) => Promise<{ total: number; equipamentos: Equipamento[] }>;
   /**
    * De onde continuar a numeração de nomes e TAGs, a partir do que já existe.
    */
@@ -202,21 +259,17 @@ export interface UseSelectionDataContract {
   loadingProprietarios: boolean;
   loadingPlantas: boolean;
   loadingHierarquia: boolean;
-  loadingTipos: boolean;
   loadingUCs: boolean;
-  proprietarios: any[];
-  plantas: any[];
-  tiposEquipamentos: any[];
-  equipamentosUC: SelectionOption[];
-  fetchProprietarios: () => Promise<any[]>;
-  fetchPlantas: (proprietarioId?: string) => Promise<any[]>;
-  fetchHierarquiaNivel: (nivel: string, parentId?: string) => Promise<any[]>;
-  fetchTiposEquipamentos: () => Promise<any[]>;
-  fetchEquipamentosUC: (plantaId?: string) => Promise<SelectionOption[]>;
-  getProprietarioById: (id: string) => any | null;
-  getPlantaById: (id: string) => any | null;
-  getTipoEquipamentoById: (id: string) => any | null;
-  getCamposTecnicosPorTipo: (tipo: string) => any[];
+  proprietarios: ProprietarioSelection[];
+  plantas: PlantaSelection[];
+  equipamentosUC: OpcaoDaSelecao[];
+  fetchProprietarios: () => Promise<ProprietarioSelection[]>;
+  fetchPlantas: (proprietarioId?: string) => Promise<PlantaSelection[]>;
+  /** O formato de cada nivel depende do nivel pedido. */
+  fetchHierarquiaNivel: (nivel: string, parentId?: string) => Promise<unknown[]>;
+  fetchEquipamentosUC: (plantaId?: string) => Promise<OpcaoDaSelecao[]>;
+  getProprietarioById: (id: string) => ProprietarioSelection | null;
+  getPlantaById: (id: string) => PlantaSelection | null;
   error: string | null;
   clearError: () => void;
 }
@@ -225,14 +278,16 @@ export interface UseSelectionDataContract {
 // UNIDADES CONTRACTS
 // ============================================================
 
+/** Unidades: o formato que a rota /unidades devolve (o `Unidade` da feature). */
 export interface UseUnidadesContract {
-  unidades: any[];
-  pagination: Pagination;
+  unidades: UnidadeDoApp[];
+  /** Ausente enquanto a primeira pagina carrega. */
+  pagination?: Pagination;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
-  createUnidade: (data: any) => Promise<any>;
-  updateUnidade: (params: { id: string; data: any }) => Promise<any>;
+  createUnidade: (data: CreateUnidadeDoApp) => Promise<UnidadeDoApp>;
+  updateUnidade: (params: { id: string; data: UpdateUnidadeDoApp }) => Promise<UnidadeDoApp>;
   deleteUnidade: (id: string) => Promise<void>;
   isCreating: boolean;
   isUpdating: boolean;
@@ -240,29 +295,36 @@ export interface UseUnidadesContract {
 }
 
 export interface UseUnidadesByPlantaContract {
-  unidades: any[];
+  unidades: UnidadeDoApp[];
   isLoading: boolean;
   error: Error | null;
 }
 
 export interface UseUnidadeContract {
-  unidade: any | undefined;
+  unidade: UnidadeDoApp | undefined;
   isLoading: boolean;
   error: Error | null;
 }
 
 export interface UseUnidadeEstatisticasContract {
-  estatisticas: any | undefined;
+  estatisticas: UnidadeEstatisticas | undefined;
   isLoading: boolean;
   error: Error | null;
 }
 
 export interface UseUnidadeEquipamentosContract {
-  equipamentos: any[];
-  pagination: Pagination;
-  unidade: any;
+  // Nenhuma pagina do nucleo le esta lista ainda; o formato e o da rota /unidades/:id/equipamentos.
+  equipamentos: unknown[];
+  pagination?: Pagination;
+  unidade: UnidadeEquipamentosResponse['unidade'] | undefined;
   isLoading: boolean;
   error: Error | null;
+}
+
+export interface FiltrosDosEquipamentosDaUnidade {
+  page?: number;
+  limit?: number;
+  search?: string;
 }
 
 export interface PlantaOption {
@@ -297,11 +359,11 @@ export interface UseProprietariosContract {
 // ============================================================
 
 export interface UseUsuariosContract {
-  usuarios: any[];
+  usuarios: Usuario[];
   loading: boolean;
   error: string | null;
   pagination: Pagination;
-  filters: any;
+  filters: UsuariosFilters;
   statistics: {
     totalUsuarios: number;
     usuariosAtivos: number;
@@ -311,25 +373,28 @@ export interface UseUsuariosContract {
     vendedores: number;
     consultores: number;
   };
-  handleFilterChange: (filters: any) => void;
+  handleFilterChange: (filters: Partial<UsuariosFilters>) => void;
   handlePageChange: (page: number) => void;
   /** Opcional: liga o seletor de linhas por pagina da tabela de usuarios. */
   handleLimitChange?: (limit: number) => void;
   refetch: () => void;
-  createUsuario: (data: any) => Promise<any>;
-  updateUsuario: (id: string, data: any) => Promise<any>;
+  // Metodos (e nao propriedades-funcao) de proposito: o formulario do nucleo
+  // tipa `permissions` como string[] e o hook do app como a lista fechada
+  // `Permissao` — em runtime sao os mesmos nomes; o metodo aceita os dois lados.
+  createUsuario(data: UsuarioFormData): Promise<Usuario>;
+  updateUsuario(id: string, data: Partial<UsuarioFormData>): Promise<Usuario>;
   deleteUsuario: (id: string) => Promise<void>;
-  findUsuario: (id: string) => Promise<any>;
-  findUsuarioWithDebug?: (id: string) => Promise<any>;
+  findUsuario: (id: string) => Promise<Usuario>;
   changeUserPassword: (id: string, data: { senhaAtual: string; novaSenha: string }) => Promise<{ message: string }>;
   resetUserPassword: (id: string, data: { novaSenha: string; confirmarSenha: string }) => Promise<{ message: string; senhaTemporaria: string }>;
-  getUserPermissions: (id: string) => Promise<any>;
-  getUserPermissionsSummary: (id: string) => Promise<any>;
+  getUserPermissions: (id: string) => Promise<UserPermissionsResponse>;
+  getUserPermissionsSummary: (id: string) => Promise<UserPermissionsSummary>;
   checkUserPermission: (id: string, permissionName: string) => Promise<boolean>;
   assignUserRole: (id: string, roleId: number) => Promise<void>;
   syncUserPermissions: (id: string, permissionIds: number[]) => Promise<void>;
-  usuarioToFormData: (usuario: any) => any;
-  usuarioToFormDataAsync: (usuario: any) => Promise<any>;
+  // Metodos pelo mesmo motivo de createUsuario (permissoes string[] x Permissao[]).
+  usuarioToFormData(usuario: Usuario): UsuarioFormData;
+  usuarioToFormDataAsync(usuario: Usuario): Promise<UsuarioFormData>;
   clearError: () => void;
   isEmptyResult: boolean;
 }
@@ -348,7 +413,7 @@ export interface UsePlantasFeatureContract {
   loading: boolean;
   plantas: SimplePlanta[];
   carregarPlantasSimples: () => Promise<SimplePlanta[]>;
-  obterPlanta: (id: string) => Promise<any | null>;
+  obterPlanta: (id: string) => Promise<PlantaResponse | null>;
 }
 
 export interface UseProprietariosForPlantasContract {
@@ -362,18 +427,28 @@ export interface UseProprietariosForPlantasContract {
 // CONCESSIONARIAS CONTRACTS
 // ============================================================
 
+/** Filtros da lista de concessionarias (`estado: 'all'` = sem filtro de estado). */
+export interface ConcessionariasFiltros {
+  page?: number;
+  limit?: number;
+  search?: string;
+  estado?: string;
+  orderBy?: string;
+  orderDirection?: string;
+}
+
 export interface UseConcessionariasFeatureContract {
-  concessionarias: any[];
+  concessionarias: ConcessionariaResponse[];
   loading: boolean;
   error: string | null;
   pagination: Pagination;
-  filters: any;
-  fetchConcessionarias: (filters?: any) => Promise<void>;
-  createConcessionaria: (data: any) => Promise<any>;
-  updateConcessionaria: (id: string, data: any) => Promise<any>;
+  filters: ConcessionariasFiltros;
+  fetchConcessionarias: (filters?: ConcessionariasFiltros) => Promise<void>;
+  createConcessionaria: (data: CreateConcessionariaDto) => Promise<ConcessionariaResponse>;
+  updateConcessionaria: (id: string, data: UpdateConcessionariaDto) => Promise<ConcessionariaResponse>;
   deleteConcessionaria: (id: string) => Promise<void>;
-  getConcessionaria: (id: string) => Promise<any>;
-  handleFilterChange: (filters: any) => void;
+  getConcessionaria: (id: string) => Promise<ConcessionariaResponse>;
+  handleFilterChange: (filters: ConcessionariasFiltros) => void;
   handlePageChange: (page: number) => void;
   refetch: () => void;
 }
@@ -384,7 +459,7 @@ export interface UseConcessionariasServiceContract {
     estado?: string;
     orderBy?: string;
     orderDirection?: string;
-  }) => Promise<{ data: any[]; pagination: Pagination }>;
+  }) => Promise<{ data: ConcessionariaResponse[]; pagination: Pagination }>;
 }
 
 // ============================================================
@@ -392,35 +467,35 @@ export interface UseConcessionariasServiceContract {
 // ============================================================
 
 export interface UsePermissoesContract {
-  permissoes: any[];
-  permissoesPorCategoria: Record<string, any[]>;
+  permissoes: PermissaoOption[];
+  permissoesPorCategoria: Record<string, PermissaoOption[]>;
   loading: boolean;
   error: string | null;
 }
 
 export interface UsePermissoesGroupedContract {
-  permissoesPorCategoria: Record<string, any[]>;
+  permissoesPorCategoria: Record<string, PermissaoOption[]>;
   loading: boolean;
   error: string | null;
 }
 
 export interface UseRolesContract {
-  roles: any[];
+  roles: PapelDoSistema[];
   loading: boolean;
   error: string | null;
 }
 
 export interface UseUserPermissionsContract {
-  permissions: any[];
-  roles: any[];
+  permissions: UserPermission[];
+  roles: UserRole[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
 }
 
 export interface UseAvailableRolesAndPermissionsContract {
-  roles: any[];
-  permissions: any[];
+  roles: UserRole[];
+  permissions: UserPermission[];
   loading: boolean;
   error: string | null;
 }
@@ -430,21 +505,21 @@ export interface UseAvailableRolesAndPermissionsContract {
 // ============================================================
 
 export interface UseCategoriasContract {
-  categorias: any[];
+  categorias: CategoriaEquipamento[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
 }
 
 export interface UseModelosContract {
-  modelos: any[];
+  modelos: TipoEquipamento[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
 }
 
 export interface UseOrganizacoesContract {
-  organizacoes: any[];
+  organizacoes: OrganizacaoDTO[];
   loading: boolean;
   error: string | null;
   refetch: () => void;
@@ -462,11 +537,11 @@ export interface SharedHooks {
   useSelectionData: () => UseSelectionDataContract;
 
   // Unidades
-  useUnidades: (filters?: any) => UseUnidadesContract;
+  useUnidades: (filters?: UnidadeFiltersDoApp) => UseUnidadesContract;
   useUnidadesByPlanta: (plantaId?: string) => UseUnidadesByPlantaContract;
   useUnidade: (id?: string) => UseUnidadeContract;
   useUnidadeEstatisticas: (id?: string) => UseUnidadeEstatisticasContract;
-  useUnidadeEquipamentos: (id?: string, filters?: any) => UseUnidadeEquipamentosContract;
+  useUnidadeEquipamentos: (id?: string, filters?: FiltrosDosEquipamentosDaUnidade) => UseUnidadeEquipamentosContract;
   usePlantasForUnidades: () => UsePlantasForUnidadesContract;
   useProprietariosForUnidades: () => UseProprietariosContract;
 

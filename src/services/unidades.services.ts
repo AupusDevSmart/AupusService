@@ -1,22 +1,21 @@
 import { api } from '@/config/api';
+// As respostas seguem o formato que a rota /unidades devolve (UnidadeResponse do
+// backend), que e o `Unidade` da feature — nao o `UnidadeNexon` de types/unidades.
 import {
   CreateUnidadeDto,
   UpdateUnidadeDto,
   Unidade as UnidadeCompleta,
+  UnidadeFilters as FiltrosDeUnidade,
+  UnidadesResponse,
+  UnidadeEstatisticas,
+  UnidadeEquipamentosResponse,
 } from '../features/unidades/types';
-import {
-  UnidadeNexon,
-  FilterUnidadeDto,
-  PaginatedUnidadeResponse,
-  UnidadeStats,
-  ImportResult,
-} from '../types/unidades';
 
 class UnidadesService {
   private readonly baseUrl = '/unidades';
 
   // Listar unidades com filtros e paginação
-  async listarUnidades(filtros?: FilterUnidadeDto): Promise<PaginatedUnidadeResponse> {
+  async listarUnidades(filtros?: FiltrosDeUnidade): Promise<UnidadesResponse> {
     try {
       const params = new URLSearchParams();
 
@@ -34,7 +33,7 @@ class UnidadesService {
       console.log('🔍 [UnidadesService] Enviando requisição com params:', params.toString());
       console.log('🔍 [UnidadesService] proprietarioId no filtro:', filtros?.proprietarioId);
 
-      const response = await api.get(`${this.baseUrl}?${params.toString()}`);
+      const response = await api.get<UnidadesResponse>(`${this.baseUrl}?${params.toString()}`);
 
       console.log('📨 [UnidadesService] Resposta da API:', {
         status: response.status,
@@ -52,9 +51,9 @@ class UnidadesService {
   }
 
   // Buscar unidade por ID
-  async buscarUnidade(id: string): Promise<UnidadeNexon> {
+  async buscarUnidade(id: string): Promise<UnidadeCompleta> {
     try {
-      const response = await api.get(`${this.baseUrl}/${id}`);
+      const response = await api.get<UnidadeCompleta>(`${this.baseUrl}/${id}`);
       // Busca por ID retorna o objeto diretamente dentro de data
       return response.data;
     } catch (error) {
@@ -64,7 +63,7 @@ class UnidadesService {
   }
 
   // Criar nova unidade
-  async criarUnidade(dados: CreateUnidadeDto): Promise<UnidadeNexon> {
+  async criarUnidade(dados: CreateUnidadeDto): Promise<UnidadeCompleta> {
     try {
       // 🔍 LOG DETALHADO - Dados antes de enviar
       console.log('🏁 [FRONTEND SERVICE - CREATE] ===== INÍCIO =====');
@@ -75,7 +74,7 @@ class UnidadesService {
       console.log('📝 [FRONTEND SERVICE - CREATE] É null?', dados.concessionaria_id === null);
       console.log('📝 [FRONTEND SERVICE - CREATE] É string vazia?', dados.concessionaria_id === '');
 
-      const response = await api.post(this.baseUrl, dados);
+      const response = await api.post<UnidadeCompleta>(this.baseUrl, dados);
 
       console.log('✅ [FRONTEND SERVICE - CREATE] Resposta recebida');
       const result = response.data;
@@ -93,9 +92,9 @@ class UnidadesService {
   }
 
   // Atualizar unidade
-  async atualizarUnidade(id: string, dados: UpdateUnidadeDto): Promise<UnidadeNexon> {
+  async atualizarUnidade(id: string, dados: UpdateUnidadeDto): Promise<UnidadeCompleta> {
     try {
-      const response = await api.put(`${this.baseUrl}/${id}`, dados);
+      const response = await api.put<UnidadeCompleta>(`${this.baseUrl}/${id}`, dados);
 
       // Exibir sucesso
 
@@ -118,70 +117,10 @@ class UnidadesService {
     }
   }
 
-  // Obter estatísticas
-  async obterEstatisticas(): Promise<UnidadeStats> {
-    try {
-      const response = await api.get(`${this.baseUrl}/stats`);
-      return response.data;
-    } catch (error) {
-      console.error('❌ [UnidadesService] Erro ao obter estatísticas:', error);
-      throw error;
-    }
-  }
-
-  // Importar unidades em lote
-  async importarUnidades(unidades: CreateUnidadeDto[]): Promise<ImportResult> {
-    try {
-      const response = await api.post(`${this.baseUrl}/import`, unidades);
-
-      const result = response.data as ImportResult;
-
-      // Exibir resultado da importação
-      const message = `Importação concluída!\n` +
-        `Total processado: ${result.totalProcessed}\n` +
-        `Sucessos: ${result.successful}\n` +
-        `Falhas: ${result.failed}`;
-
-      alert(message);
-
-      return result;
-    } catch (error) {
-      console.error('❌ [UnidadesService] Erro ao importar unidades:', error);
-      throw error;
-    }
-  }
-
-  // Exportar unidades (CSV)
-  async exportarCSV(filtros?: FilterUnidadeDto): Promise<void> {
-    try {
-      const params = new URLSearchParams();
-
-      if (filtros?.search) params.append('search', filtros.search);
-      if (filtros?.tipo) params.append('tipo', filtros.tipo);
-      if (filtros?.status) params.append('status', filtros.status);
-      if (filtros?.estado) params.append('estado', filtros.estado);
-
-      const response = await api.get(`${this.baseUrl}/export/csv?${params.toString()}`, {
-        responseType: 'blob',
-      });
-
-      // Criar download do arquivo
-      const blob = new Blob([response.data], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `unidades_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      alert('Arquivo CSV baixado com sucesso!');
-    } catch (error) {
-      console.error('Erro ao exportar CSV:', error);
-      throw error;
-    }
-  }
+  // obterEstatisticas (/stats), importarUnidades (/import) e exportarCSV
+  // (/export/csv) sairam: chamavam rotas que o backend nao tem e ninguem os
+  // usava (achado no SN-36). As estatisticas de uma unidade sao
+  // buscarEstatisticasUnidade; a planilha do cadastro e a de plantas.
 
   // Validar dados antes de enviar
   private validarDados(dados: CreateUnidadeDto | UpdateUnidadeDto): boolean {
@@ -218,7 +157,7 @@ class UnidadesService {
   }
 
   // Buscar unidades por planta
-  async buscarUnidadesPorPlanta(plantaId: string): Promise<UnidadeNexon[]> {
+  async buscarUnidadesPorPlanta(plantaId: string): Promise<UnidadeCompleta[]> {
     try {
       // Limpar o plantaId de espaços extras
       const cleanPlantaId = plantaId?.trim();
@@ -226,20 +165,20 @@ class UnidadesService {
 
       // Tentar endpoint específico primeiro
       try {
-        const response = await api.get(`${this.baseUrl}/planta/${cleanPlantaId}`);
+        const response = await api.get<UnidadeCompleta[]>(`${this.baseUrl}/planta/${cleanPlantaId}`);
         const data = response.data;
         return Array.isArray(data) ? data : [];
       } catch (err) {
         // Fallback: usar endpoint geral com filtro
         console.log('⚠️ [UnidadesService] Endpoint /planta não disponível, usando filtro');
-        const response = await api.get(`${this.baseUrl}?plantaId=${cleanPlantaId}&limit=100`);
+        const response = await api.get<UnidadesResponse | UnidadeCompleta[]>(`${this.baseUrl}?plantaId=${cleanPlantaId}&limit=100`);
 
         const responseData = response.data;
-        const data = responseData.data || responseData || [];
+        const data = (Array.isArray(responseData) ? responseData : responseData.data) || [];
 
         return Array.isArray(data) ? data : [];
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [UnidadesService] Erro ao buscar unidades por planta ${plantaId}:`, error);
       // Retornar array vazio em vez de throw para não quebrar o UI
       return [];
@@ -247,20 +186,20 @@ class UnidadesService {
   }
 
   // Buscar unidades por proprietário
-  async buscarUnidadesPorProprietario(proprietarioId: string): Promise<UnidadeNexon[]> {
+  async buscarUnidadesPorProprietario(proprietarioId: string): Promise<UnidadeCompleta[]> {
     try {
       const cleanProprietarioId = proprietarioId?.trim();
       console.log(`📡 [UnidadesService] Buscando unidades do proprietário ${cleanProprietarioId}`);
 
       // Usar endpoint geral com filtro de proprietário
-      const response = await api.get(`${this.baseUrl}?proprietarioId=${cleanProprietarioId}&limit=1000`);
+      const response = await api.get<UnidadesResponse | UnidadeCompleta[]>(`${this.baseUrl}?proprietarioId=${cleanProprietarioId}&limit=1000`);
 
       const responseData = response.data;
-      const data = responseData.data || responseData || [];
+      const data = (Array.isArray(responseData) ? responseData : responseData.data) || [];
 
       console.log(`✅ [UnidadesService] ${Array.isArray(data) ? data.length : 0} unidades encontradas`);
       return Array.isArray(data) ? data : [];
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [UnidadesService] Erro ao buscar unidades por proprietário ${proprietarioId}:`, error);
       // Retornar array vazio em vez de throw para não quebrar o UI
       return [];
@@ -268,14 +207,14 @@ class UnidadesService {
   }
 
   // Buscar estatísticas de uma unidade específica
-  async buscarEstatisticasUnidade(id: string): Promise<UnidadeStats> {
+  async buscarEstatisticasUnidade(id: string): Promise<UnidadeEstatisticas> {
     try {
       const cleanId = id?.trim();
       console.log(`📡 [UnidadesService] Buscando estatísticas da unidade ${cleanId}`);
 
-      const response = await api.get(`${this.baseUrl}/${cleanId}/estatisticas`);
+      const response = await api.get<UnidadeEstatisticas>(`${this.baseUrl}/${cleanId}/estatisticas`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [UnidadesService] Erro ao buscar estatísticas da unidade ${id}:`, error);
       throw error;
     }
@@ -285,7 +224,7 @@ class UnidadesService {
   async buscarEquipamentosUnidade(
     id: string,
     filters?: { page?: number; limit?: number; search?: string }
-  ): Promise<any> {
+  ): Promise<UnidadeEquipamentosResponse> {
     try {
       const cleanId = id?.trim();
       console.log(`📡 [UnidadesService] Buscando equipamentos da unidade ${cleanId}`);
@@ -295,9 +234,9 @@ class UnidadesService {
       if (filters?.limit) params.append('limit', filters.limit.toString());
       if (filters?.search) params.append('search', filters.search);
 
-      const response = await api.get(`${this.baseUrl}/${cleanId}/equipamentos?${params.toString()}`);
+      const response = await api.get<UnidadeEquipamentosResponse>(`${this.baseUrl}/${cleanId}/equipamentos?${params.toString()}`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [UnidadesService] Erro ao buscar equipamentos da unidade ${id}:`, error);
       throw error;
     }
@@ -309,7 +248,7 @@ export const unidadesService = new UnidadesService();
 export default unidadesService;
 
 // ✅ EXPORTS NOMEADOS PARA COMPATIBILIDADE COM IMPORTS FUNCTION-BASED
-export const getAllUnidades = (filters: FilterUnidadeDto) => unidadesService.listarUnidades(filters);
+export const getAllUnidades = (filters?: FiltrosDeUnidade) => unidadesService.listarUnidades(filters);
 export const getUnidadeById = (id: string) => unidadesService.buscarUnidade(id);
 export const createUnidade = (dados: CreateUnidadeDto) => unidadesService.criarUnidade(dados);
 export const updateUnidade = (id: string, dados: UpdateUnidadeDto) => unidadesService.atualizarUnidade(id, dados);
@@ -321,4 +260,4 @@ export const getUnidadeEquipamentos = (id: string, filters?: { page?: number; li
   unidadesService.buscarEquipamentosUnidade(id, filters);
 
 // ✅ TIPOS RE-EXPORTADOS
-export type { UnidadeCompleta as Unidade, FilterUnidadeDto as UnidadeFilters };
+export type { UnidadeCompleta as Unidade, FiltrosDeUnidade as UnidadeFilters };

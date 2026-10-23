@@ -11,8 +11,9 @@ export const profileService = {
    * @param data - The profile data to update
    * @returns Updated user data
    */
-  async updateProfile(userId: string, data: UpdateUsuarioDto): Promise<UsuarioDTO> {
-    const response = await api.patch<any>(`/usuarios/${userId}`, data);
+  async updateProfile(_userId: string, data: UpdateUsuarioDto): Promise<UsuarioDTO> {
+    // /usuarios/me: o próprio usuário, sem passar pela permissão de gerenciar usuários.
+    const response = await api.patch<UsuarioDTO>('/usuarios/me', data);
     return response.data;
   },
 
@@ -26,7 +27,7 @@ export const profileService = {
     userId: string,
     data: ChangePasswordDto
   ): Promise<{ message: string }> {
-    const response = await api.patch<any>(`/usuarios/${userId}/change-password`, data);
+    const response = await api.patch<{ message: string }>(`/usuarios/${userId}/change-password`, data);
     return response.data;
   },
 
@@ -40,7 +41,7 @@ export const profileService = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await api.post<any>(`/usuarios/${userId}/upload-avatar`, formData, {
+    const response = await api.post<{ imageUrl: string }>(`/usuarios/${userId}/upload-avatar`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

@@ -1,10 +1,12 @@
 // src/features/execucao-os/config/form-config.tsx - CORRIGIDA COM MAPEAMENTO DE GRUPOS E COLSPAN
-import type { FormField } from '@/types/base';
+import type { FormField, FormFieldProps } from '@/types/base';
+import type { BaseEntity, DadosDoFormulario } from '@/core/types/base';
+import type { ExecucaoOS, HistoricoOS } from '@/features/execucao-os/types';
+import type { OSDaOrigem } from '../components/OrigemOSCardWrapper';
 import { ProgramacaoSelector } from '../components/ProgramacaoSelector';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
 import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManager';
-import { OrcamentoCardManager } from '@/components/common/cards/OrcamentoCardManager';
 import { OrigemOSCardWrapper } from '../components/OrigemOSCardWrapper';
 import { ReservaVeiculoCard } from '../components/ReservaVeiculoCard';
 import { HistoricoOSCard } from '../components/HistoricoOSCard';
@@ -24,15 +26,22 @@ const DEPOIS_DE_AUDITAR = ['AUDITADA', 'FINALIZADA'];
 const temValor = (v: unknown) =>
   v !== undefined && v !== null && String(v).trim() !== '' && !(typeof v === 'number' && Number.isNaN(v));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- entidade/formData do BaseForm
-const exibirSe = (statuses: string[], chave: string, extra?: (entity: any) => boolean) => (entity: any, formData: any) => {
+/**
+ * A OS aberta no sheet (já transformada) ou o formulário vivo: lidos pela
+ * chave do campo, com os aliases que o transform monta.
+ */
+type CamposDaOS = DadosDoFormulario & { statusExecucao?: string };
+
+/** O que se lê da OS para saber se ela tem reserva de viatura. */
+type OSComReserva = BaseEntity & { reserva_veiculo?: unknown; reservaVeiculo?: unknown; reserva_id?: unknown };
+
+const exibirSe = (statuses: string[], chave: string, extra?: (entity?: OSComReserva | null) => boolean) => (entity?: (BaseEntity & CamposDaOS) | null, formData?: CamposDaOS) => {
   const status = formData?.statusExecucao || entity?.statusExecucao;
   const valor = formData?.[chave] ?? entity?.[chave];
-  return statuses.includes(status) && temValor(valor) && (!extra || extra(entity));
+  return statuses.includes(status ?? '') && temValor(valor) && (!extra || extra(entity));
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const temReservaNa = (entity: any) => Boolean(entity?.reserva_veiculo || entity?.reservaVeiculo || entity?.reserva_id);
+const temReservaNa = (entity?: OSComReserva | null) => Boolean(entity?.reserva_veiculo || entity?.reservaVeiculo || entity?.reserva_id);
 
 /**
  * Listas (técnicos, materiais, ferramentas, orçamento): enquanto a OS não foi
@@ -40,10 +49,9 @@ const temReservaNa = (entity: any) => Boolean(entity?.reserva_veiculo || entity?
  * vazio vira ruído ("Nenhum material cadastrado" no relatório): só aparece
  * se alguma das listas tiver item.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- entidade/formData do BaseForm
-const exibirListaSe = (...chaves: string[]) => (entity: any, formData: any) => {
+const exibirListaSe = (...chaves: string[]) => (entity?: (BaseEntity & CamposDaOS) | null, formData?: CamposDaOS) => {
   const status = formData?.statusExecucao || entity?.statusExecucao;
-  if (!DEPOIS_DE_EXECUTAR.includes(status)) return true;
+  if (!DEPOIS_DE_EXECUTAR.includes(status ?? '')) return true;
   return chaves.some((chave) => {
     const lista = formData?.[chave] ?? entity?.[chave];
     return Array.isArray(lista) && lista.length > 0;
@@ -115,7 +123,7 @@ export const execucaoOSFormFields: FormField[] = [
     type: 'custom',
     group: 'origem',
     colSpan: 2, // ✅ Ocupa 2 colunas (largura total)
-    render: (props: any) => (
+    render: (props: FormFieldProps & { value?: OSDaOrigem; entity?: (BaseEntity & OSDaOrigem) | null; formData?: OSDaOrigem }) => (
       <OrigemOSCardWrapper
         value={props.value}
         entity={props.entity}
@@ -132,8 +140,7 @@ export const execucaoOSFormFields: FormField[] = [
     component: ReservaVeiculoCard,
     group: 'reserva',
     colSpan: 2, // ✅ Ocupa 2 colunas (largura total)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    condition: (entity: any) => temReservaNa(entity)
+    condition: (entity?: OSComReserva | null) => temReservaNa(entity)
   },
 
   // Dados de Execução da Reserva - GRUPO: reserva
@@ -212,15 +219,29 @@ export const execucaoOSFormFields: FormField[] = [
   },
   {
     // Depois das datas: e um valor derivado delas, nao um dado de entrada.
-    key: 'tempoTotalExecucao',
-    label: 'Tempo Total de Execução (min)',
-    type: 'number',
+    // SN-61: sem as pausas (antes era o fim menos o inicio, com elas dentro),
+    // e legivel ("3 h 20 min", nao "200")
+    key: 'tempoEfetivo',
+    label: 'Tempo efetivo (sem pausas)',
+    type: 'text',
     disabled: true,
     group: 'controle',
     width: 'half',
     startNewRow: true,
-    condition: exibirSe(DEPOIS_DE_INICIAR, 'tempoTotalExecucao')
+    condition: exibirSe(DEPOIS_DE_INICIAR, 'tempoEfetivo')
   },
+  {
+    // SN-61: a soma das horas de cada pessoa, registradas ao executar
+    key: 'hhReal',
+    label: 'Horas-homem',
+    type: 'text',
+    disabled: true,
+    group: 'controle',
+    width: 'half',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'hhReal')
+  },
+  // O custo real saiu daqui (SN-93): a seção "Custos", no alto do sheet, o mostra contra o
+  // previsto, por natureza e por instrução, pela conta da API
 
   // Equipe e Responsável - GRUPO: equipe
   {
@@ -331,47 +352,11 @@ export const execucaoOSFormFields: FormField[] = [
     condition: exibirListaSe('ferramentasUtilizadas')
   },
 
-  // ⚠️ MOVIDO PARA FinalizarExecucaoModal - Só mostra em visualização
-  {
-    key: 'custosAdicionais',
-    colSpan: 2,
-    label: 'Custos Adicionais (R$)',
-    type: 'number',
-    placeholder: 'Custos não planejados',
-    group: 'recursos',
-    width: 'half',
-    disabled: true,
-    startNewRow: true,
-    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'custosAdicionais')
-  },
+  // Os custos adicionais (o número antigo, sem descrição) aparecem na seção "Custos" (SN-93)
 
-  // Orçamento - GRUPO: orcamento
-  {
-    key: 'itens_orcamento',
-    label: '', // duplicava o titulo do grupo
-    type: 'custom',
-    component: OrcamentoCardManager,
-    componentProps: (formData: any) => {
-      const materiais = formData?.materiaisConsumidos || formData?.materiais || [];
-      const tecnicos = formData?.tecnicos || formData?.tecnicosPresentes || [];
-      const custoMateriais = materiais.reduce((acc: number, m: any) => {
-        return acc + ((Number(m.custo_unitario) || 0) * (Number(m.quantidade_planejada) || Number(m.quantidade_consumida) || 0));
-      }, 0);
-      const custoEquipe = tecnicos.reduce((acc: number, t: any) => {
-        return acc + ((Number(t.custo_hora) || 0) * (Number(t.horas_estimadas) || Number(t.horas_trabalhadas) || 0));
-      }, 0);
-      return {
-        title: 'Outros Custos',
-        custoMateriais,
-        custoEquipe,
-        disabled: true
-      };
-    },
-    defaultValue: [],
-    group: 'orcamento',
-    colSpan: 2,
-    condition: exibirListaSe('itens_orcamento', 'materiaisConsumidos', 'tecnicos'),
-  },
+  // O orçamento (o cartão "Outros Custos") saiu do sheet da execução (SN-93): a seção "Custos" mostra
+  // o previsto por natureza e o detalhe de cada pessoa, material e outro custo, pela conta da API. O
+  // cartão daqui somava o material planejado e as horas estimadas mesmo depois de executar
 
   // Condições de Segurança - GRUPO: seguranca
   // ⚠️ MOVIDO PARA FinalizarExecucaoModal - Só mostra em visualização de execuções finalizadas
@@ -395,6 +380,73 @@ export const execucaoOSFormFields: FormField[] = [
     disabled: true,
     startNewRow: true,
     condition: exibirSe(DEPOIS_DE_EXECUTAR, 'incidentesSeguranca')
+  },
+
+  // SN-60: Dados da falha - GRUPO: falha. Vêm do painel do Executar (obrigatórios
+  // na corretiva, menos o horário da parada); aparecem depois de executar, só com valor
+  {
+    key: 'equipamentoParou',
+    disabled: true,
+    label: 'O equipamento parou?',
+    type: 'text',
+    group: 'falha',
+    width: 'half',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'equipamentoParou')
+  },
+  {
+    key: 'paradaInicio',
+    disabled: true,
+    label: 'Equipamento parou em',
+    type: 'datetime-local',
+    group: 'falha',
+    width: 'half',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'paradaInicio')
+  },
+  {
+    key: 'paradaFim',
+    disabled: true,
+    label: 'Voltou a funcionar em',
+    type: 'datetime-local',
+    group: 'falha',
+    width: 'half',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'paradaFim')
+  },
+  {
+    key: 'tempoParado',
+    disabled: true,
+    label: 'Tempo parado',
+    type: 'text',
+    group: 'falha',
+    width: 'half',
+    startNewRow: true,
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'tempoParado')
+  },
+  {
+    key: 'falhaSintoma',
+    disabled: true,
+    label: 'Sintoma',
+    type: 'textarea',
+    colSpan: 2,
+    group: 'falha',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'falhaSintoma')
+  },
+  {
+    key: 'falhaCausa',
+    disabled: true,
+    label: 'Causa',
+    type: 'textarea',
+    colSpan: 2,
+    group: 'falha',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'falhaCausa')
+  },
+  {
+    key: 'falhaAcao',
+    disabled: true,
+    label: 'Ação tomada',
+    type: 'textarea',
+    colSpan: 2,
+    group: 'falha',
+    condition: exibirSe(DEPOIS_DE_EXECUTAR, 'falhaAcao')
   },
 
   // Resultados e Qualidade - GRUPO: resultados
@@ -446,8 +498,7 @@ export const execucaoOSFormFields: FormField[] = [
     disabled: true, // D1: vem dos paineis das transicoes; o editar nao grava
     label: 'Avaliação da qualidade',
     type: 'custom',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    render: ({ entity, formData }: any) => (
+    render: ({ entity, formData }: FormFieldProps & { entity?: (BaseEntity & { avaliacaoQualidade?: number }) | null }) => (
       <AvaliacaoEstrelas valor={Number(formData?.avaliacaoQualidade ?? entity?.avaliacaoQualidade)} somenteLeitura />
     ),
     group: 'qualidade',
@@ -485,7 +536,7 @@ export const execucaoOSFormFields: FormField[] = [
     colSpan: 2,
     placeholder: 'Descreva o motivo do cancelamento',
     required: true,
-    condition: (entity, formData) => {
+    condition: (entity?: ExecucaoOS | null, formData?: Record<string, unknown>) => {
       return formData?.statusExecucao === 'CANCELADA' ||
              (entity && entity.statusExecucao === 'CANCELADA');
     },
@@ -500,7 +551,7 @@ export const execucaoOSFormFields: FormField[] = [
     group: 'historico',
     colSpan: 2,
     showOnlyOnMode: ['view', 'edit'],
-    render: (props: any) => (
+    render: (props: FormFieldProps & { entity?: (BaseEntity & { historico?: HistoricoOS[] }) | null }) => (
       <HistoricoOSCard historico={props.entity?.historico} />
     )
   },
@@ -513,24 +564,31 @@ export const execucaoOSFormFields: FormField[] = [
     disabled: true,
     group: 'auditoria',
     width: 'half',
-    condition: (entity, formData) => {
+    condition: (entity?: ExecucaoOS | null, formData?: Record<string, unknown>) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
       return status === 'FINALIZADA' || status === 'CANCELADA';
     }
   },
   {
+    // SN-62: a coluna existe desde o código de verificação (as finalizadas antes
+    // ganharam a data da trilha). Antes mostrava o fim da execução com este nome
     key: 'dataFinalizacao',
-    // Mostra data_hora_fim_real: nao existe coluna de "finalizado em". Sao
-    // momentos diferentes do fluxo (EXECUTADA -> AUDITADA -> FINALIZADA).
-    label: 'Data de Conclusão da Execução',
+    label: 'Finalizada em',
     type: 'datetime-local',
     disabled: true,
     group: 'auditoria',
     width: 'half',
-    condition: (entity, formData) => {
-      const status = formData?.statusExecucao || entity?.statusExecucao;
-      return status === 'FINALIZADA' || status === 'CANCELADA';
-    }
+    condition: exibirSe(['FINALIZADA'], 'dataFinalizacao')
+  },
+  {
+    // O SHA-256 do conteúdo gravado na finalização, o mesmo do PDF (SN-62)
+    key: 'codigoVerificacao',
+    label: 'Código de verificação',
+    type: 'text',
+    disabled: true,
+    group: 'auditoria',
+    colSpan: 2,
+    condition: exibirSe(['FINALIZADA'], 'codigoVerificacao')
   },
   {
     key: 'aprovadoPor',
@@ -540,7 +598,7 @@ export const execucaoOSFormFields: FormField[] = [
     group: 'auditoria',
     width: 'half',
     startNewRow: true,
-    condition: (entity, formData) => {
+    condition: (entity?: ExecucaoOS | null, formData?: Record<string, unknown>) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
       return status === 'FINALIZADA';
     }
@@ -552,7 +610,7 @@ export const execucaoOSFormFields: FormField[] = [
     disabled: true,
     group: 'auditoria',
     width: 'half',
-    condition: (entity, formData) => {
+    condition: (entity?: ExecucaoOS | null, formData?: Record<string, unknown>) => {
       const status = formData?.statusExecucao || entity?.statusExecucao;
       return status === 'FINALIZADA';
     }
@@ -590,7 +648,7 @@ export const execucaoOSFormGroups = [
     key: 'controle',
     title: 'Execução',
     columns: 3,
-    fields: ['dataHoraInicioReal', 'dataHoraFimReal', 'tempoTotalExecucao']
+    fields: ['dataHoraInicioReal', 'dataHoraFimReal', 'tempoEfetivo', 'hhReal']
   },
   {
     key: 'equipe',
@@ -610,17 +668,17 @@ export const execucaoOSFormGroups = [
   {
     key: 'recursos',
     title: 'Recursos Consumidos',
-    fields: ['materiaisConsumidos', 'ferramentasUtilizadas', 'custosAdicionais'] // ✅ ADICIONADO: mapping explícito
-  },
-  {
-    key: 'orcamento',
-    title: 'Orçamento',
-    fields: ['itens_orcamento']
+    fields: ['materiaisConsumidos', 'ferramentasUtilizadas'] // ✅ ADICIONADO: mapping explícito
   },
   {
     key: 'seguranca',
     title: 'Segurança e EPIs',
     fields: ['equipamentosSeguranca', 'incidentesSeguranca']
+  },
+  {
+    key: 'falha',
+    title: 'Dados da falha',
+    fields: ['equipamentoParou', 'paradaInicio', 'paradaFim', 'tempoParado', 'falhaSintoma', 'falhaCausa', 'falhaAcao'],
   },
   {
     key: 'resultados',
@@ -647,7 +705,7 @@ export const execucaoOSFormGroups = [
   {
     key: 'auditoria',
     title: 'Informações de Auditoria',
-    fields: ['finalizadoPor', 'dataFinalizacao', 'aprovadoPor', 'dataAprovacao'] // ✅ Campos controlados por condition individual baseada em status
+    fields: ['finalizadoPor', 'dataFinalizacao', 'aprovadoPor', 'dataAprovacao', 'codigoVerificacao'] // ✅ Campos controlados por condition individual baseada em status
     // Removido conditional do grupo - deixar os campos controlarem sua própria visibilidade
   }
 ];

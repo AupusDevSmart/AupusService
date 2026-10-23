@@ -1,5 +1,6 @@
 // src/services/usuarios.services.ts - ENUM CORRIGIDO
 import { api } from '@/config/api';
+import { mensagemDoBackend } from '@/utils/api-error';
 
 // ============================================================================
 // TIPOS - CORRIGIDOS BASEADOS NO BACKEND
@@ -82,7 +83,7 @@ export interface CreateUsuarioRequest {
   permissions?: string[];
 }
 
-export interface UpdateUsuarioRequest extends Partial<CreateUsuarioRequest> {}
+export type UpdateUsuarioRequest = Partial<CreateUsuarioRequest>;
 
 // ============================================================================
 // SERVICE - COM LOGGING MELHORADO
@@ -98,12 +99,12 @@ export class UsuariosService {
     try {
       // console.log('🔍 [USUARIOS SERVICE] Buscando usuários com params:', params);
       
-      const response = await api.get(this.BASE_PATH, { params });
+      const response = await api.get<PaginatedUsuariosResponse>(this.BASE_PATH, { params });
       
       // console.log('✅ [USUARIOS SERVICE] Usuários encontrados:', response.data.data.length);
       
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('❌ [USUARIOS SERVICE] Erro ao buscar usuários:', error);
       // console.error('❌ [USUARIOS SERVICE] Response data:', error.response?.data);
       throw this.handleError(error, 'Erro ao buscar usuários');
@@ -161,7 +162,7 @@ export class UsuariosService {
       // console.log('📊 [USUARIOS SERVICE] Status encontrados:', [...new Set(usuariosBasicos.map(u => u.status))]);
       
       return usuariosFiltrados;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('❌ [USUARIOS SERVICE] Erro ao buscar usuários básicos:', error);
       throw this.handleError(error, 'Erro ao buscar usuários');
     }
@@ -184,7 +185,7 @@ export class UsuariosService {
 
       // console.log('✅ [USUARIOS SERVICE] Conexão OK:', response.status);
       return true;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('❌ [USUARIOS SERVICE] Falha na conexão:', error.response?.status);
       // console.error('❌ [USUARIOS SERVICE] Erro detalhado:', error.response?.data);
       return false;
@@ -198,12 +199,12 @@ export class UsuariosService {
     try {
       // console.log('🔍 [USUARIOS SERVICE] Buscando usuário:', id);
       
-      const response = await api.get(`${this.BASE_PATH}/${id}`);
+      const response = await api.get<UsuarioResponse>(`${this.BASE_PATH}/${id}`);
       
       // console.log('✅ [USUARIOS SERVICE] Usuário encontrado:', response.data.nome);
       
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('❌ [USUARIOS SERVICE] Erro ao buscar usuário:', error);
       throw this.handleError(error, 'Erro ao buscar usuário');
     }
@@ -216,12 +217,12 @@ export class UsuariosService {
     try {
       // console.log('🔄 [USUARIOS SERVICE] Criando usuário:', data.nome);
       
-      const response = await api.post(this.BASE_PATH, data);
+      const response = await api.post<UsuarioResponse>(this.BASE_PATH, data);
       
       // console.log('✅ [USUARIOS SERVICE] Usuário criado:', response.data.id);
       
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('❌ [USUARIOS SERVICE] Erro ao criar usuário:', error);
       throw this.handleError(error, 'Erro ao criar usuário');
     }
@@ -235,12 +236,12 @@ export class UsuariosService {
       // console.log('🔄 [USUARIOS SERVICE] Atualizando usuário:', id);
       // console.log('📝 [USUARIOS SERVICE] Dados enviados:', data);
       
-      const response = await api.patch(`${this.BASE_PATH}/${id}`, data);
+      const response = await api.patch<UsuarioResponse>(`${this.BASE_PATH}/${id}`, data);
       
       // console.log('✅ [USUARIOS SERVICE] Usuário atualizado:', response.data.nome);
       
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('❌ [USUARIOS SERVICE] Erro ao atualizar usuário:', error);
       throw this.handleError(error, 'Erro ao atualizar usuário');
     }
@@ -253,12 +254,12 @@ export class UsuariosService {
     try {
       // console.log('🗑️ [USUARIOS SERVICE] Excluindo usuário:', id);
       
-      const response = await api.delete(`${this.BASE_PATH}/${id}`);
+      const response = await api.delete<{ message: string }>(`${this.BASE_PATH}/${id}`);
       
       // console.log('✅ [USUARIOS SERVICE] Usuário excluído');
       
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       // console.error('❌ [USUARIOS SERVICE] Erro ao excluir usuário:', error);
       throw this.handleError(error, 'Erro ao excluir usuário');
     }
@@ -336,12 +337,15 @@ export class UsuariosService {
   // PRIVATE
   // ============================================================================
 
-  private static handleError(error: any, defaultMessage: string): Error {
-    if (error.response?.data?.message) {
-      return new Error(error.response.data.message);
+  private static handleError(error: unknown, defaultMessage: string): Error {
+    // A mensagem do backend vem em error.message (envelope do HttpExceptionFilter);
+    // lendo só data.message, a tela mostrava "Request failed with status code 400"
+    const mensagemDaApi = mensagemDoBackend(error);
+    if (mensagemDaApi) {
+      return new Error(mensagemDaApi);
     }
     
-    if (error.message) {
+    if (error instanceof Error && error.message) {
       return new Error(error.message);
     }
     

@@ -30,7 +30,7 @@ export const useUnidades = (filters?: UnidadeFilters) => {
     refetch,
   } = useQuery({
     queryKey: ['unidades', filters],
-    queryFn: () => getAllUnidades(filters as any),
+    queryFn: () => getAllUnidades(filters),
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 

@@ -1,5 +1,6 @@
 // src/features/reservas/config/form-config.tsx
 import React from 'react';
+import type { FormFieldProps } from '@/types/base';
 
 export interface FormField {
   key: string;
@@ -8,8 +9,8 @@ export interface FormField {
   required?: boolean;
   placeholder?: string;
   options?: { label: string; value: string | number }[];
-  validation?: (value: any) => string | null;
-  render?: (props: any) => React.ReactNode;
+  validation?: (value: string | undefined) => string | null;
+  render?: (props: FormFieldProps) => React.ReactNode;
   colSpan?: number;
 }
 

@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TarefaDisponivel } from './types';
+import { formatarHoras } from '@/utils/horas';
 
 interface TarefasSelectorProps {
   tarefas: TarefaDisponivel[];
@@ -76,19 +77,18 @@ export function TarefasSelector({
           const marcada = selectedIds.includes(tarefa.id);
           const instrucao = tarefa.instrucao;
 
+          // A duração é a soma dos passos (SN-85: a instrução não tem mais categoria nem tipo)
+          const horas = (instrucao?.sub_instrucoes ?? []).reduce((h, p) => h + (Number(p.duracao_horas) || 0), 0);
           const detalhe = [
-            instrucao?.tag,
+            instrucao?.codigo,
             instrucao?.nome,
             instrucao?.sub_instrucoes?.length
               ? `${instrucao.sub_instrucoes.length} etapa${instrucao.sub_instrucoes.length === 1 ? '' : 's'}`
               : null,
+            horas > 0 ? formatarHoras(horas) : null,
           ]
             .filter(Boolean)
             .join(' · ');
-
-          const etiquetas = [instrucao?.categoria, instrucao?.tipo_manutencao].filter(
-            Boolean,
-          ) as string[];
 
           return (
             <label
@@ -105,19 +105,6 @@ export function TarefasSelector({
               />
 
               <div className="min-w-0 flex-1">
-                {etiquetas.length > 0 && (
-                  <div className="mb-0.5 flex flex-wrap gap-1.5">
-                    {etiquetas.map((etiqueta) => (
-                      <span
-                        key={etiqueta}
-                        className="text-[10px] uppercase tracking-wide text-muted-foreground"
-                      >
-                        {etiqueta}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
                 <p className="truncate text-sm">{tarefa.nome}</p>
                 {detalhe && <p className="truncate text-xs text-muted-foreground">{detalhe}</p>}
               </div>

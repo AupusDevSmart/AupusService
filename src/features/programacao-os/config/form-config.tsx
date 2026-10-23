@@ -1,43 +1,91 @@
 // src/features/programacao-os/config/form-config.tsx - CORRIGIDA COM MAPEAMENTO DE GRUPOS
-import { useState } from 'react';
-import type { FormField } from '@/types/base';
+import type { FormField, FormFieldProps } from '@/types/base';
+import type { BaseEntity, DadosDoFormulario } from '@/core/types/base';
+import type { DadosOrigem, TarefasPorPlano } from '../types';
+import type { OrigemOSValue } from '../components/origem-selector/types';
+import type { AnomaliaDoCard, SolicitacaoDoCard, TarefaDoCard } from '../components/OrigemOSCard';
+import type { ReservaVinculada } from '../components/ReservaVinculadaCard';
 import { OrigemOSSelector } from '../components/OrigemOSSelector';
-import { InstrucoesDaOrigem } from '../components/InstrucoesDaOrigem';
-import { RecursosDaOrigem } from '../components/RecursosDaOrigem';
+import { InstrucoesDaProgramacao } from '@/features/programacao-os/components/InstrucoesDaProgramacao';
+import { HORAS_DA_VAGA, type RecursosDaProgramacao } from '@/features/programacao-os/utils/recursos-das-instrucoes';
 import { PrazoDaOrigem } from '../components/PrazoDaOrigem';
 import { OrigemOSCard } from '../components/OrigemOSCard';
 import { MateriaisCardManager } from '@/components/common/cards/MateriaisCardManager';
 import { FerramentasCardManager } from '@/components/common/cards/FerramentasCardManager';
-import { TecnicosCardManager } from '@/components/common/cards/TecnicosCardManager';
-import { OrcamentoCardManager } from '@/components/common/cards/OrcamentoCardManager';
+import { TecnicosDaPlanta } from '../components/TecnicosDaPlanta';
+import type { TecnicoItem } from '@/components/common/cards/TecnicosCardManager';
+import { ResponsavelDaOS } from '../components/ResponsavelDaOS';
+import { OrcamentoCardManager, type ItemOrcamento } from '@/components/common/cards/OrcamentoCardManager';
 import { ReservaViaturaField } from '../components/ReservaViaturaField';
 import { ReservaVinculadaCard } from '../components/ReservaVinculadaCard';
-
+import { ValoresDasInstrucoes } from '@/features/programacao-os/components/ValoresDasInstrucoes';
+import { linhasDeValor, type AjustesDeValor } from '@/features/programacao-os/utils/valores-das-instrucoes';
 
 /**
- * As instrucoes da origem, e os recursos que elas trazem.
- *
- * Um componente so porque as duas coisas dependem da MESMA lista: resolver o
- * vinculo em dois lugares daria duas listas que podem divergir, e a pessoa
- * veria uma instrucao na tela cujos materiais nao entraram.
+ * A programação aberta no sheet, como o `getModalEntity` da página a monta:
+ * `origem` já é o objeto do seletor (com `tipo`), e as relações vêm da API.
+ * Só o que estes campos leem.
  */
-function InstrucoesOrigemComRecursos({
-  onMultipleChange,
-  ...props
-}: any) {
-  const [instrucaoIds, setInstrucaoIds] = useState<string[]>([]);
+type ProgramacaoAberta = BaseEntity & {
+  status?: string;
+  origem?: DadosOrigem | null;
+  dados_origem?: DadosOrigem | null;
+  anomalia?: AnomaliaDoCard | null;
+  anomalia_id?: string;
+  /** SN-93: com o valor da instrução nesta programação e o equipamento */
+  tarefas_programacao?: Array<TarefaDoCard & { valor?: number | null; valor_original?: number | null; equipamento_nome?: string | null }>;
+  plano_manutencao?: { id?: string } | null;
+  plano_manutencao_id?: string;
+  planos_selecionados?: unknown[];
+  tarefas_por_plano?: TarefasPorPlano;
+  solicitacao_servico?: SolicitacaoDoCard | null;
+  solicitacao_servico_id?: string;
+  /** As instruções avulsas gravadas (SN-86) */
+  instrucoes?: Array<{
+    instrucao_id?: string | null;
+    codigo?: string | null;
+    nome?: string | null;
+    valor?: number | null;
+    valor_original?: number | null;
+    equipamento_nome?: string | null;
+  }>;
+  data_previsao_fim?: string;
+  reserva_veiculo?: ReservaVinculada | null;
+  observacoes_aprovacao?: string;
+  data_analise?: string;
+  data_aprovacao?: string;
+};
 
-  return (
-    <>
-      <InstrucoesDaOrigem {...props} onInstrucoes={setInstrucaoIds} />
-      <RecursosDaOrigem
-        instrucaoIds={instrucaoIds}
-        ativo={Boolean(onMultipleChange)}
-        onCarregar={(recursos) => onMultipleChange?.(recursos)}
-      />
-    </>
-  );
-}
+/** O formulário vivo da programação: só as chaves que estes campos leem. */
+type CamposDaProgramacao = DadosDoFormulario & {
+  origem?: OrigemOSValue | null;
+  status?: string;
+  data_previsao_fim?: string;
+  data_previsao_inicio?: string;
+  data_hora_programada?: string;
+  reserva_id?: string | null;
+  reserva_veiculo?: { id?: string } | null;
+  observacoes_aprovacao?: string;
+  materiais?: RecursosDaProgramacao['materiais'];
+  tecnicos?: RecursosDaProgramacao['tecnicos'];
+  ferramentas?: RecursosDaProgramacao['ferramentas'];
+  itens_orcamento?: RecursosDaProgramacao['itens_orcamento'];
+  instrucoes_ids?: string[];
+  /** SN-93: o valor das instruções ajustado nesta programação, pela chave da linha */
+  valores_das_instrucoes?: AjustesDeValor;
+  /** Fora do payload (o handleSubmit monta o dele): uma troca de instrução ainda calculando os recursos */
+  recursos_em_calculo?: boolean;
+  /** Fora do payload: um valor de instrução que não dá para ler (SN-93) */
+  valores_ilegiveis?: boolean;
+  /** Algum outro custo com valor ilegível: o Salvar mandaria o anterior calado */
+  orcamento_ilegivel?: boolean;
+};
+
+/** O render de um campo: o fieldProps inteiro, com a entidade e o formulário da programação. */
+type PropsDoRender = FormFieldProps & {
+  entity?: ProgramacaoAberta | null;
+  formData?: CamposDaProgramacao;
+};
 
 export const programacaoOSFormFields: FormField[] = [
   // Informações básicas - GRUPO: identificacao
@@ -74,7 +122,7 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Descreva o serviço a ser executado',
     group: 'identificacao',
     colSpan:2,
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -105,11 +153,11 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'origem',
     showOnlyOnMode: ['view', 'edit'],
     colSpan: 2, // Ocupar largura total no sheet
-    render: (props: any) => {
+    render: (props: PropsDoRender) => {
       const { entity } = props;
       return (
         <OrigemOSCard
-          origem={entity?.origem?.tipo || entity?.origem || 'MANUAL'}
+          origem={entity?.origem?.tipo || 'MANUAL'}
           dadosOrigem={entity?.origem || entity?.dados_origem}
           anomalia={entity?.anomalia}
           tarefas={entity?.tarefas_programacao}
@@ -122,25 +170,27 @@ export const programacaoOSFormFields: FormField[] = [
     }
   },
   {
-    key: 'instrucoes_origem',
+    // SN-86: as instruções da programação, as das tarefas e as avulsas. É delas
+    // que a OS tira o checklist, e os recursos planejados as acompanham
+    key: 'instrucoes_ids',
     label: '',
     type: 'custom',
     group: 'origem',
     colSpan: 2,
-    excludeFromSubmit: true,
-    render: ({ entity, formData, onMultipleChange }: any) => {
+    render: ({ entity, formData, value, onChange, onMultipleChange, mode, disabled }: PropsDoRender) => {
       // No cadastro a origem esta no formulario; numa OS ja salva, na entidade.
       const origem = formData?.origem;
-      const tipo = origem?.tipo || entity?.origem?.tipo || entity?.origem || 'MANUAL';
+      const tipo = origem?.tipo || entity?.origem?.tipo || 'MANUAL';
 
       const tarefaIds: string[] = origem?.tarefasSelecionadas?.length
         ? origem.tarefasSelecionadas
         : (entity?.tarefas_programacao || [])
-            .map((t: any) => t?.tarefa_id || t?.tarefa?.id || t?.id)
-            .filter(Boolean);
+            .map((t) => t?.tarefa_id || t?.tarefa?.id || t?.id)
+            .filter((id): id is string => Boolean(id));
+      const editavel = mode !== 'view' && !disabled;
 
       return (
-        <InstrucoesOrigemComRecursos
+        <InstrucoesDaProgramacao
           tipo={tipo}
           anomaliaId={origem?.anomaliaId || entity?.anomalia?.id || entity?.anomalia_id}
           solicitacaoId={
@@ -150,10 +200,26 @@ export const programacaoOSFormFields: FormField[] = [
           }
           planoId={origem?.planoId || entity?.plano_manutencao?.id || entity?.plano_manutencao_id}
           tarefaIds={tarefaIds}
-          onMultipleChange={onMultipleChange}
+          valor={Array.isArray(value) ? (value as string[]) : undefined}
+          onValor={editavel ? (ids) => onChange(ids) : undefined}
+          semearDaOrigem={mode === 'create'}
+          gravadas={(entity?.instrucoes ?? [])
+            .filter((i) => i.instrucao_id)
+            .map((i) => ({ id: String(i.instrucao_id).trim(), codigo: i.codigo ?? undefined, nome: i.nome ?? undefined }))}
+          recursos={{
+            materiais: formData?.materiais ?? [],
+            ferramentas: formData?.ferramentas ?? [],
+            tecnicos: formData?.tecnicos ?? [],
+            itens_orcamento: formData?.itens_orcamento ?? [],
+          }}
+          onRecursos={onMultipleChange ? (recursos) => onMultipleChange({ ...recursos }) : undefined}
+          onCalculando={onMultipleChange ? (sim) => onMultipleChange({ recursos_em_calculo: sim }) : undefined}
         />
       );
     },
+    // Salvar com a troca ainda calculando gravaria a instrução sem os recursos dela
+    validation: (_valor: unknown, formData?: CamposDaProgramacao) =>
+      formData?.recursos_em_calculo ? 'Aguarde: os recursos das instruções ainda estão sendo calculados.' : null,
   },
 
 
@@ -172,7 +238,7 @@ export const programacaoOSFormFields: FormField[] = [
     ],
     group: 'classificacao',
     width: 'third', // 33.33% em desktop (3 campos na linha)
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -191,7 +257,7 @@ export const programacaoOSFormFields: FormField[] = [
     ],
     group: 'classificacao',
     width: 'third', // 33.33% em desktop (3 campos na linha)
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -206,7 +272,7 @@ export const programacaoOSFormFields: FormField[] = [
     ],
     group: 'classificacao',
     width: 'third', // 33.33% em desktop (3 campos na linha)
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -218,7 +284,7 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'datetime-local',
     group: 'planejamento',
     width: 'half', // 50% em desktop
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -228,7 +294,7 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'datetime-local',
     group: 'planejamento',
     width: 'half', // 50% em desktop
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -250,9 +316,9 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'planejamento',
     colSpan: 2,
     excludeFromSubmit: true,
-    render: ({ entity, formData }: any) => {
+    render: ({ entity, formData }: PropsDoRender) => {
       const origem = formData?.origem;
-      const tipo = origem?.tipo || entity?.origem?.tipo || entity?.origem;
+      const tipo = origem?.tipo || entity?.origem?.tipo;
 
       return (
         <PrazoDaOrigem
@@ -276,7 +342,7 @@ export const programacaoOSFormFields: FormField[] = [
     placeholder: 'Ex: 6',
     group: 'planejamento',
     width: 'half', // 50% em desktop
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -336,7 +402,7 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'checkbox',
     defaultValue: false, // ✅ Sempre iniciar com false para evitar uncontrolled
     group: 'veiculo',
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -345,7 +411,7 @@ export const programacaoOSFormFields: FormField[] = [
     label: 'Reserva de Veículo',
     type: 'custom',
     component: ReservaViaturaField,
-    componentProps: (formData: any) => ({
+    componentProps: (formData: CamposDaProgramacao) => ({
       dataProgramada: formData?.data_hora_programada || formData?.data_previsao_inicio,
       reservaId: formData?.reserva_id || formData?.reserva_veiculo?.id
     }),
@@ -356,7 +422,7 @@ export const programacaoOSFormFields: FormField[] = [
     showOnlyOnMode: ['create', 'edit'],
     group: 'veiculo',
     colSpan: 2, // Ocupar largura total no sheet
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -371,7 +437,7 @@ export const programacaoOSFormFields: FormField[] = [
     showOnlyOnMode: 'view',
     group: 'veiculo',
     colSpan: 2, // Ocupar largura total no sheet
-    render: (props: any) => {
+    render: (props: PropsDoRender) => {
       const { entity } = props;
       return (
         <ReservaVinculadaCard
@@ -396,7 +462,7 @@ export const programacaoOSFormFields: FormField[] = [
     defaultValue: [],
     group: 'recursos',
     colSpan: 2, // Ocupar largura total no sheet
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -416,54 +482,114 @@ export const programacaoOSFormFields: FormField[] = [
     defaultValue: [],
     group: 'recursos',
     colSpan: 2, // Ocupar largura total no sheet
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
 
-  // Recursos - Técnicos - GRUPO: recursos
+  // Responsável e equipe - GRUPO: equipe (SN-31: pessoas são usuários)
+  // `render`, e não `component`: só o render recebe o formData (de onde sai a
+  // planta) e o onMultipleChange (id e nome do responsável juntos)
+  {
+    key: 'responsavel_id',
+    label: 'Responsável',
+    type: 'custom',
+    // Embrulhado: o ResponsavelDaOS nao recebe onChange, e o valor do campo e o id (texto).
+    render: (props: FormFieldProps) => (
+      <ResponsavelDaOS
+        value={props.value as string | null | undefined}
+        formData={props.formData}
+        onMultipleChange={props.onMultipleChange}
+        disabled={props.disabled}
+      />
+    ),
+    group: 'equipe',
+    colSpan: 2,
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
+      return entity?.status && entity.status !== 'PENDENTE';
+    }
+  },
   {
     key: 'tecnicos',
     label: 'Técnicos Necessários',
     type: 'custom',
-    component: TecnicosCardManager,
-    componentProps: {
-      mode: 'planejamento',
-      showCustos: true,
-      showStatus: true,
-      title: 'Equipe Planejada'
-    },
+    render: ({ value, onChange, formData, disabled }: FormFieldProps & { value?: TecnicoItem[] }) => (
+      <TecnicosDaPlanta
+        value={value ?? []}
+        onChange={onChange}
+        formData={formData}
+        disabled={disabled}
+        mode="planejamento"
+        showCustos
+        showStatus
+        title="Equipe Planejada"
+      />
+    ),
     defaultValue: [],
-    group: 'recursos',
+    // As horas de cada técnico, de 0,25 a 24 (o servidor recusa fora disso). A
+    // vaga que a instrução abre sem duração vem com 0 h para a programação
+    // preencher; antes o salvar trocava o vazio por 8 h, calado
+    validation: (value: unknown) => {
+      const sem = (Array.isArray(value) ? (value as TecnicoItem[]) : []).filter((t) => {
+        const horas = Number(t?.horas_estimadas);
+        return !Number.isFinite(horas) || horas < HORAS_DA_VAGA.minimo || horas > HORAS_DA_VAGA.maximo;
+      });
+      if (!sem.length) return null;
+      const quem = [...new Set(sem.map((t) => t.nome?.trim() || t.especialidade?.trim() || 'técnico'))].join(', ');
+      return `Informe as horas de cada técnico, de 0,25 a 24 h: ${quem}`;
+    },
+    group: 'equipe',
     colSpan: 2, // Ocupar largura total no sheet
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
 
   // Orçamento - GRUPO: orcamento
+  // SN-93 (D1): o valor de cada instrução, o do cadastro no vínculo, ajustável só nesta programação
+  {
+    key: 'valores_das_instrucoes',
+    label: '',
+    type: 'custom',
+    group: 'orcamento',
+    colSpan: 2,
+    render: ({ entity, formData, value, onChange, onMultipleChange, mode, disabled }: PropsDoRender) => (
+      <ValoresDasInstrucoes
+        linhas={linhasDeValor(entity)}
+        ajustes={(value as AjustesDeValor | undefined) ?? formData?.valores_das_instrucoes ?? {}}
+        onChange={onChange}
+        onIlegivel={onMultipleChange ? (sim) => onMultipleChange({ valores_ilegiveis: sim }) : undefined}
+        criando={mode === 'create'}
+        disabled={disabled || mode === 'view' || (entity?.status !== undefined && entity.status !== 'PENDENTE')}
+      />
+    ),
+    // Salvar com um valor ilegível gravaria o anterior calado
+    validation: (_valor: unknown, formData?: CamposDaProgramacao) =>
+      formData?.valores_ilegiveis ? 'Corrija o valor da instrução marcado em vermelho (ex.: 1.402,50).' : null,
+  },
   {
     key: 'itens_orcamento',
     label: '', // duplicava o titulo do grupo
     type: 'custom',
-    component: OrcamentoCardManager,
-    componentProps: (formData: any) => {
-      const custoMateriais = (formData?.materiais || []).reduce((acc: number, m: any) => {
-        return acc + ((m.custo_unitario || 0) * (m.quantidade_planejada || 0));
-      }, 0);
-      const custoEquipe = (formData?.tecnicos || []).reduce((acc: number, t: any) => {
-        return acc + ((t.custo_hora || 0) * (t.horas_estimadas || 0));
-      }, 0);
-      return {
-        title: 'Outros Custos',
-        custoMateriais,
-        custoEquipe
-      };
-    },
+    // `render`, não `component`: só o render recebe o formData e o onMultipleChange, e o valor
+    // ilegível tem de travar o Salvar
+    render: ({ entity, formData, value, onChange, onMultipleChange, mode, disabled }: PropsDoRender) => (
+      <OrcamentoCardManager
+        title="Outros Custos"
+        value={(value as ItemOrcamento[] | undefined) ?? []}
+        onChange={onChange}
+        disabled={disabled || mode === 'view' || (entity?.status !== undefined && entity.status !== 'PENDENTE')}
+        custoMateriais={(formData?.materiais || []).reduce((acc: number, m) => acc + (m.custo_unitario || 0) * (m.quantidade_planejada || 0), 0)}
+        custoEquipe={(formData?.tecnicos || []).reduce((acc: number, t) => acc + (t.custo_hora || 0) * (t.horas_estimadas || 0), 0)}
+        onIlegivel={onMultipleChange ? (sim) => onMultipleChange({ orcamento_ilegivel: sim }) : undefined}
+      />
+    ),
+    validation: (_valor: unknown, formData?: CamposDaProgramacao) =>
+      formData?.orcamento_ilegivel ? 'Corrija o valor do outro custo marcado em vermelho (ex.: 1.402,50).' : null,
     defaultValue: [],
     group: 'orcamento',
     colSpan: 2,
-    computeDisabled: (entity: any) => {
+    computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
     }
   },
@@ -487,9 +613,9 @@ export const programacaoOSFormFields: FormField[] = [
     disabled: true,
     group: 'workflow',
     colSpan: 2,
-    condition: (entity: any, data: any) => {
+    condition: (entity?: ProgramacaoAberta | null, data?: CamposDaProgramacao) => {
       const status = data?.status || entity?.status;
-      return ['APROVADA', 'FINALIZADA'].includes(status) && (data?.observacoes_aprovacao || entity?.observacoes_aprovacao);
+      return ['APROVADA', 'FINALIZADA'].includes(status ?? '') && (data?.observacoes_aprovacao || entity?.observacoes_aprovacao);
     }
   },
 
@@ -503,7 +629,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'workflow',
     colSpan: 2,
     showOnlyOnMode: ['view'],
-    condition: (entity: any, data: any) => {
+    condition: (entity?: ProgramacaoAberta | null, data?: CamposDaProgramacao) => {
       const status = data?.status || entity?.status;
       return status === 'FINALIZADA';
     }
@@ -516,7 +642,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'workflow',
     colSpan: 1,
     showOnlyOnMode: ['view'],
-    condition: (entity: any, data: any) => {
+    condition: (entity?: ProgramacaoAberta | null, data?: CamposDaProgramacao) => {
       const status = data?.status || entity?.status;
       return status === 'FINALIZADA';
     }
@@ -529,7 +655,7 @@ export const programacaoOSFormFields: FormField[] = [
     group: 'workflow',
     colSpan: 1,
     showOnlyOnMode: ['view'],
-    condition: (entity: any, data: any) => {
+    condition: (entity?: ProgramacaoAberta | null, data?: CamposDaProgramacao) => {
       const status = data?.status || entity?.status;
       return status === 'FINALIZADA';
     }
@@ -544,7 +670,7 @@ export const programacaoOSFormFields: FormField[] = [
     disabled: true,
     group: 'workflow',
     colSpan: 2,
-    condition: (entity: any, data: any) => {
+    condition: (entity?: ProgramacaoAberta | null, data?: CamposDaProgramacao) => {
       const status = data?.status || entity?.status;
       return status === 'CANCELADA';
     }
@@ -578,7 +704,7 @@ export const programacaoOSFormFields: FormField[] = [
     showOnlyOnMode: ['view'],
     group: 'auditoria',
     width: 'half', // 50% em desktop
-    condition: (entity: any) => entity?.data_analise
+    condition: (entity?: ProgramacaoAberta | null) => entity?.data_analise
   },
   {
     key: 'data_analise',
@@ -588,7 +714,7 @@ export const programacaoOSFormFields: FormField[] = [
     showOnlyOnMode: ['view'],
     group: 'auditoria',
     width: 'half', // 50% em desktop
-    condition: (entity: any) => entity?.data_analise
+    condition: (entity?: ProgramacaoAberta | null) => entity?.data_analise
   },
   {
     key: 'aprovado_por',
@@ -598,7 +724,7 @@ export const programacaoOSFormFields: FormField[] = [
     showOnlyOnMode: ['view'],
     group: 'auditoria',
     width: 'half', // 50% em desktop
-    condition: (entity: any) => entity?.data_aprovacao
+    condition: (entity?: ProgramacaoAberta | null) => entity?.data_aprovacao
   },
   {
     key: 'data_aprovacao',
@@ -608,7 +734,7 @@ export const programacaoOSFormFields: FormField[] = [
     showOnlyOnMode: ['view'],
     group: 'auditoria',
     width: 'half', // 50% em desktop
-    condition: (entity: any) => entity?.data_aprovacao
+    condition: (entity?: ProgramacaoAberta | null) => entity?.data_aprovacao
   }
 ];
 
@@ -665,6 +791,13 @@ export const programacaoOSFormGroups = [
   },
   */
   {
+    key: 'equipe',
+    title: 'Responsável e equipe',
+    // Quem responde pela OS e quem vai a campo, escolhidos entre os usuários
+    // da equipe da planta ou do planejamento (SN-31)
+    fields: ['responsavel_id', 'tecnicos']
+  },
+  {
     key: 'veiculo',
     title: 'Requisitos de Veículo',
     fields: ['necessita_veiculo', 'reserva_veiculo', 'reserva_vinculada']
@@ -672,12 +805,12 @@ export const programacaoOSFormGroups = [
   {
     key: 'recursos',
     title: 'Recursos Necessários',
-    fields: ['materiais', 'ferramentas', 'tecnicos']
+    fields: ['materiais', 'ferramentas']
   },
   {
     key: 'orcamento',
     title: 'Orçamento',
-    fields: ['itens_orcamento']
+    fields: ['valores_das_instrucoes', 'itens_orcamento']
   },
   {
     key: 'workflow',
@@ -689,7 +822,7 @@ export const programacaoOSFormGroups = [
     ],
     conditional: {
       field: 'status',
-      value: function(entity: any) {
+      value: function(entity?: ProgramacaoAberta | null) {
         // Mostrar grupo sempre que o status indica que passou por alguma ação de workflow
         return entity?.status && entity.status !== 'PENDENTE';
       }

@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/core/components/common/Layout';
 import { TitleCard } from '@/core/components/common/TitleCard';
-import { Button } from '@/core/components/ui/button';
 import { Plus } from 'lucide-react';
 import { UsuariosTable } from './usuarios-table';
 import { UsuariosFilters } from './usuarios-filters';
@@ -19,6 +18,16 @@ import { exportarUsuarios, lerUsuarios } from '../utils/planilha';
 export function UsuariosPage() {
   const navigate = useNavigate();
   const { hasPermission } = useUserStore();
+  // Criar: quem pode criar ao menos um tipo; editar: quem gerencia usuários (o
+  // backend ainda confere a hierarquia de papéis em cada caso).
+  const podeCriar = hasPermission(
+    'usuarios.create_operador',
+    'usuarios.create_proprietario',
+    'usuarios.create_analista',
+    'usuarios.create_gerente',
+    'usuarios.create_admin',
+  );
+  const podeEditar = hasPermission('usuarios.manage');
 
   const {
     usuarios,
@@ -109,22 +118,18 @@ export function UsuariosPage() {
                 }
                 ler={lerUsuarios}
                 aoImportar={refetch}
-                podeImportar={hasPermission(
-                  'usuarios.manage',
-                  'usuarios.create_operador',
-                  'usuarios.create_proprietario',
-                  'usuarios.create_analista',
-                  'usuarios.create_admin',
-                )}
+                podeImportar={podeCriar || podeEditar}
                 aviso="Usuário compartilhado com o NexOn: o que você confirmar aqui é replicado lá. Senha e permissões diretas não passam pela planilha."
               />
-              <button
-                onClick={() => handleOpenModal('create')}
-                className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                <span>Novo Usuário</span>
-              </button>
+              {podeCriar && (
+                <button
+                  onClick={() => handleOpenModal('create')}
+                  className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span>Novo Usuário</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -137,7 +142,7 @@ export function UsuariosPage() {
               onPageChange={handlePageChange}
               onLimitChange={handleLimitChange}
               onView={(usuario) => handleOpenModal('view', usuario)}
-              onEdit={(usuario) => handleOpenModal('edit', usuario)}
+              onEdit={podeEditar ? (usuario) => handleOpenModal('edit', usuario) : undefined}
               onPlantasClick={handleGerenciarPlantas}
               customActions={compartilhamento.acoes}
             />

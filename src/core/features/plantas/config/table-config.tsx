@@ -3,8 +3,6 @@ import {
   Factory,
   Building2,
   MapPin,
-  Clock,
-  Calendar,
 } from 'lucide-react';
 import { TableColumn } from '@/core/types/base';
 import { PlantaApiResponse } from '../types'; // ✅ Usando tipo da API

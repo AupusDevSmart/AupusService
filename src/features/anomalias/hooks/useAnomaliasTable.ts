@@ -43,16 +43,15 @@ const initialFilters: AnomaliasFilters = {
   limit: 10,
 };
 
-// Estatísticas iniciais
+// Estatísticas iniciais (as chaves de AnomaliasStats: as antigas — aguardando,
+// emAnalise, osGerada... — passavam pelo cast e não existiam)
 const initialStats: AnomaliasStats = {
   total: 0,
-  aguardando: 0,
-  emAnalise: 0,
-  osGerada: 0,
-  resolvida: 0,
-  cancelada: 0,
+  registradas: 0,
+  programadas: 0,
+  finalizadas: 0,
   criticas: 0,
-} as unknown as AnomaliasStats;
+};
 
 export function useAnomaliasTable(): UseAnomaliasTableReturn {
   // Estados

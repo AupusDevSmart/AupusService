@@ -8,10 +8,12 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/core/components/ui/select';
+import { formatApiError } from '@/utils/api-error';
 
 interface ConcessionariaSelectFieldProps {
   value?: string;
-  onChange?: (value: string) => void;
+  /** Recebe undefined ao limpar a seleção (a concessionária é opcional). */
+  onChange?: (value: string | undefined) => void;
   disabled?: boolean;
   estado?: string; // Filtrar concessionárias por estado
 }
@@ -67,9 +69,9 @@ export function ConcessionariaSelectField({
             });
           }
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('❌ [ConcessionariaSelect] Erro ao carregar concessionárias:', err);
-        setError(err.message || 'Erro ao carregar concessionárias');
+        setError(formatApiError(err) || 'Erro ao carregar concessionárias');
         setConcessionarias([]);
       } finally {
         setLoading(false);
@@ -99,7 +101,7 @@ export function ConcessionariaSelectField({
 
     // Permitir limpar o campo (concessionária é opcional)
     if (newValue === '__clear__') {
-      onChange?.(undefined as any); // Enviar undefined para limpar
+      onChange?.(undefined); // Enviar undefined para limpar
       return;
     }
 

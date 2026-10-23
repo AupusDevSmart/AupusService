@@ -1,8 +1,11 @@
 // src/services/documentos-veiculos.service.ts
 import { api } from '@/config/api';
+import { diaDaquiA } from '@/utils/dia-de-calendario';
 import {
   DocumentoVeiculoResponse,
   UploadDocumentoDto,
+  documentoDaApi,
+  type DocumentacaoDaApi,
   validarTipoArquivo,
   validarTamanhoArquivo,
   TAMANHO_MAXIMO_DOCUMENTO,
@@ -10,7 +13,7 @@ import {
 } from '@/features/veiculos/types/documentos';
 
 export interface DocumentosListResponse {
-  data: DocumentoVeiculoResponse[];
+  data: DocumentacaoDaApi[];
 }
 
 class DocumentosVeiculosApiService {
@@ -41,7 +44,7 @@ class DocumentosVeiculosApiService {
   // ==========================================
 
   async uploadDocumento(
-    veiculoId: number,
+    veiculoId: string,
     uploadData: UploadDocumentoDto,
     onProgress?: (progress: number) => void
   ): Promise<DocumentoVeiculoResponse> {
@@ -54,60 +57,56 @@ class DocumentosVeiculosApiService {
     const documentacaoData = {
       tipo: uploadData.categoria,
       descricao: uploadData.descricao || `${uploadData.file.name}`,
-      dataVencimento: uploadData.dataVencimento || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0], // Default: 1 ano
+      // Padrão: daqui a um ano, no fuso de quem está na tela (o dia UTC, depois das 21h, já era o seguinte)
+      dataVencimento: uploadData.dataVencimento || diaDaquiA({ anos: 1 }),
       numeroDocumento: '',
       orgaoEmissor: '',
       observacoes: ''
     };
 
-    try {
-      // 1. Criar documentação
-      const documentacaoResponse = await api.post(
-        `${this.baseUrl}/${veiculoId}/documentacao`,
-        documentacaoData
-      );
+    // 1. Criar documentação
+    const documentacaoResponse = await api.post(
+      `${this.baseUrl}/${veiculoId}/documentacao`,
+      documentacaoData
+    );
 
-      const documentacaoId = documentacaoResponse.data.id;
+    const documentacaoId = documentacaoResponse.data.id;
 
-      // 2. Upload do arquivo
-      const formData = new FormData();
-      formData.append('file', uploadData.file);
+    // 2. Upload do arquivo
+    const formData = new FormData();
+    formData.append('file', uploadData.file);
 
-      await api.post(
-        `${this.baseUrl}/${veiculoId}/documentacao/${documentacaoId}/upload`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          onUploadProgress: (progressEvent) => {
-            if (onProgress && progressEvent.total) {
-              const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-              onProgress(progress);
-            }
-          },
-        }
-      );
+    await api.post(
+      `${this.baseUrl}/${veiculoId}/documentacao/${documentacaoId}/upload`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(progress);
+          }
+        },
+      }
+    );
 
-      // console.log('✅ [DocumentosVeiculosService] Upload concluído:', uploadResponse.data);
-      return {
-        ...documentacaoResponse.data,
-        nome_original: uploadData.file.name,
-        nome_arquivo: uploadData.file.name,
-        tipo: uploadData.file.type,
-        tamanho: uploadData.file.size
-      };
-    } catch (error) {
-      // console.error('❌ [DocumentosVeiculosService] Erro no upload:', error);
-      throw error;
-    }
+    // console.log('✅ [DocumentosVeiculosService] Upload concluído:', uploadResponse.data);
+    return {
+      ...documentoDaApi(documentacaoResponse.data),
+      nome_original: uploadData.file.name,
+      nome_arquivo: uploadData.file.name,
+      tipo: uploadData.file.name.split('.').pop() ?? '',
+      tamanho: uploadData.file.size
+    };
   }
 
   // ==========================================
   // 🔵 LISTAGEM E CONSULTA
   // ==========================================
 
-  async listarDocumentos(veiculoId: number): Promise<DocumentoVeiculoResponse[]> {
+  async listarDocumentos(veiculoId: string): Promise<DocumentoVeiculoResponse[]> {
     // console.log('📋 [DocumentosVeiculosService] Listando documentos do veículo:', veiculoId);
 
     try {
@@ -115,7 +114,8 @@ class DocumentosVeiculosApiService {
       // console.log('📋 [DocumentosVeiculosService] Documentos encontrados:', response.data.data?.length || 0);
 
       // API pode retornar array direto ou dentro de 'data'
-      return Array.isArray(response.data) ? response.data : response.data.data || [];
+      const lista = Array.isArray(response.data) ? response.data : response.data.data || [];
+      return lista.map(documentoDaApi);
     } catch (error) {
       // console.error('❌ [DocumentosVeiculosService] Erro ao listar documentos:', error);
       return []; // Retornar array vazio em caso de erro
@@ -135,83 +135,80 @@ class DocumentosVeiculosApiService {
   // 🔵 DOWNLOAD
   // ==========================================
 
-  async downloadDocumento(veiculoId: number, documentoId: string): Promise<void> {
+  async downloadDocumento(veiculoId: string, documentoId: string): Promise<void> {
     // console.log('⬇️ [DocumentosVeiculosService] Iniciando download:', { veiculoId, documentoId });
 
-    try {
-      const response = await api.get(`${this.baseUrl}/${veiculoId}/documentacao/${documentoId}/download`, {
-        responseType: 'blob',
-      });
+    const response = await api.get(`${this.baseUrl}/${veiculoId}/documentacao/${documentoId}/download`, {
+      responseType: 'blob',
+    });
 
-      // 🔍 DEBUG: Log detalhado do response
-      // console.log('📊 [DocumentosVeiculosService] Response headers:', response.headers);
-      // console.log('📊 [DocumentosVeiculosService] Content-Type:', response.headers['content-type']);
-      // console.log('📊 [DocumentosVeiculosService] Content-Length:', response.headers['content-length']);
-      // console.log('📊 [DocumentosVeiculosService] Blob type:', response.data.type);
-      // console.log('📊 [DocumentosVeiculosService] Blob size:', response.data.size);
+    // 🔍 DEBUG: Log detalhado do response
+    // console.log('📊 [DocumentosVeiculosService] Response headers:', response.headers);
+    // console.log('📊 [DocumentosVeiculosService] Content-Type:', response.headers['content-type']);
+    // console.log('📊 [DocumentosVeiculosService] Content-Length:', response.headers['content-length']);
+    // console.log('📊 [DocumentosVeiculosService] Blob type:', response.data.type);
+    // console.log('📊 [DocumentosVeiculosService] Blob size:', response.data.size);
 
-      // Extrair nome do arquivo do header Content-Disposition
-      const contentDisposition = response.headers['content-disposition'];
-      let fileName = `documento-${documentoId}`;
+    // Extrair nome do arquivo do header Content-Disposition
+    const contentDisposition = response.headers['content-disposition'];
+    let fileName = `documento-${documentoId}`;
 
-      // console.log('📄 [DocumentosVeiculosService] Content-Disposition:', contentDisposition);
+    // console.log('📄 [DocumentosVeiculosService] Content-Disposition:', contentDisposition);
 
-      if (contentDisposition) {
-        const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (fileNameMatch && fileNameMatch[1]) {
-          fileName = fileNameMatch[1].replace(/['"]/g, '');
-        }
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (fileNameMatch && fileNameMatch[1]) {
+        fileName = fileNameMatch[1].replace(/['"]/g, '');
       }
-
-      // Verificar se o arquivo é realmente um PDF
-      const contentType = response.headers['content-type'];
-
-      // 🔧 FIX: Backend retorna "pdf" mas deveria ser "application/pdf"
-      const isActuallyPdf = contentType && (
-        contentType.includes('application/pdf') ||
-        contentType === 'pdf' ||
-        contentType.includes('pdf')
-      );
-
-      // console.log('🔍 [DocumentosVeiculosService] Arquivo detectado como PDF?', isActuallyPdf);
-
-      // 🔧 FIX: Garantir que PDFs tenham extensão .pdf
-      if (isActuallyPdf && !fileName.toLowerCase().endsWith('.pdf')) {
-        fileName = fileName + '.pdf';
-        // console.log('🔧 [DocumentosVeiculosService] Adicionada extensão .pdf:', fileName);
-      }
-
-      // Criar blob com o content-type correto
-      const correctMimeType = isActuallyPdf ? 'application/pdf' : (contentType || 'application/octet-stream');
-      const blob = new Blob([response.data], {
-        type: correctMimeType
-      });
-
-      // Criar URL temporária e fazer download
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-
-      // console.log('⬇️ [DocumentosVeiculosService] Download iniciado:', fileName);
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-
-      // console.log('✅ [DocumentosVeiculosService] Download concluído:', fileName);
-    } catch (error) {
-      // console.error('❌ [DocumentosVeiculosService] Erro no download:', error);
-      throw error;
     }
+
+    // Verificar se o arquivo é realmente um PDF
+    // O axios 1.20 tipa o cabeçalho como qualquer valor de header (SN-39): só texto conta
+    const cabecalhoDoTipo = response.headers['content-type'];
+    const contentType = typeof cabecalhoDoTipo === 'string' ? cabecalhoDoTipo : '';
+
+    // 🔧 FIX: Backend retorna "pdf" mas deveria ser "application/pdf"
+    const isActuallyPdf = contentType && (
+      contentType.includes('application/pdf') ||
+      contentType === 'pdf' ||
+      contentType.includes('pdf')
+    );
+
+    // console.log('🔍 [DocumentosVeiculosService] Arquivo detectado como PDF?', isActuallyPdf);
+
+    // 🔧 FIX: Garantir que PDFs tenham extensão .pdf
+    if (isActuallyPdf && !fileName.toLowerCase().endsWith('.pdf')) {
+      fileName = fileName + '.pdf';
+      // console.log('🔧 [DocumentosVeiculosService] Adicionada extensão .pdf:', fileName);
+    }
+
+    // Criar blob com o content-type correto
+    const correctMimeType = isActuallyPdf ? 'application/pdf' : (contentType || 'application/octet-stream');
+    const blob = new Blob([response.data], {
+      type: correctMimeType
+    });
+
+    // Criar URL temporária e fazer download
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+
+    // console.log('⬇️ [DocumentosVeiculosService] Download iniciado:', fileName);
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    // console.log('✅ [DocumentosVeiculosService] Download concluído:', fileName);
   }
 
   // ==========================================
   // 🔵 REMOÇÃO
   // ==========================================
 
-  async removerDocumento(veiculoId: number, documentoId: string): Promise<{ message: string }> {
+  async removerDocumento(veiculoId: string, documentoId: string): Promise<{ message: string }> {
     // console.log('🗑️ [DocumentosVeiculosService] Removendo documento:', { veiculoId, documentoId });
 
     const response = await api.delete(`${this.baseUrl}/${veiculoId}/documentacao/${documentoId}`);

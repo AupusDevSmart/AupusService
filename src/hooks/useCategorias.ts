@@ -1,6 +1,8 @@
 // src/hooks/useCategorias.ts
 import { useState, useEffect } from 'react';
+import { isAxiosError } from 'axios';
 import { categoriasEquipamentosApi, type CategoriaEquipamento } from '@/services/tipos-equipamentos.services';
+import { mensagemDoBackend } from '@/utils/api-error';
 
 // Desabilitar logs de debug em produção
 const noop = () => {};
@@ -41,13 +43,14 @@ export const useCategorias = (): UseCategoriasReturn => {
       }
 
       setCategorias(data);
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || err.message || 'Erro ao carregar categorias';
+    } catch (err) {
+      const resposta = isAxiosError<{ message?: string }>(err) ? err.response : undefined;
+      const errorMsg = mensagemDoBackend(err) || (err instanceof Error ? err.message : '') || 'Erro ao carregar categorias';
       setError(errorMsg);
       console.error('❌ [useCategorias] Erro ao carregar categorias:', {
         error: err,
-        response: err.response?.data,
-        status: err.response?.status
+        response: resposta?.data,
+        status: resposta?.status
       });
     } finally {
       setLoading(false);

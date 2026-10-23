@@ -9,13 +9,17 @@ import { BaseModal } from '@/core/components/common/base-modal/BaseModal';
 import { Plus, Zap, RefreshCw, Filter } from 'lucide-react';
 import { useGenericModal } from '@/core/hooks/useGenericModal';
 import { toast } from '@/core/hooks/use-toast';
-import { ConcessionariasFilters } from '../types';
+import { isAxiosError } from 'axios';
+import { ehAnexoTemporario, type ConcessionariasFilters } from '../types';
+import type { ConcessionariaResponse } from '@/services/concessionarias.services';
+import { doFormulario, paraApi, type ConcessionariaDoFormulario } from '@/core/features/concessionarias/utils/formulario';
 import { concessionariasTableColumns } from '../config/table-config';
 import { useConcessionariasFilters } from '../hooks/useConcessionariasFilters';
 import { concessionariasFormFields } from '../config/form-config';
-import { useUserStore, useConcessionariasFeature } from '@/core/context/hooks';
+import { useUserStore, useConcessionariasFeature, useHttpClient } from '@/core/context/hooks';
 import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
 import { exportarConcessionarias, lerConcessionarias } from '../utils/planilha';
+import { formatApiError } from '@/utils/api-error';
 
 const initialFilters: ConcessionariasFilters = {
   search: '',
@@ -24,57 +28,15 @@ const initialFilters: ConcessionariasFilters = {
   limit: LINHAS_POR_PAGINA_PADRAO
 };
 
-// ✅ HELPER: Transformar dados do formulário para API
-const transformFormDataToAPI = (data: any): any => {
-  const transformedData: any = {
-    nome: (data.nome || '').trim(),
-    estado: (data.estado || '').toUpperCase(),
-    numero_reh: (data.numero_reh || '').trim() || undefined,
-    data_inicio: data.data_inicio,
-    data_validade: data.data_validade,
-  };
-
-  // Adicionar tarifas se existirem
-  if (data.tarifas) {
-    if (data.tarifas.a4_verde) {
-      transformedData.a4_verde = data.tarifas.a4_verde;
-    }
-    if (data.tarifas.a3a_verde) {
-      transformedData.a3a_verde = data.tarifas.a3a_verde;
-    }
-    if (data.tarifas.b) {
-      transformedData.b = data.tarifas.b;
-    }
-  }
-
-  return transformedData;
-};
-
-// ✅ HELPER: Transformar dados da API para o formulário
-const transformAPIToFormData = (concessionaria: any): any => {
-  return {
-    id: concessionaria.id,
-    nome: concessionaria.nome,
-    estado: concessionaria.estado || '',
-    numero_reh: concessionaria.numero_reh || '',
-    data_inicio: concessionaria.data_inicio.split('T')[0],
-    data_validade: concessionaria.data_validade.split('T')[0],
-    tarifas: {
-      a4_verde: concessionaria.a4_verde,
-      a3a_verde: concessionaria.a3a_verde,
-      b: concessionaria.b
-    },
-    anexos: concessionaria.anexos || []
-  };
-};
-
 export function ConcessionariasPage() {
-  const { isAdmin } = useUserStore();
+  const { hasPermission } = useUserStore();
+  const podeGerenciar = hasPermission('concessionarias.manage');
   const concessionariasFeature = useConcessionariasFeature();
+  const httpClient = useHttpClient();
 
   // Estados locais
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [concessionarias, setConcessionarias] = useState<any[]>([]);
+  const [concessionarias, setConcessionarias] = useState<ConcessionariaResponse[]>([]);
   const [totalConcessionarias, setTotalConcessionarias] = useState(0);
   const [loading, setLoading] = useState(true);
   const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('concessionarias');
@@ -91,7 +53,7 @@ export function ConcessionariasPage() {
     modalState,
     openModal,
     closeModal
-  } = useGenericModal<any>();
+  } = useGenericModal<ConcessionariaResponse>();
 
   // ✅ FUNÇÃO: Buscar concessionárias da API
   const fetchConcessionarias = async (currentFilters: ConcessionariasFilters) => {
@@ -117,11 +79,11 @@ export function ConcessionariasPage() {
       // pagina e vieram os mesmos registros". O efeito de sincronia abaixo faz
       // a copia no render seguinte, quando o hook ja tem os dados novos.
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [CONCESSIONARIAS PAGE] Erro ao carregar concessionárias:', error);
       toast({
         title: "Erro ao carregar concessionárias",
-        description: error.message || "Não foi possível carregar a lista de concessionárias.",
+        description: formatApiError(error) || "Não foi possível carregar a lista de concessionárias.",
         variant: "destructive",
       });
       setConcessionarias([]);
@@ -176,14 +138,14 @@ export function ConcessionariasPage() {
   };
 
   // ✅ HANDLER: Buscar dados detalhados da concessionária para modal
-  const fetchConcessionariaDetails = async (id: string): Promise<any | null> => {
+  const fetchConcessionariaDetails = async (id: string): Promise<ConcessionariaResponse | null> => {
     try {
       return await concessionariasFeature.getConcessionaria(id);
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [CONCESSIONARIAS PAGE] Erro ao buscar detalhes da concessionária:', error);
       toast({
         title: "Erro ao carregar concessionária",
-        description: error.message || "Não foi possível carregar os detalhes da concessionária.",
+        description: formatApiError(error) || "Não foi possível carregar os detalhes da concessionária.",
         variant: "destructive",
       });
       return null;
@@ -191,7 +153,7 @@ export function ConcessionariasPage() {
   };
 
   // ✅ HANDLER: Visualizar concessionária (abertura otimista)
-  const handleView = async (concessionaria: any) => {
+  const handleView = async (concessionaria: ConcessionariaResponse) => {
 
     // Abrir modal IMEDIATAMENTE com dados básicos
     openModal('view', concessionaria);
@@ -208,7 +170,7 @@ export function ConcessionariasPage() {
   };
 
   // ✅ HANDLER: Editar concessionária (abertura otimista)
-  const handleEdit = async (concessionaria: any) => {
+  const handleEdit = async (concessionaria: ConcessionariaResponse) => {
 
     // Abrir modal IMEDIATAMENTE com dados básicos
     openModal('edit', concessionaria);
@@ -225,24 +187,45 @@ export function ConcessionariasPage() {
   };
 
   // ✅ HANDLER: Submissão do formulário (Create e Update)
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: ConcessionariaDoFormulario) => {
     setIsSubmitting(true);
 
     try {
-      const transformedData = transformFormDataToAPI(data);
+      const transformedData = paraApi(data);
 
       if (modalState.mode === 'create') {
         // 1. Criar a concessionária
         const novaConcessionaria = await concessionariasFeature.createConcessionaria(transformedData);
 
-        // Note: Anexo uploads are handled by AnexosConcessionariaField via useHttpClient
-        // For temporary anexos during create, we rely on the field component logic
+        // 2. Os arquivos escolhidos antes de a concessionária existir. Antes nada
+        // os enviava: a tela dizia "será enviado ao salvar" e o arquivo sumia.
+        const pendentes = (data.anexos ?? []).filter(ehAnexoTemporario);
+        const naoSubiram: string[] = [];
+        for (const anexo of pendentes) {
+          const form = new FormData();
+          form.append('file', anexo.file);
+          try {
+            await httpClient.post(`/concessionarias/${String(novaConcessionaria.id).trim()}/anexos`, form, {
+              headers: { 'Content-Type': 'multipart/form-data' },
+            });
+          } catch (erro) {
+            console.error('Erro ao enviar anexo da concessionária:', erro);
+            naoSubiram.push(anexo.nome_original);
+          }
+        }
 
         toast({
           title: "Concessionária cadastrada!",
           description: `A concessionária "${novaConcessionaria.nome}" foi cadastrada com sucesso.`,
           variant: "default",
         });
+        if (naoSubiram.length > 0) {
+          toast({
+            title: "Alguns anexos não foram enviados",
+            description: `Abra a concessionária e anexe de novo: ${naoSubiram.join(', ')}.`,
+            variant: "destructive",
+          });
+        }
 
       } else if (modalState.mode === 'edit') {
         // Usar o ID da entidade original ou do data se disponível
@@ -269,13 +252,13 @@ export function ConcessionariasPage() {
       await fetchConcessionarias(filters);
       closeModal();
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [CONCESSIONARIAS PAGE] Erro ao salvar concessionária:', error);
-      console.error('❌ [CONCESSIONARIAS PAGE] Error details:', error.response?.data || error);
+      console.error('❌ [CONCESSIONARIAS PAGE] Error details:', (isAxiosError(error) && error.response?.data) || error);
 
       toast({
         title: modalState.mode === 'create' ? "Erro ao cadastrar concessionária" : "Erro ao atualizar concessionária",
-        description: error.message || "Ocorreu um erro interno. Tente novamente.",
+        description: formatApiError(error) || "Ocorreu um erro interno. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -303,7 +286,7 @@ export function ConcessionariasPage() {
     }
 
     // Transformar dados da API para formato do formulário
-    return modalState.entity ? transformAPIToFormData(modalState.entity) : null;
+    return modalState.entity ? doFormulario(modalState.entity) : null;
   };
 
   // ✅ CALCULAR PAGINAÇÃO
@@ -358,7 +341,7 @@ export function ConcessionariasPage() {
                   }
                   ler={lerConcessionarias}
                   aoImportar={handleRefresh}
-                  podeImportar={isAdmin()}
+                  podeImportar={podeGerenciar}
                 />
                 <button
                   onClick={handleRefresh}
@@ -369,7 +352,7 @@ export function ConcessionariasPage() {
                   <span className="hidden sm:inline">Atualizar</span>
                 </button>
 
-                {isAdmin() && (
+                {podeGerenciar && (
                   <button
                     onClick={() => openModal('create')}
                     disabled={isSubmitting}
@@ -406,7 +389,7 @@ export function ConcessionariasPage() {
               onPageChange={handlePageChange}
               onLimitChange={handleLimitChange}
               onView={handleView}
-              onEdit={isAdmin() ? handleEdit : undefined}
+              onEdit={podeGerenciar ? handleEdit : undefined}
               emptyMessage={
                 filters.search
                   ? `Nenhuma concessionária encontrada para "${filters.search}".`

@@ -26,7 +26,7 @@ function casa(rota: string, pathname: string): number {
 
 /**
  * Folha do menu que corresponde a pagina; se varias servem, ganha a mais
- * especifica. Telas internas (`/cadastros/plantas/123/operadores`) marcam o item
+ * especifica. Telas internas (`/cadastros/plantas/123/...`) marcam o item
  * de onde vieram; `ativoEm` cobre as que tem outro nome.
  */
 export function acharAtivo(links: NavigationLink[], pathname: string): string | null {

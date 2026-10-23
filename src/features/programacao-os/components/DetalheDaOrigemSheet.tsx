@@ -99,7 +99,7 @@ function DetalheSolicitacao({ id, onClose }: { id: string; onClose: () => void }
     <BaseModal
       isOpen
       mode="view"
-      entity={registro as any}
+      entity={registro}
       title="Solicitação de serviço"
       formFields={formFields}
       onClose={onClose}
@@ -127,7 +127,7 @@ function DetalhePlano({ id, onClose }: { id: string; onClose: () => void }) {
     <BaseModal
       isOpen
       mode="view"
-      entity={registro as any}
+      entity={registro}
       title="Plano de manutenção"
       formFields={formFields}
       onClose={onClose}

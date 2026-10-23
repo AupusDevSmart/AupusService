@@ -1,11 +1,10 @@
 // src/services/solicitacoes-servico.service.ts
 import { api } from '@/config/api';
+import { instanteParaApi } from '@/utils/instante';
 import {
   SolicitacaoServico,
   SolicitacaoServicoFormData,
   SolicitacoesFilters,
-  AdicionarComentarioDto,
-  ComentarioSolicitacao,
   HistoricoSolicitacao,
 } from '@/features/solicitacoes-servico/types';
 
@@ -65,20 +64,6 @@ export interface UpdateSolicitacaoDto extends Partial<Omit<CreateSolicitacaoDto,
   data_necessidade?: string | null;
 }
 
-/**
- * "Precisa até" para a API: ISO com fuso, convertido no navegador.
- *
- * O campo e datetime-local e devolve "2026-09-29T09:00" (hora local, sem fuso
- * e sem segundos). Enviado assim, o Prisma recusava — a solicitacao nao salvava
- * e a tela recebia 500 — e, mesmo aceito, seria lido no fuso do servidor.
- * Vazio vira null (limpar).
- */
-export function dataNecessidadeParaApi(valor?: string | null): string | null {
-  if (!valor || !String(valor).trim()) return null;
-  const data = new Date(valor);
-  return Number.isNaN(data.getTime()) ? null : data.toISOString();
-}
-
 class SolicitacoesServicoApiService {
   private baseUrl = '/solicitacoes-servico';
 
@@ -114,8 +99,9 @@ class SolicitacoesServicoApiService {
     return response.data;
   }
 
-  async findOne(id: string): Promise<SolicitacaoServico> {
-    const response = await api.get(`${this.baseUrl}/${id}`);
+  /** `semAvisoGlobal`: quem chama trata a falha (a origem excluída da OS é contexto, não erro) */
+  async findOne(id: string, opcoes: { semAvisoGlobal?: boolean } = {}): Promise<SolicitacaoServico> {
+    const response = await api.get(`${this.baseUrl}/${id}`, { semAvisoGlobal: opcoes.semAvisoGlobal });
     return response.data;
   }
 
@@ -147,7 +133,7 @@ class SolicitacoesServicoApiService {
       riscos_nao_execucao: data.riscos_nao_execucao,
       requisitos_especiais: data.requisitos_especiais,
       // observacoes: data.observacoes, // Campo removido - backend não aceita
-      data_necessidade: dataNecessidadeParaApi(data.data_necessidade) ?? undefined,
+      data_necessidade: instanteParaApi(data.data_necessidade) ?? undefined,
       prazo_esperado: data.prazo_esperado,
       tempo_estimado: data.tempo_estimado,
       custo_estimado: data.custo_estimado,
@@ -175,7 +161,7 @@ class SolicitacoesServicoApiService {
       // O prazo tem que viajar no update tambem: sem ele, editar qualquer
       // outro campo apagaria a data que ja estava gravada. Vazio vai como
       // null, que e como se limpa o campo.
-      data_necessidade: dataNecessidadeParaApi(data.data_necessidade),
+      data_necessidade: instanteParaApi(data.data_necessidade),
       tempo_estimado: data.tempo_estimado,
       custo_estimado: data.custo_estimado,
       materiais_necessarios: data.materiais_necessarios,
@@ -206,23 +192,6 @@ class SolicitacoesServicoApiService {
     const url = `${this.baseUrl}/stats${params.toString() ? `?${params}` : ''}`;
     const response = await api.get(url);
 
-    return response.data;
-  }
-
-  // ==========================================
-  // 💬 4. COMENTÁRIOS
-  // ==========================================
-
-  async getComentarios(id: string): Promise<ComentarioSolicitacao[]> {
-    const response = await api.get(`${this.baseUrl}/${id}/comentarios`);
-    return response.data;
-  }
-
-  async adicionarComentario(
-    id: string,
-    dto: AdicionarComentarioDto
-  ): Promise<ComentarioSolicitacao> {
-    const response = await api.post(`${this.baseUrl}/${id}/comentarios`, dto);
     return response.data;
   }
 

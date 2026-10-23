@@ -1,0 +1,126 @@
+import { describe, expect, it } from 'vitest';
+import { descreverFaixa, dinheiroNoCampo, foraDaFaixa, formatarLeitura, kmNoCampo, lerDinheiroDigitado, lerKmDigitado, lerQuantidadeDigitada, lerNumeroDigitado, numeroNoCampo, numeroOuNulo } from './leitura';
+
+describe('leitura (SN-58)', () => {
+  it.each([
+    [600, 580, 620, false],
+    [580, 580, 620, false],
+    [620, 580, 620, false],
+    [579.9, 580, 620, true],
+    [620.1, 580, 620, true],
+    [-5, null, 0, false],
+    [5, null, 0, true],
+    [0.5, 1, null, true],
+    [null, 580, 620, false],
+  ])('%s na faixa [%s, %s] -> fora: %s', (valor, minimo, maximo, fora) => {
+    expect(foraDaFaixa(valor, { minimo, maximo })).toBe(fora);
+  });
+
+  it.each([
+    [{ minimo: 580, maximo: 620, unidade: 'V' }, '580 a 620 V'],
+    [{ minimo: 1.5, maximo: null, unidade: 'MΩ' }, 'no mínimo 1,5 MΩ'],
+    [{ minimo: null, maximo: 70.5, unidade: ' °C ' }, 'no máximo 70,5 °C'],
+    [{ minimo: 1000, maximo: 2500.25, unidade: null }, '1.000 a 2.500,25'],
+    [{ minimo: null, maximo: null, unidade: 'h' }, ''],
+  ])('descreve %j como "%s"', (faixa, texto) => {
+    expect(descreverFaixa(faixa)).toBe(texto);
+  });
+
+  it('formata o valor com a unidade', () => {
+    expect(formatarLeitura(601.25, 'V')).toBe('601,25 V');
+    expect(formatarLeitura(12, null)).toBe('12');
+  });
+
+  it.each([
+    ['601,25', 601.25],
+    ['601.25', 601.25],
+    ['1.234,5', 1234.5],
+    ['1234,5', 1234.5],
+    ['13.800,0001', 13800.0001],
+    ['1.5', 1.5],
+    ['1.2345', 1.2345],
+    [' -3 ', -3],
+    ['', null],
+    ['  ', null],
+    ['abc', undefined],
+    ['1,2,3', undefined],
+    ['12V', undefined],
+    // Sem vírgula, o ponto de milhar é ambíguo (mil e quinhentos ou um e meio?)
+    ['1.500', undefined],
+    ['1.234.567', undefined],
+    // Ponto fora de grupo de três não é milhar
+    ['1.23,5', undefined],
+    // A coluna é Decimal(14, 4)
+    ['0,12345', undefined],
+  ])('lê "%s" como %s', (texto, valor) => {
+    expect(lerNumeroDigitado(texto)).toBe(valor);
+  });
+
+  // Revisão do SN-58: o campo mostrava "1.234", sair dele sem mexer regravava 1,234
+  it.each([[1234], [13800], [-1500], [1000000], [601.25], [0.0001], [0], [-0.5]])(
+    'o que o campo mostra volta igual: %s',
+    (valor) => {
+      expect(lerNumeroDigitado(numeroNoCampo(valor))).toBe(valor);
+    },
+  );
+
+  it('o Decimal em texto vira número; vazio e lixo viram null', () => {
+    expect(numeroOuNulo('70.5000')).toBe(70.5);
+    expect(numeroOuNulo('')).toBeNull();
+    expect(numeroOuNulo(undefined)).toBeNull();
+    expect(numeroOuNulo('x')).toBeNull();
+  });
+});
+
+/** O dinheiro (SN-93): "1,005" virava 1,00 na tela e 1,01 na API */
+describe('lerDinheiroDigitado', () => {
+  it('até 2 casas; mais que isso é ilegível, e vazio apaga', () => {
+    expect(lerDinheiroDigitado('1.402,50')).toBe(1402.5);
+    expect(lerDinheiroDigitado('0,29')).toBe(0.29);
+    expect(lerDinheiroDigitado('85')).toBe(85);
+    expect(lerDinheiroDigitado('1,005')).toBeUndefined();
+    expect(lerDinheiroDigitado('1.500')).toBeUndefined();
+    expect(lerDinheiroDigitado('')).toBeNull();
+  });
+});
+
+describe('dinheiroNoCampo', () => {
+  it('mostra as 2 casas, e o que mostra se lê de volta', () => {
+    expect(dinheiroNoCampo(181.5)).toBe('181,50');
+    expect(dinheiroNoCampo(160)).toBe('160,00');
+    expect(dinheiroNoCampo(1402.5)).toBe('1.402,50');
+    expect(dinheiroNoCampo(null)).toBe('');
+    for (const v of [181.5, 160, 1402.5, 9999999.99, 0.05]) expect(lerDinheiroDigitado(dinheiroNoCampo(v))).toBe(v);
+  });
+});
+
+describe('lerQuantidadeDigitada', () => {
+  it('até 3 casas, como a API; mais é ilegível (a API recusava o salvar inteiro)', () => {
+    expect(lerQuantidadeDigitada('0,375')).toBe(0.375);
+    expect(lerQuantidadeDigitada('2')).toBe(2);
+    expect(lerQuantidadeDigitada('')).toBeNull();
+    expect(lerQuantidadeDigitada('0,3755')).toBeUndefined();
+  });
+});
+
+describe('lerKmDigitado', () => {
+  it('inteiro, com ou sem o ponto de milhar: KM não tem casa decimal, então "45.230" é 45230', () => {
+    expect(lerKmDigitado('45230')).toBe(45230);
+    expect(lerKmDigitado('45.230')).toBe(45230);
+    expect(lerKmDigitado(' 1.045.230 ')).toBe(1045230);
+    expect(lerKmDigitado('')).toBeNull();
+  });
+
+  it('decimal, milhar torto, texto ou acima do teto da API é ilegível', () => {
+    for (const texto of ['45230,5', '45,2', '45.23', '4.5230', 'abc', '-10', '10000000']) {
+      expect(lerKmDigitado(texto)).toBeUndefined();
+    }
+    expect(lerKmDigitado('9.999.999')).toBe(9_999_999);
+  });
+
+  it('volta para o campo com o milhar e se lê igual', () => {
+    expect(kmNoCampo(45230)).toBe('45.230');
+    expect(lerKmDigitado(kmNoCampo(45230))).toBe(45230);
+    expect(kmNoCampo(null)).toBe('');
+  });
+});

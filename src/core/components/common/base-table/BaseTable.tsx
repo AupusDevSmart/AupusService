@@ -24,7 +24,7 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import { Skeleton } from '@/core/components/ui/skeleton';
-import { BaseEntity, TableColumn, Pagination, TableAction } from '@/core/types/base';
+import { BaseEntity, TableColumn, Pagination, TableAction, type IconeDeAcao } from '@/core/types/base';
 import { OPCOES_LINHAS_POR_PAGINA } from './linhas-por-pagina';
 import { Expandir, useMontadoAteSair } from '@/components/ui/expandir';
 
@@ -43,7 +43,7 @@ const renderarIcone = (icone: TableAction['icon']): React.ReactNode => {
   if (!icone) return null;
   if (React.isValidElement(icone)) return icone;
   if (typeof icone === 'function' || typeof icone === 'object') {
-    return React.createElement(icone as React.ComponentType<any>, {
+    return React.createElement(icone as IconeDeAcao, {
       className: 'h-4 w-4',
     });
   }
@@ -304,8 +304,11 @@ export function BaseTable<T extends BaseEntity>({
     colunasNoCartao.find((c) => c.primaryOnMobile) ?? colunasNoCartao[0];
   const colunasSecundarias = colunasNoCartao.filter((c) => c !== colunaTitulo);
 
+  // `key` de coluna e texto livre (pode nem ser campo da entidade); o valor cru e o que estiver la.
+  const valorCru = (entity: T, chave: string): unknown => entity[chave as keyof T];
+
   const valorDaColuna = (column: TableColumn<T>, entity: T) =>
-    column.render ? column.render(entity) : String((entity as any)[column.key] ?? '');
+    column.render ? column.render(entity) : String(valorCru(entity, column.key) ?? '');
 
   if (loading) {
     return (
@@ -531,7 +534,7 @@ export function BaseTable<T extends BaseEntity>({
                     >
                       {column.render
                         ? column.render(entity)
-                        : String((entity as any)[column.key] || '')
+                        : String(valorCru(entity, column.key) || '')
                       }
                     </TableCell>
                   ))}

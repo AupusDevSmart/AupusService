@@ -5,7 +5,7 @@ import { CommandPallete } from '@/features/navigation/components/CommandPallete'
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { AppSidebar } from '@/features/navigation/components/Sidebar/app-sidebar';
 import { useUserStore } from '@/store/useUserStore';
-import { NotificacoesSheet } from '@/components/common/notification-sheet';
+import { NotificacoesSheet } from '@/features/notificacoes/components/NotificacoesSheet';
 
 const queryClient = new QueryClient();
 

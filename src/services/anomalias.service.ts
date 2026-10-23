@@ -1,5 +1,6 @@
 // src/services/anomalias.service.ts
 import { api } from '@/config/api';
+import { instanteParaApi } from '@/utils/instante';
 import { 
   Anomalia, 
   AnomaliaFormData, 
@@ -35,6 +36,8 @@ export interface CreateAnomaliaDto {
   origem: string;
   prioridade: string;
   observacoes?: string;
+  /** Até quando precisa estar resolvida: ISO com fuso; null apaga */
+  prazo?: string | null;
   instrucoes_ids?: string[];
 }
 
@@ -54,7 +57,7 @@ class AnomaliasApiService {
   // 🔵 1. OPERAÇÕES CRUD BÁSICAS
   // ==========================================
 
-  async findAll(filters: AnomaliasFilters): Promise<AnomaliasResponse> {
+  async findAll(filters: Partial<AnomaliasFilters>): Promise<AnomaliasResponse> {
     // // console.log('🔍 [AnomaliasService] Buscando anomalias com filtros:', filters);
     
     const params = new URLSearchParams();
@@ -83,10 +86,9 @@ class AnomaliasApiService {
     return response.data;
   }
 
-  async findOne(id: string): Promise<Anomalia> {
-    // // console.log('🔍 [AnomaliasService] Buscando anomalia:', id);
-    
-    const response = await api.get(`${this.baseUrl}/${id}`);
+  /** `semAvisoGlobal`: quem chama trata a falha (a origem excluída da OS é contexto, não erro) */
+  async findOne(id: string, opcoes: { semAvisoGlobal?: boolean } = {}): Promise<Anomalia> {
+    const response = await api.get(`${this.baseUrl}/${id}`, { semAvisoGlobal: opcoes.semAvisoGlobal });
     // // console.log('📨 [AnomaliasService] Anomalia encontrada:', response.data);
     
     return response.data;
@@ -111,6 +113,8 @@ class AnomaliasApiService {
       origem: data.origem,
       prioridade: data.prioridade,
       observacoes: data.observacoes,
+      // O campo existia no formulário e nunca era enviado: nenhum prazo gravava
+      prazo: instanteParaApi(data.prazo) ?? undefined,
       instrucoes_ids: data.instrucoes_ids,
     };
 
@@ -173,13 +177,21 @@ class AnomaliasApiService {
       observacoes: data.observacoes,
       instrucoes_ids: data.instrucoes_ids,
     };
+    // Só quando veio no formulário: apagar o campo manda null, e um update
+    // parcial sem o prazo não pode apagá-lo
+    if (data.prazo !== undefined) updateDto.prazo = instanteParaApi(data.prazo);
     
-    // Se há dados de localização, estruturar corretamente
-    if (data.equipamentoId || data.local || data.ativo) {
+    // Se há dados de localização, estruturar corretamente. A página manda a
+    // localização aninhada (como no create); sem ler `localizacao`, trocar o
+    // equipamento na edição não chegava ao backend.
+    const equipamentoId = data.localizacao?.equipamentoId ?? data.equipamentoId;
+    const local = data.localizacao?.local ?? data.local;
+    const ativo = data.localizacao?.ativo ?? data.ativo;
+    if (equipamentoId || local || ativo) {
       updateDto.localizacao = {
-        equipamentoId: data.equipamentoId?.toString() || '',
-        local: data.local || '',
-        ativo: data.ativo || ''
+        equipamentoId: equipamentoId?.toString() || '',
+        local: local || '',
+        ativo: ativo || ''
       };
     }
     

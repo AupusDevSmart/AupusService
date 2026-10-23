@@ -26,16 +26,18 @@ export interface Planta extends BaseEntity {
 
 export interface Unidade extends BaseEntity {
   id: string;
-  criadoEm: string;
-  plantaId: string;
+  // Opcionais como no transform do hook (features/equipamentos): a unidade
+  // embutida no equipamento so traz id, nome e planta.
+  criadoEm?: string;
+  plantaId?: string;
   nome: string;
-  tipo: string;
-  estado: string;
-  cidade: string;
-  latitude: number;
-  longitude: number;
-  potencia: number;
-  status: string;
+  tipo?: string;
+  estado?: string;
+  cidade?: string;
+  latitude?: number;
+  longitude?: number;
+  potencia?: number;
+  status?: string;
   planta?: {
     id: string;
     nome: string;
@@ -79,6 +81,8 @@ export interface Equipamento extends BaseEntity {
 
   // Relacionamentos hierárquicos - TODOS CORRIGIDOS PARA STRING
   unidadeId?: string; // NOVO: Equipamentos UC agora pertencem a Unidades
+  /** Vem do transform (planta_id) e da localizacao que abre o cadastro. */
+  plantaId?: string;
   proprietarioId?: string;
   equipamentoPaiId?: string;
 
@@ -101,13 +105,14 @@ export interface Equipamento extends BaseEntity {
   /** A POSICAO onde este equipamento esta instalado. */
   ativo_funcional_id?: string;
   ativoFuncionalId?: string;
-  ativo_funcional?: { id: string; nome: string; categoria_id?: string };
+  ativo_funcional?: { id: string; nome: string; categoria_id?: string } | null;
   /** O nome proprio do equipamento — `nome` traz o da posicao. */
   nome_proprio?: string;
 
+  // id/nome opcionais como no transform do hook (features/equipamentos).
   tipoEquipamentoObj?: {
-    id: string;
-    nome: string;
+    id?: string;
+    nome?: string;
     codigo?: string;
     categoria?: string | { id: string; nome: string };
     categoriaId?: string;
@@ -126,7 +131,14 @@ export interface Equipamento extends BaseEntity {
 
   // Datas
   dataImobilizacao?: string;
-  dataInstalacao?: string;
+  /** null = apagada na tela (vai null para a API) */
+  dataInstalacao?: string | null;
+  /** SN-66: até quando está em garantia (AAAA-MM-DD) */
+  garantiaAte?: string | null;
+  /** SN-64: a avaliação pela matriz (impacto e probabilidade de 1 a 5; motivo só quando o nível difere) */
+  criticidadeImpacto?: number | null;
+  criticidadeProbabilidade?: number | null;
+  criticidadeMotivo?: string | null;
 
   // Valores financeiros
   valorImobilizado?: number;
@@ -135,8 +147,8 @@ export interface Equipamento extends BaseEntity {
   vidaUtil?: number;
 
   // Administrativo
-  fornecedor?: string;
-  centroCusto?: string;
+  fornecedor?: string | null;
+  centroCusto?: string | null;
   planoManutencao?: string;
 
   // Localização
@@ -154,6 +166,9 @@ export interface Equipamento extends BaseEntity {
   // Automacao (PR3) — equipamento expoe pontos (comando/status/medicao) para integracao com TONs.
   // Ver tipos PontoEquipamento abaixo + service equipamento-pontos.
   automacao?: boolean;
+  /** Os pontos do equipamento, como o findOne inclui (`pontos` e o nome que o sheet aceita tambem). */
+  equipamento_pontos?: PontoEquipamento[];
+  pontos?: PontoEquipamento[];
 
   // Campos MCPSE
   mcpse?: boolean;
@@ -240,6 +255,7 @@ export interface EquipamentoFormData {
   tipoDepreciacao?: 'linear' | 'uso';
   dataImobilizacao?: string;
   dataInstalacao?: string;
+  garantiaAte?: string;
   valorImobilizado?: number;
   valorDepreciacao?: number;
   valorContabil?: number;
@@ -306,32 +322,8 @@ export interface EquipamentosListResponse {
   };
 }
 
-export interface PlantaEquipamentosResponse extends EquipamentosListResponse {
-  planta: {
-    id: string;
-    nome: string;
-    localizacao: string;
-  };
-}
-
-export interface EstatisticasPlanta {
-  planta: {
-    id: string;
-    nome: string;
-    localizacao: string;
-  };
-  totais: {
-    equipamentos: number;
-    equipamentosUC: number;
-    componentesUAR: number;
-  };
-  porCriticidade: Record<string, number>;
-  financeiro: {
-    valorTotalContabil: number;
-  };
-}
-
 export interface ComponentesGerenciamento {
+  /** Nulo quando a consulta falhou (o hook devolve a lista vazia e o erro). */
   equipamentoUC: {
     id: string;
     nome: string;
@@ -345,7 +337,7 @@ export interface ComponentesGerenciamento {
       id: string;
       nome: string;
     };
-  };
+  } | null;
   componentes: Equipamento[];
 }
 
@@ -390,6 +382,15 @@ export const validateEquipamentoData = (data: EquipamentoFormData): {
 export const isUC = (equipamento: Equipamento): boolean => {
   return equipamento.classificacao === 'UC';
 };
+
+/**
+ * O id do equipamento que o `onSubmit` de um sheet devolveu, aparado — ou
+ * `undefined` quando ele nao devolveu um equipamento (edicao, erro).
+ */
+export const idDoEquipamentoCriado = (retorno: unknown): string | undefined =>
+  typeof retorno === 'object' && retorno !== null && 'id' in retorno && typeof retorno.id === 'string'
+    ? retorno.id.trim()
+    : undefined;
 
 export const isUAR = (equipamento: Equipamento): boolean => {
   return equipamento.classificacao === 'UAR';

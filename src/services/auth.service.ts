@@ -25,7 +25,7 @@ export const AuthService = {
    */
   async login(credentials: LoginDto): Promise<AuthResponseDto> {
     try {
-      const response = await api.post<any>('/auth/login', credentials);
+      const response = await api.post<AuthResponseDto>('/auth/login', credentials);
 
       // O backend retorna { success: true, data: {...}, meta: {...} }
       // Extrair os dados do wrapper
@@ -35,7 +35,7 @@ export const AuthService = {
       this.setTokens(authData.access_token, authData.refresh_token);
 
       return authData;
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [AUTH SERVICE] Erro ao fazer login:', error);
       throw error;
     }
@@ -53,7 +53,7 @@ export const AuthService = {
     }
 
     try {
-      const response = await api.post<any>('/auth/refresh', {
+      const response = await api.post<RefreshTokenResponseDto>('/auth/refresh', {
         refresh_token: refreshToken,
       });
 
@@ -64,7 +64,7 @@ export const AuthService = {
       this.setTokens(tokenData.access_token, tokenData.refresh_token);
 
       return tokenData;
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [AUTH SERVICE] Erro ao renovar token:', error);
       // Se falhar, limpa tokens (força novo login)
       this.clearTokens();
@@ -117,10 +117,10 @@ export const AuthService = {
    */
   async getCurrentUser(): Promise<UsuarioDTO> {
     try {
-      const response = await api.get<any>('/auth/me');
+      const response = await api.get<UsuarioDTO>('/auth/me');
       // O backend retorna { success: true, data: {...}, meta: {...} }
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ [AUTH SERVICE] Erro ao buscar usuário atual:', error);
       throw error;
     }

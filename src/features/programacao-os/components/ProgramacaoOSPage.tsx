@@ -1,5 +1,5 @@
 // src/features/programacao-os/components/ProgramacaoOSPage.tsx - ATUALIZADA COM CARDS
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { formatApiError } from '@/utils/api-error';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -13,6 +13,8 @@ import { Plus, FileText, Calendar, CheckCircle, Clock } from 'lucide-react';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { programacaoOSTableColumns } from '../config/table-config';
 import { programacaoOSFilterConfig } from '../config/filter-config';
+import { filtrosDePlantaEquipamentoPeriodo } from '@/components/common/filtros/filtros-da-lista';
+import { usePlantasDoFiltro } from '@/hooks/usePlantasDoFiltro';
 import { programacaoOSFormFields, programacaoOSFormGroups } from '../config/form-config';
 import { createProgramacaoOSTableActions } from '../config/actions-config';
 import { useProgramacaoOS } from '../hooks/useProgramacaoOS';
@@ -25,6 +27,88 @@ import { programacaoOSApi } from '@/services/programacao-os.service';
 import { atalhoDaUrl } from '../utils/link-de-programacao';
 import { useUserStore } from '@/store/useUserStore';
 import { toast } from '@/hooks/use-toast';
+import type { IconeDeAcao } from '@/core/types/base';
+import type { OrigemOSValue } from './origem-selector/types';
+import { quantidadeDaFerramenta } from '../utils/quantidade-da-ferramenta';
+import { valoresDoPedido, type AjustesDeValor } from '@/features/programacao-os/utils/valores-das-instrucoes';
+
+/** Número como o formulário guarda: campo number dá número; texto ou vazio, string. */
+type NumeroDoFormulario = number | string | null | undefined;
+
+/**
+ * O que o formulário da programação entrega ao salvar. Os nomes em camelCase
+ * são de versões antigas do formulário; a página ainda lê os dois.
+ */
+interface FormularioDaProgramacao {
+  descricao?: string;
+  condicoes?: string;
+  tipo?: string;
+  prioridade?: string;
+  origem?: (OrigemOSValue & { equipamentoId?: string }) | null;
+  /** SN-86: as instruções avulsas; indefinido quando a origem não se leu */
+  instrucoes_ids?: string[];
+  itens_orcamento?: Array<{ descricao?: string; valor?: NumeroDoFormulario; natureza?: string }>;
+  /** SN-93: o valor das instruções ajustado nesta programação, pela chave da linha */
+  valores_das_instrucoes?: AjustesDeValor;
+  tempo_estimado?: NumeroDoFormulario;
+  tempoEstimado?: NumeroDoFormulario;
+  duracao_estimada?: NumeroDoFormulario;
+  duracaoEstimada?: NumeroDoFormulario;
+  data_previsao_inicio?: string;
+  dataPrevisaoInicio?: string;
+  data_previsao_fim?: string;
+  dataPrevisaoFim?: string;
+  materiais?: Array<{
+    descricao?: string;
+    quantidade_planejada?: NumeroDoFormulario;
+    quantidade?: NumeroDoFormulario;
+    unidade?: string;
+    custo_unitario?: NumeroDoFormulario;
+  }>;
+  ferramentas?: Array<{ descricao?: string; quantidade?: NumeroDoFormulario }>;
+  tecnicos?: Array<{
+    nome?: string;
+    especialidade?: string;
+    horas_estimadas?: NumeroDoFormulario;
+    horasEstimadas?: NumeroDoFormulario;
+    custo_hora?: NumeroDoFormulario;
+    custoHora?: NumeroDoFormulario;
+    tecnico_id?: string | null;
+  }>;
+  data_hora_programada?: string;
+  dataHoraProgramada?: string;
+  responsavel?: string;
+  responsavel_id?: string;
+  time_equipe?: string;
+  timeEquipe?: string;
+  necessita_veiculo?: boolean;
+  necessitaVeiculo?: boolean;
+  /** O valor do ReservaViaturaField */
+  reserva_veiculo?: {
+    veiculo_id?: string;
+    reserva_data_inicio?: string;
+    reserva_data_fim?: string;
+    reserva_hora_inicio?: string;
+    reserva_hora_fim?: string;
+    reserva_finalidade?: string;
+  } | null;
+  veiculo_id?: string;
+  reserva_data_inicio?: string;
+  reserva_data_fim?: string;
+  reserva_hora_inicio?: string;
+  reserva_hora_fim?: string;
+  reserva_finalidade?: string;
+  assentos_necessarios?: NumeroDoFormulario;
+  assentosNecessarios?: NumeroDoFormulario;
+  carga_necessaria?: NumeroDoFormulario;
+  cargaNecessaria?: NumeroDoFormulario;
+  observacoes_veiculo?: string;
+  observacoesVeiculo?: string;
+  observacoes?: string;
+  observacoes_programacao?: string;
+  observacoesProgramacao?: string;
+  justificativa?: string;
+}
 
 // useProgramacaoOS ja relanca o erro com a mensagem da API
 // A mensagem da API ("A viatura NKD-1880 já está reservada de…") e não o
@@ -32,7 +116,7 @@ import { toast } from '@/hooks/use-toast';
 const mensagemDoErro = (error: unknown) => formatApiError(error) || 'Tente novamente.';
 
 // Função utilitária para converter datas para o formato datetime-local
-const formatToDateTimeLocal = (dateValue: any): string => {
+const formatToDateTimeLocal = (dateValue: string | number | Date | null | undefined): string => {
   if (!dateValue) return '';
 
   try {
@@ -84,7 +168,11 @@ const initialFilters: ProgramacaoFiltersDto = {
   status: 'all',
   tipo: 'all',
   prioridade: 'all',
-  origem: 'all'
+  origem: 'all',
+  planta_id: 'all',
+  equipamento_id: 'all',
+  data_inicio: '',
+  data_fim: '',
 };
 
 export function ProgramacaoOSPage() {
@@ -135,14 +223,18 @@ export function ProgramacaoOSPage() {
     aprovarProgramacao,
     cancelarProgramacao,
     deletarProgramacao,
-    exportarOS,
     buscarProgramacao
   } = useProgramacaoOS();
 
   // Carregar dados
+  // Só a resposta do último pedido vale: com filtros trocando rápido, a de um
+  // pedido anterior podia chegar depois e deixar na tabela o que a tela não pede
+  const ultimoPedido = useRef(0);
   const carregarDados = async () => {
+    const pedido = ++ultimoPedido.current;
     try {
       const response = await listarProgramacoes(filters);
+      if (pedido !== ultimoPedido.current) return;
       setProgramacoes(response.data || []);
       setPagination(response.pagination || {
         page: 1,
@@ -189,8 +281,9 @@ export function ProgramacaoOSPage() {
 
     (async () => {
       try {
-        const daLista = programacoes.find((p) => p.id?.trim() === id.trim());
-        const detalhe = daLista ?? (await buscarProgramacao(id));
+        // Sempre o detalhe: a linha da lista não traz a tarefa de cada linha nem o valor do cadastro
+        // (o sheet abria com os valores das instruções vazios e "Total: R$ 0,00")
+        const detalhe = await buscarProgramacao(id);
         if (detalhe) openModal('view', detalhe as ProgramacaoResponse);
       } catch (error) {
         console.error('Erro ao abrir programação vinda da URL:', error);
@@ -245,9 +338,26 @@ export function ProgramacaoOSPage() {
     setFilters(prev => ({
       ...prev,
       ...filters,
+      // Outra planta: o equipamento escolhido era da anterior
+      ...('planta_id' in filters && filters.planta_id !== prev.planta_id && { equipamento_id: 'all' }),
       page: 1 // Reset para primeira página
     }));
   };
+
+  // Planta, equipamento e período (SN-55), a mesma régua da Execução
+  const plantasDoFiltro = usePlantasDoFiltro();
+  const filtrosDaPagina = useMemo(
+    () => [
+      ...programacaoOSFilterConfig,
+      ...filtrosDePlantaEquipamentoPeriodo({
+        plantas: plantasDoFiltro.opcoes,
+        carregandoPlantas: plantasDoFiltro.carregando,
+        plantaId: filters.planta_id,
+        chaves: { planta: 'planta_id', equipamento: 'equipamento_id', inicio: 'data_inicio', fim: 'data_fim' },
+      }),
+    ],
+    [plantasDoFiltro.opcoes, plantasDoFiltro.carregando, filters.planta_id],
+  );
 
   // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
   // um trecho que nao existe.
@@ -261,10 +371,22 @@ export function ProgramacaoOSPage() {
   };
 
   // Handlers para CRUD
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: FormularioDaProgramacao) => {
     try {
       console.log('🔄 Dados recebidos do modal:', data);
       
+      // A tela só mostra a duração: o tempo a acompanha. Ele ia sempre com o 4
+      // do valor inicial, escondido, e o painel somava esse 4 no HH (SN-81).
+      // Sem duração, nada vai: o servidor põe o padrão, que o painel conta à
+      // parte — o 6 de antes era estimativa que ninguém fez.
+      const lida = parseFloat(String(data.duracao_estimada || data.duracaoEstimada));
+      const duracao = Number.isFinite(lida) && lida > 0 ? lida : undefined;
+      // Na edição, o tempo só acompanha quando a duração mudou: editar o
+      // responsável de uma programação do cron tirava a OS do "sem estimativa"
+      const original = modalState.mode === 'edit' ? modalState.entity : null;
+      const tempo =
+        original && Number(original.duracao_estimada) === duracao ? Number(original.tempo_estimado) : duracao;
+
       // ✅ UNIFICADO: Mesma preparação de dados para create e update
       const preparedData = {
         // Campos básicos
@@ -284,33 +406,35 @@ export function ProgramacaoOSPage() {
         dados_origem: data.origem || {},
 
         // Itens de orçamento (tabela própria)
-        itens_orcamento: (data.itens_orcamento || []).map((item: any) => ({
+        itens_orcamento: (data.itens_orcamento || []).map((item) => ({
           descricao: item.descricao,
-          valor: parseFloat(item.valor) || 0,
-        })).filter((item: any) => item.descricao),
+          valor: parseFloat(String(item.valor)) || 0,
+          // SN-93: a natureza que a instrução deu ao item (o lançado à mão vai sem; a API usa o prefixo)
+          ...(item.natureza && { natureza: item.natureza }),
+        })).filter((item) => item.descricao),
 
         // Planejamento - campos atualizados para snake_case
-        tempo_estimado: parseFloat(data.tempo_estimado || data.tempoEstimado) || 4,
-        duracao_estimada: parseFloat(data.duracao_estimada || data.duracaoEstimada) || 6,
+        tempo_estimado: tempo,
+        duracao_estimada: duracao,
         data_previsao_inicio: data.data_previsao_inicio || data.dataPrevisaoInicio ?
-          new Date(data.data_previsao_inicio || data.dataPrevisaoInicio).toISOString() : null,
+          new Date(String(data.data_previsao_inicio || data.dataPrevisaoInicio)).toISOString() : null,
         data_previsao_fim: data.data_previsao_fim || data.dataPrevisaoFim ?
-          new Date(data.data_previsao_fim || data.dataPrevisaoFim).toISOString() : null,
+          new Date(String(data.data_previsao_fim || data.dataPrevisaoFim)).toISOString() : null,
         // Orcamento calculado automaticamente: materiais + equipe + itens extras
         orcamento_previsto: (() => {
-          const custoMateriais = (data.materiais || []).reduce((acc: number, m: any) =>
-            acc + ((parseFloat(m.custo_unitario) || 0) * (parseFloat(m.quantidade_planejada) || 0)), 0);
-          const custoEquipe = (data.tecnicos || []).reduce((acc: number, t: any) =>
-            acc + ((parseFloat(t.custo_hora) || 0) * (parseFloat(t.horas_estimadas) || 0)), 0);
-          const custoOutros = (data.itens_orcamento || []).reduce((acc: number, i: any) =>
-            acc + (parseFloat(i.valor) || 0), 0);
+          const custoMateriais = (data.materiais || []).reduce((acc: number, m) =>
+            acc + ((parseFloat(String(m.custo_unitario)) || 0) * (parseFloat(String(m.quantidade_planejada)) || 0)), 0);
+          const custoEquipe = (data.tecnicos || []).reduce((acc: number, t) =>
+            acc + ((parseFloat(String(t.custo_hora)) || 0) * (parseFloat(String(t.horas_estimadas)) || 0)), 0);
+          const custoOutros = (data.itens_orcamento || []).reduce((acc: number, i) =>
+            acc + (parseFloat(String(i.valor)) || 0), 0);
           const total = custoMateriais + custoEquipe + custoOutros;
           return total > 0 ? total : null;
         })(),
 
         // Programação - campos atualizados para snake_case
         data_hora_programada: data.data_hora_programada || data.dataHoraProgramada ?
-          new Date(data.data_hora_programada || data.dataHoraProgramada).toISOString() : null,
+          new Date(String(data.data_hora_programada || data.dataHoraProgramada)).toISOString() : null,
         responsavel: data.responsavel || null,
         responsavel_id: data.responsavel_id || null,
         time_equipe: data.time_equipe || data.timeEquipe || null,
@@ -325,9 +449,9 @@ export function ProgramacaoOSPage() {
         reserva_hora_fim: data.reserva_veiculo?.reserva_hora_fim || data.reserva_hora_fim || null,
         reserva_finalidade: data.reserva_veiculo?.reserva_finalidade || data.reserva_finalidade || null,
         assentos_necessarios: data.assentos_necessarios || data.assentosNecessarios ?
-          parseInt(data.assentos_necessarios || data.assentosNecessarios) : null,
+          parseInt(String(data.assentos_necessarios || data.assentosNecessarios)) : null,
         carga_necessaria: data.carga_necessaria || data.cargaNecessaria ?
-          parseFloat(data.carga_necessaria || data.cargaNecessaria) : null,
+          parseFloat(String(data.carga_necessaria || data.cargaNecessaria)) : null,
         observacoes_veiculo: data.observacoes_veiculo || data.observacoesVeiculo || null,
 
         // Observações - campos atualizados para snake_case
@@ -341,24 +465,37 @@ export function ProgramacaoOSPage() {
           tarefas_ids: data.origem?.tarefasSelecionadas || []
         }),
 
+        // SN-93: o valor das instruções ajustado (só existe na edição: na criação as linhas nascem agora)
+        ...(modalState.mode === 'edit' &&
+          data.valores_das_instrucoes &&
+          Object.keys(data.valores_das_instrucoes).length > 0 && { valores_das_instrucoes: valoresDoPedido(data.valores_das_instrucoes) }),
+
+        // SN-86: as instruções avulsas. Sem a lista (a origem não se leu), o
+        // servidor põe as da origem no cadastro e não mexe na edição
+        ...(Array.isArray(data.instrucoes_ids) && {
+          instrucoes_ids: data.instrucoes_ids.map((id) => String(id).trim()).filter(Boolean),
+        }),
+
         // Arrays de recursos - Apenas campos aceitos pelo backend
-        materiais: data.materiais?.map((m: any) => ({
+        materiais: data.materiais?.map((m) => ({
           descricao: m.descricao,
-          quantidade_planejada: parseFloat(m.quantidade_planejada || m.quantidade || 1),
+          quantidade_planejada: parseFloat(String(m.quantidade_planejada || m.quantidade || 1)),
           unidade: m.unidade || 'UN',
-          custo_unitario: parseFloat(m.custo_unitario || 0)
+          custo_unitario: parseFloat(String(m.custo_unitario || 0))
         })) || [],
 
-        ferramentas: data.ferramentas?.map((f: any) => ({
+        ferramentas: data.ferramentas?.map((f) => ({
           descricao: f.descricao,
-          quantidade: parseInt(f.quantidade || 1)
+          // Decimal no backend: parseInt truncava 2,5 para 2
+          quantidade: quantidadeDaFerramenta(f.quantidade)
         })) || [],
 
-        tecnicos: data.tecnicos?.map((t: any) => ({
+        tecnicos: data.tecnicos?.map((t) => ({
           nome: t.nome,
           especialidade: t.especialidade,
-          horas_estimadas: parseFloat(t.horas_estimadas || t.horasEstimadas || 8),
-          custo_hora: parseFloat(t.custo_hora || t.custoHora || 0),
+          // O formulário exige as horas (0,25 a 24): o 8 que entrava no vazio era invenção
+          horas_estimadas: parseFloat(String(t.horas_estimadas ?? t.horasEstimadas ?? '')),
+          custo_hora: parseFloat(String(t.custo_hora || t.custoHora || 0)),
           tecnico_id: t.tecnico_id || null
         })) || []
       };
@@ -419,8 +556,10 @@ export function ProgramacaoOSPage() {
       const dadosCompletos = await buscarProgramacao(programacao.id);
       openModal('edit', dadosCompletos);
     } catch (error) {
+      // Sem o detalhe, não edita (o interceptor já mostrou o erro): a linha da lista não traz
+      // materiais, ferramentas, equipe nem outros custos, e salvar mandava as quatro listas vazias,
+      // que apagavam as da programação
       console.error('Erro ao carregar dados completos:', error);
-      openModal('edit', programacao);
     }
   };
 
@@ -452,25 +591,25 @@ export function ProgramacaoOSPage() {
         case 'aprovar':
           await aprovarProgramacao(entity.id, observacoes || '');
           toast({
-            title: 'Programacao aprovada',
-            description: 'OS gerada automaticamente. Acesse Execucao de OS para acompanhar.',
+            title: 'Programação aprovada',
+            description: 'A OS foi gerada. Acompanhe em Execução de OS.',
             action: (
               <button
                 className="text-xs underline"
                 onClick={() => navigate('/execucao-os')}
               >
-                Ir para Execucoes
+                Ir para execuções
               </button>
             ),
           });
           break;
         case 'cancelar':
           if (!observacoes?.trim()) {
-            alert('O motivo do cancelamento e obrigatorio');
+            toast({ title: 'Informe o motivo do cancelamento', variant: 'destructive' });
             return;
           }
           await cancelarProgramacao(entity.id, observacoes);
-          toast({ title: 'Programacao cancelada' });
+          toast({ title: 'Programação cancelada' });
           break;
       }
 
@@ -506,7 +645,7 @@ export function ProgramacaoOSPage() {
   };
 
   const abrirOS = (programacao: ProgramacaoResponse) => {
-    const osId = (programacao as { ordem_servico?: { id?: string } }).ordem_servico?.id?.trim();
+    const osId = programacao.ordem_servico?.id?.trim();
     if (osId) navigate(`/execucao-os?execucaoId=${osId}`);
   };
 
@@ -529,25 +668,6 @@ export function ProgramacaoOSPage() {
     } else if (acao === 'abrir_os') abrirOS(entity);
   };
 
-  const _handleExportar = async () => {
-    try {
-      const blob = await exportarOS(filters);
-
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `programacoes-os-${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      // console.error('Erro ao exportar:', error);
-      alert('Erro ao exportar dados. Tente novamente.');
-    }
-  };
-  void _handleExportar;
-
   // Criar ações da tabela
   const tableActions = createProgramacaoOSTableActions(handleView, acaoDaTabela, temPermissao);
 
@@ -563,6 +683,8 @@ export function ProgramacaoOSPage() {
   const getModalEntity = useMemo(() => {
     if (modalState.mode === 'create') {
       const baseEntity = {
+        // Ainda sem id: o BaseModal so exige o campo (vira undefined na semeadura)
+        id: '',
         descricao: '',
         condicoes: 'PARADO',
         tipo: 'PREVENTIVA',
@@ -574,9 +696,7 @@ export function ProgramacaoOSPage() {
           dados: {},
           tarefasSelecionadas: []
         },
-        // Usar snake_case para compatibilidade com form-config
-        tempo_estimado: 4,
-        duracao_estimada: 6,
+        // Sem estimativa inventada: a duração é obrigatória e o planejador a digita (SN-81)
         necessita_veiculo: false,
         assentos_necessarios: null,
         carga_necessaria: null,
@@ -613,7 +733,7 @@ export function ProgramacaoOSPage() {
         tipo: entity.origem, // ✅ CORREÇÃO: origem é uma string, não um objeto
         ...(typeof entity.dados_origem === 'object' ? entity.dados_origem : {}),
         // ✅ CORREÇÃO: Extrair IDs corretos das tarefas da programação
-        tarefasSelecionadas: ((entity as any).tarefas_programacao || []).map((tarefa: any) => {
+        tarefasSelecionadas: (entity.tarefas_programacao || []).map((tarefa) => {
           // CRÍTICO: Usar tarefa_id em vez de id para obter o ID real da tarefa
           const tarefaId = tarefa.tarefa_id || tarefa.id;
           console.log('🔍 [ProgramacaoOSPage] Extraindo ID da tarefa:', {
@@ -692,7 +812,7 @@ export function ProgramacaoOSPage() {
 
       // Mapear recursos da API para o formato do formulário COM cálculos
       materiais: processarMateriaisComCustos(
-        entity.materiais?.map((material: any) => ({
+        entity.materiais?.map((material) => ({
           id: material.id,
           descricao: material.descricao,
           quantidade_planejada: material.quantidade_planejada || 0,
@@ -700,26 +820,28 @@ export function ProgramacaoOSPage() {
           unidade: material.unidade,
           custo_unitario: material.custo_unitario || 0,
           custoUnitario: material.custo_unitario || 0, // Alias para compatibilidade
-          status: material.status || 'PLANEJADO',
+          // A API nao manda status do material: sempre caia no padrao
+          status: ('status' in material && material.status) || 'PLANEJADO',
           confirmado: material.confirmado || false,
           disponivel: material.disponivel !== false,
           observacoes: material.observacoes || ''
         })) || []
       ),
 
-      ferramentas: entity.ferramentas?.map((ferramenta: any) => ({
+      ferramentas: entity.ferramentas?.map((ferramenta) => ({
         id: ferramenta.id,
         descricao: ferramenta.descricao,
         quantidade: ferramenta.quantidade,
-        status: ferramenta.status || 'PLANEJADA',
+        // A API nao manda status nem calibracao da ferramenta: sempre caiam no padrao
+        status: ('status' in ferramenta && ferramenta.status) || 'PLANEJADA',
         confirmada: ferramenta.confirmada || false,
         disponivel: ferramenta.disponivel !== false,
-        calibracao: ferramenta.calibracao || 'EM_DIA',
+        calibracao: ('calibracao' in ferramenta && ferramenta.calibracao) || 'EM_DIA',
         observacoes: ferramenta.observacoes || ''
       })) || [],
 
       tecnicos: processarTecnicosComCustos(
-        entity.tecnicos?.map((tecnico: any) => ({
+        entity.tecnicos?.map((tecnico) => ({
           id: tecnico.id,
           nome: tecnico.nome,
           especialidade: tecnico.especialidade,
@@ -728,31 +850,38 @@ export function ProgramacaoOSPage() {
           custo_hora: tecnico.custo_hora || 0,
           custoHora: tecnico.custo_hora || 0, // Alias para compatibilidade
           tecnico_id: tecnico.tecnico_id,
-          status: tecnico.status || 'PLANEJADO',
-          confirmado: tecnico.confirmado || false,
+          // A API nao manda status, confirmado nem observacoes do tecnico: sempre caiam no padrao
+          status: ('status' in tecnico && tecnico.status) || 'PLANEJADO',
+          confirmado: ('confirmado' in tecnico && tecnico.confirmado) || false,
           disponivel: tecnico.disponivel !== false,
-          observacoes: tecnico.observacoes || ''
+          observacoes: ('observacoes' in tecnico && tecnico.observacoes) || ''
         })) || [],
         'planejamento' // Modo padrão
       ),
 
       // Itens de orcamento (tabela própria)
-      itens_orcamento: (entity as any).itens_orcamento || [],
+      itens_orcamento: entity.itens_orcamento || [],
 
-      // Dados da origem expandidos (para exibição no card)
-      anomalia: (entity as any).anomalia || null,
-      plano_manutencao: (entity as any).plano_manutencao || null,
-      tarefas_programacao: (entity as any).tarefas_programacao || [],
+      // SN-86: as instruções avulsas gravadas, e o código e nome delas para a tela
+      instrucoes_ids: (entity.instrucoes ?? []).map((i) => i.instrucao_id?.trim()).filter((id): id is string => Boolean(id)),
+      instrucoes: entity.instrucoes ?? [],
+
+      // Dados da origem expandidos (para exibição no card). A API da
+      // programacao nao manda anomalia nem plano: o card busca pela origem.
+      anomalia: ('anomalia' in entity && entity.anomalia) || null,
+      plano_manutencao: ('plano_manutencao' in entity && entity.plano_manutencao) || null,
+      tarefas_programacao: entity.tarefas_programacao || [],
 
       // ✅ LOGGING: Verificar estrutura das tarefas na API
       _debug_entity_keys: Object.keys(entity || {}),
-      _debug_tarefas_ids: (entity as any).tarefas_ids,
-      _debug_tarefas_programacao: (entity as any).tarefas_programacao,
+      _debug_tarefas_ids: 'tarefas_ids' in entity ? entity.tarefas_ids : undefined,
+      _debug_tarefas_programacao: entity.tarefas_programacao,
       _debug_dados_origem: entity.dados_origem,
 
-      // Campos computados (usando as propriedades que existem)
-      created_at: (entity as any).created_at,
-      updated_at: (entity as any).updated_at
+      // Campos computados (usando as propriedades que existem). A API manda
+      // criado_em/atualizado_em; estes dois chegam vazios.
+      created_at: 'created_at' in entity ? entity.created_at : undefined,
+      updated_at: 'updated_at' in entity ? entity.updated_at : undefined
     };
   }, [modalState.mode, modalState.entity, modalState.preselectedData]);
 
@@ -782,7 +911,7 @@ export function ProgramacaoOSPage() {
             <div className="flex-1">
               <BaseFilters 
                 filters={filters}
-                config={programacaoOSFilterConfig}
+                config={filtrosDaPagina}
                 onFilterChange={handleFilterChange}
               />
             </div>
@@ -804,14 +933,17 @@ export function ProgramacaoOSPage() {
               loading={loading}
               onPageChange={handlePageChange}
               onLimitChange={handleLimitChange}
-              customActions={tableActions.map((action: any) => ({
-                key: action.label.toLowerCase().replace(/\s+/g, ''),
-                label: action.label,
-                handler: action.onClick,
-                condition: action.condition,
-                icon: action.icon ? <action.icon className="h-4 w-4" /> : undefined,
-                variant: action.variant,
-              }))}
+              customActions={tableActions.map((action) => {
+                const Icone = action.icon as IconeDeAcao | undefined;
+                return {
+                  key: action.label.toLowerCase().replace(/\s+/g, ''),
+                  label: action.label,
+                  handler: action.onClick,
+                  condition: action.condition,
+                  icon: Icone ? <Icone className="h-4 w-4" /> : undefined,
+                  variant: action.variant,
+                };
+              })}
               emptyMessage="Nenhuma programação de OS encontrada."
               emptyIcon={<FileText className="h-8 w-8 text-gray-400" />}
             />

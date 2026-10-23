@@ -1,13 +1,13 @@
 // src/features/concessionarias/components/TarifasFormField.tsx
 import { useState, useEffect } from 'react';
 import { ChevronDown, Check, Info } from 'lucide-react';
-import { SUBGRUPOS, SubgrupoTipo } from '../types';
+import { SUBGRUPOS, SubgrupoTipo, type TarifasDoFormulario } from '../types';
 import { TarifasSubgrupoTable } from './TarifasSubgrupoTable';
 import { cn } from '@/core/lib/utils';
 
 interface TarifasFormFieldProps {
-  value?: any;
-  onChange?: (value: any) => void;
+  value?: TarifasDoFormulario;
+  onChange?: (value: TarifasDoFormulario) => void;
   disabled?: boolean;
 }
 
@@ -39,7 +39,7 @@ export function TarifasFormField({ value = {}, onChange, disabled = false }: Tar
                 subgrupoId === 'A3a_VERDE' ? 'a3a_verde' : 'b';
 
     const valores = tarifas[key];
-    return Object.values(valores || {}).some(v => v !== null && v !== undefined && v !== 0 && v !== '');
+    return Object.values<unknown>(valores || {}).some(v => v !== null && v !== undefined && v !== 0 && v !== '');
   };
 
   // Abrir automaticamente os subgrupos que têm valores quando o componente é montado ou value muda

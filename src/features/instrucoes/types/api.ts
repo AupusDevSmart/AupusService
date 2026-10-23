@@ -2,9 +2,6 @@
 // Re-export all types from the service layer for backwards compatibility
 export type {
   StatusInstrucao,
-  CategoriaTarefa,
-  TipoManutencao,
-  CondicaoAtivo,
   TipoAnexo,
   CreateSubInstrucaoApiData,
   CreateRecursoInstrucaoApiData,

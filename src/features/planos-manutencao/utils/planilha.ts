@@ -113,7 +113,7 @@ function secaoDeTarefas(refs: Referencia[]) {
         lista: referencia(refs, 'instrucoes'),
         obrigatorio: 'Na tarefa nova',
         explicacao:
-          'A instrução que a tarefa executa: o nome como na aba REFERÊNCIAS, ou a TAG (INST-…). Tarefa antiga, de antes da instrução, pode continuar sem ela.',
+          'A instrução que a tarefa executa: o nome como na aba REFERÊNCIAS, ou o código (INST-…). Tarefa antiga, de antes da instrução, pode continuar sem ela.',
         exemplo: 'INST-006',
         valor: (t) => t.nomeDaInstrucao,
       },

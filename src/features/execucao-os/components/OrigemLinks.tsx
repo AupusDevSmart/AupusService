@@ -5,7 +5,7 @@ import { AlertTriangle, ClipboardList, FileText, ExternalLink } from 'lucide-rea
 import { AnomaliaViewSheet } from '@/features/anomalias/components/AnomaliaViewSheet';
 import { InstrucoesModal } from '@/features/instrucoes/components/InstrucoesModal';
 import { instrucoesFormFields } from '@/features/instrucoes/config/form-config';
-import { instrucoesApi } from '@/services/instrucoes.services';
+import { instrucoesApi, type InstrucaoApiResponse } from '@/services/instrucoes.services';
 import { toast } from '@/hooks/use-toast';
 import { formatApiError } from '@/utils/api-error';
 
@@ -40,7 +40,7 @@ export function OrigemLinks({
   planoNome,
 }: OrigemLinksProps) {
   const [anomaliaAberta, setAnomaliaAberta] = useState(false);
-  const [instrucao, setInstrucao] = useState<unknown>(null);
+  const [instrucao, setInstrucao] = useState<InstrucaoApiResponse | null>(null);
   const [carregandoInstrucao, setCarregandoInstrucao] = useState(false);
 
   const abrirInstrucao = async () => {
@@ -123,7 +123,7 @@ export function OrigemLinks({
         <InstrucoesModal
           isOpen
           mode="view"
-          entity={instrucao as never}
+          entity={instrucao}
           formFields={instrucoesFormFields}
           pendingFiles={[]}
           onClose={() => setInstrucao(null)}

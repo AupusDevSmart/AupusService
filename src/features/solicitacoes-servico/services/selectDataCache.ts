@@ -23,6 +23,7 @@ interface UnidadeData {
   id: string;
   nome: string;
   plantaId: string;  // Corrigido para camelCase
+  planta_id?: string;  // A API ainda manda o nome cru
 }
 
 class SelectDataCache {
@@ -81,7 +82,7 @@ class SelectDataCache {
 
       // Processar proprietários
       const usuarios = proprietariosRes.data.data || proprietariosRes.data || [];
-      this.proprietarios = usuarios.map((usuario: any) => ({
+      this.proprietarios = usuarios.map((usuario: { id: string; nome: string }) => ({
         value: usuario.id,
         label: usuario.nome,
       }));
@@ -196,7 +197,7 @@ class SelectDataCache {
       console.log('[CACHE] Filtrando unidades pela planta:', plantaId);
 
       const unidadesDaPlanta = this.unidades.filter(u => {
-        const plantaIdFromUnidade = u.plantaId || (u as any).planta_id;
+        const plantaIdFromUnidade = u.plantaId || u.planta_id;
         return plantaIdFromUnidade?.trim() === plantaId.trim();
       });
 

@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { FeatureWrapper } from './components/common/FeatureWrapper';
-import { ConfiguracoesDiasUteisPage, FeriadosPage } from './features/agenda';
+import { CalendarioPage, ConfiguracoesDiasUteisPage, FeriadosPage } from './features/agenda';
 // Paginas exclusivas do Service
 import { ExecucaoOSPage } from './features/execucao-os';
 import { FerramentasPage } from './features/ferramentas/components/FerramentasPage';
@@ -15,17 +15,19 @@ import { ProgramacaoOSPage } from './features/programacao-os';
 import { ReservasPage } from './features/reservas';
 import { InstrucoesPage } from './features/instrucoes/components/InstrucoesPage';
 import { RecursosPage } from './features/recursos/components/RecursosPage';
+import { MaquinariosPage } from './features/maquinarios/components/MaquinariosPage';
 import { VeiculosPage } from './features/veiculos/components/VeiculosPage';
 import { AppTemplate } from './pages/AppTemplate';
 import { AnomaliaPage } from './pages/anomalias';
 import SolicitacoesServicoPage from './pages/solicitacoes-servico';
 import { DashboardPage } from './pages/dashboard';
-import PlantaOperadoresPage from './pages/plantas-operadores';
 import { Settings } from './pages/settings';
 import { LoginPage } from './pages/login/LoginPage';
 import { EsqueciSenhaPage } from './pages/esqueci-senha/EsqueciSenhaPage';
 import { RedefinirSenhaPage } from './pages/redefinir-senha/RedefinirSenhaPage';
+import { TrocarSenhaPage } from './pages/trocar-senha/TrocarSenhaPage';
 import { useUserStore } from './store/useUserStore';
+import { useSessaoAtualizada } from '@/hooks/useSessaoAtualizada';
 
 // Paginas do nucleo (src/core, antes o pacote @aupus/shared-pages)
 import {
@@ -41,10 +43,18 @@ import {
  */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useUserStore();
+  // As permissões do login ficam no navegador: relidas a cada carga da página
+  useSessaoAtualizada(Boolean(user?.id));
 
   if (!user?.id) {
-    const currentPath = window.location.pathname;
-    return <Navigate to={`/login?redirectTo=${currentPath}`} replace />;
+    // Com a busca: o endereço de conferência do PDF da OS (?conferir=) se perdia no login (SN-62)
+    const destino = window.location.pathname + window.location.search;
+    return <Navigate to={`/login?redirectTo=${encodeURIComponent(destino)}`} replace />;
+  }
+
+  // Senha provisória: antes de qualquer tela, a troca (o backend recusa o resto)
+  if (user.deve_trocar_senha && window.location.pathname !== '/trocar-senha') {
+    return <Navigate to="/trocar-senha" replace />;
   }
 
   return <>{children}</>;
@@ -65,6 +75,16 @@ export const appRoutes = createBrowserRouter([
   {
     path: '/redefinir-senha',
     element: <RedefinirSenhaPage />,
+  },
+
+  // Troca obrigatória da senha provisória: logado, fora do layout do sistema
+  {
+    path: '/trocar-senha',
+    element: (
+      <ProtectedRoute>
+        <TrocarSenhaPage />
+      </ProtectedRoute>
+    ),
   },
 
   // ✅ Rotas protegidas
@@ -111,14 +131,6 @@ export const appRoutes = createBrowserRouter([
         element: (
           <FeatureWrapper feature="plantas.view">
             <PlantasPage />
-          </FeatureWrapper>
-        ),
-      },
-      {
-        path: 'cadastros/plantas/:plantaId/operadores',
-        element: (
-          <FeatureWrapper feature="plantas.manage_operadores">
-            <PlantaOperadoresPage />
           </FeatureWrapper>
         ),
       },
@@ -174,7 +186,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'cadastros/concessionarias',
         element: (
-          <FeatureWrapper feature="equipamentos.manage">
+          <FeatureWrapper feature="concessionarias.manage">
             <ConcessionariasPage />
           </FeatureWrapper>
         ),
@@ -214,7 +226,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'solicitacoes-servico',
         element: (
-          <FeatureWrapper feature="manutencao.manage">
+          <FeatureWrapper feature="solicitacoes.view">
             <SolicitacoesServicoPage />
           </FeatureWrapper>
         ),
@@ -222,7 +234,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'instrucoes',
         element: (
-          <FeatureWrapper feature="manutencao.manage">
+          <FeatureWrapper feature="manutencao.view">
             <InstrucoesPage />
           </FeatureWrapper>
         ),
@@ -232,6 +244,14 @@ export const appRoutes = createBrowserRouter([
         element: (
           <FeatureWrapper feature="recursos.manage">
             <RecursosPage />
+          </FeatureWrapper>
+        ),
+      },
+      {
+        path: 'maquinarios',
+        element: (
+          <FeatureWrapper feature="recursos.manage">
+            <MaquinariosPage />
           </FeatureWrapper>
         ),
       },
@@ -262,7 +282,7 @@ export const appRoutes = createBrowserRouter([
       {
         path: 'planos-manutencao',
         element: (
-          <FeatureWrapper feature="manutencao.manage">
+          <FeatureWrapper feature="manutencao.view">
             <PlanosManutencaoPage />
           </FeatureWrapper>
         ),
@@ -271,6 +291,16 @@ export const appRoutes = createBrowserRouter([
       // plano agora e template de categoria e o vinculo com equipamento sai do
       // sheet do proprio equipamento, copiando o template.
       // ✅ NOVA: Rotas para agenda
+      {
+        // Programações, OS e a previsão das preventivas (SN-52). Quem vê
+        // manutenção; OS e programação vêm só para quem tem a permissão delas
+        path: 'agenda/calendario',
+        element: (
+          <FeatureWrapper feature="manutencao.view">
+            <CalendarioPage />
+          </FeatureWrapper>
+        ),
+      },
       {
         path: 'agenda/feriados',
         element: (

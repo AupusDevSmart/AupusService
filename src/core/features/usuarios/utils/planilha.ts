@@ -96,8 +96,8 @@ const campos: Campo<UsuarioDaApi>[] = [
     caminho: 'telefone',
     tipo: 'texto',
     largura: 16,
-    explicacao: 'Com DDD (de 10 a 20 caracteres).',
-    exemplo: '62999998888',
+    explicacao: 'Com DDD. Pode ter máscara ((62) 99999-8888) ou não; é gravado como +5562999998888. Outro país: comece com + e o código do país.',
+    exemplo: '+5562999998888',
     valor: (u) => u.telefone ?? null,
   },
   {
@@ -194,9 +194,9 @@ async function plantasDosOperadores(usuarios: UsuarioDaApi[]) {
 }
 
 export async function exportarUsuarios(filtros: FiltrosDeUsuarios) {
-  const usuarios = (await todasAsPaginas((page, limit) =>
+  const usuarios: UsuarioDaApi[] = await todasAsPaginas((page, limit) =>
     UsuariosService.getAllUsuarios({ ...filtros, page, limit }),
-  )) as unknown as UsuarioDaApi[];
+  );
   await plantasDosOperadores(usuarios);
   await exportarPlana(definicaoDeUsuarios, usuarios);
 }

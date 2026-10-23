@@ -1,5 +1,7 @@
 // src/features/programacao-os/types/index.ts - VERSÃO FINAL
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
+import type { InstrucaoDaProgramacao } from '@/services/programacao-os.service';
+import type { NaturezaDoOutroCusto } from '@/features/execucao-os/types/custos';
 
 // ========================================
 // ENUMS E TIPOS BASE (CONFORME SCHEMA)
@@ -32,6 +34,7 @@ export type OrigemOS =
   | 'ANOMALIA'
   | 'TAREFA'
   | 'PLANO_MANUTENCAO'
+  | 'SOLICITACAO_SERVICO'
   | 'MANUAL';
 
 // Aliases para compatibilidade
@@ -47,7 +50,54 @@ export type OrigemProgramacao = OrigemOS;
 export interface ItemOrcamento {
   id?: string;
   descricao: string;
+  /** O previsto (0 no não previsto) */
   valor: number;
+  /** SN-93: a natureza do custo; sem ela, a API a tira do prefixo da descrição ("Veículo: ...") */
+  natureza?: NaturezaDoOutroCusto;
+  /** SN-93, só na OS: o que custou, conferido no Executar (null = não conferido) */
+  valor_real?: number | null;
+  /** SN-93, só na OS: lançado no Executar, fora do orçamento */
+  nao_previsto?: boolean;
+}
+
+/**
+ * Tarefas escolhidas por plano, como o seletor de vários planos gravava no
+ * `dados_origem`. Quem lê hoje só conta as chaves (os planos).
+ */
+export interface TarefasPorPlano {
+  [planoId: string]: {
+    plano?: unknown;
+    tarefas?: unknown[];
+    expanded?: boolean;
+  };
+}
+
+/**
+ * `dados_origem` da programação (a OS copia): JSON livre. O formulário grava o
+ * valor do seletor de origem; o backend (from-anomalia, from-solicitacao,
+ * from-tarefas) e o cron acrescentam chaves próprias. Aqui, só as que a tela lê.
+ */
+export interface DadosOrigem {
+  // Do seletor de origem (OrigemOSValue)
+  tipo?: string;
+  anomaliaId?: string;
+  planoId?: string;
+  solicitacaoServicoId?: string;
+  plantaId?: string;
+  unidadeId?: string;
+  equipamentoId?: string;
+  planosSelecionados?: string[];
+  tarefasSelecionadas?: string[];
+  tarefasPorPlano?: TarefasPorPlano;
+  // Do backend e do cron
+  numero?: string;
+  solicitacao_id?: string;
+  tarefas_ids?: string[];
+  tarefas_nomes?: string[];
+  tarefas_tags?: string[];
+  tarefas_count?: number;
+  unidade_nome?: string;
+  auto_gerada?: boolean;
 }
 
 export interface MaterialProgramacaoOS {
@@ -101,7 +151,7 @@ export interface HistoricoProgramacaoOS {
   observacoes?: string;
   status_anterior?: StatusProgramacao;
   status_novo?: StatusProgramacao;
-  dados_extras?: any;
+  dados_extras?: Record<string, unknown> | null;
 }
 
 // ========================================
@@ -128,7 +178,7 @@ export interface ProgramacaoOS extends BaseEntity {
   equipamento_id?: string;
   anomalia_id?: string;
   plano_manutencao_id?: string;
-  dados_origem?: any;
+  dados_origem?: DadosOrigem | null;
 
   // Planejamento
   data_previsao_inicio?: string; // ISO DateTime string
@@ -175,6 +225,8 @@ export interface ProgramacaoOS extends BaseEntity {
   itens_orcamento?: ItemOrcamento[];
   historico?: HistoricoProgramacaoOS[];
   tarefas_programacao?: TarefaProgramacaoOS[];
+  /** SN-86: as instruções avulsas (da anomalia, da solicitação ou acrescentadas); as das tarefas vêm por elas */
+  instrucoes?: InstrucaoDaProgramacao[];
 
   // Relacionamentos expandidos (opcional)
   planta?: { id: string; nome: string };
@@ -229,7 +281,7 @@ export interface CreateProgramacaoDto {
   equipamento_id?: string;
   anomalia_id?: string;
   plano_manutencao_id?: string;
-  dados_origem?: any;
+  dados_origem?: DadosOrigem;
   tempo_estimado: number;
   duracao_estimada: number;
   data_previsao_inicio?: string; // ISO DateTime string
@@ -246,13 +298,15 @@ export interface CreateProgramacaoDto {
   observacoes_programacao?: string;
   justificativa?: string;
   tarefas_ids?: string[];
+  /** SN-86: as instruções avulsas, trocadas inteiras; ausente no cadastro, o servidor põe as da origem */
+  instrucoes_ids?: string[];
   materiais?: Omit<MaterialProgramacaoOS, 'id' | 'programacao_id'>[];
   ferramentas?: Omit<FerramentaProgramacaoOS, 'id' | 'programacao_id'>[];
   tecnicos?: Omit<TecnicoProgramacaoOS, 'id' | 'programacao_id'>[];
   itens_orcamento?: Omit<ItemOrcamento, 'id'>[];
 }
 
-export interface UpdateProgramacaoDto extends Partial<CreateProgramacaoDto> {}
+export type UpdateProgramacaoDto = Partial<CreateProgramacaoDto>;
 
 // ========================================
 // FILTROS
@@ -287,7 +341,7 @@ export interface OrdemServicoFormData {
   condicoes: CondicaoOS;
   tipo: TipoOS;
   prioridade: PrioridadeOS;
-  origem: OrigemOS | any; // Aceita estruturas complexas
+  origem: OrigemOS | DadosOrigem; // Aceita estruturas complexas
   
   // Relacionamentos
   plantaId?: string;
@@ -346,7 +400,7 @@ export interface ProgramacaoOSFormData {
 // ========================================
 
 export interface ViaturaReservadaOS {
-  veiculoId: number;
+  veiculoId: string;
   dataInicio: string;
   dataFim: string;
   horaInicio: string;
@@ -372,11 +426,11 @@ export interface IniciarExecucaoData {
 // ESTADO DO MODAL
 // ========================================
 
-export interface ModalState<T = any> {
+export interface ModalState<T = unknown> {
   isOpen: boolean;
   mode: ModalMode | 'programar';
   entity: T | null;
-  preselectedData?: any;
+  preselectedData?: Record<string, unknown>;
   // Compatibilidade
   ordemServico?: T | null;
 }

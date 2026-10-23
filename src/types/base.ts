@@ -1,4 +1,6 @@
 // src/types/base.ts - TIPOS BASE CORRIGIDOS
+import type { EntidadeDoCampo, FormFieldComponent } from '@/core/types/base';
+
 export interface BaseEntity {
   id: string;
   criadoEm?: string | Date;
@@ -37,7 +39,7 @@ export interface ExtendedPaginatedResponse<T> {
   data: T[];
   pagination: PaginationMeta;
   meta?: {
-    filters?: Record<string, any>;
+    filters?: Record<string, unknown>;
     sort?: {
       field: string;
       direction: 'asc' | 'desc';
@@ -49,7 +51,7 @@ export interface ExtendedPaginatedResponse<T> {
 // ✅ CORRIGIDO: Adicionar todos os modos de transição de OS
 export type ModalMode = 'create' | 'edit' | 'view' | 'programar' | 'iniciar' | 'pausar' | 'retomar' | 'finalizar' | 'cancelar' | 'anexos';
 
-export interface BaseModalState<T = any> {
+export interface BaseModalState<T = unknown> {
   isOpen: boolean;
   mode: ModalMode;
   entity: T | null;
@@ -62,20 +64,25 @@ export interface FormField {
   type: 'text' | 'email' | 'password' | 'number' | 'textarea' | 'select' | 'custom' | 'checkbox' | 'date' | 'datetime-local' | 'time';
   required?: boolean;
   placeholder?: string;
-  defaultValue?: any;
+  defaultValue?: unknown;
   min?: number;
   max?: number;
   options?: Array<{ value: string | number; label: string }>;
-  validation?: (value: any) => string | null;
-  render?: (props: FormFieldProps) => React.ReactElement;
-  component?: React.FC<any>; // ✅ ADICIONADO: Para campos customizados
-  componentProps?: Record<string, any>; // ✅ ADICIONADO: Props para componentes customizados
+  // Callbacks como método (não propriedade-função): o componente pode declarar o
+  // valor/entidade que espera e continua aceito — ver o comentário em @/core/types/base.
+  /** O formulário inteiro vem junto (o BaseModal passa): para validar um campo pelo outro */
+  validation?(value: unknown, formData?: Record<string, unknown>): string | null;
+  render?(props: FormFieldProps): React.ReactElement;
+  /** Recebe só value, onChange, disabled e componentProps (sem formData/mode/entity — para isso, render). */
+  component?: FormFieldComponent; // ✅ ADICIONADO: Para campos customizados
+  /** Props extras do component; como função, recebe o formulário inteiro. */
+  componentProps?: Record<string, unknown> | ((formData: Record<string, unknown>) => Record<string, unknown>); // ✅ ADICIONADO: Props para componentes customizados
   disabled?: boolean;
   group?: string;
-  condition?: (entity?: any, formData?: any) => boolean;
+  condition?(entity?: EntidadeDoCampo, formData?: Record<string, unknown>): unknown;
   showOnlyWhen?: {
     field: string;
-    value: any;
+    value: unknown;
   };
   showOnlyOnMode?: ModalMode | ModalMode[];
   hideOnMode?: ModalMode | ModalMode[];
@@ -83,19 +90,26 @@ export interface FormField {
   dependencies?: string[]; // ✅ ADICIONADO: Para campos que dependem de outros
   colSpan?: number; // ✅ ADICIONADO: Para layout em grid
   helpText?: string; // ✅ ADICIONADO: Texto de ajuda
-  computeDisabled?: (entity?: any, formData?: any) => boolean; // ✅ ADICIONADO: Para campos condicionalmente desabilitados
+  computeDisabled?(entity?: EntidadeDoCampo, formData?: Record<string, unknown>): unknown; // ✅ ADICIONADO: Para campos condicionalmente desabilitados
   width?: 'full' | 'half' | 'third' | 'two-thirds' | 'quarter' | 'three-quarters'; // ✅ ADICIONADO: Para controle de largura do campo
   startNewRow?: boolean; // ✅ ADICIONADO: Para forçar nova linha no layout
 }
 
+/**
+ * O que o BaseForm passa para `render`. `value` é `unknown`: o BaseForm não
+ * sabe o que cada campo guarda — quem renderiza estreita.
+ */
 export interface FormFieldProps {
-  value: any;
-  onChange: (value: any) => void;
-  onMultipleChange?: (updates: Record<string, any>) => void;
+  value?: unknown;
+  /** Argumentos além do primeiro são ignorados pelo BaseForm. */
+  onChange(value: unknown, ...ignorados: unknown[]): void;
+  onMultipleChange?(updates: Record<string, unknown>): void;
+  /** O formulário inteiro: o BaseForm passa para `render` (não para `component`) */
+  formData?: Record<string, unknown>;
   disabled?: boolean;
   hasError?: boolean;
   error?: string;
-  entity?: any;
+  entity?: EntidadeDoCampo;
   mode?: ModalMode;
 }
 
@@ -113,12 +127,12 @@ export interface FilterConfig {
 }
 
 export interface FilterFieldProps {
-  value: any;
-  onChange: (value: any) => void;
+  value: unknown;
+  onChange: (value: unknown) => void;
   disabled?: boolean;
 }
 
-export interface TableColumn<T = any> {
+export interface TableColumn<T = unknown> {
   key: string;
   label: string;
   sortable?: boolean;
@@ -200,14 +214,14 @@ export interface TableProps<T> {
 
 // ✅ ADICIONADO: Tipos para componentes de filtro
 export interface FiltersProps {
-  filters: Record<string, any>;
+  filters: Record<string, unknown>;
   config: FilterConfig[];
-  onFilterChange: (filters: Partial<Record<string, any>>) => void;
+  onFilterChange: (filters: Partial<Record<string, unknown>>) => void;
   loading?: boolean;
 }
 
 // ✅ ADICIONADO: Tipos para componentes de modal
-export interface ModalProps<T = any> {
+export interface ModalProps<T = unknown> {
   isOpen: boolean;
   mode: ModalMode;
   entity?: T | null;
@@ -215,7 +229,7 @@ export interface ModalProps<T = any> {
   icon?: React.ReactElement;
   formFields: FormField[];
   onClose: () => void;
-  onSubmit: (data: any) => void | Promise<void>;
+  onSubmit: (data: Record<string, unknown>) => void | Promise<void>;
   width?: string;
   loading?: boolean;
   loadingText?: string;
@@ -257,8 +271,8 @@ export interface UseModalResult<T> {
 }
 
 // ✅ ADICIONADO: Tipos para componentes de modal (legados)
-export interface ModalEntity<_T = any> extends BaseEntity {
-  [key: string]: any;
+export interface ModalEntity<_T = unknown> extends BaseEntity {
+  [key: string]: unknown;
 }
 
 // ✅ ADICIONADO: Alias para Pagination

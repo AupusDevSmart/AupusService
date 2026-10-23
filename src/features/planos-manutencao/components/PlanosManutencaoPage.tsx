@@ -1,4 +1,5 @@
 // src/features/planos-manutencao/components/PlanosManutencaoPage.tsx - REFATORADA
+import { usePermission } from '@/components/common/Can';
 import { useState, useEffect, useCallback } from 'react';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { Layout } from '@/components/common/Layout';
@@ -17,7 +18,7 @@ import {
   CreatePlanoManutencaoApiData,
   UpdatePlanoManutencaoApiData
 } from '@/services/planos-manutencao.services';
-import { PlanosModal } from './PlanosModal';
+import { PlanosModal, type FormularioDoPlano } from './PlanosModal';
 import { TarefasExpandedRow } from './TarefasExpandedRow';
 import {
   InstrucoesApiService,
@@ -168,7 +169,7 @@ export function PlanosManutencaoPage() {
     await reloadAll();
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: FormularioDoPlano) => {
     try {
       if (modalState.mode === 'create') {
         if (!user?.id) {
@@ -276,7 +277,7 @@ export function PlanosManutencaoPage() {
     const cleanedFilters = { ...newFilters };
     Object.keys(cleanedFilters).forEach((key) => {
       if (cleanedFilters[key as keyof typeof cleanedFilters] === 'all') {
-        cleanedFilters[key as keyof typeof cleanedFilters] = undefined as any;
+        cleanedFilters[key as keyof typeof cleanedFilters] = undefined;
       }
     });
 
@@ -295,11 +296,13 @@ export function PlanosManutencaoPage() {
   };
 
   // Criar ações customizadas da tabela - apenas visualizar, editar e associar
+  // Ler: todos; escrever (novo, importar, editar, tarefas): quem gerencia manutenção.
+  const podeGerenciar = usePermission('manutencao.manage');
   const customActions = createPlanosTableActions({
     handleView,
     handleEdit,
     handleAdicionarTarefa,
-  }) as any;
+  }).filter((acao) => podeGerenciar || acao.key === 'visualizar');
 
   return (
     <Layout>
@@ -323,12 +326,15 @@ export function PlanosManutencaoPage() {
                 exportar={() => exportarPlanos({ search: filters.search || undefined })}
                 ler={lerPlanos}
                 aoImportar={() => void reloadAll()}
+                podeImportar={podeGerenciar}
               />
-              <button onClick={() => openModal('create')} className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap">
-                <Plus className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Novo Plano</span>
-                <span className="sm:hidden">Novo</span>
-              </button>
+              {podeGerenciar && (
+                <button onClick={() => openModal('create')} className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap">
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Novo Plano</span>
+                  <span className="sm:hidden">Novo</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -360,6 +366,7 @@ export function PlanosManutencaoPage() {
                   onVerTarefa={abrirInstrucaoDaTarefa}
                   onTarefasChange={handleTarefasChange}
                   posicaoBotaoAdicionar="oculto"
+                  somenteLeitura={!podeGerenciar}
                   abrirCadastroPara={abrirCadastroPara}
                   onCadastroAberto={() => setAbrirCadastroPara(null)}
                 />

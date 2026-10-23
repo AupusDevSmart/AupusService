@@ -12,23 +12,44 @@ import { montarDeInstrucoes, type ItemProposta } from './proposta.services';
  * porque a linha existe e tem um número plausível.
  */
 
-const instrucoes: Record<string, any> = {
+/** A instrução como o findOne devolve, só no que a montagem lê. */
+interface InstrucaoDoTeste {
+  id: string;
+  codigo: string | null;
+  nome: string;
+  // O custo de cada linha vem pronto do servidor (subtotal, a conta do AupusProject, SN-85)
+  recursos: { quantidade: number; recurso: { nome: string; preco_base: number }; subtotal: number | null }[];
+  maquinarios?: { quantidade: number; maquinario: { nome: string }; subtotal: number | null }[];
+}
+
+const instrucoes: Record<string, InstrucaoDoTeste> = {
   A: {
     id: 'A',
-    tag: 'INST-001',
+    codigo: 'INST-001',
     nome: 'Troca de rolamento',
     recursos: [
-      { descricao: 'Rolamento', quantidade: 2, recurso: { preco_medio: 150 } },
-      { descricao: 'Graxa', quantidade: 1, recurso: { preco_medio: 40 } },
+      { quantidade: 2, recurso: { nome: 'Rolamento', preco_base: 150 }, subtotal: 300 },
+      { quantidade: 1, recurso: { nome: 'Graxa', preco_base: 40 }, subtotal: 40 },
     ],
+    // O maquinário entra na soma (SN-85)
+    maquinarios: [{ quantidade: 1, maquinario: { nome: 'Munck' }, subtotal: 60 }],
   },
   B: {
     id: 'B',
-    tag: null,
+    codigo: null,
     nome: 'Inspeção visual',
-    recursos: [{ descricao: 'Técnico', quantidade: 1, recurso: { preco_medio: 200 } }],
+    recursos: [{ quantidade: 1, recurso: { nome: 'Técnico', preco_base: 200 }, subtotal: 200 }],
   },
-  SEM: { id: 'SEM', tag: 'INST-009', nome: 'Sem recursos', recursos: [] },
+  SEM: { id: 'SEM', codigo: 'INST-009', nome: 'Sem recursos', recursos: [] },
+  FURO: {
+    id: 'FURO',
+    codigo: 'INST-010',
+    nome: 'Com linha sem preço',
+    recursos: [
+      { quantidade: 10, recurso: { nome: 'Cabo', preco_base: 5 }, subtotal: 50 },
+      { quantidade: 4, recurso: { nome: 'Conector', preco_base: 0 }, subtotal: null },
+    ],
+  },
 };
 
 vi.mock('@/services/instrucoes.services', () => ({
@@ -44,7 +65,7 @@ vi.mock('@/services/instrucoes.services', () => ({
 beforeEach(() => vi.clearAllMocks());
 
 describe('montarDeInstrucoes', () => {
-  it('dá uma linha por instrução, valendo a soma do catálogo', async () => {
+  it('dá uma linha por instrução, valendo a soma do catálogo (recursos e maquinário)', async () => {
     const itens = await montarDeInstrucoes(['A', 'B']);
 
     expect(itens).toHaveLength(2);
@@ -52,10 +73,10 @@ describe('montarDeInstrucoes', () => {
       instrucao_id: 'A',
       descricao: 'INST-001 - Troca de rolamento',
       quantidade: 1,
-      preco_unitario: 340, // 2 x 150 + 1 x 40
-      preco_unitario_original: 340,
+      preco_unitario: 400, // 2 x 150 + 1 x 40 + o munck (60)
+      preco_unitario_original: 400,
     });
-    // Sem tag, o rótulo é só o nome.
+    // Sem código, o rótulo é só o nome.
     expect(itens[1].descricao).toBe('Inspeção visual');
     expect(itens[1].preco_unitario).toBe(200);
   });
@@ -89,7 +110,7 @@ describe('montarDeInstrucoes', () => {
 
     expect(itens).toHaveLength(1);
     expect(itens[0].descricao).toBe('INST-001 - Troca de rolamento');
-    expect(itens[0].preco_unitario).toBe(340);
+    expect(itens[0].preco_unitario).toBe(400);
   });
 
   it('descarta a linha por recurso mesmo quando a instrução tinha um só', async () => {
@@ -103,6 +124,13 @@ describe('montarDeInstrucoes', () => {
 
     expect(itens[0].descricao).toBe('Inspeção visual');
     expect(itens[0].recurso_id).toBeUndefined();
+  });
+
+  it('a linha sem preço entra como zero, e o item leva a marca para a tela avisar (SN-86)', async () => {
+    const [furo, completa] = await montarDeInstrucoes(['FURO', 'B']);
+
+    expect(furo).toMatchObject({ preco_unitario: 50, sem_preco_no_cadastro: true });
+    expect(completa.sem_preco_no_cadastro).toBeUndefined();
   });
 
   it('instrução sem recursos entra valendo zero, e não some', async () => {

@@ -1,23 +1,16 @@
 // src/features/execucao-os/utils/transform-api-data.ts
 
-import { ExecucaoOS, ChecklistAtividade } from '../types';
+import { ExecucaoOS } from '../types';
+import type { OrdemServicoDaApi } from '@/services/execucao-os.service';
+import { duracaoLegivel } from '@/utils/horas';
+import { descreverCustoReal, descreverHorasHomem } from './horas-da-equipe';
+import { codigoAgrupado } from './documento-da-os';
+import { rotuloDoParou } from '@/features/execucao-os/utils/equipamento-parou';
 
 /**
  * Transforma a resposta da API para o formato esperado pelo frontend
  */
-export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
-  // Calcular tempo total de execução em minutos
-  const calcularTempoExecucao = (): number | undefined => {
-    if (!apiData.data_hora_inicio_real) return undefined;
-
-    const inicio = new Date(apiData.data_hora_inicio_real).getTime();
-    const fim = apiData.data_hora_fim_real
-      ? new Date(apiData.data_hora_fim_real).getTime()
-      : new Date().getTime();
-
-    const diffMs = fim - inicio;
-    return Math.round(diffMs / 60000); // Converter para minutos
-  };
+export function transformApiResponseToExecucaoOS(apiData: OrdemServicoDaApi): ExecucaoOS {
 
   // Separar data e hora de uma string ISO
   const separarDataHora = (isoString?: string): { data: string; hora: string } => {
@@ -46,8 +39,9 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   };
 
-  // Transformar checklist_atividades para camelCase
-  const checklistAtividades: ChecklistAtividade[] = (apiData.checklist_atividades || []).map((item: any) => ({
+  // Transformar checklist_atividades para camelCase (formato antigo: a API
+  // manda o checklist em `checklist`, e ninguem le este campo)
+  const checklistAtividades = (apiData.checklist_atividades || []).map((item) => ({
     id: item.id,
     descricao: item.descricao,
     obrigatoria: item.obrigatoria,
@@ -72,7 +66,8 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     programacao_id: apiData.programacao_id,
 
     // Identificação
-    numero_os: apiData.numero_os || apiData.codigo,
+    // Vazio no lugar de ausente: o BaseModal trata os dois igual
+    numero_os: apiData.numero_os || apiData.codigo || '',
     numeroOS: apiData.numero_os || apiData.codigo,
     descricao: apiData.descricao,
     descricaoOS: apiData.descricao,
@@ -150,9 +145,40 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     resultadoServico: apiData.resultado_servico,
     problemas_encontrados: apiData.problemas_encontrados,
     problemasEncontrados: apiData.problemas_encontrados,
+    // O painel do Executar lê o que já está na OS (reexecutar depois de reabrir)
+    incidentes_seguranca: apiData.incidentes_seguranca,
     recomendacoes: apiData.recomendacoes,
     proxima_manutencao: apiData.proxima_manutencao,
     proximaManutencao: toDatetimeLocal(apiData.proxima_manutencao),
+
+    // SN-60: dados de falha. O ISO vai para o painel do Executar (que preenche
+    // com o que já está na OS); o local, para a leitura
+    equipamento_parou: apiData.equipamento_parou,
+    equipamentoParou: rotuloDoParou(apiData) ?? undefined,
+    parada_inicio: apiData.parada_inicio,
+    parada_fim: apiData.parada_fim,
+    paradaInicio: toDatetimeLocal(apiData.parada_inicio ?? undefined),
+    paradaFim: toDatetimeLocal(apiData.parada_fim ?? undefined),
+    // Legível: 4320 min não diz nada; "3 d" diz
+    tempoParado: duracaoLegivel(apiData.minutos_parado) || undefined,
+    falha_sintoma: apiData.falha_sintoma,
+    falha_causa: apiData.falha_causa,
+    falha_acao: apiData.falha_acao,
+    falhaSintoma: apiData.falha_sintoma,
+    falhaCausa: apiData.falha_causa,
+    falhaAcao: apiData.falha_acao,
+
+    // SN-61: horas-homem e tempo sem as pausas. Crus para o painel do Executar
+    // (que começa as horas no tempo efetivo); legíveis para a leitura
+    hh_real: apiData.hh_real,
+    hh_estimado: apiData.hh_estimado,
+    tempo_efetivo_minutos: apiData.tempo_efetivo_minutos,
+    // Em execução, o tempo continua correndo depois da leitura: o painel do
+    // Executar soma o que passou (aberto às 8h05, executado ao meio-dia)
+    tempo_efetivo_lido_em: Date.now(),
+    hhReal: descreverHorasHomem(apiData.hh_real, apiData.hh_estimado),
+    tempoEfetivo: duracaoLegivel(apiData.tempo_efetivo_minutos) || undefined,
+    custoReal: descreverCustoReal(apiData.custo_real, apiData.hh_real, apiData.tecnicos),
 
     // Qualidade
     avaliacao_qualidade: apiData.avaliacao_qualidade,
@@ -168,7 +194,11 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     finalizado_por: apiData.finalizado_por,
     finalizado_por_id: apiData.finalizado_por_id,
     finalizadoPor: apiData.finalizado_por,
-    dataFinalizacao: toDatetimeLocal(apiData.data_hora_fim_real),
+    // A data da finalização (SN-62); antes a tela mostrava o fim da execução no lugar
+    dataFinalizacao: toDatetimeLocal(apiData.finalizada_em ?? undefined),
+    finalizada_em: apiData.finalizada_em,
+    codigo_verificacao: apiData.codigo_verificacao,
+    codigoVerificacao: codigoAgrupado(apiData.codigo_verificacao) || undefined,
     aprovado_por: apiData.aprovado_por,
     aprovado_por_id: apiData.aprovado_por_id,
     aprovadoPor: apiData.aprovado_por,
@@ -234,15 +264,21 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
     incidentesSeguranca: apiData.incidentes_seguranca,
     medidasSegurancaAdicionais: apiData.medidas_seguranca_adicionais,
     custosAdicionais: apiData.custos_adicionais,
+    // SN-93: o custo aberto, como a API manda (a tela não refaz a conta)
+    custos: apiData.custos,
 
     // Campos computados
-    tempoTotalExecucao: calcularTempoExecucao(),
-    tempo_execucao_minutos: calcularTempoExecucao(),
+    // O tempo efetivo da API (sem as pausas, SN-61); a conta local é para resposta sem ele
+    // O tempo efetivo da API (sem as pausas, SN-61). A conta local que havia aqui
+    // (fim - início, ou até agora) contava as pausas e, na OS cancelada depois de
+    // iniciada, crescia todo dia — a API manda null de propósito
+    tempoTotalExecucao: apiData.tempo_efetivo_minutos ?? undefined,
+    tempo_execucao_minutos: apiData.tempo_efetivo_minutos ?? undefined,
 
     // Objeto "os" aninhado para compatibilidade com componentes antigos
     os: {
       id: apiData.id,
-      numeroOS: apiData.numero_os || apiData.codigo,
+      numeroOS: apiData.numero_os || apiData.codigo || '',
       descricao: apiData.descricao,
       local: apiData.local,
       ativo: apiData.ativo,
@@ -257,15 +293,15 @@ export function transformApiResponseToExecucaoOS(apiData: any): ExecucaoOS {
         modelo: apiData.reserva_veiculo.veiculo?.modelo || '',
         placa: apiData.reserva_veiculo.veiculo?.placa || '',
       } : undefined,
-    } as any,
+    },
   };
 
-  return transformed as unknown as ExecucaoOS;
+  return transformed;
 }
 
 /**
  * Transforma um array de respostas da API
  */
-export function transformApiArrayToExecucaoOS(apiDataArray: any[]): ExecucaoOS[] {
+export function transformApiArrayToExecucaoOS(apiDataArray: OrdemServicoDaApi[]): ExecucaoOS[] {
   return apiDataArray.map(transformApiResponseToExecucaoOS);
 }

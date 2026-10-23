@@ -1,6 +1,6 @@
 // src/features/usuarios/config/form-config.tsx - ATUALIZADO PARA DTO
-import { useEffect, useMemo, useRef } from 'react';
-import { FormField } from '@/core/types/base';
+import { useMemo, type ComponentProps } from 'react';
+import { FormField, FormFieldProps } from '@/core/types/base';
 import {  Permissao } from '../types';
 import { Checkbox } from '@/core/components/ui/checkbox';
 import { Button } from '@/core/components/ui/button';
@@ -15,16 +15,21 @@ import {
 import { EstadoSelect } from '@/core/components/common/EstadoSelect';
 import { CidadeSelect } from '@/core/components/common/CidadeSelect';
 import { CEPInput } from '@/core/components/common/CEPInput';
+import { TelefoneInput } from '@/core/components/ui/telefone-input';
 import { GerenteSelect } from '@/core/components/common/GerenteSelect';
 import { ConcessionariaSelect } from '@/core/components/common/ConcessionariaSelect';
 import { OrganizacaoSelect } from '@/core/components/common/OrganizacaoSelect';
 import { useRoles, usePermissoesGrouped, useUserStore } from '@/core/context/hooks';
+import { papeisQuePodeDar, permissoesMarcadas, soAsExtras, type PapelDaTela } from '@/core/features/usuarios/utils/papeis';
+
+/** Uma permissao como pode chegar: o nome, ou um objeto com o nome em name, value ou permission. */
+type PermissaoRecebida = string | { name?: string; value?: string; permission?: string } | null;
 
 // Normaliza o valor recebido pelo selector de permissoes para sempre ser string[]
 const normalizePermissionValue = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return value
-    .map((item: any) => {
+    .map((item: PermissaoRecebida) => {
       if (typeof item === 'string') return item;
       if (item && typeof item === 'object') {
         return item.name || item.value || item.permission || '';
@@ -118,28 +123,15 @@ const getPermissionLabel = (permissao: { value: string; label?: string }): strin
   return humanizePermissionName(permissao.value);
 };
 
-// ✅ COMPONENTE PARA SELEÇÃO DE ROLES DINÂMICO - USANDO DADOS DA TABELA
-const RoleSelector = ({ value, onChange, disabled }: any) => {
+// TIPO DO USUÁRIO: só os papéis que quem está na tela pode dar
+// (usuarios.create_<papel>, a mesma regra do backend), com o que cada um faz e
+// o que enxerga.
+const RoleSelector = ({ value, onChange, disabled }: FormFieldProps) => {
   const { roles, loading, error } = useRoles();
-
-  // ✅ IMPORTAR useUserStore para verificar role do usuário logado
-  const { user, getUserRole } = useUserStore();
-  const currentUserRole = getUserRole();
-
-  // Roles permitidas no sistema
-  const allowedRoles = ['super_admin', 'admin', 'gerente', 'analista', 'proprietario', 'operador'];
-
-  // Filtrar apenas roles permitidas
-  let availableRoles = roles.filter(role =>
-    allowedRoles.includes(role.value.toLowerCase())
-  );
-
-  // Se usuário logado é proprietário, mostrar apenas "operador"
-  if (currentUserRole === 'propietario' || currentUserRole === 'proprietario') {
-    availableRoles = availableRoles.filter(role =>
-      role.value.toLowerCase() === 'operador'
-    );
-  }
+  const { hasPermission, isSuperAdmin } = useUserStore();
+  const atual: string | undefined = typeof value === 'string' && value.trim() ? value : undefined;
+  const opcoes = papeisQuePodeDar(roles, hasPermission, isSuperAdmin(), atual);
+  const escolhido = roles.find((papel: PapelDaTela) => papel.value === atual);
 
   if (loading) {
     return (
@@ -153,211 +145,152 @@ const RoleSelector = ({ value, onChange, disabled }: any) => {
 
   if (error && roles.length === 0) {
     return (
-      <div className="flex items-center p-3 border border-red-200 rounded-md bg-red-50">
-        <div className="text-sm text-red-600">
-          ❌ Erro ao carregar tipos de usuário: {error}
-        </div>
+      <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+        Não foi possível carregar os tipos de usuário: {error}
       </div>
     );
   }
 
-  // ✅ Verificar se proprietário não tem roles disponíveis (quando operador não existe)
-  if ((currentUserRole === 'propietario' || currentUserRole === 'proprietario') && availableRoles.length === 0) {
-    return (
-      <div className="flex items-center p-3 border border-amber-200 rounded-md bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
-        <div className="text-sm text-amber-700 dark:text-amber-300">
-          ⚠️ Você só pode cadastrar usuários com o tipo "Operador". Entre em contato com o administrador para configurar este tipo de usuário no sistema.
-        </div>
-      </div>
-    );
-  }
+  const descricao = escolhido?.description && (
+    <p className="mt-1.5 text-xs text-muted-foreground">
+      {escolhido.description}
+      {escolhido.escopo ? ` Enxerga: ${escolhido.escopo.charAt(0).toLowerCase()}${escolhido.escopo.slice(1)}.` : ''}
+    </p>
+  );
 
-  // Encontrar o role atual para mostrar o label correto
-  const currentRole = roles.find(role => role.value === value);
-
-  // ✅ MODO VIEW (DISABLED): Mostrar como texto estilizado ao invés de Select desabilitado
   if (disabled) {
     return (
-      <div className="flex items-center p-3 border rounded-md bg-muted/30">
-        <span className="font-medium text-sm">
-          {currentRole ? currentRole.label : value || 'Não definido'}
-        </span>
+      <div>
+        <div className="flex items-center rounded-md border bg-muted p-3">
+          <span className="text-sm font-medium">{escolhido?.label ?? atual ?? 'Não definido'}</span>
+        </div>
+        {descricao}
       </div>
     );
   }
 
-  // ✅ MODO EDIT: Select normal para edição
-  // Garantir que value seja uma string válida ou undefined (NUNCA string vazia para Select controlado)
-  const selectValue = value && String(value).trim() !== '' ? String(value) : undefined;
+  if (opcoes.length === 0) {
+    return <div className="rounded-md border p-3 text-sm text-muted-foreground">Você não pode dar nenhum tipo de usuário.</div>;
+  }
 
   return (
-    <Select
-      key={`role-select-${selectValue || 'empty'}`}
-      value={selectValue}
-      onValueChange={onChange}
-      disabled={disabled}
-    >
-      <SelectTrigger>
-        <SelectValue placeholder="Selecione um tipo de usuário" />
-      </SelectTrigger>
-      <SelectContent>
-        {availableRoles.map(role => (
-          <SelectItem key={role.value} value={role.value}>
-            <span className="font-medium">{role.label}</span>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div>
+      <Select key={`papel-${atual ?? 'vazio'}`} value={atual} onValueChange={onChange}>
+        <SelectTrigger>
+          <SelectValue placeholder="Selecione o tipo de usuário" />
+        </SelectTrigger>
+        <SelectContent>
+          {opcoes.map((papel) => (
+            <SelectItem key={papel.value} value={papel.value}>
+              <span className="font-medium">{papel.label}</span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {descricao}
+    </div>
   );
 };
 
-// COMPONENTE DINAMICO PARA SELECAO DE PERMISSOES
-// - Marca corretamente as permissoes do usuario em modo edit/view (normaliza value)
-// - Em modo create, preenche permissoes padrao quando o usuario escolhe um tipo
-// - Permite marcar/desmarcar permissoes individuais alem das herdadas pela role
-const PermissoesSelector = ({ value, onChange, disabled, formData, mode }: any) => {
+// PERMISSÕES: as do tipo vêm do tipo (marcadas e travadas; mudar o tipo muda o
+// acesso). Só as extras se escolhem, e só quem gerencia usuários — o backend
+// grava como direta apenas o que o tipo não dá. O valor do campo guarda só as
+// extras.
+const PermissoesSelector = ({ value, onChange, disabled, formData, onMultipleChange }: FormFieldProps) => {
   const { permissoesPorCategoria, loading, error } = usePermissoesGrouped();
   const { roles } = useRoles();
+  const { hasPermission } = useUserStore();
 
-  // Sempre trabalha com strings na UI; o pai recebe array de strings via onChange
-  const permissoesSelecionadas = useMemo(() => normalizePermissionValue(value), [value]);
-
-  // Role atualmente selecionada no form (campo roleNames pode ser string ou string[])
-  const currentRoleName: string | undefined = (() => {
+  const nomeDoPapel: string | undefined = (() => {
     const raw = formData?.roleNames;
     if (Array.isArray(raw)) return raw[0];
     if (typeof raw === 'string' && raw.trim()) return raw;
     return undefined;
   })();
+  const papel = roles.find((r: PapelDaTela) => r.value === nomeDoPapel);
+  const doPapel: string[] = useMemo(() => papel?.permissions ?? [], [papel]);
+  const extras = useMemo(() => soAsExtras(normalizePermissionValue(value), doPapel), [value, doPapel]);
+  const marcadas = permissoesMarcadas(doPapel, extras);
+  const podeDarExtras = !disabled && hasPermission('usuarios.manage');
 
-  const currentRole = roles.find((r: any) => r.value === currentRoleName);
-  const rolePermissions: string[] = useMemo(
-    () => (Array.isArray(currentRole?.permissions) ? currentRole.permissions : []),
-    [currentRole]
-  );
-
-  // Auto-marcar permissoes padrao quando o usuario muda a role em modo CREATE.
-  // Em edit/view, mantem o set existente para preservar overrides; o botao
-  // "Aplicar permissoes padrao da role" abaixo permite reset manual.
-  const lastAppliedRoleRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (mode !== 'create') return;
-    if (!currentRoleName) return;
-    if (rolePermissions.length === 0) return;
-    if (lastAppliedRoleRef.current === currentRoleName) return;
-
-    lastAppliedRoleRef.current = currentRoleName;
-    onChange(rolePermissions);
-  }, [mode, currentRoleName, rolePermissions, onChange]);
-
-  const handlePermissaoChange = (permissaoValue: string, checked: boolean) => {
-    const setAtual = new Set(permissoesSelecionadas);
-    if (checked) setAtual.add(permissaoValue);
-    else setAtual.delete(permissaoValue);
-    onChange(Array.from(setAtual));
+  const alterar = (novas: string[]) => {
+    // Só a lista mexida vai ao servidor (mapFormDataToCreateDto): o sheet pode
+    // abrir antes de as diretas carregarem, e mandar a lista vazia apagaria todas.
+    if (onMultipleChange) onMultipleChange({ permissions: novas, permissoesAlteradas: true });
+    else onChange(novas);
   };
-
-  const handleAplicarRoleDefaults = () => {
-    if (rolePermissions.length === 0) return;
-    onChange([...rolePermissions]);
-  };
-
-  const handleLimparTodas = () => {
-    onChange([]);
-  };
+  const alternar = (permissao: string, marcar: boolean) =>
+    alterar(marcar ? [...extras, permissao] : extras.filter((p) => p !== permissao));
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 border rounded-lg">
-        <div className="text-sm text-muted-foreground">
-          Carregando permissoes...
-        </div>
+      <div className="flex items-center justify-center rounded-lg border p-8">
+        <div className="text-sm text-muted-foreground">Carregando permissões...</div>
       </div>
     );
   }
 
   if (error && Object.keys(permissoesPorCategoria).length === 0) {
     return (
-      <div className="flex items-center justify-center p-8 border border-destructive/30 rounded-lg bg-destructive/5">
-        <div className="text-center">
-          <div className="text-sm text-destructive mb-2">
-            Nao foi possivel carregar as permissoes
-          </div>
-          <div className="text-xs text-muted-foreground">{error}</div>
-        </div>
+      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+        Não foi possível carregar as permissões: {error}
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      {!disabled && (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleAplicarRoleDefaults}
-            disabled={!currentRoleName || rolePermissions.length === 0}
-            title={
-              currentRoleName
-                ? `Marca as permissoes padrao da role ${currentRoleName}`
-                : 'Selecione um tipo de usuario primeiro'
-            }
-          >
-            Aplicar padrao da role
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleLimparTodas}
-            disabled={permissoesSelecionadas.length === 0}
-          >
-            Desmarcar todas
-          </Button>
-          {currentRoleName && rolePermissions.length > 0 && (
-            <span className="text-muted-foreground">
-              Role <span className="font-medium">{currentRoleName}</span> traz {rolePermissions.length} permissoes padrao.
-            </span>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span>
+          {papel ? (
+            <>
+              <span className="font-medium text-foreground">{doPapel.length}</span> vêm do tipo{' '}
+              <span className="font-medium text-foreground">{papel.label}</span>
+            </>
+          ) : (
+            'Escolha o tipo do usuário: as permissões dele vêm do tipo'
           )}
-        </div>
-      )}
+          {extras.length > 0 && (
+            <>
+              {' '}
+              e <span className="font-medium text-foreground">{extras.length}</span> extra{extras.length > 1 ? 's' : ''}
+            </>
+          )}
+          .
+        </span>
+        {podeDarExtras && extras.length > 0 && (
+          <Button type="button" variant="ghost" size="sm" onClick={() => alterar([])}>
+            Tirar as extras
+          </Button>
+        )}
+        {!disabled && !podeDarExtras && <span>Só quem gerencia usuários dá permissões extras.</span>}
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-72 overflow-y-auto border rounded-lg p-4">
+      <div className="grid max-h-72 grid-cols-1 gap-4 overflow-y-auto rounded-lg border p-4 md:grid-cols-2">
         {Object.entries(permissoesPorCategoria).map(([categoria, permissoes]) => (
           <div key={categoria} className="space-y-2">
-            <h4 className="font-medium text-sm text-muted-foreground border-b pb-1">
-              {categoria}
-            </h4>
-            {permissoes.map((permissao: any) => {
-              const checked = permissoesSelecionadas.includes(permissao.value);
-              const isFromRole = rolePermissions.includes(permissao.value);
-              const isExtra = checked && !isFromRole;
+            <h4 className="border-b pb-1 text-sm font-medium text-muted-foreground">{categoria}</h4>
+            {permissoes.map((permissao) => {
+              const doTipo = doPapel.includes(permissao.value);
+              const marcada = marcadas.has(permissao.value);
               return (
                 <div key={permissao.value} className="flex items-center gap-2">
                   <Checkbox
                     id={permissao.value}
-                    checked={checked}
-                    onCheckedChange={(c) =>
-                      handlePermissaoChange(permissao.value as Permissao, !!c)
-                    }
-                    disabled={disabled}
+                    checked={marcada}
+                    onCheckedChange={(c) => alternar(permissao.value as Permissao, !!c)}
+                    disabled={disabled || doTipo || !podeDarExtras}
                   />
-                  <label
-                    htmlFor={permissao.value}
-                    className="text-sm cursor-pointer flex-1"
-                    title={permissao.description || permissao.value}
-                  >
+                  <label htmlFor={permissao.value} className="flex-1 cursor-pointer text-sm" title={permissao.description || permissao.value}>
                     {getPermissionLabel(permissao)}
                   </label>
-                  {isFromRole && (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                      padrao
+                  {doTipo && (
+                    <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                      do tipo
                     </Badge>
                   )}
-                  {isExtra && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                  {marcada && !doTipo && (
+                    <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
                       extra
                     </Badge>
                   )}
@@ -367,17 +300,18 @@ const PermissoesSelector = ({ value, onChange, disabled, formData, mode }: any) 
           </div>
         ))}
       </div>
-
-      <div className="text-xs text-muted-foreground">
-        {permissoesSelecionadas.length} permissao(oes) selecionada(s)
-        {error && <span className="text-amber-600 ml-2">{error}</span>}
-      </div>
     </div>
   );
 };
 
+/** O que os seletores de localizacao leem: o id do IBGE no valor e o nome no formulario. */
+type PropsDeLocalizacao = FormFieldProps & {
+  value?: string;
+  formData?: { estado?: string; cidade?: string };
+};
+
 // Componente para seleção de estado com IBGE
-const EstadoSelector = ({ value, onChange, disabled, onMultipleChange, formData }: any) => {
+const EstadoSelector = ({ value, onChange, disabled, onMultipleChange, formData }: PropsDeLocalizacao) => {
   const handleEstadoChange = (estado: { id: string; nome: string; sigla: string }) => {
 
     // Atualizar estadoId (para o CidadeSelect depender)
@@ -406,7 +340,8 @@ const EstadoSelector = ({ value, onChange, disabled, onMultipleChange, formData 
 };
 
 // Componente para seleção de cidade com IBGE
-const CidadeSelector = ({ value, onChange, disabled, estadoId, onMultipleChange, formData }: any) => {
+// estadoId chega pelo nome (dependencies do campo): id do IBGE, texto ou numero.
+const CidadeSelector = ({ value, onChange, disabled, estadoId, onMultipleChange, formData }: PropsDeLocalizacao & { estadoId?: string | number }) => {
   const handleCidadeChange = (cidade: { id: string; nome: string }) => {
 
     // Atualizar cidadeId
@@ -428,16 +363,19 @@ const CidadeSelector = ({ value, onChange, disabled, estadoId, onMultipleChange,
       value={value}
       displayValue={formData?.cidade}
       onCidadeChange={handleCidadeChange}
-      estadoId={estadoId ? parseInt(estadoId) : null}
+      estadoId={estadoId ? parseInt(String(estadoId)) : null}
       disabled={disabled}
       placeholder="Selecione uma cidade"
     />
   );
 };
 
+/** O endereco que o CEPInput acha pelo CEP. */
+type EnderecoDoCEP = Parameters<NonNullable<ComponentProps<typeof CEPInput>['onEnderecoChange']>>[0];
+
 // Componente para CEP com busca automática
-const CEPSelector = ({ value, onChange, disabled, onMultipleChange }: any) => {
-  const handleEnderecoChange = (endereco: any) => {
+const CEPSelector = ({ value, onChange, disabled, onMultipleChange }: FormFieldProps & { value?: string }) => {
+  const handleEnderecoChange = (endereco: EnderecoDoCEP) => {
     // Atualizar campo de endereço completo quando CEP for encontrado
     if (onMultipleChange && endereco) {
       // Concatenar endereço e bairro em um único campo
@@ -474,7 +412,7 @@ const CEPSelector = ({ value, onChange, disabled, onMultipleChange }: any) => {
 };
 
 // Componente para seleção de gerente responsável
-const GerenteSelector = ({ value, onChange, disabled }: any) => {
+const GerenteSelector = ({ value, onChange, disabled }: FormFieldProps & { value?: string }) => {
   return (
     <GerenteSelect
       value={value}
@@ -486,7 +424,7 @@ const GerenteSelector = ({ value, onChange, disabled }: any) => {
 };
 
 // Componente para seleção de concessionária
-const ConcessionariaSelector = ({ value, onChange, disabled }: any) => {
+const ConcessionariaSelector = ({ value, onChange, disabled }: FormFieldProps & { value?: string }) => {
   return (
     <ConcessionariaSelect
       value={value}
@@ -498,7 +436,7 @@ const ConcessionariaSelector = ({ value, onChange, disabled }: any) => {
 };
 
 // Componente para seleção de organização
-const OrganizacaoSelector = ({ value, onChange, disabled }: any) => {
+const OrganizacaoSelector = ({ value, onChange, disabled }: FormFieldProps & { value?: string }) => {
   return (
     <OrganizacaoSelect
       value={value}
@@ -538,8 +476,11 @@ export const usuariosFormFields: FormField[] = [
   {
     key: 'telefone',
     label: 'Telefone',
-    type: 'text',
-    placeholder: '(11) 99999-9999',
+    type: 'custom',
+    // Máscara na tela, E.164 no que vai para a API (SN-46)
+    render: ({ value, onChange, disabled }: FormFieldProps) => (
+      <TelefoneInput value={typeof value === 'string' ? value : ''} onChange={onChange} disabled={disabled} />
+    ),
     group: 'informacoes_basicas'
   },
   {
@@ -593,7 +534,7 @@ export const usuariosFormFields: FormField[] = [
     required: true,
     render: RoleSelector,
     group: 'configuracoes',
-    help: 'Role atual do usuário no sistema'
+    help: 'Define o que a pessoa faz e o que enxerga'
   },
   {
     key: 'status',

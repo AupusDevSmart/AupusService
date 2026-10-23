@@ -1,4 +1,5 @@
 // src/features/dashboard/components/PainelManutencao.tsx
+import { OPCOES_DE_CRITICIDADE } from '@/core/features/equipamentos/config/criticidade';
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -27,8 +28,10 @@ import {
   dashboardManutencaoApi,
   type FiltrosDashboard,
 } from '@/services/dashboard-manutencao.services';
-import { CartaoIndicador, Quadro, SemDado } from './PainelPrimitivos';
+import { CartaoIndicador, LegendaDasFormulas, Quadro, SemDado } from './PainelPrimitivos';
 import { DADOS_DEMO, PAINEL_USA_DADOS_DE_EXEMPLO } from './dadosDemo';
+import { BotaoExportarPainel } from './BotaoExportarPainel';
+import { useUserStore } from '@/store/useUserStore';
 
 /**
  * Painel de gestão de manutenção e serviços.
@@ -73,15 +76,8 @@ const PERIODOS: { value: Periodo; label: string }[] = [
   { value: 'ano', label: 'Ano corrente' },
 ];
 
-/** Mesma escala de 1 a 5 do cadastro de equipamentos. */
-const CRITICIDADES = [
-  { value: 'all', label: 'Toda criticidade' },
-  { value: '5', label: '5 · muito alta' },
-  { value: '4', label: '4 · alta' },
-  { value: '3', label: '3 · média' },
-  { value: '2', label: '2 · baixa' },
-  { value: '1', label: '1 · muito baixa' },
-];
+/** Mesma escala de 1 a 5 do cadastro de equipamentos (uma fonte só, SN-65). */
+const CRITICIDADES = OPCOES_DE_CRITICIDADE;
 
 /**
  * Altura das molduras fora do modo "uma tela".
@@ -91,7 +87,13 @@ const CRITICIDADES = [
  */
 const ALTURA_PADRAO = 'h-[180px] 2xl:h-auto';
 
+/** Os gráficos que a tela mostra: a legenda lista só estes (mix, finalidade e a linha 4 estão desligados) */
+const GRAFICOS_A_VISTA = ['execucaoPlano', 'planejadaVsNao', 'origemOS', 'custo', 'custoPorOS', 'anomalias', 'hh'];
+
 const moedaMil = (v: number) => `R$ ${v.toLocaleString('pt-BR')}k`;
+/** O eixo de um valor em reais (o custo médio por OS): "R$ 8k", "R$ 750" */
+const moedaCurta = (v: number) =>
+  Math.abs(v) >= 1000 ? `R$ ${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}k` : `R$ ${v.toLocaleString('pt-BR')}`;
 
 /**
  * Tooltip no visual do produto — o padrão do recharts destoa do resto.
@@ -139,6 +141,7 @@ export function PainelManutencao() {
   const navigate = useNavigate();
   const [parametrosUrl] = useSearchParams();
   const [filtros, setFiltros] = useState<FiltrosDashboard>({ periodo: '12meses' });
+  const temPermissao = useUserStore((s) => s.hasPermission);
 
   /**
    * Dados de exemplo no lugar da resposta da API, para avaliar o desenho da
@@ -203,7 +206,7 @@ export function PainelManutencao() {
       mes,
       maoObra: data.custo.maoObra[i] ?? 0,
       material: data.custo.material[i] ?? 0,
-      terceiros: data.custo.terceiros[i] ?? 0,
+      adicionais: data.custo.adicionais[i] ?? 0,
       orcado: data.custo.orcado[i] ?? 0,
       corretiva: data.custoPorOS.corretiva[i] ?? 0,
       preventiva: data.custoPorOS.preventiva[i] ?? 0,
@@ -261,6 +264,19 @@ export function PainelManutencao() {
   const pctPlano = ep.programadas > 0 ? Math.round((ep.executadas / ep.programadas) * 100) : 0;
   const a = data.anomalias;
   const pctBase = (n: number) => (a.identificadas > 0 ? Math.round((n / a.identificadas) * 100) : 0);
+  /** A fórmula e a base do gráfico, para o ícone de informação dele */
+  const explicacaoDe = (id: string) => data.graficos?.find((g) => g.id === id);
+  const graficosAVista = (data.graficos ?? []).filter((g) => GRAFICOS_A_VISTA.includes(g.id));
+  // O filtro como a tela o mostra, para a aba FILTRO da exportação
+  const nomeDe = (lista: { id: string; nome: string }[], id?: string) =>
+    id && id !== 'all' ? (lista.find((x) => x.id.trim() === id.trim())?.nome ?? id) : 'Todas';
+  const filtrosEmPalavras: [string, string][] = [
+    ['Período', PERIODOS.find((p) => p.value === filtros.periodo)?.label ?? 'Últimos 12 meses'],
+    ['Planta', nomeDe(data.opcoes.plantas, filtros.plantaId)],
+    ['Instalação', nomeDe(data.opcoes.unidades, filtros.unidadeId)],
+    ['Criticidade', CRITICIDADES.find((c) => c.value === (filtros.criticidade ?? 'all'))?.label ?? String(filtros.criticidade)],
+    ['Equipe', filtros.equipe && filtros.equipe !== 'all' ? filtros.equipe : 'Todas'],
+  ];
 
   return (
     <Layout>
@@ -274,7 +290,9 @@ export function PainelManutencao() {
               Painel de manutenção
             </h1>
 
-            <div className="w-[calc(50%-0.25rem)] sm:w-40">
+            {/* Larguras pelo texto da opção "todas" de cada combo: com 160 e 176 px saíam "Últimos 12 ..." e
+                "Todas as insta..." a 1440 px (22/out/2026). A linha cabe inteira a partir de 1440 e quebra abaixo */}
+            <div className="w-[calc(50%-0.25rem)] sm:w-48">
               <Combobox
                 options={PERIODOS}
                 value={filtros.periodo}
@@ -285,7 +303,7 @@ export function PainelManutencao() {
               />
             </div>
 
-            <div className="w-[calc(50%-0.25rem)] sm:w-44">
+            <div className="w-[calc(50%-0.25rem)] sm:w-48">
               <Combobox
                 options={opcoesPlanta}
                 value={filtros.plantaId ?? 'all'}
@@ -300,7 +318,7 @@ export function PainelManutencao() {
               />
             </div>
 
-            <div className="w-[calc(50%-0.25rem)] sm:w-44">
+            <div className="w-[calc(50%-0.25rem)] sm:w-56">
               <Combobox
                 options={opcoesUnidade}
                 value={filtros.unidadeId ?? 'all'}
@@ -311,7 +329,7 @@ export function PainelManutencao() {
               />
             </div>
 
-            <div className="w-[calc(50%-0.25rem)] sm:w-40">
+            <div className="w-[calc(50%-0.25rem)] sm:w-[11.5rem]">
               <Combobox
                 options={CRITICIDADES}
                 value={filtros.criticidade ?? 'all'}
@@ -350,6 +368,18 @@ export function PainelManutencao() {
               </Button>
             )}
 
+            {/* A legenda das fórmulas: todos os números num painel lateral, sem ocupar a tela */}
+            <LegendaDasFormulas indicadores={data.kpis} graficos={graficosAVista} />
+            {/* A planilha leva OS por OS, com custo: a permissão de ver OS (a mesma da rota) */}
+            {temPermissao('execucao_os.view') && (
+              <BotaoExportarPainel
+                filtros={filtros}
+                filtrosEmPalavras={filtrosEmPalavras}
+                graficosAVista={GRAFICOS_A_VISTA}
+                desabilitado={demo}
+              />
+            )}
+
             {/* O aviso ocupa o lugar do horário: não faz sentido dizer
                 "atualizado às 14h" sobre número inventado.
 
@@ -385,6 +415,7 @@ export function PainelManutencao() {
             {/* linha 1 — aderência ao plano */}
             <Quadro
               titulo="Execução do plano"
+              explicacao={explicacaoDe('execucaoPlano')}
               subtitulo={`meta ${ep.meta}%`}
               className={`${ALTURA_PADRAO} 2xl:col-span-4`}
             >
@@ -432,6 +463,7 @@ export function PainelManutencao() {
 
             <Quadro
               titulo="Planejada vs. não planejada"
+              explicacao={explicacaoDe('planejadaVsNao')}
               subtitulo="ref. 80/20"
               className={`${ALTURA_PADRAO} 2xl:col-span-4`}
               legenda={[
@@ -479,7 +511,7 @@ export function PainelManutencao() {
               </div>
             </Quadro>
 
-            <Quadro titulo="Origem da OS" className={`${ALTURA_PADRAO} 2xl:col-span-4`}>
+            <Quadro titulo="Origem da OS" explicacao={explicacaoDe('origemOS')} className={`${ALTURA_PADRAO} 2xl:col-span-4`}>
               <div className="flex h-full items-center justify-center gap-3">
                 <div className="aspect-square h-full shrink-0">
                   <Grafico>
@@ -569,13 +601,15 @@ export function PainelManutencao() {
             <Quadro
               titulo="Custo de manutenção"
               subtitulo="tracejado = orçado"
-              className={`${ALTURA_PADRAO} 2xl:col-span-8`}
-              simulado={data.custo.simulado}
+              // Duas colunas no xl: com uma, a linha ficava com um buraco ao lado do custo médio e o
+              // subtítulo saía "tracejado = ..."
+              className={`${ALTURA_PADRAO} xl:col-span-2 2xl:col-span-8`}
               pendencia={data.custo.pendencia}
+              explicacao={explicacaoDe('custo')}
               legenda={[
                 { rotulo: 'Mão de obra', cor: COR.azul },
                 { rotulo: 'Material', cor: COR.laranja },
-                { rotulo: 'Terceiros', cor: COR.verde },
+                { rotulo: 'Outros custos', cor: COR.verde },
               ]}
             >
               <Grafico>
@@ -593,8 +627,8 @@ export function PainelManutencao() {
                   <Bar dataKey="maoObra" name="Mão de obra" stackId="c" fill={COR.azul} maxBarSize={24} />
                   <Bar dataKey="material" name="Material" stackId="c" fill={COR.laranja} maxBarSize={24} />
                   <Bar
-                    dataKey="terceiros"
-                    name="Terceiros"
+                    dataKey="adicionais"
+                    name="Outros custos"
                     stackId="c"
                     fill={COR.verde}
                     maxBarSize={24}
@@ -614,6 +648,7 @@ export function PainelManutencao() {
 
             <Quadro
               titulo="Custo médio por OS"
+              explicacao={explicacaoDe('custoPorOS')}
               className={`${ALTURA_PADRAO} 2xl:col-span-4`}
               pendencia={data.custoPorOS.pendencia}
               legenda={
@@ -632,7 +667,8 @@ export function PainelManutencao() {
                   <LineChart data={serieMensal} margin={{ top: 4, right: 4 }}>
                     <CartesianGrid vertical={false} {...grade} />
                     <XAxis dataKey="mes" tickLine={false} axisLine={false} tick={eixo} />
-                    <YAxis tickLine={false} axisLine={false} tick={eixo} width={48} />
+                    {/* Em reais, como o custo de manutenção: "8000" sem R$ nem milhar */}
+                    <YAxis tickLine={false} axisLine={false} tick={eixo} tickFormatter={moedaCurta} width={58} />
                     <Tooltip content={<DicaGrafico />} />
                     <Line dataKey="corretiva" name="Corretiva" stroke={COR.vermelho} strokeWidth={2} dot={false} />
                     <Line
@@ -687,6 +723,7 @@ export function PainelManutencao() {
             <Quadro
               titulo="Anomalias"
               subtitulo="por mês de registro, não de fechamento"
+              explicacao={explicacaoDe('anomalias')}
               className={`${ALTURA_PADRAO} md:col-span-2 xl:col-span-3 2xl:col-span-8`}
               legenda={[
                 { rotulo: 'Resolvida', cor: COR.verde },
@@ -754,7 +791,9 @@ export function PainelManutencao() {
 
             <Quadro
               titulo="HH planejado vs. apontado"
-              className={`${ALTURA_PADRAO} 2xl:col-span-4`}
+              // Último da grade: abaixo do 2xl ficava sozinho numa coluna, com o resto da linha vazio
+              className={`${ALTURA_PADRAO} md:col-span-2 xl:col-span-3 2xl:col-span-4`}
+              explicacao={explicacaoDe('hh')}
               legenda={[
                 { rotulo: 'Planejado', cor: COR.azulPalido },
                 { rotulo: 'Apontado', cor: COR.azul },
@@ -869,6 +908,7 @@ export function PainelManutencao() {
             ))}
           </div>
           */}
+
         </div>
       </Layout.Main>
     </Layout>

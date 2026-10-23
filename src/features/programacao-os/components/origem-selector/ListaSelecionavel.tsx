@@ -1,26 +1,32 @@
 // src/features/programacao-os/components/origem-selector/ListaSelecionavel.tsx
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type UIEvent } from 'react';
 import { Check, Loader2, Search } from 'lucide-react';
+import type { PaginacaoDoCombobox } from '@/core';
+import { filtrarOpcoes, type OpcaoDaLista } from './filtrar-opcoes';
 
-export interface OpcaoDaLista {
-  id: string;
-  titulo: string;
-  /** Uma linha abaixo do título. Local, ativo, tipo — o que situa a escolha. */
-  subtitulo?: string;
-  /** Marcadores curtos antes do título: prioridade, status, número. */
-  etiquetas?: Array<{ texto: string; alerta?: boolean }>;
-}
+export type { OpcaoDaLista } from './filtrar-opcoes';
 
 interface ListaSelecionavelProps {
   opcoes: OpcaoDaLista[];
   value?: string;
   onChange: (id: string) => void;
   placeholder: string;
-  /** Mostrado quando a busca não acha nada, ou quando não há o que listar. */
+  /** Mostrado quando não há o que listar. */
   vazio: string;
+  /** A primeira página ainda não chegou */
   loading?: boolean;
+  /** A lista não carregou (o interceptor já avisou o motivo) */
+  erro?: boolean;
   disabled?: boolean;
+  /**
+   * Cadastro que cresce (SN-77): a busca vai para o servidor e a próxima página
+   * vem ao rolar até o fim. Sem ela, a lista filtra o que recebeu.
+   */
+  paginacao?: PaginacaoDoCombobox;
 }
+
+/** Quantos pixels antes do fim a próxima página já começa a vir. */
+const PERTO_DO_FIM = 48;
 
 /**
  * Uma lista com busca, para escolher um item.
@@ -31,6 +37,8 @@ interface ListaSelecionavelProps {
  *
  * O `overscroll-contain` não é detalhe: sem ele, chegar ao fim desta lista
  * continuava rolando o modal atrás e jogava a pessoa para o pé do formulário.
+ * O campo de busca fica montado enquanto carrega: no lugar do carregando, ele
+ * perdia o foco a cada letra (a busca no servidor carrega a cada uma).
  */
 export function ListaSelecionavel({
   opcoes,
@@ -39,33 +47,42 @@ export function ListaSelecionavel({
   placeholder,
   vazio,
   loading = false,
+  erro = false,
   disabled = false,
+  paginacao,
 }: ListaSelecionavelProps) {
   const [busca, setBusca] = useState('');
 
-  // O filtro varre tudo que a linha mostra. Buscar só pelo título fazia a
-  // pessoa procurar por "casa de bombas" e não achar nada.
-  const filtradas = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    if (!termo) return opcoes;
+  // A busca do servidor fica no hook: ao sair do passo, ela volta a vazia junto com o campo
+  const paginacaoAtual = useRef(paginacao);
+  paginacaoAtual.current = paginacao;
+  useEffect(() => () => paginacaoAtual.current?.onBuscar(''), []);
 
-    return opcoes.filter((o) =>
-      [o.titulo, o.subtitulo, ...(o.etiquetas ?? []).map((e) => e.texto)]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(termo),
-    );
-  }, [opcoes, busca]);
+  // Paginado, quem filtra é o servidor
+  const filtradas = useMemo(() => (paginacao ? opcoes : filtrarOpcoes(opcoes, busca)), [opcoes, busca, paginacao]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 py-8 justify-center text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Carregando...
-      </div>
-    );
-  }
+  const buscar = (texto: string) => {
+    setBusca(texto);
+    paginacao?.onBuscar(texto);
+  };
+
+  const pedirMaisSePertoDoFim = (lista: HTMLDivElement | null) => {
+    if (!lista || !paginacao?.temMais || paginacao.carregando) return;
+    if (lista.scrollHeight - lista.scrollTop - lista.clientHeight < PERTO_DO_FIM) paginacao.carregarMais();
+  };
+
+  const aoRolar = (e: UIEvent<HTMLDivElement>) => pedirMaisSePertoDoFim(e.currentTarget);
+
+  // Depois de cada página, de novo: a lista curta não rola (e a página que
+  // chegou com a pessoa já no fim não dispara rolagem nenhuma)
+  const listaRef = useRef<HTMLDivElement>(null);
+  const pedirMais = useRef(pedirMaisSePertoDoFim);
+  pedirMais.current = pedirMaisSePertoDoFim;
+  useEffect(() => {
+    pedirMais.current(listaRef.current);
+  }, [opcoes.length, paginacao?.temMais, paginacao?.carregando]);
+
+  const semResultado = busca.trim() ? `Nada encontrado para "${busca.trim()}".` : vazio;
 
   return (
     <div className="space-y-2">
@@ -76,13 +93,22 @@ export function ListaSelecionavel({
           placeholder={placeholder}
           value={busca}
           disabled={disabled}
-          onChange={(e) => setBusca(e.target.value)}
+          onChange={(e) => buscar(e.target.value)}
         />
       </div>
 
-      <div className="max-h-72 space-y-1 overflow-y-auto overscroll-contain">
-        {filtradas.length === 0 && (
-          <p className="py-6 text-center text-sm text-muted-foreground">{vazio}</p>
+      <div ref={listaRef} className="max-h-72 space-y-1 overflow-y-auto overscroll-contain" onScroll={aoRolar} data-testid="lista-de-origem">
+        {loading && filtradas.length === 0 && (
+          <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Carregando...
+          </div>
+        )}
+
+        {!loading && filtradas.length === 0 && (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            {erro ? 'Não foi possível carregar a lista.' : semResultado}
+          </p>
         )}
 
         {filtradas.map((opcao) => {
@@ -123,6 +149,13 @@ export function ListaSelecionavel({
             </button>
           );
         })}
+
+        {paginacao?.carregando && filtradas.length > 0 && (
+          <p className="flex items-center justify-center gap-2 py-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Carregando mais...
+          </p>
+        )}
       </div>
     </div>
   );

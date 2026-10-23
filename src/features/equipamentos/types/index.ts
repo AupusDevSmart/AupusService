@@ -1,5 +1,6 @@
 // src/features/equipamentos/types/index.ts - TIPOS CORRIGIDOS COM STRING IDS
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
+import type { PontoEquipamento } from '@/core/features/equipamentos/types';
 
 // ============================================================================
 // TIPOS BASE COMPATÍVEIS COM A API
@@ -108,7 +109,14 @@ export interface Equipamento extends BaseEntity {
   
   // Datas
   dataImobilizacao?: string;
-  dataInstalacao?: string;
+  /** null = apagada na tela (vai null para a API) */
+  dataInstalacao?: string | null;
+  /** SN-66: até quando está em garantia (AAAA-MM-DD) */
+  garantiaAte?: string | null;
+  /** SN-64: a avaliação pela matriz (impacto e probabilidade de 1 a 5; motivo só quando o nível difere) */
+  criticidadeImpacto?: number | null;
+  criticidadeProbabilidade?: number | null;
+  criticidadeMotivo?: string | null;
   
   // Valores financeiros
   valorImobilizado?: number;
@@ -117,8 +125,8 @@ export interface Equipamento extends BaseEntity {
   vidaUtil?: number;
   
   // Administrativo
-  fornecedor?: string;
-  centroCusto?: string;
+  fornecedor?: string | null;
+  centroCusto?: string | null;
   planoManutencao?: string;
   
   // Localização
@@ -131,6 +139,10 @@ export interface Equipamento extends BaseEntity {
   mqttHabilitado?: boolean;
   topicoMqtt?: string;
 
+  // Automacao (PR3): o sheet le os pontos daqui ao abrir o equipamento.
+  automacao?: boolean;
+  equipamento_pontos?: PontoEquipamento[];
+
   // Campos MCPSE
   mcpse?: boolean;
   mcpseAtivo?: boolean;
@@ -141,7 +153,7 @@ export interface Equipamento extends BaseEntity {
   a4?: string;
   a5?: string;
   a6?: string;
-  
+
   // Dados técnicos dinâmicos
   dadosTecnicos?: DadoTecnico[];
   
@@ -153,7 +165,7 @@ export interface Equipamento extends BaseEntity {
  /** A POSICAO onde este equipamento esta instalado. */
   ativo_funcional_id?: string;
   ativoFuncionalId?: string;
-  ativo_funcional?: { id: string; nome: string; categoria_id?: string };
+  ativo_funcional?: { id: string; nome: string; categoria_id?: string } | null;
   /** O nome proprio do equipamento — `nome` traz o da posicao. */
   nome_proprio?: string;
 
@@ -256,31 +268,6 @@ export interface EquipamentosListResponse {
     limit: number;
     total: number;
     pages: number;
-  };
-}
-
-export interface PlantaEquipamentosResponse extends EquipamentosListResponse {
-  planta: {
-    id: string;
-    nome: string;
-    localizacao: string;
-  };
-}
-
-export interface EstatisticasPlanta {
-  planta: {
-    id: string;
-    nome: string;
-    localizacao: string;
-  };
-  totais: {
-    equipamentos: number;
-    equipamentosUC: number;
-    componentesUAR: number;
-  };
-  porCriticidade: Record<string, number>;
-  financeiro: {
-    valorTotalContabil: number;
   };
 }
 

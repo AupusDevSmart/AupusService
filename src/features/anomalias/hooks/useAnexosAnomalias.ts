@@ -1,5 +1,6 @@
 // src/features/anomalias/hooks/useAnexosAnomalias.ts - VERSÃO LIMPA
 import { useState, useCallback } from 'react';
+import { isAxiosError } from 'axios';
 import { 
   AnexoAnomaliaResponse, 
   AnexoUploadProgress,
@@ -7,6 +8,7 @@ import {
   validarTamanhoArquivo
 } from '../types/anexos';
 import { anexosAnomaliasService } from '@/services/anexos-anomalias.service';
+import { formatApiError } from '@/utils/api-error';
 
 interface UseAnexosAnomaliasReturn {
   // Estados
@@ -80,12 +82,12 @@ export function useAnexosAnomalias(): UseAnexosAnomaliasReturn {
       
       setAnexos(anexosSanitizados);
       
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Erro ao carregar anexos';
+    } catch (err) {
+      const errorMessage = formatApiError(err);
       setError(errorMessage);
       setAnexos([]);
       
-      if (err.response?.status === 404) {
+      if (isAxiosError(err) && err.response?.status === 404) {
         setError(null);
       }
       
@@ -149,8 +151,8 @@ export function useAnexosAnomalias(): UseAnexosAnomaliasReturn {
       setAnexos(prev => [...prev, anexo]);
       return anexo;
 
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Erro no upload';
+    } catch (err) {
+      const errorMessage = formatApiError(err);
       
       setUploadProgress(prev => 
         prev.map(item => 
@@ -177,8 +179,8 @@ export function useAnexosAnomalias(): UseAnexosAnomaliasReturn {
     
     try {
       await anexosAnomaliasService.downloadAnexo(cleanAnexoId);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Erro no download';
+    } catch (err) {
+      const errorMessage = formatApiError(err);
       setError(errorMessage);
       throw new Error(errorMessage);
     }
@@ -192,8 +194,8 @@ export function useAnexosAnomalias(): UseAnexosAnomaliasReturn {
       await anexosAnomaliasService.removerAnexo(cleanAnexoId);
       setAnexos(prev => prev.filter(anexo => anexo.id?.trim() !== cleanAnexoId));
       return true;
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Erro ao remover anexo';
+    } catch (err) {
+      const errorMessage = formatApiError(err);
       setError(errorMessage);
       return false;
     }

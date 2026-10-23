@@ -7,8 +7,14 @@ import {
 } from 'lucide-react';
 import { TableColumn } from '@/core/types/base';
 import { Badge } from '@/core/components/ui/badge';
+import type {
+  ConcessionariaResponse,
+  TarifasA3aVerde,
+  TarifasA4Verde,
+  TarifasB,
+} from '@/services/concessionarias.services';
 
-export const concessionariasTableColumns: TableColumn<any>[] = [
+export const concessionariasTableColumns: TableColumn<ConcessionariaResponse>[] = [
   {
     key: 'dados_principais',
     label: 'Concessionária',
@@ -148,7 +154,7 @@ function isVigenciaFutura(dataInicio: string): boolean {
 }
 
 // ✅ HELPER: Verificar se tem tarifas cadastradas
-function hasTarifas(tarifas: any): boolean {
+function hasTarifas(tarifas: TarifasA4Verde | TarifasA3aVerde | TarifasB | null | undefined): boolean {
   if (!tarifas) return false;
 
   return Object.values(tarifas).some(valor =>

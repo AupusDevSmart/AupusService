@@ -10,8 +10,11 @@ import {
   InstrucoesListApiResponse,
   AnexoInstrucaoApiResponse,
   AssociarAnomaliaApiData,
-  AssociarSolicitacaoApiData
+  AssociarSolicitacaoApiData,
+  type AssociacaoDeAnomaliaApiResponse,
+  type AssociacaoDeSolicitacaoApiResponse,
 } from '@/services/instrucoes.services';
+import { formatApiError } from '@/utils/api-error';
 
 export function useInstrucoesApi() {
   const [loading, setLoading] = useState(false);
@@ -22,15 +25,8 @@ export function useInstrucoesApi() {
   const [total, setTotal] = useState(0);
   const [lastParams, setLastParams] = useState<QueryInstrucoesApiParams | undefined>();
 
-  const handleError = useCallback((err: any, context?: string) => {
-    let message = 'Erro desconhecido';
-    if (err?.response?.data?.message) {
-      message = err.response.data.message;
-    } else if (err?.message) {
-      message = err.message;
-    } else if (typeof err === 'string') {
-      message = err;
-    }
+  const handleError = useCallback((err: unknown, context?: string) => {
+    const message = formatApiError(err);
     console.error(`Erro na API de instrucoes${context ? ` (${context})` : ''}:`, err);
     setError(message);
   }, []);
@@ -139,7 +135,7 @@ export function useInstrucoesApi() {
 
   // Associacoes
 
-  const associarAnomalia = useCallback(async (id: string, data: AssociarAnomaliaApiData): Promise<any> => {
+  const associarAnomalia = useCallback(async (id: string, data: AssociarAnomaliaApiData): Promise<AssociacaoDeAnomaliaApiResponse> => {
     try {
       setLoading(true);
       setError(null);
@@ -176,7 +172,7 @@ export function useInstrucoesApi() {
     }
   }, [handleError]);
 
-  const associarSolicitacao = useCallback(async (id: string, data: AssociarSolicitacaoApiData): Promise<any> => {
+  const associarSolicitacao = useCallback(async (id: string, data: AssociarSolicitacaoApiData): Promise<AssociacaoDeSolicitacaoApiResponse> => {
     try {
       setLoading(true);
       setError(null);

@@ -15,8 +15,11 @@ interface Usuario {
   id: string;
   nome: string;
   email: string;
-  roles?: { name: string }[];
-  organizacao_atual?: { nome: string };
+  /** Nomes dos papeis: a API manda texto (ex.: ["gerente"]), nao objeto. */
+  roles?: string[];
+  // A lista de usuarios traz so o id da organizacao (texto); o nome so existe
+  // quando vier o objeto.
+  organizacao_atual?: string | { nome: string };
 }
 
 interface GerenteSelectProps {
@@ -39,8 +42,8 @@ export function GerenteSelect({
   // Filtrar apenas usuários com role de gerente ou admin
   const gerentes = useMemo(() => {
     return usuarios.filter(usuario => 
-      usuario.roles?.some((role: any) => 
-        role.name === 'gerente' || role.name === 'admin'
+      usuario.roles?.some((role) =>
+        role === 'gerente' || role === 'admin'
       )
     );
   }, [usuarios]);
@@ -58,7 +61,7 @@ export function GerenteSelect({
   }
 
   const renderGerenteItem = (gerente: Usuario) => {
-    const isAdmin = gerente.roles?.some(role => role.name === 'admin');
+    const isAdmin = gerente.roles?.some(role => role === 'admin');
     const roleDisplay = isAdmin ? 'Administrador' : 'Gerente';
     
     return (
@@ -96,7 +99,7 @@ export function GerenteSelect({
           <div className="flex items-center gap-1 text-xs text-gray-500">
             <Building2 className="h-3 w-3" />
             <span className="max-w-[80px] truncate">
-              {gerente.organizacao_atual.nome}
+              {typeof gerente.organizacao_atual === 'object' ? gerente.organizacao_atual.nome : undefined}
             </span>
           </div>
         )}
@@ -109,7 +112,7 @@ export function GerenteSelect({
       return <span className="text-muted-foreground">{placeholder}</span>;
     }
 
-    const isAdmin = selectedGerente.roles?.some((role: any) => role.name === 'admin');
+    const isAdmin = selectedGerente.roles?.some((role) => role === 'admin');
     
     return (
       <div className="flex items-center gap-2">

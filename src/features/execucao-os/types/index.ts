@@ -1,7 +1,8 @@
 // src/features/execucao-os/types/index.ts - VERSÃO FINAL
 import { BaseEntity, type BaseFilters as BaseFiltersType, ModalMode } from '@/types/base';
 import type { InstalacaoDaOrigem } from '@/utils/instalacao';
-import { ProgramacaoResponse, ItemOrcamento } from '../../programacao-os/types';
+import type { ResumoDoCusto } from './custos';
+import { ProgramacaoResponse, ItemOrcamento, type DadosOrigem } from '../../programacao-os/types';
 
 // ========================================
 // ENUMS E TIPOS BASE (CONFORME SCHEMA)
@@ -91,18 +92,37 @@ export interface TecnicoOS {
 }
 
 export interface TarefaOS {
-  id?: string;
+  id: string;
   os_id: string;
-  tarefa_id: string;
+  /** Nulo na instrução avulsa (SN-86) e no vínculo cuja cópia do plano foi apagada */
+  tarefa_id: string | null;
+  /** SN-86: TAREFA (do plano) ou INSTRUCAO (a avulsa) */
+  origem_item?: 'TAREFA' | 'INSTRUCAO';
   ordem?: number;
   status?: string;
   data_conclusao?: string;
   concluida_por?: string;
   observacoes?: string;
+  // O que foi pedido, congelado na OS (não seguir a tarefa viva)
+  nome_snapshot?: string;
+  criticidade_snapshot?: number;
+  frequencia_snapshot?: string;
+  instrucao_tag?: string;
+  instrucao_nome?: string;
+  instrucao_descricao?: string;
+  instrucao_id?: string;
+  plano_id?: string;
+  plano_nome?: string;
+  tarefa?: { id: string; nome: string } | null;
+  /** SN-93: o valor da instrução nesta OS (o do cadastro no vínculo, ou o ajustado) e o original */
+  valor?: number | null;
+  valor_original?: number | null;
+  /** SN-93: o equipamento da tarefa, com o nome congelado (o da posição) */
+  equipamento_nome?: string | null;
 }
 
 export interface ChecklistAtividadeOS {
-  id?: string;
+  id: string;
   os_id: string;
   atividade: string;
   ordem?: number;
@@ -113,6 +133,20 @@ export interface ChecklistAtividadeOS {
   concluida_em?: string;
   concluida_por?: string;
   concluida_por_id?: string;
+  /** A tarefa da OS a que o item pertence; nulo nos itens genéricos das OS antigas */
+  tarefa_os_id?: string | null;
+}
+
+/** Item no formato antigo de `checklist_atividades`: o backend manda o checklist em `checklist`. */
+export interface ItemDeChecklistLegado {
+  id: string;
+  descricao?: string;
+  obrigatoria?: boolean;
+  concluida?: boolean;
+  data_hora_conclusao?: string;
+  observacoes?: string;
+  concluido_por?: string;
+  ordem?: number;
 }
 
 export interface AnexoOS {
@@ -131,6 +165,15 @@ export interface AnexoOS {
   uploaded_by?: string;
   uploaded_by_id?: string;
   deletado_em?: string;
+  /** SN-59: a tarefa da OS ou o item do checklist que o anexo prova; os dois vazios = geral da OS */
+  tarefa_os_id?: string | null;
+  checklist_item_id?: string | null;
+}
+
+/** Onde o anexo novo prova alguma coisa (SN-59). O item já leva a tarefa dele. */
+export interface DestinoDoAnexo {
+  tarefa_os_id?: string;
+  checklist_item_id?: string;
 }
 
 export interface RegistroTempoOS {
@@ -143,7 +186,8 @@ export interface RegistroTempoOS {
   tempo_total?: number; // em minutos
   atividade: string;
   observacoes?: string;
-  pausas?: any;
+  /** JSON livre do backend */
+  pausas?: unknown;
 }
 
 export interface HistoricoOS {
@@ -156,7 +200,8 @@ export interface HistoricoOS {
   observacoes?: string;
   status_anterior?: StatusExecucaoOS;
   status_novo?: StatusExecucaoOS;
-  dados_extras?: any;
+  /** JSON livre do backend */
+  dados_extras?: unknown;
 }
 
 // ========================================
@@ -193,7 +238,7 @@ export interface OrdemServico extends BaseEntity {
   anomalia_id?: string;
   plano_manutencao_id?: string;
   reserva_id?: string;
-  dados_origem?: any;
+  dados_origem?: DadosOrigem | null;
 
   // Planejamento (da programação)
   tempo_estimado: number;
@@ -229,6 +274,15 @@ export interface OrdemServico extends BaseEntity {
   recomendacoes?: string;
   proxima_manutencao?: string;
 
+  // SN-60: dados de falha (ISO em UTC); minutos_parado vem calculado da API
+  equipamento_parou?: boolean | null;
+  parada_inicio?: string | null;
+  parada_fim?: string | null;
+  minutos_parado?: number | null;
+  falha_sintoma?: string | null;
+  falha_causa?: string | null;
+  falha_acao?: string | null;
+
   // Qualidade
   avaliacao_qualidade?: number;
   observacoes_qualidade?: string;
@@ -250,16 +304,18 @@ export interface OrdemServico extends BaseEntity {
   tecnicos?: TecnicoOS[];
   itens_orcamento?: ItemOrcamento[];
   historico?: HistoricoOS[];
-  checklist_atividades?: ChecklistAtividadeOS[];
+  checklist_atividades?: ItemDeChecklistLegado[];
+  /** O checklist como a API manda hoje (com `tarefa_os_id`); o transform cai no formato antigo */
+  checklist?: Array<ChecklistAtividadeOS | ItemDeChecklistLegado>;
   anexos?: AnexoOS[];
   registros_tempo?: RegistroTempoOS[];
   tarefas_os?: TarefaOS[];
 
-  // Relacionamentos expandidos (opcional)
-  programacao?: ProgramacaoResponse;
+  // Relacionamentos expandidos (opcional). Da programação a API manda só id, código e descrição.
+  programacao?: Pick<ProgramacaoResponse, 'id'> & Partial<Pick<ProgramacaoResponse, 'codigo' | 'descricao'>>;
   planta?: { id: string; nome: string };
   equipamento?: { id: string; nome: string };
-  anomalia?: { id: string; descricao: string };
+  anomalia?: { id: string; descricao: string; data?: string | null; condicao?: string | null };
   plano_manutencao?: { id: string; nome: string };
 }
 
@@ -289,6 +345,9 @@ export interface ExecucaoOS extends OrdemServico {
   resultadoServico?: string; // Alias para resultado_servico
   problemasEncontrados?: string; // Alias para problemas_encontrados
   observacoesExecucao?: string; // Alias para observacoes_execucao
+
+  /** SN-93: o custo aberto (por natureza, por instrução, previsto e real), a conta da API */
+  custos?: ResumoDoCusto;
 
   // Relacionamento com reserva de veículo
   reserva_veiculo?: {
@@ -365,9 +424,13 @@ export interface ExecucaoOSFilters extends BaseFiltersType {
   tipo?: TipoOS | 'all';
   prioridade?: PrioridadeOS | 'all';
   responsavel?: string;
-  dataExecucao?: string;
   periodo?: string;
   planta?: string;
+  /** O equipamento e os componentes dele (SN-55). */
+  equipamento?: string;
+  /** AAAA-MM-DD: o período pela data programada da OS. */
+  dataInicio?: string;
+  dataFim?: string;
   data_inicio?: string;
   data_fim?: string;
   programacao_id?: string;
@@ -428,6 +491,8 @@ export interface ExecucaoOSFormData {
   materiaisConsumidos?: MaterialOS[];
   ferramentasUtilizadas?: FerramentaOS[];
   custosAdicionais?: number;
+  /** SN-93: o custo aberto (por natureza, por instrução, previsto e real), a conta da API */
+  custos?: ResumoDoCusto;
   
   // Segurança
   equipamentosSeguranca?: string;
@@ -462,7 +527,7 @@ export interface ExecucaoModalState {
   isOpen: boolean;
   mode: ModalMode;
   execucaoOS: ExecucaoOS | null;
-  preselectedData?: any;
+  preselectedData?: Record<string, unknown>;
 }
 
 // ========================================

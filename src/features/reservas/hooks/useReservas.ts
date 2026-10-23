@@ -35,7 +35,7 @@ interface UseReservasReturn {
   aprovarReserva: (id: string, aprovadoPor: string) => Promise<ReservaResponse>;
   deleteReserva: (id: string) => Promise<void>;
   verificarConflitos: (
-    veiculoId: number,
+    veiculoId: string,
     dataInicio: string,
     dataFim: string,
     horaInicio: string,
@@ -175,7 +175,7 @@ export const useReservas = (params: UseReservasParams = {}): UseReservasReturn =
 
   // Verificar conflitos
   const verificarConflitos = useCallback(async (
-    veiculoId: number,
+    veiculoId: string,
     dataInicio: string,
     dataFim: string,
     horaInicio: string,
@@ -429,7 +429,7 @@ interface UseReservasByVeiculoReturn {
   clearError: () => void;
 }
 
-export const useReservasByVeiculo = (veiculoId: number | null): UseReservasByVeiculoReturn => {
+export const useReservasByVeiculo = (veiculoId: string | null): UseReservasByVeiculoReturn => {
   // States
   const [reservas, setReservas] = useState<ReservaResponse[]>([]);
   const [loading, setLoading] = useState(false);
