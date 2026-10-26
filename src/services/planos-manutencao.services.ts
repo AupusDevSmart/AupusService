@@ -377,13 +377,11 @@ export class PlanosManutencaoApiService {
     return response.data;
   }
 
-  async findByEquipamento(equipamentoId: string): Promise<PlanoManutencaoApiResponse> {
-    // console.log('🔍 PLANOS API: Buscando plano por equipamento:', equipamentoId);
-
-    const response = await api.get<PlanoManutencaoApiResponse>(
-      `${this.baseEndpoint}/por-equipamento/${equipamentoId}`
-    );
-    // console.log('✅ PLANOS API: Plano do equipamento encontrado:', response.data);
+  /** 404 = o equipamento não tem plano. `semAvisoGlobal`: quem chama espera o 404 e trata (a exportação de equipamentos) */
+  async findByEquipamento(equipamentoId: string, opcoes: { semAvisoGlobal?: boolean } = {}): Promise<PlanoManutencaoApiResponse> {
+    const response = await api.get<PlanoManutencaoApiResponse>(`${this.baseEndpoint}/por-equipamento/${equipamentoId}`, {
+      semAvisoGlobal: opcoes.semAvisoGlobal,
+    });
     return response.data;
   }
 

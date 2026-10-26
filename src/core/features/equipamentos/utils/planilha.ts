@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios';
 import type { Workbook } from 'exceljs';
 
 import { api } from '@/config/api';
@@ -470,17 +471,24 @@ async function referencias(): Promise<{ refs: Referencia[]; modeloPorId: Map<str
 }
 
 /**
- * O plano deste equipamento, se tiver (404 = sem plano), pelo nome do
- * TEMPLATE: o nome da cópia pode estar desatualizado e casar com outro template.
+ * O plano deste equipamento, se tiver, pelo nome do TEMPLATE: o nome da cópia
+ * pode estar desatualizado e casar com outro template.
+ *
+ * O 404 é "sem plano", o normal de quem não tem, e vai sem o aviso global (até
+ * 26/out/2026 cada equipamento sem plano punha um "Não foi possível concluir"
+ * na tela durante a exportação). Outro erro para a exportação: engolido, saía
+ * a planilha com o PLANO vazio, e importar de volta mantinha (vazio = mantém),
+ * mas a planilha mentia.
  */
-async function planoDo(id: string, templatePorId: Map<string, string>): Promise<Equipamento['plano']> {
+export async function planoDo(id: string, templatePorId: Map<string, string>): Promise<Equipamento['plano']> {
   try {
-    const copia = await planosManutencaoApi.findByEquipamento(id);
+    const copia = await planosManutencaoApi.findByEquipamento(id, { semAvisoGlobal: true });
     if (!copia?.nome) return null;
     const origemId = copia.plano_origem_id?.trim() ?? null;
     return { nome: (origemId && templatePorId.get(origemId)) || copia.nome, origemId };
-  } catch {
-    return null;
+  } catch (erro) {
+    if (isAxiosError(erro) && erro.response?.status === 404) return null;
+    throw erro;
   }
 }
 
@@ -501,7 +509,8 @@ export async function exportarEquipamentos(filtros: FiltrosDeEquipamentos) {
     const [detalhe, plano, tarefas] = await Promise.all([
       equipamentosApi.findOne(id),
       planoDo(id, templatePorId),
-      tarefasApi.findByEquipamento(id).catch(() => []),
+      // Sem plano a lista vem vazia (200): a falha aqui é erro de verdade e para a exportação
+      tarefasApi.findByEquipamento(id),
     ]);
     return {
       ...(detalhe as unknown as EquipamentoDaApi),
