@@ -42,16 +42,18 @@ export const getEquipamentosTableColumns = (): TableColumn<Equipamento>[] => [
   },
 
   {
-    key: 'classificacao',
-    label: 'Classificação',
-    render: (equipamento) => (
-      <Badge
-        variant="outline"
-        className="text-xs"
-      >
-        {equipamento.classificacao}
-      </Badge>
-    )
+    // A lista e so de UCs (os componentes abrem no dropdown da linha), entao
+    // "UC" em toda linha nao diz nada; a contagem diz se ha o que abrir.
+    key: 'componentes',
+    label: 'Componentes',
+    render: (equipamento) => {
+      const total = equipamento.totalComponentes ?? 0;
+      return (
+        <span className="text-sm text-muted-foreground whitespace-nowrap">
+          {total === 0 ? '-' : `${total} ${total === 1 ? 'componente' : 'componentes'}`}
+        </span>
+      );
+    }
   },
 
   {

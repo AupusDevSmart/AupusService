@@ -1,5 +1,6 @@
 // src/features/equipamentos/components/EquipamentosPage.tsx - CORRIGIDO
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -27,6 +28,8 @@ import { exportarEquipamentos, lerEquipamentos } from '../utils/planilha';
 import { EtiquetasDosEquipamentos } from './EtiquetasDosEquipamentos';
 import { equipamentosParaEtiqueta } from '../utils/equipamentos-para-etiqueta';
 import { useEquipamentoDaUrl } from '../hooks/useEquipamentoDaUrl';
+import { CHAVE_COMPONENTES_DO_UC, useComponentesDoUC } from '../hooks/useComponentesDoUC';
+import { ComponentesUARExpandedRow } from './ComponentesUARExpandedRow';
 
 /**
  * O filtro da tela em parâmetros da exportação, com a mesma hierarquia da
@@ -50,7 +53,8 @@ const initialFilters: EquipamentosFilters = {
   proprietarioId: 'all',
   plantaId: 'all',
   unidadeId: 'all',
-  classificacao: 'all',
+  // A lista e de UCs: os componentes (UAR) moram no dropdown de cada UC.
+  classificacao: 'UC',
   criticidade: 'all',
   page: 1,
   limit: LINHAS_POR_PAGINA_PADRAO
@@ -145,11 +149,23 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
     clearError: clearFiltersError
   } = useEquipamentoFilters();
 
+  // UC aberto no dropdown e os componentes dele. Os dados moram AQUI e nao na
+  // linha expandida: os sheets abrem pela pagina, nao dentro de um <TableCell>.
+  const [ucExpandidoId, setUcExpandidoId] = useState<string | null>(null);
+  const componentesDoUC = useComponentesDoUC(ucExpandidoId);
+  const queryClient = useQueryClient();
+
   // Compartilhamento com o outro produto: estado em lote, acoes de linha e o
   // dialogo de confirmacao que lista a hierarquia (instalacao, planta, dono).
+  // Os UARs do dropdown entram junto: o equipamento e o mesmo recurso, e os
+  // botoes da linha deles precisam saber se ja estao compartilhados.
+  const registrosCompartilhaveis = useMemo(
+    () => [...equipamentos, ...componentesDoUC.componentes],
+    [equipamentos, componentesDoUC.componentes],
+  );
   const compartilhamento = useAcoesDeCompartilhamento({
     recurso: 'equipamentos',
-    registros: equipamentos,
+    registros: registrosCompartilhaveis,
     habilitado: podeCompartilhar,
   });
 
@@ -210,6 +226,13 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
   useEffect(() => {
     loadEquipamentos(filters);
   }, [filters, loadEquipamentos]);
+
+  // Depois de gravar: a lista de UCs e os componentes do dropdown aberto. Sem a
+  // segunda metade, o UAR editado/criado/excluido seguia como estava na linha.
+  const recarregarLista = async () => {
+    void queryClient.invalidateQueries({ queryKey: [CHAVE_COMPONENTES_DO_UC] });
+    await loadEquipamentos(filters);
+  };
 
   // Aplicar filtros da URL quando a página carrega
   useEffect(() => {
@@ -425,7 +448,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
     }
 
     // Recarregar dados após salvar
-    await loadEquipamentos(filters);
+    await recarregarLista();
 
     // Quem fecha o sheet é o próprio sheet: depois de criar, ele ainda tem
     // trabalho a fazer com o id novo (subir a foto, os anexos e vincular o
@@ -460,7 +483,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
     }
 
     closeUARModal();
-    await loadEquipamentos(filters);
+    await recarregarLista();
 
     // Devolvido para o sheet subir a foto que ficou pendente ate existir id.
     return criado;
@@ -469,7 +492,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
   /** O lote nao passa pelo onSubmit: cria os N por endpoint proprio. */
   const handleUARsCriadosEmLote = async () => {
     closeUARModal();
-    await loadEquipamentos(filters);
+    await recarregarLista();
   };
 
   // ============================================================================
@@ -477,7 +500,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
   // ============================================================================
   const handleSalvarUARs = async (ucId: string, uars: Equipamento[]) => {
     await salvarComponentesUARLote(ucId, uars);
-    await loadEquipamentos(filters);
+    await recarregarLista();
   };
 
   // ============================================================================
@@ -523,6 +546,12 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
     }
   };
 
+  // IDs voltam do backend com espaco no fim: sem trim a linha nunca fecha.
+  const handleRowToggle = useCallback((equipamento: Equipamento) => {
+    const id = equipamento?.id?.trim() || '';
+    setUcExpandidoId((atual) => (atual === id ? null : id));
+  }, []);
+
   const handleDelete = (equipamento: Equipamento) => {
     setDeleteDialog({
       isOpen: true,
@@ -542,7 +571,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
       });
 
       // Recarregar dados
-      await loadEquipamentos(filters);
+      await recarregarLista();
 
     } catch (error) {
       const errorMessage = formatApiError(error);
@@ -704,7 +733,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
                   titulo="Equipamentos"
                   exportar={() => exportarEquipamentos(filtrosDaExportacao(filters))}
                   ler={lerEquipamentos}
-                  aoImportar={() => void loadEquipamentos(filters)}
+                  aoImportar={() => void recarregarLista()}
                   podeImportar={podeGerenciar}
                   aviso="Cada aba é uma UC com os seus componentes. Equipamento compartilhado com o NexOn: o que você confirmar aqui é replicado lá. Trocar o PLANO refaz a cópia do plano, como vincular na tela."
                 />
@@ -742,17 +771,33 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
                         label: 'Duplicar',
                         icon: Copy,
                         handler: handleDuplicar,
-                        // O UAR so pode ser duplicado quando se sabe o pai: sem
-                        // ele o componente nao teria onde encaixar.
-                        condition: (equipamento: Equipamento) =>
-                          equipamento.classificacao === 'UC' ||
-                          Boolean(equipamento.equipamentoPaiId || equipamento.equipamentoPai),
                       },
                     ]
                     : []),
                   ...compartilhamento.acoes,
                 ]
               }
+              expandedRowId={ucExpandidoId}
+              onRowToggle={handleRowToggle}
+              // So o UC com componente abre: sem chevron, a linha diz que nao ha o que ver
+              isRowExpandable={(equipamento) => (equipamento.totalComponentes ?? 0) > 0}
+              renderExpandedRow={() => (
+                <ComponentesUARExpandedRow
+                  componentes={componentesDoUC.componentes}
+                  total={componentesDoUC.total}
+                  carregando={componentesDoUC.carregando}
+                  falhou={componentesDoUC.falhou}
+                  onTentarNovamente={componentesDoUC.tentarNovamente}
+                  somenteLeitura={!podeGerenciar}
+                  onVisualizar={handleView}
+                  onEditar={handleEdit}
+                  onDuplicar={handleDuplicar}
+                  onExcluir={handleDelete}
+                  estaCompartilhado={(c) => !!compartilhamento.estados[c?.id?.trim?.()]?.compartilhado}
+                  onCompartilhar={podeCompartilhar ? (c) => compartilhamento.abrir(c, 'ligar') : undefined}
+                  onPararDeCompartilhar={podeCompartilhar ? (c) => compartilhamento.abrir(c, 'desligar') : undefined}
+                />
+              )}
               emptyMessage={
                 plantaInfo
                   ? `Nenhum equipamento encontrado para ${plantaInfo.nome}.`
@@ -774,7 +819,7 @@ export function EquipamentosPage({ renderSecaoExtraUC, renderCampoDadosBasicosUC
           entity={modalUC.entity}
           duplicarDe={duplicarDe}
           aoCriarEmLote={async (total) => {
-            await loadEquipamentos(filters);
+            await recarregarLista();
             toast.success(`${total} equipamentos cadastrados!`, {
               description: 'Vincule o plano de manutenção de cada um pela tela do equipamento.',
               duration: 5000,
