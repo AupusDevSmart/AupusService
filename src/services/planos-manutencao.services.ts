@@ -136,10 +136,12 @@ export interface UsuarioResumoDto {
 /**
  * O que o plano devolve de cada tarefa quando pedido com `incluir_tarefas`.
  *
- * São SEIS campos, não a tarefa inteira — é o que
+ * São SEIS campos obrigatórios, não a tarefa inteira — é o que
  * `PlanosManutencaoService.mapearParaResponse` monta. Este tipo declarava
  * `categoria`, `tipo_manutencao`, `status` e `tempo_estimado`, que o backend
  * não manda (colunas droppadas no PR6), e omitia `instrucao_id`, que manda.
+ * Os opcionais (frequência, instrução, ativo e valor) só vêm com o plano lido
+ * por id e `incluirTarefas`, para o sheet do plano.
  *
  * Para o conteúdo da tarefa, busque-a por `GET /tarefas/:id`, que traz a
  * instrução aninhada.
@@ -151,6 +153,16 @@ export interface TarefaResumoDto {
   ordem: number;
   criticidade: number;
   instrucao_id?: string;
+  /** Daqui para baixo, so na leitura do plano com as tarefas (`getPlano(id, true)`). */
+  instrucao_codigo?: string;
+  instrucao_nome?: string;
+  frequencia?: string;
+  frequencia_personalizada?: number;
+  ativo?: boolean;
+  /** O valor da instrucao pelo cadastro; nulo quando a tarefa nao tem instrucao. */
+  valor?: number | null;
+  /** A instrucao tem linha sem preco no cadastro: o valor esta abaixo do custo. */
+  valor_sem_preco?: boolean;
 }
 
 export interface PlanoManutencaoApiResponse {
@@ -182,6 +194,11 @@ export interface PlanoManutencaoApiResponse {
   tarefas_ativas?: number;
   tempo_total_estimado?: number;
   criticidade_media?: number;
+
+  /** Com as tarefas: soma do valor das tarefas ativas, uma execucao de cada. */
+  valor_total?: number;
+  /** Tarefas ativas cuja instrucao tem linha sem preco: o total esta abaixo do custo. */
+  tarefas_sem_preco?: number;
 }
 
 export interface PlanoResumoDto {

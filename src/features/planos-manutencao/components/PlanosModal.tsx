@@ -20,11 +20,13 @@ interface PlanosModalProps {
 }
 
 /**
- * Sheet do plano: apenas os dados do plano.
+ * Sheet do plano: os dados do plano e, so leitura, as tarefas com o valor de
+ * cada uma e o do plano (`TarefasEValoresDoPlano`).
  *
- * As tarefas ficam na linha expandida da tabela, nao aqui. A secao antiga
+ * As tarefas se EDITAM na linha expandida da tabela, nao aqui. A secao antiga
  * dentro do modal montava payload no formato pre-migracao e abria o sheet
- * completo de tarefa — dois caminhos para a mesma coisa, um deles quebrado.
+ * completo de tarefa — dois caminhos para a mesma coisa, um deles quebrado. A
+ * de hoje so lista o que a pagina ja carregou (`getPlano(id, true)`).
  */
 export function PlanosModal({
   isOpen,
@@ -69,6 +71,12 @@ export function PlanosModal({
     return vazio;
   }, [entity, mode]);
 
+  // Plano novo nao tem tarefa nem valor: a secao so existe com o plano criado
+  const camposDoSheet = useMemo(
+    () => (mode === 'create' ? formFields.filter((campo) => campo.key !== 'tarefas_e_valores') : formFields),
+    [formFields, mode],
+  );
+
   return (
     <BaseModal
       isOpen={isOpen}
@@ -76,7 +84,7 @@ export function PlanosModal({
       entity={modalEntity}
       title={getModalTitle()}
       icon={<Layers className="h-5 w-5 text-muted-foreground" />}
-      formFields={formFields}
+      formFields={camposDoSheet}
       onClose={onClose}
       onSubmit={onSubmit}
       width="w-[700px]"
@@ -87,6 +95,11 @@ export function PlanosModal({
           // O grupo lista as chaves explicitamente: campo fora daqui nao
           // renderiza.
           fields: ['categoria_id', 'nome', 'descricao', 'versao']
+        },
+        {
+          key: 'tarefas_e_valores',
+          title: 'Tarefas e valores',
+          fields: ['tarefas_e_valores']
         }
       ]}
     />

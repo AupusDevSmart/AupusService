@@ -1,6 +1,8 @@
 // src/features/planos-manutencao/config/form-config.tsx
 import { FormField } from '@/types/base';
+import type { PlanoManutencaoApiResponse } from '@/services/planos-manutencao.services';
 import { CategoriaSelector } from '../components/CategoriaSelector';
+import { TarefasEValoresDoPlano } from '../components/TarefasEValoresDoPlano';
 
 export const planosFormFields: FormField[] = [
   // Informações Básicas
@@ -47,5 +49,18 @@ export const planosFormFields: FormField[] = [
     group: 'informacoes_basicas',
     colSpan: 2,
     placeholder: 'Descrição detalhada do plano de manutenção...'
+  },
+
+  // Só leitura, e só onde o plano já existe: o PlanosModal tira este campo do create
+  {
+    key: 'tarefas_e_valores',
+    label: '',
+    type: 'custom',
+    required: false,
+    group: 'tarefas_e_valores',
+    colSpan: 2,
+    render: (props) => (
+      <TarefasEValoresDoPlano plano={props.entity as PlanoManutencaoApiResponse | null | undefined} />
+    )
   }
 ];
