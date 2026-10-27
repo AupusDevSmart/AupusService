@@ -58,8 +58,8 @@ export interface DashboardManutencaoApi {
   origemOS: { plano: number; anomalia: number; solicitacao: number };
   mixTipo: { preventiva: number; preditiva: number; corretiva: number; melhoria: number };
 
-  /** Por natureza, em R$ mil: mão de obra e material pelas linhas da OS, adicionais da OS (SN-81) */
-  custo: {
+  /** Por natureza, em R$ mil: mão de obra e material pelas linhas da OS, adicionais da OS (SN-81). Null para o cliente (SERV-10) */
+  custo: null | {
     maoObra: number[];
     material: number[];
     adicionais: number[];
@@ -67,7 +67,7 @@ export interface DashboardManutencaoApi {
     total: number[];
     pendencia?: string;
   };
-  custoPorOS: {
+  custoPorOS: null | {
     corretiva: number[];
     preventiva: number[];
     base: number;

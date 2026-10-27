@@ -388,7 +388,7 @@ export interface OrdemServicoDaApi {
   medidas_seguranca_adicionais?: string;
   custos_adicionais?: number;
   /** SN-93: o custo aberto, pela conta da API (a do PDF e do custo real gravado) */
-  custos?: ResumoDoCusto;
+  custos?: ResumoDoCusto | null; // null para o cliente (SERV-10)
   tarefas_os?: TarefaOS[];
   materiais?: MaterialOS[];
   ferramentas?: FerramentaOS[];

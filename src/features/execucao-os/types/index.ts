@@ -347,7 +347,7 @@ export interface ExecucaoOS extends OrdemServico {
   observacoesExecucao?: string; // Alias para observacoes_execucao
 
   /** SN-93: o custo aberto (por natureza, por instrução, previsto e real), a conta da API */
-  custos?: ResumoDoCusto;
+  custos?: ResumoDoCusto | null;
 
   // Relacionamento com reserva de veículo
   reserva_veiculo?: {
@@ -492,7 +492,7 @@ export interface ExecucaoOSFormData {
   ferramentasUtilizadas?: FerramentaOS[];
   custosAdicionais?: number;
   /** SN-93: o custo aberto (por natureza, por instrução, previsto e real), a conta da API */
-  custos?: ResumoDoCusto;
+  custos?: ResumoDoCusto | null;
   
   // Segurança
   equipamentosSeguranca?: string;

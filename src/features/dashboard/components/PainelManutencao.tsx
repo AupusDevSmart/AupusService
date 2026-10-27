@@ -204,12 +204,12 @@ export function PainelManutencao() {
     if (!data) return [];
     return data.meses.map((mes, i) => ({
       mes,
-      maoObra: data.custo.maoObra[i] ?? 0,
-      material: data.custo.material[i] ?? 0,
-      adicionais: data.custo.adicionais[i] ?? 0,
-      orcado: data.custo.orcado[i] ?? 0,
-      corretiva: data.custoPorOS.corretiva[i] ?? 0,
-      preventiva: data.custoPorOS.preventiva[i] ?? 0,
+      maoObra: data.custo?.maoObra[i] ?? 0,
+      material: data.custo?.material[i] ?? 0,
+      adicionais: data.custo?.adicionais[i] ?? 0,
+      orcado: data.custo?.orcado[i] ?? 0,
+      corretiva: data.custoPorOS?.corretiva[i] ?? 0,
+      preventiva: data.custoPorOS?.preventiva[i] ?? 0,
       manutencao: data.finalidade.manutencao[i] ?? 0,
       servicos: data.finalidade.servicos[i] ?? 0,
       resolvida: data.anomalias.resolvida[i] ?? 0,
@@ -598,91 +598,96 @@ export function PainelManutencao() {
             */}
 
             {/* linha 2 — custo */}
-            <Quadro
-              titulo="Custo de manutenção"
-              subtitulo="tracejado = orçado"
-              // Duas colunas no xl: com uma, a linha ficava com um buraco ao lado do custo médio e o
-              // subtítulo saía "tracejado = ..."
-              className={`${ALTURA_PADRAO} xl:col-span-2 2xl:col-span-8`}
-              pendencia={data.custo.pendencia}
-              explicacao={explicacaoDe('custo')}
-              legenda={[
-                { rotulo: 'Mão de obra', cor: COR.azul },
-                { rotulo: 'Material', cor: COR.laranja },
-                { rotulo: 'Outros custos', cor: COR.verde },
-              ]}
-            >
-              <Grafico>
-                <ComposedChart data={serieMensal} margin={{ top: 4, right: 4 }}>
-                  <CartesianGrid vertical={false} {...grade} />
-                  <XAxis dataKey="mes" tickLine={false} axisLine={false} tick={eixo} />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tick={eixo}
-                    tickFormatter={moedaMil}
-                    width={58}
-                  />
-                  <Tooltip content={<DicaGrafico />} />
-                  <Bar dataKey="maoObra" name="Mão de obra" stackId="c" fill={COR.azul} maxBarSize={24} />
-                  <Bar dataKey="material" name="Material" stackId="c" fill={COR.laranja} maxBarSize={24} />
-                  <Bar
-                    dataKey="adicionais"
-                    name="Outros custos"
-                    stackId="c"
-                    fill={COR.verde}
-                    maxBarSize={24}
-                    radius={[3, 3, 0, 0]}
-                  />
-                  <Line
-                    dataKey="orcado"
-                    name="Orçado"
-                    stroke="hsl(var(--muted-foreground))"
-                    strokeDasharray="5 4"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </ComposedChart>
-              </Grafico>
-            </Quadro>
+            {/* SERV-10: o cliente não vê dinheiro — a API manda o custo nulo, e os dois quadros saem */}
+            {data.custo && data.custoPorOS && (
+              <>
+                <Quadro
+                  titulo="Custo de manutenção"
+                  subtitulo="tracejado = orçado"
+                  // Duas colunas no xl: com uma, a linha ficava com um buraco ao lado do custo médio e o
+                  // subtítulo saía "tracejado = ..."
+                  className={`${ALTURA_PADRAO} xl:col-span-2 2xl:col-span-8`}
+                  pendencia={data.custo.pendencia}
+                  explicacao={explicacaoDe('custo')}
+                  legenda={[
+                    { rotulo: 'Mão de obra', cor: COR.azul },
+                    { rotulo: 'Material', cor: COR.laranja },
+                    { rotulo: 'Outros custos', cor: COR.verde },
+                  ]}
+                >
+                  <Grafico>
+                    <ComposedChart data={serieMensal} margin={{ top: 4, right: 4 }}>
+                      <CartesianGrid vertical={false} {...grade} />
+                      <XAxis dataKey="mes" tickLine={false} axisLine={false} tick={eixo} />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tick={eixo}
+                        tickFormatter={moedaMil}
+                        width={58}
+                      />
+                      <Tooltip content={<DicaGrafico />} />
+                      <Bar dataKey="maoObra" name="Mão de obra" stackId="c" fill={COR.azul} maxBarSize={24} />
+                      <Bar dataKey="material" name="Material" stackId="c" fill={COR.laranja} maxBarSize={24} />
+                      <Bar
+                        dataKey="adicionais"
+                        name="Outros custos"
+                        stackId="c"
+                        fill={COR.verde}
+                        maxBarSize={24}
+                        radius={[3, 3, 0, 0]}
+                      />
+                      <Line
+                        dataKey="orcado"
+                        name="Orçado"
+                        stroke="hsl(var(--muted-foreground))"
+                        strokeDasharray="5 4"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </ComposedChart>
+                  </Grafico>
+                </Quadro>
 
-            <Quadro
-              titulo="Custo médio por OS"
-              explicacao={explicacaoDe('custoPorOS')}
-              className={`${ALTURA_PADRAO} 2xl:col-span-4`}
-              pendencia={data.custoPorOS.pendencia}
-              legenda={
-                data.custoPorOS.base === 0
-                  ? undefined
-                  : [
-                      { rotulo: 'Corretiva', cor: COR.vermelho },
-                      { rotulo: 'Preventiva', cor: COR.azul },
-                    ]
-              }
-            >
-              {data.custoPorOS.base === 0 ? (
-                <SemDado mensagem="Nenhuma OS concluída tem custo lançado no período." />
-              ) : (
-                <Grafico>
-                  <LineChart data={serieMensal} margin={{ top: 4, right: 4 }}>
-                    <CartesianGrid vertical={false} {...grade} />
-                    <XAxis dataKey="mes" tickLine={false} axisLine={false} tick={eixo} />
-                    {/* Em reais, como o custo de manutenção: "8000" sem R$ nem milhar */}
-                    <YAxis tickLine={false} axisLine={false} tick={eixo} tickFormatter={moedaCurta} width={58} />
-                    <Tooltip content={<DicaGrafico />} />
-                    <Line dataKey="corretiva" name="Corretiva" stroke={COR.vermelho} strokeWidth={2} dot={false} />
-                    <Line
-                      dataKey="preventiva"
-                      name="Preventiva"
-                      stroke={COR.azul}
-                      strokeWidth={2}
-                      strokeDasharray="6 3"
-                      dot={false}
-                    />
-                  </LineChart>
-                </Grafico>
-              )}
-            </Quadro>
+                <Quadro
+                  titulo="Custo médio por OS"
+                  explicacao={explicacaoDe('custoPorOS')}
+                  className={`${ALTURA_PADRAO} 2xl:col-span-4`}
+                  pendencia={data.custoPorOS.pendencia}
+                  legenda={
+                    data.custoPorOS.base === 0
+                      ? undefined
+                      : [
+                          { rotulo: 'Corretiva', cor: COR.vermelho },
+                          { rotulo: 'Preventiva', cor: COR.azul },
+                        ]
+                  }
+                >
+                  {data.custoPorOS.base === 0 ? (
+                    <SemDado mensagem="Nenhuma OS concluída tem custo lançado no período." />
+                  ) : (
+                    <Grafico>
+                      <LineChart data={serieMensal} margin={{ top: 4, right: 4 }}>
+                        <CartesianGrid vertical={false} {...grade} />
+                        <XAxis dataKey="mes" tickLine={false} axisLine={false} tick={eixo} />
+                        {/* Em reais, como o custo de manutenção: "8000" sem R$ nem milhar */}
+                        <YAxis tickLine={false} axisLine={false} tick={eixo} tickFormatter={moedaCurta} width={58} />
+                        <Tooltip content={<DicaGrafico />} />
+                        <Line dataKey="corretiva" name="Corretiva" stroke={COR.vermelho} strokeWidth={2} dot={false} />
+                        <Line
+                          dataKey="preventiva"
+                          name="Preventiva"
+                          stroke={COR.azul}
+                          strokeWidth={2}
+                          strokeDasharray="6 3"
+                          dot={false}
+                        />
+                      </LineChart>
+                    </Grafico>
+                  )}
+                </Quadro>
+              </>
+            )}
 
             {/* DESLIGADO — Manutenção vs. serviços.
                 Era simulado: não existe campo de finalidade na OS. Para

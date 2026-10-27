@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Package, Trash2 } from 'lucide-react';
 import { CardLista, CardLinha, campoCard, type ColunaCard } from './card-lista';
 import { formatCurrency } from '@/lib/utils';
+import { useVeCustos } from '@/hooks/useVeCustos';
 import { CampoDeNumero } from '@/components/common/CampoDeNumero';
 import { AVISO_DE_DINHEIRO, AVISO_DE_QUANTIDADE, dinheiroNoCampo, lerDinheiroDigitado, lerQuantidadeDigitada } from '@/utils/leitura';
 
@@ -33,9 +34,11 @@ const MateriaisCardManager: React.FC<MateriaisCardManagerProps> = ({
   onChange,
   disabled = false,
   mode = 'planejamento',
-  showCustos = false,
+  showCustos: pedeCustos = false,
   title = "Materiais"
 }) => {
+  // SERV-10: o cliente não vê dinheiro (a API já não manda o valor)
+  const showCustos = useVeCustos() && pedeCustos;
   const [materiais, setMateriais] = useState<MaterialItem[]>(value);
   // Na execução só se registra o consumo: o backend (PATCH :id/materiais)
   // grava quantidade consumida de itens que já existem. Adicionar, remover ou

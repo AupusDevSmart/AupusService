@@ -153,24 +153,26 @@ const FORMATO: Record<NonNullable<Coluna['formato']>, string> = {
 export async function planilhaDasOS(
   ordens: OrdemServicoDaApi[],
   filtro: [string, string][],
-  { mudou = false, exportadoEm = new Date() }: { mudou?: boolean; exportadoEm?: Date } = {},
+  { mudou = false, exportadoEm = new Date(), comCustos = true }: { mudou?: boolean; exportadoEm?: Date; comCustos?: boolean } = {},
 ): Promise<Workbook> {
   const livro = await novoLivro();
 
   const aba = livro.addWorksheet('OS', { views: [{ state: 'frozen', ySplit: 1 }] });
-  aba.columns = COLUNAS.map((c) => ({ header: c.titulo, width: c.largura }));
+  // SERV-10: o cliente não vê dinheiro (a API já manda o custo nulo): sem a coluna vazia
+  const colunas = comCustos ? COLUNAS : COLUNAS.filter((c) => c.formato !== 'moeda');
+  aba.columns = colunas.map((c) => ({ header: c.titulo, width: c.largura }));
   cabecalho(aba.getRow(1));
   for (const os of ordens) {
-    const linha = aba.addRow(COLUNAS.map((c) => c.valor(os)));
-    COLUNAS.forEach((c, i) => {
+    const linha = aba.addRow(colunas.map((c) => c.valor(os)));
+    colunas.forEach((c, i) => {
       if (!c.formato) return;
       const celula = linha.getCell(i + 1);
       if (c.formato === 'moeda') moeda(celula);
       else celula.numFmt = FORMATO[c.formato];
     });
   }
-  aba.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: COLUNAS.length } };
-  bordaFina(aba, COLUNAS.length);
+  aba.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: colunas.length } };
+  bordaFina(aba, colunas.length);
 
   // O que foi exportado: o filtro e se a planilha traz tudo
   const sobre = livro.addWorksheet('FILTRO');

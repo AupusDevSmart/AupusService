@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useUserStore } from '@/store/useUserStore';
 import { MateriaisCardManager } from './MateriaisCardManager';
 
 /**
@@ -8,6 +9,9 @@ import { MateriaisCardManager } from './MateriaisCardManager';
  * 10 m planejados e 4 consumidos apareciam custando os 10.
  */
 const cabo = { id: 'M1', descricao: 'Cabo 6 mm²', quantidade_planejada: 10, quantidade_consumida: 4, unidade: 'm', custo_unitario: 5, custo_total: 50 };
+
+// Quem vê custo: o planejador (o cliente não, SERV-10)
+beforeEach(() => useUserStore.setState({ acessivel: ['execucao_os.manage'] }));
 
 describe('MateriaisCardManager', () => {
   it('na execução, o custo é o do consumido', () => {
@@ -45,5 +49,10 @@ describe('MateriaisCardManager', () => {
     fireEvent.change(consumido, { target: { value: '0,3' } });
     fireEvent.blur(consumido);
     expect(onChange.mock.lastCall?.[0][0]).toMatchObject({ quantidade_consumida: 0.3 });
+  });
+  it('o cliente não vê custo nenhum (SERV-10)', () => {
+    useUserStore.setState({ acessivel: ['execucao_os.view'] });
+    render(<MateriaisCardManager value={[cabo]} onChange={vi.fn()} mode="execucao" showCustos />);
+    expect(screen.queryByText(/R\$/)).not.toBeInTheDocument();
   });
 });

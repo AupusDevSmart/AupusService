@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useUserStore } from '@/store/useUserStore';
 import { TecnicosCardManager, type TecnicoItem } from './TecnicosCardManager';
 
 /**
@@ -8,6 +9,9 @@ import { TecnicosCardManager, type TecnicoItem } from './TecnicosCardManager';
  * horas agora se escrevem como na execução ("3h30", "45min" ou "3,5").
  */
 const ana: TecnicoItem = { id: 'T1', nome: 'Ana Souza', especialidade: 'Eletricista', horas_estimadas: 1.5, custo_hora: 64, custo_total: 96 };
+
+// Quem vê custo: o planejador (o cliente não, SERV-10)
+beforeEach(() => useUserStore.setState({ acessivel: ['execucao_os.manage'] }));
 
 describe('TecnicosCardManager', () => {
   it('horas como 1h30 e o valor da hora com 2 casas', () => {
