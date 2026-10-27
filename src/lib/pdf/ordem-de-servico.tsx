@@ -188,18 +188,30 @@ function OrdemDeServicoDocumento({ documento }: { documento: DocumentoDaOS }) {
       titulo: 'Equipe e horas',
       conteudo: (
         <View>
-          {/* SN-93 (D3): o valor da hora e o custo de cada pessoa */}
-          <TabelaPdf
-            colunas={[
-              { titulo: 'Pessoa', largura: '36%' },
-              { titulo: 'Previstas', largura: '12%', alinhar: 'right' },
-              { titulo: 'Trabalhadas', largura: '13%', alinhar: 'right' },
-              { titulo: 'R$/h', largura: '13%', alinhar: 'right' },
-              { titulo: 'Custo', largura: '16%', alinhar: 'right' },
-              { titulo: 'Foi', largura: '10%', alinhar: 'right' },
-            ]}
-            linhas={d.equipe.map((t) => [t.nome, t.estimadas, t.trabalhadas, t.valorHora, t.custo, t.presente])}
-          />
+          {/* SN-93 (D3): o valor da hora e o custo de cada pessoa; sem eles para técnico e cliente (SERV-9) */}
+          {d.comValores ? (
+            <TabelaPdf
+              colunas={[
+                { titulo: 'Pessoa', largura: '36%' },
+                { titulo: 'Previstas', largura: '12%', alinhar: 'right' },
+                { titulo: 'Trabalhadas', largura: '13%', alinhar: 'right' },
+                { titulo: 'R$/h', largura: '13%', alinhar: 'right' },
+                { titulo: 'Custo', largura: '16%', alinhar: 'right' },
+                { titulo: 'Foi', largura: '10%', alinhar: 'right' },
+              ]}
+              linhas={d.equipe.map((t) => [t.nome, t.estimadas, t.trabalhadas, t.valorHora, t.custo, t.presente])}
+            />
+          ) : (
+            <TabelaPdf
+              colunas={[
+                { titulo: 'Pessoa', largura: '52%' },
+                { titulo: 'Previstas', largura: '16%', alinhar: 'right' },
+                { titulo: 'Trabalhadas', largura: '18%', alinhar: 'right' },
+                { titulo: 'Foi', largura: '14%', alinhar: 'right' },
+              ]}
+              linhas={d.equipe.map((t) => [t.nome, t.estimadas, t.trabalhadas, t.presente])}
+            />
+          )}
           {d.totalDaEquipe && <Text style={[estilos.fraco, { marginTop: 6 }]}>{d.totalDaEquipe}</Text>}
         </View>
       ),
@@ -207,16 +219,27 @@ function OrdemDeServicoDocumento({ documento }: { documento: DocumentoDaOS }) {
     d.materiais.length > 0 && {
       titulo: 'Materiais',
       conteudo: (
-        <TabelaPdf
-          colunas={[
-            { titulo: 'Material', largura: '34%' },
-            { titulo: 'Planejado', largura: '15%', alinhar: 'right' },
-            { titulo: 'Consumido', largura: '15%', alinhar: 'right' },
-            { titulo: 'Unitário', largura: '16%', alinhar: 'right' },
-            { titulo: 'Custo', largura: '20%', alinhar: 'right' },
-          ]}
-          linhas={d.materiais.map((m) => [m.descricao, m.planejado, m.consumido, m.unitario, m.custo])}
-        />
+        d.comValores ? (
+          <TabelaPdf
+            colunas={[
+              { titulo: 'Material', largura: '34%' },
+              { titulo: 'Planejado', largura: '15%', alinhar: 'right' },
+              { titulo: 'Consumido', largura: '15%', alinhar: 'right' },
+              { titulo: 'Unitário', largura: '16%', alinhar: 'right' },
+              { titulo: 'Custo', largura: '20%', alinhar: 'right' },
+            ]}
+            linhas={d.materiais.map((m) => [m.descricao, m.planejado, m.consumido, m.unitario, m.custo])}
+          />
+        ) : (
+          <TabelaPdf
+            colunas={[
+              { titulo: 'Material', largura: '52%' },
+              { titulo: 'Planejado', largura: '24%', alinhar: 'right' },
+              { titulo: 'Consumido', largura: '24%', alinhar: 'right' },
+            ]}
+            linhas={d.materiais.map((m) => [m.descricao, m.planejado, m.consumido])}
+          />
+        )
       ),
     },
     d.ferramentas.length > 0 && {

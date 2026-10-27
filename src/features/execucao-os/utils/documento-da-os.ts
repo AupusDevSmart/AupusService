@@ -50,6 +50,12 @@ export interface DocumentoDaOS {
   falha: Par[];
   /** SN-93: o custo aberto (por natureza, por instrução, os outros custos), a conta da API */
   custos: CustosDoDocumento | null;
+  /**
+   * SERV-9: o PDF de quem não gerencia a OS (técnico de campo e cliente) não leva
+   * dinheiro — a API manda o relatório sem custos, e a equipe e os materiais saem
+   * sem as colunas de valor/hora, custo unitário e custo
+   */
+  comValores: boolean;
   /** O equipamento de cada tarefa (SN-93): o PDF repetia o nome da instrução sem dizer de qual inversor */
   tarefas: { nome: string; equipamento: string; situacao: string; quem: string; observacao: string }[];
   checklist: { tarefa: string; itens: { atividade: string; feito: string; leitura: string; observacao: string }[] }[];
@@ -270,6 +276,7 @@ export function documentoDaOS(
       ['Ação tomada', os.falha_acao],
     ]),
     custos: custosDoDocumento(relatorio.custos),
+    comValores: relatorio.custos !== null,
     tarefas: tarefas.map((t) => ({
       nome: nomeDaTarefa(t),
       equipamento: t.equipamento ?? '',
