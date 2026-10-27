@@ -635,8 +635,11 @@ export interface RelatorioDaOS {
   finalizada_em: string | null;
   previa: boolean;
   conteudo: ConteudoDaOS;
-  /** SN-93: o custo aberto, pela mesma conta do sheet */
-  custos: ResumoDoCusto;
+  /**
+   * SN-93: o custo aberto, pela mesma conta do sheet. Null para quem não gerencia a
+   * OS (SERV-9: técnico de campo e cliente): o conteúdo vem sem valor nenhum
+   */
+  custos: ResumoDoCusto | null;
 }
 
 /** GET /execucao-os/conferencia?codigo= (SN-62) */

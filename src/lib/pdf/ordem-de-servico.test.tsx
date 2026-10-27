@@ -43,6 +43,7 @@ const documento = (mudar: Partial<DocumentoDaOS> = {}): DocumentoDaOS => ({
     outros: [{ descricao: 'Veículo: Picape 4x4', natureza: 'Veículo', previsto: 'R$ 1.310,00', real: 'R$ 1.402,50' }],
     pendencias: ['1 outro custo não foi conferido e entra pelo previsto.'],
   },
+  comValores: true,
   ferramentas: [{ descricao: 'Multímetro', quantidade: '1', utilizada: 'Sim' }],
   auditoria: [['Nota da auditoria', '4 de 5']],
   fotos: [
@@ -80,6 +81,18 @@ describe('PDF da OS', () => {
     expect(desenhados.filter((t) => t === 'Inversor 03').length).toBeGreaterThanOrEqual(2);
     // O custo saiu da seção da auditoria
     expect(desenhados).not.toContain('Custo e auditoria');
+  }, 30_000);
+
+  // SERV-9: técnico de campo e cliente recebem o PDF sem dinheiro nenhum
+  it('sem valores: nem a seção de custos nem as colunas de valor/hora, unitário e custo', async () => {
+    const desenhados = (await textosDesenhados(documentoDoPdfDaOS(documento({ custos: null, comValores: false })))).map((t) => t.texto);
+    for (const texto of ['R$', 'Custo', 'Unitário']) {
+      expect(desenhados.some((t) => t.includes(texto)), texto).toBe(false);
+    }
+    // As horas e as quantidades ficam: são o registro da execução
+    for (const texto of ['Ana · Técnico Elétrico', '3h30', 'Trabalhadas', 'Ventilador', 'Consumido']) {
+      expect(desenhados.some((t) => t.includes(texto)), texto).toBe(true);
+    }
   }, 30_000);
 
   it('a prévia desenha sem código', async () => {

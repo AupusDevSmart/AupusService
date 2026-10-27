@@ -178,6 +178,14 @@ describe('documento da OS (PDF)', () => {
     expect(sem(d.materiais[0].unitario)).toBe('R$ 180,00');
     expect(d.auditoria.map(([r]) => r)).not.toContain('Custo real');
     expect(d.auditoria).toEqual(expect.arrayContaining([['Nota da auditoria', '4 de 5']]));
+    expect(d.comValores).toBe(true);
+  });
+
+  // SERV-9: a API manda o relatório de técnico de campo e cliente sem custos
+  it('relatório sem custos: sem a seção e sem as colunas de valor', () => {
+    const d = montar(relatorio({ custos: null }));
+    expect([d.custos, d.comValores]).toEqual([null, false]);
+    expect(d.totalDaEquipe).toBe('Horas-homem: 3h30 (8h previstas)');
   });
 
   // SN-93: o custo aberto, com o real em destaque contra o previsto
