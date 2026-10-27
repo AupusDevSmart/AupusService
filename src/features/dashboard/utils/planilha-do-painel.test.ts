@@ -59,13 +59,26 @@ describe('planilhaDoPainel', { timeout: 60_000 }, () => {
 
   it('MENSAL: as séries da resposta, mês a mês', async () => {
     const aba = (await montar()).getWorksheet('MENSAL')!;
+    const custo = painel.custo!;
     painel.meses.forEach((mes, i) => {
       const [m, mo, mat, adic, total, orcado, , , hhPlanejado, hhApontado, resolvidas] = linhas(aba)[i + 1];
       expect([m, mo, mat, adic, total, orcado, hhPlanejado, hhApontado, resolvidas]).toEqual([
-        mes, painel.custo.maoObra[i], painel.custo.material[i], painel.custo.adicionais[i], painel.custo.total[i], painel.custo.orcado[i],
+        mes, custo.maoObra[i], custo.material[i], custo.adicionais[i], custo.total[i], custo.orcado[i],
         painel.hh.planejado[i], painel.hh.apontado[i], painel.anomalias.resolvida[i],
       ]);
     });
+  });
+
+  it('o cliente (custo nulo na resposta) recebe a planilha sem nenhuma coluna de dinheiro (SERV-10)', async () => {
+    const semCusto = { ...painel, custo: null, custoPorOS: null, ofensores: [] };
+    const livro = await gravarEReabrir(
+      await planilhaDoPainel(semCusto, ordens.map((o) => ({ ...o, custo: null })), { filtros: [], graficos: graficos.slice(1) }),
+    );
+    expect(linhas(livro.getWorksheet('MENSAL')!)[0]).toEqual(['Mês', 'HH planejado', 'HH apontado', 'Anomalias resolvidas', 'Anomalias com OS em andamento', 'Anomalias sem OS']);
+    expect(linhas(livro.getWorksheet('MENSAL')!)[1]).toEqual([painel.meses[0], painel.hh.planejado[0], painel.hh.apontado[0], painel.anomalias.resolvida[0], painel.anomalias.emExecucao[0], painel.anomalias.semOS[0]]);
+    const cabecalho = linhas(livro.getWorksheet('OS')!)[0].map(String);
+    expect(cabecalho.some((t) => /custo|mão de obra|material/i.test(t))).toBe(false);
+    expect(cabecalho).toContain('Nº da OS');
   });
 
   it('COMPOSIÇÃO e BACKLOG: os gráficos de proporção, o funil e as faixas de idade', async () => {

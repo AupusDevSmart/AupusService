@@ -19,6 +19,7 @@ import { OrcamentoCardManager, type ItemOrcamento } from '@/components/common/ca
 import { ReservaViaturaField } from '../components/ReservaViaturaField';
 import { ReservaVinculadaCard } from '../components/ReservaVinculadaCard';
 import { ValoresDasInstrucoes } from '@/features/programacao-os/components/ValoresDasInstrucoes';
+import { veCustos } from '@/hooks/useVeCustos';
 import { linhasDeValor, type AjustesDeValor } from '@/features/programacao-os/utils/valores-das-instrucoes';
 
 /**
@@ -552,6 +553,8 @@ export const programacaoOSFormFields: FormField[] = [
     label: '',
     type: 'custom',
     group: 'orcamento',
+    // SERV-10: o cliente não vê dinheiro
+    condition: () => veCustos(),
     colSpan: 2,
     render: ({ entity, formData, value, onChange, onMultipleChange, mode, disabled }: PropsDoRender) => (
       <ValoresDasInstrucoes
@@ -571,6 +574,7 @@ export const programacaoOSFormFields: FormField[] = [
     key: 'itens_orcamento',
     label: '', // duplicava o titulo do grupo
     type: 'custom',
+    condition: () => veCustos(),
     // `render`, não `component`: só o render recebe o formData e o onMultipleChange, e o valor
     // ilegível tem de travar o Salvar
     render: ({ entity, formData, value, onChange, onMultipleChange, mode, disabled }: PropsDoRender) => (

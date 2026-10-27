@@ -136,6 +136,13 @@ describe('a planilha das OS', { timeout: 120_000 }, () => {
     expect(valor(5, 'Parou em')).toBeNull();
   });
 
+  it('sem custos (o cliente, SERV-10), a coluna de custo não sai', async () => {
+    const livro = await gravarEReabrir(await planilhaDasOS([os(1)], [], { comCustos: false }));
+    const cabecalho = (livro.worksheets[0].getRow(1).values as unknown[]).slice(1).map(String);
+    expect(cabecalho).not.toContain('Custo real');
+    expect(cabecalho).toContain('Nº da OS');
+  });
+
   it('a aba FILTRO diz o que foi pedido, a ordem, e avisa quando a lista mudou na leitura', async () => {
     const livro = await gravarEReabrir(await planilhaDasOS([os(1)], [['Status', 'Finalizada']], { mudou: true }));
     const linhas = livro.getWorksheet('FILTRO')!.getSheetValues().slice(1).map((l) => (l as unknown[]).slice(1, 3));

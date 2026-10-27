@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { execucaoOSApi, type QueryExecucaoOSApiParams } from '@/services/execucao-os.service';
 import { FiltroGrandeDemais, descricaoDoFiltro, planilhaDasOS, todasAsOS } from '@/features/execucao-os/utils/planilha-das-os';
 import { baixar } from '@/lib/planilha/estilo';
+import { useVeCustos } from '@/hooks/useVeCustos';
 
 interface BotaoExportarOSProps {
   /** Os parâmetros que a tabela manda à API (a página é trocada pela exportação) */
@@ -21,6 +22,7 @@ interface BotaoExportarOSProps {
  */
 export function BotaoExportarOS({ filtro, valores, filtros }: BotaoExportarOSProps) {
   const [exportando, setExportando] = useState(false);
+  const comCustos = useVeCustos();
 
   const exportar = async () => {
     setExportando(true);
@@ -30,7 +32,7 @@ export function BotaoExportarOS({ filtro, valores, filtros }: BotaoExportarOSPro
         toast.info('Nenhuma OS no filtro para exportar');
         return;
       }
-      const livro = await planilhaDasOS(ordens, descricaoDoFiltro(valores, filtros, ordens, filtro), { mudou });
+      const livro = await planilhaDasOS(ordens, descricaoDoFiltro(valores, filtros, ordens, filtro), { mudou, comCustos });
       await baixar(livro, `ordens-de-servico-${new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })}.xlsx`);
       if (mudou) {
         toast.warning('A lista mudou durante a exportação', { description: 'Uma OS foi criada, iniciada ou excluída no meio: exporte de novo para ter o retrato exato.' });
