@@ -104,24 +104,35 @@ export async function planilhaDoPainel(
   indicadores.getColumn(5).alignment = { wrapText: true, vertical: 'top' };
   indicadores.getColumn(6).alignment = { wrapText: true, vertical: 'top' };
 
+  // SERV-10: o cliente não vê dinheiro (a API manda o custo nulo): sem as colunas de custo
+  const { custo, custoPorOS } = painel;
+  const colunasDasOS = custo ? COLUNAS_DAS_OS : COLUNAS_DAS_OS.filter((c) => c.formato !== 'moeda');
+
   // MENSAL: as séries dos gráficos, um mês por linha
   const mensal = livro.addWorksheet('MENSAL');
   tabela(
     mensal,
     [
-      'Mês', 'Mão de obra (R$ mil)', 'Material (R$ mil)', 'Outros custos (R$ mil)', 'Custo total (R$ mil)', 'Orçado (R$ mil)',
-      'Custo médio corretiva (R$)', 'Custo médio demais (R$)', 'HH planejado', 'HH apontado',
+      'Mês',
+      ...(custo && custoPorOS
+        ? ['Mão de obra (R$ mil)', 'Material (R$ mil)', 'Outros custos (R$ mil)', 'Custo total (R$ mil)', 'Orçado (R$ mil)', 'Custo médio corretiva (R$)', 'Custo médio demais (R$)']
+        : []),
+      'HH planejado', 'HH apontado',
       'Anomalias resolvidas', 'Anomalias com OS em andamento', 'Anomalias sem OS',
     ].map((header) => ({ header, width: header.length > 14 ? 16 : 12 })),
     painel.meses.map((mes, i) => [
       mes,
-      painel.custo.maoObra[i] ?? 0,
-      painel.custo.material[i] ?? 0,
-      painel.custo.adicionais[i] ?? 0,
-      painel.custo.total[i] ?? 0,
-      painel.custo.orcado[i] ?? 0,
-      painel.custoPorOS.corretiva[i] ?? 0,
-      painel.custoPorOS.preventiva[i] ?? 0,
+      ...(custo && custoPorOS
+        ? [
+            custo.maoObra[i] ?? 0,
+            custo.material[i] ?? 0,
+            custo.adicionais[i] ?? 0,
+            custo.total[i] ?? 0,
+            custo.orcado[i] ?? 0,
+            custoPorOS.corretiva[i] ?? 0,
+            custoPorOS.preventiva[i] ?? 0,
+          ]
+        : []),
       painel.hh.planejado[i] ?? 0,
       painel.hh.apontado[i] ?? 0,
       painel.anomalias.resolvida[i] ?? 0,
@@ -169,10 +180,10 @@ export async function planilhaDoPainel(
   const aba = livro.addWorksheet('OS');
   tabela(
     aba,
-    COLUNAS_DAS_OS.map((c) => ({ header: c.titulo, width: c.largura })),
-    ordens.map((o) => COLUNAS_DAS_OS.map((c) => c.valor(o))),
+    colunasDasOS.map((c) => ({ header: c.titulo, width: c.largura })),
+    ordens.map((o) => colunasDasOS.map((c) => c.valor(o))),
   );
-  COLUNAS_DAS_OS.forEach((c, i) => {
+  colunasDasOS.forEach((c, i) => {
     if (!c.formato) return;
     for (let r = 2; r <= ordens.length + 1; r++) {
       const celula = aba.getRow(r).getCell(i + 1);
@@ -180,7 +191,7 @@ export async function planilhaDoPainel(
       else celula.numFmt = c.formato === 'data' ? DATA : '0.00';
     }
   });
-  aba.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: COLUNAS_DAS_OS.length } };
+  aba.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: colunasDasOS.length } };
 
   // FILTRO: o que foi exportado
   const sobre = livro.addWorksheet('FILTRO');

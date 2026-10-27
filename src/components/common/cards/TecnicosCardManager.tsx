@@ -12,6 +12,7 @@ import { AVISO_DE_DINHEIRO, dinheiroNoCampo, lerDinheiroDigitado } from '@/utils
 
 const AVISO_DE_HORAS = 'Horas como 3h30, 45min ou 3,5';
 import { formatCurrency } from '@/lib/utils';
+import { useVeCustos } from '@/hooks/useVeCustos';
 
 export interface TecnicoItem {
   id?: string;
@@ -69,12 +70,14 @@ const TecnicosCardManager: React.FC<TecnicosCardManagerProps> = ({
   onChange,
   disabled = false,
   mode = 'planejamento',
-  showCustos = false,
+  showCustos: pedeCustos = false,
   showStatus = false,
   showHorasReais = false,
   title = "Técnicos",
   opcoesDoTecnico,
 }) => {
+  // SERV-10: o cliente não vê dinheiro (a API já não manda o valor)
+  const showCustos = useVeCustos() && pedeCustos;
   const [tecnicos, setTecnicos] = useState<TecnicoItem[]>(value);
 
   useEffect(() => {
