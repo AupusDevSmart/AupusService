@@ -19,6 +19,16 @@ export const CATEGORIAS_RECURSO: { value: CategoriaRecurso; label: string }[] = 
   { value: 'DESPESA_CAMPO', label: 'Despesa de campo' },
 ];
 
+/** O nome no plural, para o filtro da lista (como o do AupusProject) */
+export const ROTULO_PLURAL_DA_CATEGORIA: Record<CategoriaRecurso, string> = {
+  MAO_DE_OBRA: 'Mão de obra',
+  MATERIAL: 'Materiais',
+  INSTRUMENTO: 'Instrumentos',
+  VEICULO: 'Veículos',
+  TERCEIRO: 'Terceiros',
+  DESPESA_CAMPO: 'Despesas de campo',
+};
+
 export const rotuloCategoria = (categoria?: string | null) =>
   CATEGORIAS_RECURSO.find((c) => c.value === categoria)?.label || categoria || '—';
 

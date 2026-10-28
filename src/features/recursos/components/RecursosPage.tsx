@@ -1,5 +1,5 @@
 // src/features/recursos/components/RecursosPage.tsx
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Layout } from '@/components/common/Layout';
 import { TitleCard } from '@/components/common/title-card';
 import { BaseTable, BaseFilters } from '@/core';
@@ -17,8 +17,8 @@ import { useUserStore } from '@/store/useUserStore';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import type { CategoriaRecurso, QueryRecursosParams, RecursoApiResponse } from '@/services/recursos.services';
 
-/** Os filtros como a tela guarda: a categoria pode ser 'all', o "sem filtro" do BaseFilters. */
-type FiltrosDaTela = Omit<QueryRecursosParams, 'categoria'> & { categoria?: CategoriaRecurso | 'all' };
+/** Os filtros como a tela guarda: a categoria vazia (ou 'all') é "Todos". */
+type FiltrosDaTela = Omit<QueryRecursosParams, 'categoria'> & { categoria?: CategoriaRecurso | 'all' | '' };
 import { recursosTableColumns } from '../config/table-config';
 import { recursosFilterConfig } from '../config/filter-config';
 import { useRecursos } from '../hooks/useRecursos';
@@ -42,17 +42,25 @@ export function RecursosPage() {
     limit: linhasPorPagina,
   }));
 
-  // "all" é como o BaseFilters representa "sem filtro"; mandar isso para a API
-  // viraria uma categoria inexistente e a lista voltaria vazia.
+  // A busca vai à API 350 ms depois da última tecla, como no AupusProject: antes
+  // cada letra era uma requisição
+  const [buscaAplicada, setBuscaAplicada] = useState(filtrosBrutos.search ?? '');
+  useEffect(() => {
+    const espera = setTimeout(() => setBuscaAplicada(filtrosBrutos.search ?? ''), 350);
+    return () => clearTimeout(espera);
+  }, [filtrosBrutos.search]);
+
+  // "Todos" (vazio, ou o "all" de antes) não vai para a API: viraria uma
+  // categoria inexistente e a lista voltaria vazia.
   const filtros = useMemo<QueryRecursosParams>(() => {
-    const { categoria, search, page, limit } = filtrosBrutos;
+    const { categoria, page, limit } = filtrosBrutos;
     return {
       ...(categoria && categoria !== 'all' ? { categoria } : {}),
-      ...(search ? { search } : {}),
+      ...(buscaAplicada ? { search: buscaAplicada } : {}),
       page: page || 1,
       limit: limit || LINHAS_POR_PAGINA_PADRAO,
     };
-  }, [filtrosBrutos]);
+  }, [filtrosBrutos, buscaAplicada]);
 
   const { recursos, paginacao, carregando, salvando, salvar, remover, recarregar } = useRecursos(filtros);
 
