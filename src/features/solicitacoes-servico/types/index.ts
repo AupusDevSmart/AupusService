@@ -36,10 +36,11 @@ export interface SolicitacaoServico extends BaseEntity {
   status: StatusSolicitacaoServico;
   origem: OrigemSolicitacao;
 
-  // Localização
-  planta_id?: string;
-  unidade_id?: string;
-  proprietario_id?: string;
+  // Localização: planta e instalação são opcionais; sem planta, quem pediu fica em `cliente_nome`
+  planta_id?: string | null;
+  unidade_id?: string | null;
+  proprietario_id?: string | null;
+  cliente_nome?: string | null;
   area?: string;
   local?: string;
   local_especifico?: string;
@@ -92,8 +93,10 @@ export interface SolicitacaoServico extends BaseEntity {
   usuario?: PessoaDaSolicitacao | null;
   historico?: HistoricoSolicitacao[];
 
-  /** Total da proposta (Decimal: o JSON traz texto). Ausente sem proposta montada. */
+  /** Total da proposta, já com o desconto (Decimal: o JSON traz texto). Ausente sem proposta montada. */
   total_geral?: string | number | null;
+  /** Os reais do desconto da proposta (28/out/2026) */
+  total_desconto?: string | number | null;
 
   // Timestamps
   created_at?: string;
@@ -153,6 +156,8 @@ export interface SolicitacaoServicoFormData {
   planta_id?: string;
   unidade_id?: string;
   proprietario_id?: string;
+  /** Quem pediu, quando não há planta cadastrada */
+  cliente_nome?: string;
   area?: string;
   local?: string;
   local_especifico?: string;

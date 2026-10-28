@@ -1,19 +1,32 @@
 // src/features/solicitacoes-servico/components/PropostaSection.tsx
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Trash2, RefreshCw, Loader2 } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Loader2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CampoDeNumero } from '@/components/common/CampoDeNumero';
 import { formatApiError } from '@/utils/api-error';
+import { AVISO_DE_DINHEIRO, dinheiroNoCampo, lerDinheiroDigitado, numeroNoCampo } from '@/utils/leitura';
 import {
   propostaApi,
   propostaVazia,
   calcularRascunho,
   calcularBdi,
   montarDeInstrucoes,
+  linhaDaInstrucao,
+  componentesDe,
+  percentualNaTela,
+  somaImpostos,
   moeda,
+  type ComponentesDoBdi,
+  type ItemProposta,
   type OutroCusto,
   type Proposta,
+  type TipoDeDesconto,
 } from '@/services/proposta.services';
+import { instrucoesApi } from '@/services/instrucoes.services';
+import { useUserStore } from '@/store/useUserStore';
+import { ComponentesDoBdiCampos } from './ComponentesDoBdi';
 import type { ValoresDaProposta } from './proposta-contexto';
 
 interface PropostaSectionProps {
@@ -86,6 +99,32 @@ export function PropostaSection({
     void carregar();
   }, [carregar]);
 
+  // O rascunho nasce com o BDI padrão da empresa, o mesmo que o servidor dá à
+  // solicitação ao criá-la: sem isso, a tela mostraria o GOINFRA e gravaria outro.
+  // Só quem monta proposta o lê (é a margem da empresa: o cliente não)
+  const montaProposta = useUserStore((st) => st.hasPermission('solicitacoes.manage'));
+  useEffect(() => {
+    if (!rascunho || somenteLeitura || !montaProposta) return;
+    let cancelado = false;
+    propostaApi
+      .obterBdiPadrao()
+      .then((padrao) => {
+        if (cancelado) return;
+        setProposta((atual) => {
+          const calculado = calcularRascunho({ ...atual, ...componentesDe(padrao) });
+          onRascunhoChange?.(calculado);
+          return calculado;
+        });
+      })
+      .catch((erro) => {
+        if (!cancelado) toast.error('Não foi possível ler o BDI padrão', { description: `${formatApiError(erro)}. A proposta segue com o GOINFRA (30,44%).` });
+      });
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rascunho, somenteLeitura, montaProposta]);
+
   /**
    * Um caminho para os dois modos.
    *
@@ -99,14 +138,18 @@ export function PropostaSection({
     persistir: (id: string, novo: Proposta) => Promise<Proposta>,
     oQue: string,
   ) => {
-    const novo = mudanca(proposta);
-
     if (rascunho) {
-      const calculado = calcularRascunho(novo);
-      setProposta(calculado);
-      onRascunhoChange?.(calculado);
+      // Sobre a proposta de agora, não a do render que chamou: a montagem das
+      // linhas e o BDI padrão chegam de awaits diferentes, e um apagava o outro
+      setProposta((atual) => {
+        const calculado = calcularRascunho(mudanca(atual));
+        onRascunhoChange?.(calculado);
+        return calculado;
+      });
       return;
     }
+
+    const novo = mudanca(proposta);
 
     setProposta(novo); // resposta imediata ao clique
     try {
@@ -125,6 +168,12 @@ export function PropostaSection({
 
   const salvarCustos = (m: (p: Proposta) => Proposta) =>
     void aplicar(m, (id, novo) => propostaApi.salvarOutrosCustos(id, novo.outros_custos), 'o custo');
+
+  const salvarCondicoes = (
+    m: (p: Proposta) => Proposta,
+    dados: Parameters<typeof propostaApi.salvarCondicoes>[1],
+    oQue: string,
+  ) => void aplicar(m, (id) => propostaApi.salvarCondicoes(id, dados), oQue);
 
   /**
    * Uma linha por instrução vinculada — nem mais, nem menos.
@@ -175,9 +224,20 @@ export function PropostaSection({
 
     void (async () => {
       const ids = chaveInstrucoes ? chaveInstrucoes.split('|') : [];
-      const itens = await montarDeInstrucoes(ids, proposta.itens);
-      if (cancelado) return;
-      salvarItens((p) => ({ ...p, itens }));
+      try {
+        const itens = await montarDeInstrucoes(ids, proposta.itens);
+        if (cancelado) return;
+        salvarItens((p) => ({ ...p, itens }));
+        if (itens.length < ids.length) {
+          toast.warning('Uma instrução vinculada não existe mais', { description: 'Ela ficou fora da proposta: desvincule-a.' });
+        }
+      } catch (erro) {
+        if (cancelado) return;
+        // Nada se grava (a lista sem a instrução nova apagaria a linha dela calada); o
+        // próximo vínculo ou desvínculo tenta de novo
+        tentadaRef.current = null;
+        toast.error('Não foi possível montar o valor da instrução vinculada', { description: formatApiError(erro) });
+      }
     })();
 
     return () => {
@@ -221,6 +281,47 @@ export function PropostaSection({
     [],
   );
 
+  // A linha refeita pelo cadastro da instrução. Pelo ref, como o `definir`:
+  // depois do await vale a proposta de agora, não a do clique
+  const trocarLinhaRef = useRef<(linha: ItemProposta) => void>(() => {});
+  trocarLinhaRef.current = (linha) => {
+    if (somenteLeitura) return;
+    const daInstrucao = (it: ItemProposta) => String(it.instrucao_id ?? '').trim() === linha.instrucao_id && !it.recurso_id;
+    const atual = proposta.itens.find(daInstrucao);
+    if (!atual) return;
+    // O valor só se refaz quando o do cadastro mudou: editar só o texto da instrução
+    // não desfaz o preço negociado nesta proposta
+    const centavos = (v: number | null | undefined) => Math.round((v ?? 0) * 100);
+    const mudouOValor = centavos(atual.preco_unitario_original ?? atual.preco_unitario) !== centavos(linha.preco_unitario);
+    const mudouONome = atual.descricao !== linha.descricao;
+    if (!mudouOValor && !mudouONome) return;
+    salvarItens((p) => ({
+      ...p,
+      itens: p.itens.map((it) =>
+        daInstrucao(it)
+          ? mudouOValor
+            ? { ...it, ...linha, sem_preco_no_cadastro: linha.sem_preco_no_cadastro }
+            : { ...it, descricao: linha.descricao }
+          : it,
+      ),
+    }));
+    if (mudouOValor && centavos(atual.preco_unitario) !== centavos(linha.preco_unitario)) {
+      toast.info(`Valor de ${linha.descricao} na proposta: ${moeda(atual.preco_unitario)} -> ${moeda(linha.preco_unitario)}`, {
+        description: 'O valor do cadastro da instrução mudou.',
+      });
+    }
+  };
+
+  const refazer = useCallback(async (instrucaoId: string) => {
+    try {
+      trocarLinhaRef.current(linhaDaInstrucao(await instrucoesApi.findOne(instrucaoId.trim())));
+    } catch (erro) {
+      toast.error('A instrução foi salva, mas o valor dela na proposta não se atualizou', {
+        description: `${formatApiError(erro)}. Use "Refaz os valores" no fechamento.`,
+      });
+    }
+  }, []);
+
   // Salva, a lista é a da leitura do servidor; no rascunho, a marca de cada item montado aqui
   const semPreco = useMemo(
     () => [
@@ -233,11 +334,89 @@ export function PropostaSection({
   );
 
   useEffect(() => {
-    onValoresChange?.({ valores, definir, editavel, semPreco });
+    onValoresChange?.({ valores, definir, editavel, semPreco, refazer: (id) => void refazer(id) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [valores, definir, editavel, semPreco]);
+  }, [valores, definir, editavel, semPreco, refazer]);
 
   const bdi = calcularBdi(proposta) * 100;
+  // O BDI e o desconto são de quem monta proposta: o cliente que cadastra não grava a proposta
+  const ajustaCondicoes = editavel && montaProposta;
+
+  // ------------------------------------------------------------------
+  // O BDI desta proposta: nasce do padrão da empresa e se ajusta aqui.
+  // ------------------------------------------------------------------
+
+  const [editandoBdi, setEditandoBdi] = useState<ComponentesDoBdi | null>(null);
+  const editorDoBdi = useRef<HTMLDivElement>(null);
+
+  const aplicarBdi = () => {
+    if (!editandoBdi) return;
+    // O campo ilegível ("6,5%") fica com o número de antes: aplicar gravaria aquele calado
+    if (editorDoBdi.current?.querySelector('[data-ilegivel="true"]')) {
+      toast.error('Há um percentual que não dá para ler', { description: 'Corrija o campo marcado antes de aplicar.' });
+      return;
+    }
+    const componentes = editandoBdi;
+    salvarCondicoes((p) => ({ ...p, ...componentes }), componentes, 'o BDI');
+    setEditandoBdi(null);
+  };
+
+  const usarOPadrao = () =>
+    propostaApi
+      .obterBdiPadrao()
+      .then((padrao) => setEditandoBdi(componentesDe(padrao)))
+      .catch((erro) => toast.error('Não foi possível ler o BDI padrão', { description: formatApiError(erro) }));
+
+  // ------------------------------------------------------------------
+  // O desconto, sobre o total inteiro (o faturamento direto junto).
+  // ------------------------------------------------------------------
+
+  // O tipo escolhido antes de digitar o valor: sem valor, não há o que gravar
+  const [tipoNovo, setTipoNovo] = useState<TipoDeDesconto | null>(null);
+  const tipoDoDesconto = proposta.desconto_tipo ?? tipoNovo;
+  const totalSemDesconto = Math.round((proposta.total_geral + proposta.total_desconto) * 100) / 100;
+  // Remonta o campo do desconto recusado: senão ele seguia mostrando o número que não valeu
+  const [versaoDoDesconto, setVersaoDoDesconto] = useState(0);
+
+  const tirarDesconto = () => {
+    setTipoNovo(null);
+    if (proposta.desconto_tipo) {
+      salvarCondicoes((p) => ({ ...p, desconto_tipo: null, desconto_valor: null }), { desconto_tipo: null }, 'o desconto');
+    }
+  };
+
+  const gravarDesconto = (tipo: TipoDeDesconto, valor: number | null) => {
+    if (valor === null || valor === 0) return tirarDesconto();
+    // A mesma regra do servidor, antes de mandar (e no rascunho, que não tem servidor)
+    if (tipo === 'PERCENTUAL' && valor > 100) {
+      toast.error('O desconto em percentual vai até 100%');
+      setVersaoDoDesconto((v) => v + 1);
+      return;
+    }
+    if (tipo === 'VALOR' && Math.round(valor * 100) > Math.round(totalSemDesconto * 100)) {
+      toast.error('O desconto passa do total da proposta', { description: `O total é ${moeda(totalSemDesconto)}.` });
+      setVersaoDoDesconto((v) => v + 1);
+      return;
+    }
+    setTipoNovo(null);
+    salvarCondicoes((p) => ({ ...p, desconto_tipo: tipo, desconto_valor: valor }), { desconto_tipo: tipo, desconto_valor: valor }, 'o desconto');
+  };
+
+  /** Trocar % por R$ (ou o contrário) com desconto gravado mantém os reais descontados */
+  const trocarTipoDeDesconto = (escolha: string) => {
+    if (escolha === 'NENHUM') return tirarDesconto();
+    const tipo = escolha as TipoDeDesconto;
+    if (!proposta.desconto_tipo) return setTipoNovo(tipo);
+    if (tipo === proposta.desconto_tipo) return;
+    const emReais = proposta.total_desconto;
+    const valor =
+      tipo === 'VALOR' ? emReais : totalSemDesconto > 0 ? Math.round((emReais / totalSemDesconto) * 100 * 100) / 100 : 0;
+    gravarDesconto(tipo, valor);
+  };
+
+  // O total caiu abaixo do desconto em reais: vale até o total, e a tela diz
+  const descontoLimitado =
+    proposta.desconto_tipo === 'VALOR' && (proposta.desconto_valor ?? 0) > proposta.total_desconto + 0.005;
 
   const faturamentoDireto = proposta.outros_custos
     .filter((c) => c.faturamento_direto)
@@ -393,18 +572,102 @@ export function PropostaSection({
           </div>
         </div>
 
-        {/* O BDI fica no padrão da tabela GOINFRA e não é editado aqui. Os nove
-            componentes continuam gravados por solicitação — o que saiu foi a
-            edição, não o registro: proposta com preço é auditável, e a memória
-            de cálculo tem que estar no banco mesmo sem estar na tela.
+        {/* O BDI nasce do padrão da empresa (o botão "BDI padrão" da página) e
+            se ajusta aqui, só para esta proposta: os nove componentes ficam
+            gravados por solicitação, e a memória de cálculo é auditável.
 
             O faturamento direto aparece em linha própria porque não recebe BDI:
-            o cliente paga o fornecedor, e o dinheiro não passa aqui. */}
+            o cliente paga o fornecedor, e o dinheiro não passa aqui. O desconto
+            sai do total inteiro, o FD junto (decisão do usuário, 28/out/2026). */}
         <dl className="space-y-1">
           <Total rotulo="Custo" valor={custoBase} />
-          <Total rotulo={`BDI (${percentual(bdi)}%)`} valor={proposta.total_bdi} />
+          <div className="flex items-baseline justify-between gap-4">
+            <dt className="flex items-center gap-1 text-sm text-muted-foreground">
+              BDI ({percentualNaTela(bdi)}%)
+              {ajustaCondicoes && !editandoBdi && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  title="Ajustar o BDI desta proposta"
+                  aria-label="Ajustar o BDI desta proposta"
+                  onClick={() => setEditandoBdi(componentesDe(proposta))}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </dt>
+            <dd className="text-sm tabular-nums">{moeda(proposta.total_bdi)}</dd>
+          </div>
+        </dl>
+
+        {editandoBdi && (
+          <div ref={editorDoBdi} className="space-y-3 rounded-md border p-3">
+            <p className="text-xs text-muted-foreground">Só para esta proposta. O padrão da empresa se troca no botão "BDI padrão" da página.</p>
+            <ComponentesDoBdiCampos value={editandoBdi} onChange={setEditandoBdi} />
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={() => void usarOPadrao()}>
+                Usar o padrão
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => setEditandoBdi(null)}>
+                Cancelar
+              </Button>
+              <Button type="button" size="sm" disabled={somaImpostos(editandoBdi) >= 100} onClick={aplicarBdi}>
+                Aplicar
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <dl className="space-y-1">
           {faturamentoDireto > 0 && (
             <Total rotulo="Faturamento direto" valor={faturamentoDireto} />
+          )}
+          {(ajustaCondicoes || proposta.desconto_tipo) && (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <dt className="flex items-center gap-2 text-sm text-muted-foreground">
+                Desconto
+                {ajustaCondicoes ? (
+                  <>
+                    <Select value={tipoDoDesconto ?? 'NENHUM'} onValueChange={trocarTipoDeDesconto}>
+                      <SelectTrigger className="h-8 w-[92px]" aria-label="Como é o desconto">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="NENHUM">Nenhum</SelectItem>
+                        <SelectItem value="PERCENTUAL">%</SelectItem>
+                        <SelectItem value="VALOR">R$</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {tipoDoDesconto && (
+                      <CampoDeNumero
+                        key={versaoDoDesconto}
+                        className="h-8 w-24 text-right"
+                        value={proposta.desconto_tipo ? proposta.desconto_valor : null}
+                        onChange={(valor) => gravarDesconto(tipoDoDesconto, valor)}
+                        ler={lerDinheiroDigitado}
+                        mostrar={tipoDoDesconto === 'VALOR' ? dinheiroNoCampo : numeroNoCampo}
+                        aviso={tipoDoDesconto === 'VALOR' ? AVISO_DE_DINHEIRO : 'Percentual com vírgula e até 2 casas (ex.: 12,5)'}
+                        avisoCurto
+                        placeholder={tipoDoDesconto === 'VALOR' ? '0,00' : '0'}
+                        aria-label={tipoDoDesconto === 'VALOR' ? 'Desconto em reais' : 'Desconto em percentual'}
+                      />
+                    )}
+                  </>
+                ) : (
+                  proposta.desconto_tipo === 'PERCENTUAL' && <span>({percentualNaTela(proposta.desconto_valor ?? 0)}%)</span>
+                )}
+              </dt>
+              <dd className="text-sm tabular-nums">
+                {proposta.total_desconto > 0 ? `− ${moeda(proposta.total_desconto)}` : moeda(0)}
+              </dd>
+            </div>
+          )}
+          {descontoLimitado && (
+            <p className="text-xs text-muted-foreground">
+              O desconto de {moeda(proposta.desconto_valor ?? 0)} passa do total de agora: vale até o total.
+            </p>
           )}
           <Total rotulo="Total da proposta" valor={proposta.total_geral} destaque />
         </dl>
@@ -426,14 +689,6 @@ function BotaoRemover({ onClick }: { onClick: () => void }) {
       <Trash2 className="h-3.5 w-3.5" />
     </Button>
   );
-}
-
-/** Percentual com as duas casas sempre visíveis: 30,44. */
-function percentual(valor: number) {
-  return (Number.isFinite(valor) ? valor : 0).toLocaleString('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 }
 
 function Total({

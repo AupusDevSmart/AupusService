@@ -61,8 +61,15 @@ export const solicitacoesTableColumns: TableColumn<SolicitacaoServico>[] = [
     width: '16%',
     hideOnMobile: true,
     // Vem da relacao, entao nao e ordenavel: nao ha coluna para ordenar.
+    // Sem planta cadastrada, quem pediu (o cliente em texto): a linha não fica sem dono
     render: (s) =>
-      s.unidade?.nome ? <Texto>{s.unidade.nome}</Texto> : <Vazio />,
+      s.unidade?.nome ? (
+        <Texto>{s.unidade.nome}</Texto>
+      ) : s.cliente_nome ? (
+        <Texto fraco>{s.cliente_nome}</Texto>
+      ) : (
+        <Vazio />
+      ),
   },
   {
     key: 'status',
@@ -104,8 +111,10 @@ export const solicitacoesTableColumns: TableColumn<SolicitacaoServico>[] = [
     render: (s) => {
       const total = Number(s.total_geral ?? 0);
       // Sem proposta montada nao ha valor. Mostrar R$ 0,00 se leria como
-      // "custa zero", que e outra afirmacao.
-      if (!Number.isFinite(total) || total <= 0) return <Vazio />;
+      // "custa zero", que e outra afirmacao. Com desconto de 100% o total e zero
+      // e ha proposta: ai o R$ 0,00 e verdade
+      const temDesconto = Number(s.total_desconto ?? 0) > 0;
+      if (!Number.isFinite(total) || (total <= 0 && !temDesconto)) return <Vazio />;
       return (
         <span className="block truncate text-sm tabular-nums">
           {total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}

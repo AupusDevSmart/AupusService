@@ -85,7 +85,9 @@ export const SimpleCascadeSelector = ({
     setLocalState(newState);
 
     if (onMultipleChange) {
-      onMultipleChange(newState);
+      // Com planta, o cliente é o dono dela: o cliente em texto digitado antes some
+      // (escondido no formulário, ele ainda iria gravado e apareceria na lista e no PDF)
+      onMultipleChange(value ? { ...newState, cliente_nome: '' } : newState);
     }
   };
 

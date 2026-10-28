@@ -83,6 +83,8 @@ export function BotaoGerarPdf({ numero, titulo, cliente }: BotaoGerarPdfProps) {
   );
 }
 
+const textoDoFormulario = (valor: unknown) => (typeof valor === 'string' && valor.trim() ? valor.trim() : undefined);
+
 /**
  * O solicitante com o botão de PDF na mesma linha, fechando o formulário.
  *
@@ -101,7 +103,8 @@ export function comBotaoDePdf(original: ((props: FormFieldProps) => ReactNode) |
         <BotaoGerarPdf
           numero={props?.entity?.numero}
           titulo={props?.entity?.titulo ?? (typeof tituloDigitado === 'string' ? tituloDigitado : undefined)}
-          cliente={props?.entity?.planta?.nome}
+          // Sem planta cadastrada, o cliente digitado (o do formulário, que pode ter acabado de mudar)
+          cliente={props?.entity?.planta?.nome ?? textoDoFormulario(props?.formData?.cliente_nome) ?? props?.entity?.cliente_nome ?? undefined}
         />
       </div>
     );

@@ -398,6 +398,8 @@ export function ProgramacaoOSPage() {
 
         // Relacionamentos de origem (só incluir se existirem)
         ...(data.origem?.plantaId && { planta_id: data.origem.plantaId }),
+        // A instalação da solicitação sem planta, escolhida aqui: a API a grava na solicitação (28/out/2026)
+        ...(data.origem?.tipo === 'SOLICITACAO_SERVICO' && data.origem?.unidadeId && { unidade_id: data.origem.unidadeId }),
         ...(data.origem?.equipamentoId && { equipamento_id: data.origem.equipamentoId }),
         ...(data.origem?.anomaliaId && { anomalia_id: data.origem.anomaliaId }),
         ...(data.origem?.planoId && { plano_manutencao_id: data.origem.planoId }),

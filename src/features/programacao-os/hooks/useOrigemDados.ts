@@ -48,8 +48,11 @@ export interface SolicitacaoDisponivel {
   prioridade: string;
   status: string;
   local: string;
+  /** Ausente na solicitação sem planta: a programação pede a planta e a instalação */
   plantaId?: string;
   unidadeId?: string;
+  /** Quem pediu, na solicitação sem planta */
+  clienteNome?: string;
   plantaNome?: string;
   unidadeNome?: string;
   equipamentoId?: string;
@@ -86,8 +89,10 @@ function paraSolicitacaoDisponivel(solicitacao: SolicitacaoServico): Solicitacao
     prioridade: solicitacao.prioridade,
     status: solicitacao.status,
     local: solicitacao.local || '',
-    plantaId: solicitacao.planta_id,
-    unidadeId: solicitacao.unidade_id,
+    // Sem planta (28/out/2026): a programação pede a planta e a instalação
+    plantaId: solicitacao.planta_id ?? undefined,
+    unidadeId: solicitacao.unidade_id ?? undefined,
+    clienteNome: solicitacao.cliente_nome ?? undefined,
     plantaNome: solicitacao.planta?.nome,
     unidadeNome: solicitacao.unidade?.nome,
     equipamentoId: solicitacao.equipamento_id,

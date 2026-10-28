@@ -6,11 +6,12 @@ import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/core';
 import { BaseFilters } from '@/core';
 import { BaseModal } from '@/core';
-import { Plus, FilePenLine, RotateCcw } from 'lucide-react';
+import { Plus, FilePenLine, RotateCcw, Percent } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatApiError } from '@/utils/api-error';
-import { propostaApi, type Proposta } from '@/services/proposta.services';
+import { componentesDe, propostaApi, type Proposta } from '@/services/proposta.services';
 import { PropostaSection } from './PropostaSection';
+import { BdiPadraoSheet } from './BdiPadraoSheet';
 import { PropostaCorrenteProvider, comBotaoDePdf } from './BotaoGerarPdf';
 import { AbrirInstrucaoContext, ValoresDaPropostaContext, type ValoresDaProposta } from './proposta-contexto';
 import { EditarInstrucaoSheet } from '@/features/instrucoes/components/EditarInstrucaoSheet';
@@ -200,8 +201,10 @@ export function SolicitacoesPage() {
   /**
    * Grava o rascunho em sequencia: cada rota devolve os totais recalculados.
    *
-   * O BDI nao viaja: as colunas nascem com o padrao no proprio banco, e o
-   * `create` ja recalcula com ele. Mandar daqui so repetiria o mesmo numero.
+   * O BDI e o desconto vao por ultimo, numa escrita so: o `create` ja nasce com
+   * o BDI padrao, mas o rascunho pode te-lo ajustado — e o que a pessoa viu na
+   * tela e o que se grava. O desconto em reais e conferido contra o total, que
+   * so existe depois dos valores.
    */
   const gravarRascunhoProposta = async (id: string, rascunho: Proposta) => {
     if (rascunho.itens.length > 0) {
@@ -210,7 +213,20 @@ export function SolicitacoesPage() {
     if (rascunho.outros_custos.length > 0) {
       await propostaApi.salvarOutrosCustos(id, rascunho.outros_custos);
     }
+    if (rascunho.itens.length === 0 && rascunho.outros_custos.length === 0) return;
+    // Separados: o desconto recusado nao leva o BDI junto
+    await propostaApi.salvarCondicoes(id, componentesDe(rascunho));
+    if (rascunho.desconto_tipo && rascunho.desconto_valor) {
+      // O desconto em reais que passou do total (uma instrucao saiu depois) vale ate o
+      // total, como a tela mostrou; inteiro, a API o recusaria
+      const totalSemDesconto = rascunho.total_geral + rascunho.total_desconto;
+      const valor = rascunho.desconto_tipo === 'VALOR' ? Math.min(rascunho.desconto_valor, totalSemDesconto) : rascunho.desconto_valor;
+      await propostaApi.salvarCondicoes(id, { desconto_tipo: rascunho.desconto_tipo, desconto_valor: Math.round(valor * 100) / 100 });
+    }
   };
+
+  /** O BDI padrao da empresa, configurado pelo botao do cabecalho (28/out/2026) */
+  const [bdiPadraoAberto, setBdiPadraoAberto] = useState(false);
 
   /**
    * O render da proposta e montado aqui, e nao no form-config, porque so a
@@ -279,6 +295,8 @@ export function SolicitacoesPage() {
     // Comentário digitado e não enviado não some calado ao fechar (SN-48)
     if (rascunhoDoComentario.current && !window.confirm('Há um comentário não enviado. Fechar e descartar?')) return;
     rascunhoDoComentario.current = false;
+    // O rascunho do cadastro cancelado nao vai para o proximo cadastro
+    setRascunhoProposta(null);
     closeModal();
     solicitacoesActions.clearPendingAction();
   };
@@ -348,7 +366,7 @@ export function SolicitacoesPage() {
                   onFilterChange={handleFilterChange}
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={handleClearFilters}
                   className="btn-minimal-primary w-full sm:w-auto whitespace-nowrap flex-shrink-0 justify-center"
@@ -357,8 +375,22 @@ export function SolicitacoesPage() {
                   <RotateCcw className="mr-2 h-4 w-4" />
                   <span>Limpar Filtros</span>
                 </button>
+                {/* O lugar de configurar o BDI: quem monta proposta (solicitacoes.manage) */}
+                {temPermissao('solicitacoes.manage') && (
+                  <button
+                    onClick={() => setBdiPadraoAberto(true)}
+                    className="btn-minimal-primary w-full sm:w-auto whitespace-nowrap flex-shrink-0 justify-center"
+                    title="O BDI que as solicitações novas recebem"
+                  >
+                    <Percent className="mr-2 h-4 w-4" />
+                    <span>BDI padrão</span>
+                  </button>
+                )}
                 <button
-                  onClick={() => openModal('create')}
+                  onClick={() => {
+                    setRascunhoProposta(null);
+                    openModal('create');
+                  }}
                   className="btn-minimal-primary w-full sm:w-auto whitespace-nowrap flex-shrink-0 justify-center"
                 >
                   <Plus className="mr-2 h-4 w-4" />
@@ -441,11 +473,14 @@ export function SolicitacoesPage() {
               <EditarInstrucaoSheet
                 instrucaoId={instrucaoAberta}
                 onClose={() => setInstrucaoAberta(null)}
+                // O valor da proposta é cópia do da instrução: editada aqui, a linha dela se refaz
+                onSalvo={() => instrucaoAberta && valoresProposta?.refazer?.(instrucaoAberta.trim())}
               />
             </ValoresDaPropostaContext.Provider>
             </AbrirInstrucaoContext.Provider>
           </PropostaCorrenteProvider>
         )}
+        <BdiPadraoSheet aberto={bdiPadraoAberto} onClose={() => setBdiPadraoAberto(false)} />
       </Layout.Main>
     </Layout>
   );

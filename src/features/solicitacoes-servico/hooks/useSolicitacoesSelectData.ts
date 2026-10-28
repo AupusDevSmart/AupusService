@@ -5,7 +5,6 @@ import selectDataCache from '../services/selectDataCache';
 export function useSolicitacoesSelectData() {
   const [, forceUpdate] = useState({});
   const [loading, setLoading] = useState(false);
-  const [error] = useState<string | null>(null);
 
   useEffect(() => {
     // Carregar dados se ainda não foram carregados
@@ -26,12 +25,12 @@ export function useSolicitacoesSelectData() {
   }, []);
 
   return {
-    proprietarios: selectDataCache.getProprietarios(),
     plantas: selectDataCache.getPlantasOptions.bind(selectDataCache),
     proprietarioDaPlanta: selectDataCache.getProprietarioDaPlanta.bind(selectDataCache),
     unidades: selectDataCache.getUnidadesOptions.bind(selectDataCache),
     loading: loading,
-    error,
+    // A falha da carga: o seletor diz que não leu, em vez de "nenhuma instalação"
+    error: selectDataCache.getErro(),
     refetch: {
       proprietarios: () => selectDataCache.loadData(),
       plantas: () => selectDataCache.loadData(),

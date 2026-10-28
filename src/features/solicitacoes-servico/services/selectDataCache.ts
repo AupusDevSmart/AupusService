@@ -1,5 +1,7 @@
 // src/features/solicitacoes-servico/services/selectDataCache.ts
 import { api } from '@/config/api';
+import { formatApiError } from '@/utils/api-error';
+import { todasAsPaginas, type PaginaDaListagem } from '@/lib/planilha/todas-as-paginas';
 
 interface SelectOption {
   value: string;
@@ -28,11 +30,11 @@ interface UnidadeData {
 
 class SelectDataCache {
   private static instance: SelectDataCache;
-  private proprietarios: SelectOption[] = [];
   private plantas: PlantaData[] = [];
   private unidades: UnidadeData[] = [];
   private loading = false;
   private loaded = false;
+  private erro: string | null = null;
   private listeners: Set<() => void> = new Set();
 
   private constructor() {}
@@ -55,67 +57,46 @@ class SelectDataCache {
     this.listeners.forEach(listener => listener());
   }
 
+  /**
+   * Todas as plantas e instalações, uma vez por sessão.
+   *
+   * Paginado (28/out/2026): com uma página de 100, a planta ou a instalação da
+   * 101ª em diante não aparecia, e o combo dizia "nenhuma instalação nesta
+   * planta" — agora é ele que escolhe onde a programação da solicitação sem
+   * planta grava. O erro fica visível (`getErro`) e não marca como carregado: a
+   * próxima abertura tenta de novo. Antes cada falha virava lista vazia calada.
+   */
   async loadData() {
-    // Se já está carregando ou já carregou, não fazer nada
     if (this.loading || this.loaded) {
       return;
     }
 
     this.loading = true;
+    this.erro = null;
     this.notify();
 
+    const pagina = <T,>(rota: string) => async (page: number, limit: number) =>
+      (await api.get(rota, { params: { page, limit } })).data as PaginaDaListagem<T>;
+
     try {
-      const [proprietariosRes, plantasRes, unidadesRes] = await Promise.all([
-        api.get('/usuarios', { params: { limit: 100 } }).catch(err => {
-          console.error('Erro ao buscar proprietários:', err);
-          return { data: { data: [] } };
-        }),
-        api.get('/plantas', { params: { limit: 100 } }).catch(err => {
-          console.error('Erro ao buscar plantas:', err);
-          return { data: { data: [] } };
-        }),
-        api.get('/unidades', { params: { limit: 100 } }).catch(err => {
-          console.error('Erro ao buscar unidades:', err);
-          return { data: { data: [] } };
-        })
+      const [plantas, unidades] = await Promise.all([
+        todasAsPaginas(pagina<PlantaData>('/plantas')),
+        todasAsPaginas(pagina<UnidadeData>('/unidades')),
       ]);
-
-      // Processar proprietários
-      const usuarios = proprietariosRes.data.data || proprietariosRes.data || [];
-      this.proprietarios = usuarios.map((usuario: { id: string; nome: string }) => ({
-        value: usuario.id,
-        label: usuario.nome,
-      }));
-
-      // Processar plantas
-      const plantasData = plantasRes.data.data || plantasRes.data || [];
-      this.plantas = Array.isArray(plantasData) ? plantasData : [];
-
-      console.log('[CACHE] Plantas carregadas:', this.plantas.length);
-      if (this.plantas.length > 0) {
-        console.log('[CACHE] Exemplo de planta:', this.plantas[0]);
-      }
-
-      // Processar unidades
-      const unidadesData = unidadesRes.data.data || unidadesRes.data || [];
-      this.unidades = Array.isArray(unidadesData) ? unidadesData : [];
-
-      console.log('[CACHE] Unidades carregadas:', this.unidades.length);
-      if (this.unidades.length > 0) {
-        console.log('[CACHE] Exemplo de unidade:', this.unidades[0]);
-      }
-
+      this.plantas = plantas;
+      this.unidades = unidades;
       this.loaded = true;
-    } catch (error) {
-      console.error('SelectDataCache: Erro ao carregar dados:', error);
+    } catch (erro) {
+      this.erro = formatApiError(erro);
     } finally {
       this.loading = false;
       this.notify();
     }
   }
 
-  getProprietarios(): SelectOption[] {
-    return this.proprietarios;
+  /** A falha da última carga, para o seletor dizer que não leu (e não "nenhuma") */
+  getErro(): string | null {
+    return this.erro;
   }
 
   /**
@@ -229,7 +210,6 @@ class SelectDataCache {
 
   // Limpar cache quando necessário (ex: ao fazer logout)
   clearCache() {
-    this.proprietarios = [];
     this.plantas = [];
     this.unidades = [];
     this.loaded = false;

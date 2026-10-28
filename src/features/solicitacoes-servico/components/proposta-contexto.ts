@@ -21,6 +21,12 @@ export interface ValoresDaProposta {
   editavel: boolean;
   /** As instruções com alguma linha sem preço no cadastro: a sugestão a contou como zero */
   semPreco?: string[];
+  /**
+   * Refaz a linha de uma instrução pelo cadastro dela (valor e nome). Para a
+   * instrução editada de dentro da solicitação: o valor da proposta é cópia, e
+   * o card seguia mostrando o de antes da edição.
+   */
+  refazer?: (instrucaoId: string) => void;
 }
 
 export const ValoresDaPropostaContext = createContext<ValoresDaProposta | null>(null);

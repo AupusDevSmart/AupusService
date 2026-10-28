@@ -34,6 +34,9 @@ const proposta = (mudar: Partial<Proposta> = {}): Proposta => ({
   total_custo: 11758.5,
   total_bdi: 2909.94,
   total_geral: 14668.44,
+  desconto_tipo: null,
+  desconto_valor: null,
+  total_desconto: 0,
   ...mudar,
 });
 
@@ -74,6 +77,14 @@ describe('PDF da proposta', () => {
   it('o texto do PDF tem a letra de todo glifo: copiar o total dá o total', async () => {
     const arquivo = await renderToBuffer(pdfDaProposta({ proposta: proposta(), escopo: [] }));
     expect(tabelasToUnicode(arquivo).length).toBeGreaterThan(1);
+    expect(entradasVazias(arquivo)).toBe(0);
+  }, 30_000);
+
+  // O desconto (28/out/2026) entra nas parcelas, e o painel leva o total com ele
+  it('com desconto: desenha, e o texto segue legível', async () => {
+    const comDesconto = proposta({ desconto_tipo: 'PERCENTUAL', desconto_valor: 12.5, total_desconto: 1833.56, total_geral: 12834.88 });
+    const arquivo = await renderToBuffer(pdfDaProposta({ proposta: comDesconto, escopo: [] }));
+    expect(arquivo.subarray(0, 5).toString('latin1')).toBe('%PDF-');
     expect(entradasVazias(arquivo)).toBe(0);
   }, 30_000);
 });

@@ -26,6 +26,9 @@ interface Secao {
 
 const horas = (h: number) => `${h.toFixed(1).replace('.', ',')} h`;
 
+/** "12,5": o percentual do desconto como foi digitado */
+const percentualDoPdf = (valor: number) => valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+
 /** Linhas de descrição e valor, com o valor à direita */
 function Valores({ titulo, linhas }: { titulo: string; linhas: Array<{ descricao: string; valor: number }> }) {
   return (
@@ -132,6 +135,15 @@ function PropostaDocumento({
     ['Custo', moeda(custoBase)],
     [`BDI (${bdi}%)`, moeda(proposta.total_bdi)],
     ...(totalFD > 0 ? [['Faturamento direto', moeda(totalFD)] as [string, string]] : []),
+    // O desconto sai do total inteiro (28/out/2026); o painel já mostra o total com ele
+    ...(proposta.total_desconto > 0
+      ? [
+          [
+            proposta.desconto_tipo === 'PERCENTUAL' ? `Desconto (${percentualDoPdf(proposta.desconto_valor ?? 0)}%)` : 'Desconto',
+            `- ${moeda(proposta.total_desconto)}`,
+          ] as [string, string],
+        ]
+      : []),
   ];
 
   return (

@@ -56,7 +56,9 @@ vi.mock('@/services/instrucoes.services', () => ({
   instrucoesApi: {
     findOne: vi.fn(async (id: string) => {
       const achada = instrucoes[id];
-      if (!achada) throw new Error('não encontrada');
+      // FANTASMA: a que não existe mais (404); qualquer outra ausente: falha de rede
+      if (id === 'FANTASMA') throw Object.assign(new Error('não encontrada'), { isAxiosError: true, response: { status: 404 } });
+      if (!achada) throw new Error('rede');
       return achada;
     }),
   },
@@ -140,11 +142,22 @@ describe('montarDeInstrucoes', () => {
     expect(itens[0].preco_unitario).toBe(0);
   });
 
-  it('omite a instrução que não carrega, sem derrubar as outras', async () => {
+  it('omite a instrução que não existe mais (404), sem derrubar as outras', async () => {
     const itens = await montarDeInstrucoes(['A', 'FANTASMA']);
 
     expect(itens).toHaveLength(1);
     expect(itens[0].instrucao_id).toBe('A');
+  });
+
+  // Antes o catch virava "sem linha": a falha de rede tirava da proposta gravada a linha negociada
+  it('a falha de leitura de uma nova é erro; a já conhecida nem é lida', async () => {
+    const { instrucoesApi } = await import('@/services/instrucoes.services');
+    const ajustada: ItemProposta = { instrucao_id: 'A', descricao: 'A', quantidade: 1, preco_unitario: 5000, preco_unitario_original: 3200 };
+
+    await expect(montarDeInstrucoes(['A', 'SEM-REDE'], [ajustada])).rejects.toThrow('rede');
+    vi.mocked(instrucoesApi.findOne).mockClear();
+    expect(await montarDeInstrucoes(['A'], [ajustada])).toEqual([ajustada]);
+    expect(instrucoesApi.findOne).not.toHaveBeenCalled();
   });
 
   it('não chama a API quando não há instrução vinculada', async () => {

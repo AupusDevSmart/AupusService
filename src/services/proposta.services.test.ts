@@ -1,8 +1,10 @@
 // src/services/proposta.services.test.ts
 import { describe, expect, it } from 'vitest';
 import {
+  BDI_GOINFRA,
   calcularBdi,
   calcularRascunho,
+  descontoEmReais,
   propostaVazia,
   somaImpostos,
   type OutroCusto,
@@ -78,5 +80,41 @@ describe('totais do rascunho', () => {
     expect(total.total_custo).toBe(0);
     expect(total.total_bdi).toBe(0);
     expect(total.total_geral).toBe(0);
+  });
+});
+
+/**
+ * O desconto no rascunho (28/out/2026): a mesma conta do servidor, sobre o total
+ * inteiro (o faturamento direto junto), para o cadastro mostrar o total antes de
+ * a solicitação existir.
+ */
+describe('desconto do rascunho', () => {
+  const base = (): Proposta => ({
+    ...propostaVazia(),
+    itens: [{ descricao: 'Item', quantidade: 1, preco_unitario: 1000 }],
+    outros_custos: [{ descricao: 'Guindaste', valor: 200, faturamento_direto: true }],
+  });
+
+  it('percentual sobre o total inteiro: 10% de 1.504,38', () => {
+    const total = calcularRascunho({ ...base(), desconto_tipo: 'PERCENTUAL', desconto_valor: 10 });
+    expect(total.total_desconto).toBe(150.44);
+    expect(total.total_geral).toBe(1353.94);
+  });
+
+  it('em reais; maior que o total, para no total', () => {
+    expect(calcularRascunho({ ...base(), desconto_tipo: 'VALOR', desconto_valor: 500 }).total_geral).toBe(1004.38);
+    const demais = calcularRascunho({ ...base(), desconto_tipo: 'VALOR', desconto_valor: 5000 });
+    expect([demais.total_desconto, demais.total_geral]).toEqual([1504.38, 0]);
+  });
+
+  it('sem tipo ou sem valor, nada', () => {
+    expect(descontoEmReais(null, 10, 100)).toBe(0);
+    expect(descontoEmReais('VALOR', null, 100)).toBe(0);
+    expect(calcularRascunho(base()).total_geral).toBe(1504.38);
+  });
+
+  it('o rascunho nasce com o BDI que lhe derem (o padrão da empresa)', () => {
+    const comLucro10 = calcularRascunho({ ...base(), ...propostaVazia({ ...BDI_GOINFRA, bdi_lucro: 10 }), itens: base().itens });
+    expect(comLucro10.bdi_percentual).toBeCloseTo(36.65, 2);
   });
 });

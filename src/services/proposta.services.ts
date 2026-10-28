@@ -1,4 +1,5 @@
 // src/services/proposta.services.ts
+import { isAxiosError } from 'axios';
 import { api } from '@/config/api';
 
 /**
@@ -36,6 +37,45 @@ export interface OutroCusto {
   ordem?: number;
 }
 
+/** Como o desconto é dado (28/out/2026): um percentual ou um valor em reais */
+export type TipoDeDesconto = 'PERCENTUAL' | 'VALOR';
+
+/** Os nove componentes do BDI com o nome da tela, na ordem da fórmula do TCU */
+export const COMPONENTES_DO_BDI = [
+  { campo: 'bdi_administracao_central', rotulo: 'Administração central' },
+  { campo: 'bdi_seguro_garantia', rotulo: 'Seguro e garantia' },
+  { campo: 'bdi_taxa_risco', rotulo: 'Risco' },
+  { campo: 'bdi_despesas_financeiras', rotulo: 'Despesas financeiras' },
+  { campo: 'bdi_lucro', rotulo: 'Lucro' },
+  { campo: 'bdi_pis', rotulo: 'PIS' },
+  { campo: 'bdi_cofins', rotulo: 'COFINS' },
+  { campo: 'bdi_cprb', rotulo: 'CPRB' },
+  { campo: 'bdi_issqn', rotulo: 'ISS' },
+] as const;
+
+export type CampoDoBdi = (typeof COMPONENTES_DO_BDI)[number]['campo'];
+export type ComponentesDoBdi = Record<CampoDoBdi, number>;
+
+/** A tabela GOINFRA sem REIDI (30,44%): o padrão de antes, e o da linha que o SQL cria */
+export const BDI_GOINFRA: ComponentesDoBdi = {
+  bdi_administracao_central: 5,
+  bdi_seguro_garantia: 0.5,
+  bdi_taxa_risco: 0,
+  bdi_despesas_financeiras: 0.5,
+  bdi_lucro: 5,
+  bdi_pis: 0.65,
+  bdi_cofins: 3,
+  bdi_cprb: 4.5,
+  bdi_issqn: 6.5,
+};
+
+/** Os componentes de uma proposta (ou do padrão), em número */
+export const componentesDe = (origem: Partial<Record<CampoDoBdi, number | string | null>>): ComponentesDoBdi =>
+  Object.fromEntries(COMPONENTES_DO_BDI.map(({ campo }) => [campo, Number(origem[campo]) || 0])) as ComponentesDoBdi;
+
+/** O BDI padrão da empresa, como a API devolve: os componentes e o percentual que dão */
+export type BdiPadrao = ComponentesDoBdi & { bdi_percentual: number };
+
 export interface Proposta {
   itens: ItemProposta[];
   outros_custos: OutroCusto[];
@@ -56,7 +96,14 @@ export interface Proposta {
   bdi_percentual: number;
   total_custo: number;
   total_bdi: number;
+  /** O total da proposta, já com o desconto */
   total_geral: number;
+  /** O desconto (28/out/2026), sobre o total inteiro (o faturamento direto junto); null sem desconto */
+  desconto_tipo: TipoDeDesconto | null;
+  /** O digitado: o percentual ou os reais */
+  desconto_valor: number | null;
+  /** Os reais descontados, até o total */
+  total_desconto: number;
 }
 
 /**
@@ -113,19 +160,27 @@ class PropostaApiService {
   }
 
   /**
-   * Os componentes do BDI.
-   *
-   * Sem chamador hoje: o BDI fica no padrão e a tela não o edita mais. O método
-   * fica porque as colunas continuam gravadas por solicitação — o que saiu foi
-   * a edição, não o registro —, e é por aqui que uma proposta com BDI diferente
-   * seria ajustada no dia em que isso voltar a ser pedido.
+   * As condições: os componentes do BDI desta solicitação (ajustados no
+   * fechamento) e o desconto. `desconto_tipo: null` tira o desconto.
    */
   async salvarCondicoes(
     solicitacaoId: string,
-    dados: Partial<Record<string, number | string>>,
+    dados: Partial<ComponentesDoBdi> & { desconto_tipo?: TipoDeDesconto | null; desconto_valor?: number | null },
   ): Promise<Proposta> {
     const resposta = await api.put(`${this.base(solicitacaoId)}/condicoes`, dados);
     return normalizar(this.desembrulhar<Proposta>(resposta));
+  }
+
+  /** O BDI padrão da empresa: o que a solicitação nova copia */
+  async obterBdiPadrao(): Promise<BdiPadrao> {
+    const resposta = await api.get('/solicitacoes-servico/bdi-padrao');
+    return this.desembrulhar<BdiPadrao>(resposta);
+  }
+
+  /** Troca o BDI padrão: vale para as solicitações novas, as que existem ficam com o seu */
+  async salvarBdiPadrao(componentes: ComponentesDoBdi): Promise<BdiPadrao> {
+    const resposta = await api.put('/solicitacoes-servico/bdi-padrao', componentesDe(componentes));
+    return this.desembrulhar<BdiPadrao>(resposta);
   }
 
   /** Refaz os valores a partir do catálogo. Descarta o que foi ajustado. */
@@ -151,6 +206,10 @@ function normalizar(p: Proposta): Proposta {
     ...p,
     itens: Array.isArray(p?.itens) ? p.itens : [],
     outros_custos: Array.isArray(p?.outros_custos) ? p.outros_custos : [],
+    // A API de antes do desconto não manda os três: sem desconto
+    desconto_tipo: p?.desconto_tipo ?? null,
+    desconto_valor: p?.desconto_valor ?? null,
+    total_desconto: Number(p?.total_desconto) || 0,
   };
 }
 
@@ -164,30 +223,25 @@ function normalizar(p: Proposta): Proposta {
  * nasce.
  *
  * Os componentes do BDI vêm preenchidos porque o rascunho precisa deles para
- * ter total antes de existir no banco. Gravados, quem manda é o servidor.
+ * ter total antes de existir no banco: os do padrão da empresa, que a seção lê
+ * da API (até lá, o GOINFRA). Gravados, quem manda é o servidor.
  */
-export const propostaVazia = (): Proposta => ({
+export const propostaVazia = (bdi: ComponentesDoBdi = BDI_GOINFRA): Proposta => ({
   itens: [],
   outros_custos: [],
-  // Tabela GOINFRA sem REIDI: dá BDI de 30,44%.
   bdi_regime: 'SEM_REIDI',
-  bdi_administracao_central: 5,
-  bdi_seguro_garantia: 0.5,
-  bdi_taxa_risco: 0,
-  bdi_despesas_financeiras: 0.5,
-  bdi_lucro: 5,
-  bdi_pis: 0.65,
-  bdi_cofins: 3,
-  bdi_cprb: 4.5,
-  bdi_issqn: 6.5,
+  ...bdi,
   bdi_percentual: 0,
   total_custo: 0,
   total_bdi: 0,
   total_geral: 0,
+  desconto_tipo: null,
+  desconto_valor: null,
+  total_desconto: 0,
 });
 
 /** Os quatro impostos somados, que é o I da fórmula. */
-export const somaImpostos = (p: Proposta) =>
+export const somaImpostos = (p: ComponentesDoBdi) =>
   (p.bdi_pis || 0) + (p.bdi_cofins || 0) + (p.bdi_cprb || 0) + (p.bdi_issqn || 0);
 
 /**
@@ -195,7 +249,7 @@ export const somaImpostos = (p: Proposta) =>
  *
  *   BDI = [ (1+AC+SG+R) × (1+DF) × (1+L) / (1-I) ] - 1
  */
-export function calcularBdi(p: Proposta): number {
+export function calcularBdi(p: ComponentesDoBdi): number {
   const f = (v: number) => (v || 0) / 100;
   const i = f(somaImpostos(p));
   if (i >= 1) return 0;
@@ -229,14 +283,29 @@ export function calcularRascunho(p: Proposta): Proposta {
   const baseBdi = custoItens + comum;
   const bdi = calcularBdi(p);
   const totalBdi = cent(baseBdi * bdi);
+  const totalSemDesconto = cent(baseBdi + totalBdi + fd);
+  const desconto = descontoEmReais(p.desconto_tipo, p.desconto_valor, totalSemDesconto);
 
   return {
     ...p,
     bdi_percentual: Math.round(bdi * 100 * 1000) / 1000,
     total_custo: cent(custoItens + comum + fd),
     total_bdi: totalBdi,
-    total_geral: cent(baseBdi + totalBdi + fd),
+    total_desconto: desconto,
+    total_geral: cent(totalSemDesconto - desconto),
   };
+}
+
+/**
+ * Os reais do desconto, sobre o total inteiro (o faturamento direto junto),
+ * até o total: a mesma conta do servidor (`desconto-da-proposta.ts`), para o
+ * rascunho ter número antes de existir.
+ */
+export function descontoEmReais(tipo: TipoDeDesconto | null, valor: number | null, total: number): number {
+  if (!tipo || !valor || valor <= 0) return 0;
+  const base = Math.max(total, 0);
+  const pedido = tipo === 'PERCENTUAL' ? Math.round(base * valor) / 100 : Math.round(valor * 100) / 100;
+  return Math.min(pedido, base);
 }
 
 /**
@@ -281,42 +350,63 @@ export async function montarDeInstrucoes(
       .map((i) => [String(i.instrucao_id).trim(), i]),
   );
 
+  // A já conhecida não precisa do cadastro: a falha de rede na leitura dela não pode
+  // tirá-la da proposta (antes, o `catch` virava "sem linha" e a lista gravada a perdia)
+  // A nova que não existe mais (404) fica de fora (quem chama avisa); a que não se leu
+  // por outra falha é erro (quem chama avisa e não grava), e não uma linha a menos
+  const ids = instrucaoIds.map((id) => id.trim());
   const detalhes = await Promise.all(
-    instrucaoIds.map((id) => instrucoesApi.findOne(id.trim()).catch(() => null)),
+    ids.map((id) =>
+      porInstrucao.has(id)
+        ? Promise.resolve(null)
+        : instrucoesApi.findOne(id).catch((erro: unknown) => {
+            if (isAxiosError(erro) && erro.response?.status === 404) return null;
+            throw erro;
+          }),
+    ),
   );
 
-  const itens: ItemProposta[] = [];
-
-  for (const instrucao of detalhes) {
-    if (!instrucao) continue;
-
-    const id = String(instrucao.id).trim();
+  return ids.flatMap((id, i) => {
     const existente = porInstrucao.get(id);
-    if (existente) {
-      itens.push(existente);
-      continue;
-    }
+    if (existente) return [existente];
+    const instrucao = detalhes[i];
+    return instrucao ? [linhaDaInstrucao(instrucao)] : [];
+  });
+}
 
-    // O custo de cada linha vem pronto do servidor (`subtotal`, a conta do
-    // AupusProject, SN-85): a mesma da proposta do backend, recursos e
-    // maquinário. A linha sem preço entra como zero: é sugestão, e a pessoa ajusta
-    const linhas = [...(instrucao.recursos ?? []), ...(instrucao.maquinarios ?? [])];
-    const soma = linhas.reduce((total, linha) => total + (Number(linha.subtotal ?? 0) || 0), 0);
+/** O que a linha da proposta lê da instrução (o `findOne` de `instrucoes.services`) */
+export interface InstrucaoParaAProposta {
+  id: string;
+  codigo?: string | null;
+  nome: string;
+  recursos?: Array<{ subtotal?: number | string | null }> | null;
+  maquinarios?: Array<{ subtotal?: number | string | null }> | null;
+}
 
-    const valor = Math.round(soma * 100) / 100;
+/**
+ * A linha da proposta de uma instrução, valendo a soma dos recursos dela.
+ *
+ * O custo de cada linha vem pronto do servidor (`subtotal`, a conta do
+ * AupusProject, SN-85): a mesma da proposta do backend, recursos e maquinário.
+ * A linha sem preço entra como zero: é sugestão, e a pessoa ajusta.
+ *
+ * Também refaz a linha de uma instrução editada de dentro da solicitação: o
+ * valor da proposta é cópia, e sem isso o card seguia com o valor de antes.
+ */
+export function linhaDaInstrucao(instrucao: InstrucaoParaAProposta): ItemProposta {
+  const linhas = [...(instrucao.recursos ?? []), ...(instrucao.maquinarios ?? [])];
+  const soma = linhas.reduce((total, linha) => total + (Number(linha.subtotal ?? 0) || 0), 0);
+  const valor = Math.round(soma * 100) / 100;
 
-    itens.push({
-      instrucao_id: id,
-      descricao: rotuloInstrucao(instrucao.codigo, instrucao.nome),
-      quantidade: 1,
-      preco_unitario_original: valor,
-      preco_unitario: valor,
-      // A linha sem preço entrou como zero: a tela avisa, senão o valor parece completo
-      ...(linhas.some((linha) => linha.subtotal == null) && { sem_preco_no_cadastro: true }),
-    });
-  }
-
-  return itens;
+  return {
+    instrucao_id: String(instrucao.id).trim(),
+    descricao: rotuloInstrucao(instrucao.codigo, instrucao.nome),
+    quantidade: 1,
+    preco_unitario_original: valor,
+    preco_unitario: valor,
+    // A linha sem preço entrou como zero: a tela avisa, senão o valor parece completo
+    ...(linhas.some((linha) => linha.subtotal == null) && { sem_preco_no_cadastro: true }),
+  };
 }
 
 /** "INST-003 - Troca de rolamento", ou só o nome quando não há código. */
@@ -324,6 +414,10 @@ export function rotuloInstrucao(codigo: string | null | undefined, nome: string)
   const limpa = codigo?.trim();
   return limpa ? `${limpa} - ${nome}` : nome;
 }
+
+/** "30,44": o percentual com as duas casas da planilha de referência (o banco guarda três) */
+export const percentualNaTela = (valor: number) =>
+  (Number.isFinite(valor) ? valor : 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Reais, com os dois centavos sempre visíveis. */
 export const moeda = (valor: number) =>

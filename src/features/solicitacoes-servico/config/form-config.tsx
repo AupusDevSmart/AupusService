@@ -3,6 +3,7 @@ import { FormField, FormFieldProps } from '@/types/base';
 import type { SolicitacaoServico } from '../types';
 import { SimpleCascadeSelector } from '../components/SimpleCascadeSelector';
 import { AuthService } from '@/services/auth.service';
+import { useUserStore } from '@/store/useUserStore';
 import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -63,6 +64,9 @@ const SolicitanteRender = ({ value, onChange, mode, entity }: FormFieldProps & {
   );
 };
 
+/** Os papéis que veem só as próprias plantas (a regra do escopo da API) */
+const temEscopoPorPlanta = () => ['proprietario', 'operador'].includes(useUserStore.getState().getUserRole() ?? '');
+
 export const solicitacoesFormFields: FormField[] = [
   {
     key: 'titulo',
@@ -103,6 +107,20 @@ export const solicitacoesFormFields: FormField[] = [
     type: 'text',
     required: false,
     hideOnMode: ['create', 'edit', 'view'], // Sempre oculto
+  },
+  // Planta e instalação são opcionais: muita solicitação não vira OS, e criar
+  // usuário, planta e instalação para cada uma era trabalho jogado fora. Sem
+  // planta, quem pediu fica aqui (vai na lista e no PDF da proposta); a planta e
+  // a instalação se escolhem ao programar. Com planta, o cliente é o dela.
+  {
+    key: 'cliente_nome',
+    label: 'Cliente',
+    type: 'text',
+    required: false,
+    colSpan: 2,
+    placeholder: 'Sem planta cadastrada: o nome de quem pediu',
+    // Só a equipe cadastra sem planta: quem tem escopo por planta (cliente, técnico) escolhe a dele
+    condition: (_entidade, dados) => !dados?.planta_id && !temEscopoPorPlanta(),
   },
   {
     key: 'descricao',
@@ -169,6 +187,8 @@ export const solicitacoesFormFields: FormField[] = [
     type: 'custom',
     required: false,
     colSpan: 2,
+    // Lista desde o começo: o BaseModal semeia o custom com '', e o "" ia para a API (400)
+    defaultValue: [],
   },
   // Proposta comercial, depois das instrucoes e antes do solicitante: ela nasce
   // do que a instrucao traz, entao vem logo apos o escopo.

@@ -1,7 +1,7 @@
 // src/features/solicitacoes-servico/components/InstrucoesSelector.tsx
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, X, FileText } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { Combobox } from '@/core';
 import { toast } from 'sonner';
 import { instrucoesApi, opcaoDaInstrucao } from '@/services/instrucoes.services';
@@ -189,13 +189,7 @@ export function InstrucoesSelector({ value, onChange, disabled, entity }: Instru
         </div>
       )}
 
-      {selectedIds.length === 0 && !adding && (
-        <div className="text-center p-6 border-2 border-dashed border-muted-foreground/25 rounded-lg">
-          <FileText className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Nenhuma instrução vinculada</p>
-        </div>
-      )}
-
+      {/* Sem instrução, nada: o quadro tracejado de "nenhuma vinculada" ocupava meio sheet para dizer o que o + já diz */}
       <div className="space-y-2">
         {selectedIds.map((id) => {
           const meta = getMeta(id);

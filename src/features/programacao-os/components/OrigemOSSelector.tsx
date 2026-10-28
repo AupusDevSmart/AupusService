@@ -4,6 +4,7 @@ import { AlertTriangle, ExternalLink, FilePenLine, Info, Settings } from 'lucide
 import { Button } from '@/components/ui/button';
 import { AssistentePassos, type PassoDoAssistente } from '@/components/common/AssistentePassos';
 import { DetalheDaOrigemSheet, type OrigemAberta } from './DetalheDaOrigemSheet';
+import { SimpleCascadeSelector } from '@/features/solicitacoes-servico/components/SimpleCascadeSelector';
 import { useOrigemDados, type AnomaliaDisponivel, type PlanoDisponivel, type SolicitacaoDisponivel } from '../hooks/useOrigemDados';
 
 import {
@@ -48,7 +49,8 @@ function opcaoDaSolicitacao(s: SolicitacaoDisponivel): OpcaoDaLista {
   return {
     id: String(s.id).trim(),
     titulo: s.titulo,
-    subtitulo: [s.local, s.tipo, s.plantaNome, s.unidadeNome, s.solicitanteNome].filter(Boolean).join(' · '),
+    // Sem planta, o cliente em texto: a linha não fica sem dono (e a busca o acha)
+    subtitulo: [s.local, s.tipo, s.plantaNome ?? s.clienteNome, s.unidadeNome, s.solicitanteNome].filter(Boolean).join(' · '),
     etiquetas: [{ texto: s.numero }, { texto: s.prioridade, alerta: alerta(s.prioridade) }],
   };
 }
@@ -314,8 +316,13 @@ export function OrigemOSSelector({
           ? { tipo: 'PLANO_MANUTENCAO', id: planoId }
           : null;
 
+  // A solicitação sem planta (28/out/2026): a planta e a instalação se escolhem
+  // aqui, e a API as grava de volta na solicitação ao criar a programação
+  const solicitacaoSemPlanta = tipo === 'SOLICITACAO_SERVICO' && Boolean(solicitacaoEscolhida) && !solicitacaoEscolhida?.plantaId;
+
   if (escolhido && !escolhendo) {
     return (
+      <div className="space-y-3">
       <div className="flex items-start justify-between gap-3 py-1">
         <div className="min-w-0 flex-1">
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -359,6 +366,27 @@ export function OrigemOSSelector({
         </div>
 
         <DetalheDaOrigemSheet origem={detalhe} onClose={() => setDetalhe(null)} />
+      </div>
+
+      {solicitacaoSemPlanta && !disabled && (
+        <div className="space-y-2 rounded-md border p-3">
+          <p className="text-xs text-muted-foreground">
+            {solicitacaoEscolhida?.clienteNome ? `Solicitação de ${solicitacaoEscolhida.clienteNome}, sem planta cadastrada. ` : 'Solicitação sem planta cadastrada. '}
+            Escolha onde a OS será feita: a planta e a instalação ficam gravadas também na solicitação.
+          </p>
+          <SimpleCascadeSelector
+            formData={{ planta_id: value.plantaId, unidade_id: value.unidadeId }}
+            onChange={() => {}}
+            onMultipleChange={(lugar) =>
+              onChange({
+                ...value,
+                plantaId: lugar.planta_id !== undefined ? String(lugar.planta_id ?? '') : value.plantaId,
+                unidadeId: String(lugar.unidade_id ?? ''),
+              })
+            }
+          />
+        </div>
+      )}
       </div>
     );
   }
