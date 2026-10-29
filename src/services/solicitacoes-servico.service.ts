@@ -21,8 +21,11 @@ export interface SolicitacoesResponse {
 export interface SolicitacoesStats {
   total: number;
   registradas: number;
+  /** Com a proposta revisada: prontas para programar (29/out/2026) */
+  revisadas?: number;
   programadas: number;
   finalizadas: number;
+  nao_aprovadas?: number;
   porTipo: Record<string, number>;
   porPrioridade: Record<string, number>;
 }

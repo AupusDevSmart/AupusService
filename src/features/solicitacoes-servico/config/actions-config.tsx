@@ -1,5 +1,5 @@
 // src/features/solicitacoes-servico/config/actions-config.tsx
-import { Eye, Edit, Trash2, CalendarPlus, ExternalLink } from 'lucide-react';
+import { Eye, Edit, Trash2, CalendarPlus, ExternalLink, FileCheck, FileX, RotateCcw } from 'lucide-react';
 import type { Permissao } from '@/types/dtos/usuarios-dto';
 import { atalhoDaOrigem } from '@/features/programacao-os/utils/link-de-programacao';
 import { TableAction } from '@/core';
@@ -9,6 +9,10 @@ interface CreateSolicitacoesActionsProps {
   onView: (solicitacao: SolicitacaoServico) => void;
   onEdit: (solicitacao: SolicitacaoServico) => void;
   onDelete: (solicitacao: SolicitacaoServico) => void;
+  /** A revisão da proposta (29/out/2026); sem eles, as ações não aparecem */
+  onRevisar?: (solicitacao: SolicitacaoServico) => void;
+  onReabrir?: (solicitacao: SolicitacaoServico) => void;
+  onNaoAprovada?: (solicitacao: SolicitacaoServico) => void;
   /** Leva à programação com a solicitação escolhida (ou à programação dela) */
   onProgramacao?: (solicitacao: SolicitacaoServico) => void;
   temPermissao?: (...perms: Permissao[]) => boolean;
@@ -19,11 +23,16 @@ export function createSolicitacoesTableActions({
   onEdit,
   onDelete,
   onProgramacao,
+  onRevisar,
+  onReabrir,
+  onNaoAprovada,
   temPermissao = () => true,
 }: CreateSolicitacoesActionsProps): TableAction<SolicitacaoServico>[] {
+  // Quem monta a proposta também a revisa (decisão do usuário, 29/out/2026)
+  const montaProposta = () => temPermissao('solicitacoes.manage');
   // Mesma regra do botão do sheet (atalhoDaOrigem)
   const podeAtalho = (solicitacao: SolicitacaoServico, rotulo: string) => {
-    const atalho = atalhoDaOrigem(solicitacao.status);
+    const atalho = atalhoDaOrigem(solicitacao.status, 'SOLICITACAO_SERVICO');
     return Boolean(onProgramacao) && atalho?.rotulo === rotulo && temPermissao(atalho.permissao);
   };
 
@@ -44,6 +53,22 @@ export function createSolicitacoesTableActions({
       condition: (solicitacao) => solicitacao.status === 'REGISTRADA',
     },
     {
+      key: 'revisar',
+      label: 'Revisar proposta',
+      icon: FileCheck,
+      onClick: (solicitacao) => onRevisar?.(solicitacao),
+      variant: 'default',
+      condition: (solicitacao) => Boolean(onRevisar) && montaProposta() && solicitacao.status === 'REGISTRADA',
+    },
+    {
+      key: 'reabrir',
+      label: 'Reabrir proposta',
+      icon: RotateCcw,
+      onClick: (solicitacao) => onReabrir?.(solicitacao),
+      variant: 'default',
+      condition: (solicitacao) => Boolean(onReabrir) && montaProposta() && ['PROPOSTA_REVISADA', 'NAO_APROVADA'].includes(solicitacao.status),
+    },
+    {
       key: 'programar',
       label: 'Programar',
       icon: CalendarPlus,
@@ -58,6 +83,14 @@ export function createSolicitacoesTableActions({
       onClick: (solicitacao) => onProgramacao?.(solicitacao),
       variant: 'default',
       condition: (solicitacao) => podeAtalho(solicitacao, 'Ver programação'),
+    },
+    {
+      key: 'nao_aprovada',
+      label: 'Não aprovada',
+      icon: FileX,
+      onClick: (solicitacao) => onNaoAprovada?.(solicitacao),
+      variant: 'destructive',
+      condition: (solicitacao) => Boolean(onNaoAprovada) && montaProposta() && ['REGISTRADA', 'PROPOSTA_REVISADA'].includes(solicitacao.status),
     },
     {
       key: 'delete',

@@ -1,6 +1,7 @@
 // src/services/proposta.services.ts
 import { isAxiosError } from 'axios';
 import { api } from '@/config/api';
+import { contaDaProposta, totalDaLinha, type TabelaDeLogistica } from '@/services/conta-da-proposta';
 
 /**
  * Uma linha da proposta: uma instrução vinculada e o valor fechado dela.
@@ -19,7 +20,10 @@ export interface ItemProposta {
   quantidade: number;
   /** A soma do catálogo, que foi a sugestão inicial. Régua da variação. */
   preco_unitario_original?: number | null;
-  preco_unitario: number;
+  /** O custo da linha (o cliente não o recebe na conta nova: vem nulo) */
+  preco_unitario: number | null;
+  /** O preço de venda da linha (a parte dela no preço dos serviços); nulo na conta do BDI */
+  valor_venda?: number | null;
   ordem?: number;
   /**
    * Só na tela (o payload é montado campo a campo): a sugestão contou como zero
@@ -31,8 +35,9 @@ export interface ItemProposta {
 export interface OutroCusto {
   id?: string;
   descricao: string;
-  valor: number;
-  /** O cliente paga o fornecedor direto — fica fora da base do imposto. */
+  /** Nulo para quem não vê o custo (o adicional da Aupus, para o cliente) */
+  valor: number | null;
+  /** O cliente paga o fornecedor direto: fora do imposto e da margem da Aupus. */
   faturamento_direto: boolean;
   ordem?: number;
 }
@@ -40,79 +45,136 @@ export interface OutroCusto {
 /** Como o desconto é dado (28/out/2026): um percentual ou um valor em reais */
 export type TipoDeDesconto = 'PERCENTUAL' | 'VALOR';
 
-/** Os nove componentes do BDI com o nome da tela, na ordem da fórmula do TCU */
-export const COMPONENTES_DO_BDI = [
-  { campo: 'bdi_administracao_central', rotulo: 'Administração central' },
-  { campo: 'bdi_seguro_garantia', rotulo: 'Seguro e garantia' },
-  { campo: 'bdi_taxa_risco', rotulo: 'Risco' },
-  { campo: 'bdi_despesas_financeiras', rotulo: 'Despesas financeiras' },
-  { campo: 'bdi_lucro', rotulo: 'Lucro' },
-  { campo: 'bdi_pis', rotulo: 'PIS' },
-  { campo: 'bdi_cofins', rotulo: 'COFINS' },
-  { campo: 'bdi_cprb', rotulo: 'CPRB' },
-  { campo: 'bdi_issqn', rotulo: 'ISS' },
-] as const;
+export type { TabelaDeLogistica };
 
-export type CampoDoBdi = (typeof COMPONENTES_DO_BDI)[number]['campo'];
-export type ComponentesDoBdi = Record<CampoDoBdi, number>;
+/**
+ * Uma linha de frete, deslocamento ou diária (29/out/2026). Cada tabela usa as
+ * suas colunas (`totalDaLinha`); o total é do servidor (no rascunho, da cópia).
+ */
+export interface LinhaDeLogistica {
+  id?: string;
+  tabela: TabelaDeLogistica;
+  ativo: boolean;
+  /** O recurso do catálogo de onde o valor veio (copiado) */
+  recurso_id?: string | null;
+  descricao: string;
+  quantidade?: number | null;
+  valor_unitario?: number | null;
+  dias?: number | null;
+  km?: number | null;
+  valor_km?: number | null;
+  valor_fixo?: number | null;
+  total: number | null;
+  ordem?: number;
+}
 
-/** A tabela GOINFRA sem REIDI (30,44%): o padrão de antes, e o da linha que o SQL cria */
-export const BDI_GOINFRA: ComponentesDoBdi = {
-  bdi_administracao_central: 5,
-  bdi_seguro_garantia: 0.5,
-  bdi_taxa_risco: 0,
-  bdi_despesas_financeiras: 0.5,
-  bdi_lucro: 5,
-  bdi_pis: 0.65,
-  bdi_cofins: 3,
-  bdi_cprb: 4.5,
-  bdi_issqn: 6.5,
-};
+/** Os percentuais da proposta: copiados dos padrões ao criar, ajustáveis nela */
+export interface PercentuaisDaProposta {
+  imposto_percentual: number | null;
+  margem_percentual: number | null;
+  adm_servicos_percentual: number | null;
+  adm_fd_percentual: number | null;
+}
 
-/** Os componentes de uma proposta (ou do padrão), em número */
-export const componentesDe = (origem: Partial<Record<CampoDoBdi, number | string | null>>): ComponentesDoBdi =>
-  Object.fromEntries(COMPONENTES_DO_BDI.map(({ campo }) => [campo, Number(origem[campo]) || 0])) as ComponentesDoBdi;
+/** O planejamento que a conta e a programação usam */
+export interface PlanejamentoDaProposta {
+  distancia_km: number | null;
+  distancia_ida_volta_km: number | null;
+  dias_previstos: number | null;
+  pessoas_previstas: number | null;
+  noites_fora: number | null;
+}
 
-/** O BDI padrão da empresa, como a API devolve: os componentes e o percentual que dão */
-export type BdiPadrao = ComponentesDoBdi & { bdi_percentual: number };
+/** A memória da conta, para o fechamento da tela (interna: o cliente não a recebe) */
+export interface FechamentoDaProposta {
+  custo_instrucoes: number;
+  custo_logistica: number;
+  custo_adicionais: number;
+  custo_servicos: number;
+  preco_servicos: number;
+  administracao: number;
+  preco_administracao: number;
+  total_aupus_sem_desconto: number;
+  total_geral_sem_desconto: number;
+  desconto_pedido: number;
+}
 
-export interface Proposta {
+export interface Proposta extends PercentuaisDaProposta, PlanejamentoDaProposta {
+  /** IMPOSTO_MARGEM (29/out/2026) ou BDI: a proposta de antes, só leitura */
+  conta_da_proposta: 'IMPOSTO_MARGEM' | 'BDI';
   itens: ItemProposta[];
   outros_custos: OutroCusto[];
+  logistica: LinhaDeLogistica[];
   /** As instruções cujo valor sugerido conta como zero alguma linha sem preço no cadastro (SN-86) */
   instrucoes_sem_preco?: string[];
-  /** SEM_REIDI ou COM_REIDI. O REIDI desonera PIS e COFINS. */
-  bdi_regime: string;
-  bdi_administracao_central: number;
-  bdi_seguro_garantia: number;
-  bdi_taxa_risco: number;
-  bdi_despesas_financeiras: number;
-  bdi_lucro: number;
-  bdi_pis: number;
-  bdi_cofins: number;
-  bdi_cprb: number;
-  bdi_issqn: number;
-  /** O resultado da fórmula, calculado pelo servidor. */
-  bdi_percentual: number;
-  total_custo: number;
-  total_bdi: number;
-  /** O total da proposta, já com o desconto */
-  total_geral: number;
-  /** O desconto (28/out/2026), sobre o total inteiro (o faturamento direto junto); null sem desconto */
+  /** As horas dos passos das instruções em jornadas de 8 h, arredondado para cima */
+  dias_sugeridos?: number | null;
+  /** "AAAA-MM-DD" */
+  validade_proposta: string | null;
+  condicoes_comerciais: string | null;
+  // Os totais gravados (nulos para quem não os vê)
+  total_custo: number | null;
+  total_servicos: number | null;
+  total_fd: number | null;
+  total_administracao: number | null;
+  /** O faturamento da Aupus, já com o desconto */
+  total_aupus: number | null;
+  valor_imposto: number | null;
+  margem_efetiva: number | null;
+  /** O investimento global do cliente: total Aupus + faturamento direto */
+  total_geral: number | null;
   desconto_tipo: TipoDeDesconto | null;
-  /** O digitado: o percentual ou os reais */
   desconto_valor: number | null;
-  /** Os reais descontados, até o total */
+  /** Os reais descontados, até o faturamento da Aupus */
   total_desconto: number;
+  fechamento: FechamentoDaProposta | null;
+  /** O preço de venda da logística e dos adicionais (uma linha cada no PDF) */
+  venda: { logistica: number; adicionais: number } | null;
+  /** A conta de antes (BDI): o percentual e o valor, para a proposta que ficou como documento */
+  bdi_percentual?: number | null;
+  total_bdi?: number | null;
+}
+
+/** O que as condições gravam: percentuais, planejamento, validade, condições comerciais e desconto */
+export type CondicoesDaProposta = Partial<PercentuaisDaProposta & PlanejamentoDaProposta> & {
+  validade_proposta?: string | null;
+  condicoes_comerciais?: string | null;
+  desconto_tipo?: TipoDeDesconto | null;
+  desconto_valor?: number | null;
+};
+
+/** Os percentuais padrão da empresa (29/out/2026, no lugar do BDI padrão) */
+export interface PadroesDaProposta {
+  imposto_percentual: number;
+  margem_percentual: number;
+  adm_servicos_percentual: number;
+  adm_fd_percentual: number;
+}
+
+/**
+ * Até os padrões da empresa chegarem da API, o rascunho fica sem percentual (o
+ * preço sai igual ao custo por um instante). Os números não ficam no código: o
+ * repositório é público e o cliente baixa este JavaScript.
+ */
+const SEM_PADROES: PercentuaisDaProposta = { imposto_percentual: null, margem_percentual: null, adm_servicos_percentual: null, adm_fd_percentual: null };
+
+/** O que a programação herda da proposta revisada (29/out/2026) */
+export interface HerancaDaProposta {
+  valores_das_instrucoes: { instrucao_id: string; valor: number }[];
+  itens_orcamento: { descricao: string; valor: number; natureza: string }[];
+  necessita_veiculo: boolean;
+  /** As linhas de instrução da proposta sem vínculo (ou com a instrução excluída): ficam de fora */
+  sem_vinculo?: string[];
+  dias_previstos: number | null;
+  pessoas_previstas: number | null;
 }
 
 /**
  * A proposta comercial de uma solicitação.
  *
  * Todas as escritas devolvem a proposta inteira, já com os totais recalculados
- * pelo servidor. O front não repete a fórmula: tela, listagem e PDF têm que
- * mostrar o mesmo número, e três implementações da mesma conta é como elas
- * começam a divergir.
+ * pelo servidor. O front não repete a fórmula fora do rascunho: tela, listagem
+ * e PDF têm que mostrar o mesmo número.
  */
 class PropostaApiService {
   private base(solicitacaoId: string) {
@@ -133,7 +195,7 @@ class PropostaApiService {
 
   async salvarItens(solicitacaoId: string, itens: ItemProposta[]): Promise<Proposta> {
     const resposta = await api.put(`${this.base(solicitacaoId)}/itens`, {
-      // Só o que o backend aceita: `id` e `ordem` são dele, e reenviá-los
+      // Só o que o backend aceita: `id`, `ordem` e `valor_venda` são dele, e reenviá-los
       // esbarraria no forbidNonWhitelisted.
       itens: itens.map((i) => ({
         instrucao_id: i.instrucao_id ?? null,
@@ -141,7 +203,7 @@ class PropostaApiService {
         descricao: i.descricao,
         unidade: i.unidade ?? null,
         quantidade: i.quantidade,
-        preco_unitario: i.preco_unitario,
+        preco_unitario: i.preco_unitario ?? 0,
         preco_unitario_original: i.preco_unitario_original ?? null,
       })),
     });
@@ -152,41 +214,77 @@ class PropostaApiService {
     const resposta = await api.put(`${this.base(solicitacaoId)}/outros-custos`, {
       custos: custos.map((c) => ({
         descricao: c.descricao,
-        valor: c.valor,
+        valor: c.valor ?? 0,
         faturamento_direto: c.faturamento_direto,
       })),
     });
     return normalizar(this.desembrulhar<Proposta>(resposta));
   }
 
-  /**
-   * As condições: os componentes do BDI desta solicitação (ajustados no
-   * fechamento) e o desconto. `desconto_tipo: null` tira o desconto.
-   */
-  async salvarCondicoes(
-    solicitacaoId: string,
-    dados: Partial<ComponentesDoBdi> & { desconto_tipo?: TipoDeDesconto | null; desconto_valor?: number | null },
-  ): Promise<Proposta> {
-    const resposta = await api.put(`${this.base(solicitacaoId)}/condicoes`, dados);
+  /** Troca uma tabela de logística inteira; o total de cada linha é do servidor */
+  async salvarLogistica(solicitacaoId: string, tabela: TabelaDeLogistica, linhas: LinhaDeLogistica[]): Promise<Proposta> {
+    const resposta = await api.put(`${this.base(solicitacaoId)}/logistica/${tabela.toLowerCase()}`, {
+      linhas: linhas.map((l) => ({
+        ativo: l.ativo,
+        recurso_id: l.recurso_id ?? null,
+        descricao: l.descricao,
+        quantidade: l.quantidade ?? null,
+        valor_unitario: l.valor_unitario ?? null,
+        dias: l.dias ?? null,
+        km: l.km ?? null,
+        valor_km: l.valor_km ?? null,
+        valor_fixo: l.valor_fixo ?? null,
+      })),
+    });
     return normalizar(this.desembrulhar<Proposta>(resposta));
   }
 
-  /** O BDI padrão da empresa: o que a solicitação nova copia */
-  async obterBdiPadrao(): Promise<BdiPadrao> {
-    const resposta = await api.get('/solicitacoes-servico/bdi-padrao');
-    return this.desembrulhar<BdiPadrao>(resposta);
-  }
-
-  /** Troca o BDI padrão: vale para as solicitações novas, as que existem ficam com o seu */
-  async salvarBdiPadrao(componentes: ComponentesDoBdi): Promise<BdiPadrao> {
-    const resposta = await api.put('/solicitacoes-servico/bdi-padrao', componentesDe(componentes));
-    return this.desembrulhar<BdiPadrao>(resposta);
+  /**
+   * As condições: os percentuais desta proposta, o planejamento, a validade, as
+   * condições comerciais e o desconto. `desconto_tipo: null` tira o desconto.
+   */
+  async salvarCondicoes(solicitacaoId: string, dados: CondicoesDaProposta): Promise<Proposta> {
+    const resposta = await api.put(`${this.base(solicitacaoId)}/condicoes`, dados);
+    return normalizar(this.desembrulhar<Proposta>(resposta));
   }
 
   /** Refaz os valores a partir do catálogo. Descarta o que foi ajustado. */
   async recarregar(solicitacaoId: string): Promise<Proposta> {
     const resposta = await api.post(`${this.base(solicitacaoId)}/recarregar`);
     return normalizar(this.desembrulhar<Proposta>(resposta));
+  }
+
+  /** Os percentuais padrão: o que a solicitação nova copia */
+  async obterPadroes(): Promise<PadroesDaProposta> {
+    const resposta = await api.get('/solicitacoes-servico/padroes-da-proposta');
+    return this.desembrulhar<PadroesDaProposta>(resposta);
+  }
+
+  /** Troca os padrões: valem para as solicitações novas, as que existem ficam com os seus */
+  async salvarPadroes(padroes: PadroesDaProposta): Promise<PadroesDaProposta> {
+    const resposta = await api.put('/solicitacoes-servico/padroes-da-proposta', padroes);
+    return this.desembrulhar<PadroesDaProposta>(resposta);
+  }
+
+  /** REGISTRADA -> PROPOSTA_REVISADA: trava a proposta e libera a programação */
+  async revisar(solicitacaoId: string): Promise<void> {
+    await api.post(`${this.base(solicitacaoId)}/revisar`);
+  }
+
+  /** A revisada ou a não aprovada volta à edição */
+  async reabrir(solicitacaoId: string, motivo?: string): Promise<void> {
+    await api.post(`${this.base(solicitacaoId)}/reabrir`, { motivo: motivo?.trim() || null });
+  }
+
+  /** O cliente não aprovou: com o motivo, que vai para o histórico */
+  async naoAprovada(solicitacaoId: string, motivo: string): Promise<void> {
+    await api.post(`${this.base(solicitacaoId)}/nao-aprovada`, { motivo });
+  }
+
+  /** O que a programação herda da proposta revisada */
+  async paraProgramar(solicitacaoId: string): Promise<HerancaDaProposta> {
+    const resposta = await api.get(`/solicitacoes-servico/${solicitacaoId.trim()}/para-programar`);
+    return this.desembrulhar<HerancaDaProposta>(resposta);
   }
 }
 
@@ -195,8 +293,8 @@ export const propostaApi = new PropostaApiService();
 /**
  * Garante que as listas existam.
  *
- * A tela percorre `itens` e `outros_custos` sem checar, e um campo que
- * suma da resposta derruba a seção inteira em vez de mostrá-la vazia. Foi
+ * A tela percorre `itens`, `outros_custos` e `logistica` sem checar, e um campo
+ * que suma da resposta derruba a seção inteira em vez de mostrá-la vazia. Foi
  * assim que o front anterior quebrou quando o backend parou de mandar
  * `subinstrucoes`: o backend sobe primeiro no deploy, e por alguns minutos as
  * duas versões conversam.
@@ -204,12 +302,15 @@ export const propostaApi = new PropostaApiService();
 function normalizar(p: Proposta): Proposta {
   return {
     ...p,
+    conta_da_proposta: p?.conta_da_proposta === 'BDI' ? 'BDI' : 'IMPOSTO_MARGEM',
     itens: Array.isArray(p?.itens) ? p.itens : [],
     outros_custos: Array.isArray(p?.outros_custos) ? p.outros_custos : [],
-    // A API de antes do desconto não manda os três: sem desconto
+    logistica: Array.isArray(p?.logistica) ? p.logistica : [],
     desconto_tipo: p?.desconto_tipo ?? null,
     desconto_valor: p?.desconto_valor ?? null,
     total_desconto: Number(p?.total_desconto) || 0,
+    fechamento: p?.fechamento ?? null,
+    venda: p?.venda ?? null,
   };
 }
 
@@ -217,95 +318,87 @@ function normalizar(p: Proposta): Proposta {
  * Proposta em branco, para o sheet de cadastro.
  *
  * Antes de a solicitação existir não há id, e as rotas da proposta precisam
- * dele. Em vez de esconder a seção — que era o que acontecia, e deixava os
- * valores invisíveis justamente na hora de montar o orçamento — a tela
- * trabalha sobre este rascunho e a página o persiste assim que a solicitação
- * nasce.
- *
- * Os componentes do BDI vêm preenchidos porque o rascunho precisa deles para
- * ter total antes de existir no banco: os do padrão da empresa, que a seção lê
- * da API (até lá, o GOINFRA). Gravados, quem manda é o servidor.
+ * dele. Em vez de esconder a seção, a tela trabalha sobre este rascunho e a
+ * página o persiste assim que a solicitação nasce. Os percentuais vêm dos
+ * padrões da empresa, que a seção lê da API.
  */
-export const propostaVazia = (bdi: ComponentesDoBdi = BDI_GOINFRA): Proposta => ({
+export const propostaVazia = (padroes: PercentuaisDaProposta = SEM_PADROES): Proposta => ({
+  conta_da_proposta: 'IMPOSTO_MARGEM',
   itens: [],
   outros_custos: [],
-  bdi_regime: 'SEM_REIDI',
-  ...bdi,
-  bdi_percentual: 0,
+  logistica: [],
+  ...padroes,
+  distancia_km: null,
+  distancia_ida_volta_km: null,
+  dias_previstos: null,
+  pessoas_previstas: null,
+  noites_fora: null,
+  validade_proposta: null,
+  condicoes_comerciais: null,
   total_custo: 0,
-  total_bdi: 0,
+  total_servicos: 0,
+  total_fd: 0,
+  total_administracao: 0,
+  total_aupus: 0,
+  valor_imposto: 0,
+  margem_efetiva: null,
   total_geral: 0,
   desconto_tipo: null,
   desconto_valor: null,
   total_desconto: 0,
+  fechamento: null,
+  venda: null,
 });
 
-/** Os quatro impostos somados, que é o I da fórmula. */
-export const somaImpostos = (p: ComponentesDoBdi) =>
-  (p.bdi_pis || 0) + (p.bdi_cofins || 0) + (p.bdi_cprb || 0) + (p.bdi_issqn || 0);
+/** Os percentuais da proposta como a conta os lê */
+export const percentuaisDaConta = (p: PercentuaisDaProposta) => ({
+  imposto: p.imposto_percentual ?? 0,
+  margem: p.margem_percentual ?? 0,
+  admServicos: p.adm_servicos_percentual ?? 0,
+  admFd: p.adm_fd_percentual ?? 0,
+});
 
 /**
- * O BDI pela fórmula do acórdão 2.622/2013 do TCU:
- *
- *   BDI = [ (1+AC+SG+R) × (1+DF) × (1+L) / (1-I) ] - 1
- */
-export function calcularBdi(p: ComponentesDoBdi): number {
-  const f = (v: number) => (v || 0) / 100;
-  const i = f(somaImpostos(p));
-  if (i >= 1) return 0;
-
-  return (
-    ((1 + f(p.bdi_administracao_central) + f(p.bdi_seguro_garantia) + f(p.bdi_taxa_risco)) *
-      (1 + f(p.bdi_despesas_financeiras)) *
-      (1 + f(p.bdi_lucro))) /
-      (1 - i) -
-    1
-  );
-}
-
-/**
- * Os mesmos totais que o servidor calcula, para o rascunho ter numero antes de
- * existir no banco.
- *
- * É a única duplicação da fórmula, e ela é deliberada: sem id não há a quem
- * perguntar. Assim que a solicitação existe, o número passa a vir do servidor
- * e este cálculo sai de cena — quem manda no que vai para o PDF é ele.
+ * Os totais do rascunho, pela cópia da conta do servidor (`conta-da-proposta.ts`).
+ * Assim que a solicitação existe, o número passa a vir do servidor.
  */
 export function calcularRascunho(p: Proposta): Proposta {
-  const cent = (v: number) => Math.round(v * 100) / 100;
-
-  const custoItens = p.itens.reduce((s, i) => s + (i.quantidade || 0) * (i.preco_unitario || 0), 0);
-  const fd = p.outros_custos.filter((c) => c.faturamento_direto).reduce((s, c) => s + (c.valor || 0), 0);
-  const comum = p.outros_custos.filter((c) => !c.faturamento_direto).reduce((s, c) => s + (c.valor || 0), 0);
-
-  // O faturamento direto fica FORA da base do BDI: é dinheiro que o cliente
-  // paga ao fornecedor, sem passar pela empresa.
-  const baseBdi = custoItens + comum;
-  const bdi = calcularBdi(p);
-  const totalBdi = cent(baseBdi * bdi);
-  const totalSemDesconto = cent(baseBdi + totalBdi + fd);
-  const desconto = descontoEmReais(p.desconto_tipo, p.desconto_valor, totalSemDesconto);
-
+  // A linha sem nome não se grava (a API a recusaria): fora da conta, a tela mostra o que vai ser gravado
+  const comNome = <T extends { descricao: string }>(linhas: T[]) => linhas.filter((l) => l.descricao.trim());
+  const conta = contaDaProposta({
+    instrucoes: p.itens.map((i) => (i.quantidade || 0) * (i.preco_unitario || 0)),
+    logistica: comNome(p.logistica),
+    adicionais: comNome(p.outros_custos).map((c) => ({ valor: c.valor ?? 0, faturamento_direto: c.faturamento_direto })),
+    percentuais: percentuaisDaConta(p),
+    desconto: { tipo: p.desconto_tipo, valor: p.desconto_valor },
+  });
   return {
     ...p,
-    bdi_percentual: Math.round(bdi * 100 * 1000) / 1000,
-    total_custo: cent(custoItens + comum + fd),
-    total_bdi: totalBdi,
-    total_desconto: desconto,
-    total_geral: cent(totalSemDesconto - desconto),
+    itens: p.itens.map((item, i) => ({ ...item, valor_venda: conta.venda.instrucoes[i] ?? 0 })),
+    logistica: p.logistica.map((l) => ({ ...l, total: totalDaLinha(l) })),
+    total_custo: Math.round((conta.custoServicos + conta.fd) * 100) / 100,
+    total_servicos: conta.custoServicos,
+    total_fd: conta.fd,
+    total_administracao: conta.precoAdministracao,
+    total_aupus: conta.totalAupus,
+    valor_imposto: conta.imposto,
+    margem_efetiva: conta.margemEfetiva,
+    total_geral: conta.totalGeral,
+    total_desconto: p.desconto_tipo ? conta.desconto.aplicado : 0,
+    fechamento: {
+      custo_instrucoes: conta.custoInstrucoes,
+      custo_logistica: conta.custoLogistica,
+      custo_adicionais: conta.custoAdicionais,
+      custo_servicos: conta.custoServicos,
+      preco_servicos: conta.precoServicos,
+      administracao: conta.administracao,
+      preco_administracao: conta.precoAdministracao,
+      total_aupus_sem_desconto: conta.totalAupusSemDesconto,
+      total_geral_sem_desconto: conta.totalGeralSemDesconto,
+      desconto_pedido: conta.desconto.pedido,
+    },
+    venda: { logistica: conta.venda.logistica, adicionais: conta.venda.adicionais },
   };
-}
-
-/**
- * Os reais do desconto, sobre o total inteiro (o faturamento direto junto),
- * até o total: a mesma conta do servidor (`desconto-da-proposta.ts`), para o
- * rascunho ter número antes de existir.
- */
-export function descontoEmReais(tipo: TipoDeDesconto | null, valor: number | null, total: number): number {
-  if (!tipo || !valor || valor <= 0) return 0;
-  const base = Math.max(total, 0);
-  const pedido = tipo === 'PERCENTUAL' ? Math.round(base * valor) / 100 : Math.round(valor * 100) / 100;
-  return Math.min(pedido, base);
 }
 
 /**
@@ -415,7 +508,7 @@ export function rotuloInstrucao(codigo: string | null | undefined, nome: string)
   return limpa ? `${limpa} - ${nome}` : nome;
 }
 
-/** "30,44": o percentual com as duas casas da planilha de referência (o banco guarda três) */
+/** "15,00": o percentual com duas casas na tela (o banco guarda três) */
 export const percentualNaTela = (valor: number) =>
   (Number.isFinite(valor) ? valor : 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 

@@ -1,8 +1,8 @@
 // src/features/execucao-os/components/CustosDaOS.tsx
 import { useState } from 'react';
-import { Info, Loader2, Pencil } from 'lucide-react';
+import { Loader2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DicaDaConta } from '@/components/common/ComoSeCalcula';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { formatApiError } from '@/utils/api-error';
@@ -111,23 +111,7 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
     <section className="space-y-4" aria-label="Custos da OS">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-medium">Custos</h3>
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="flex items-center rounded-sm text-muted-foreground hover:text-foreground"
-              aria-label="Como se calcula o custo da OS"
-              title="Como se calcula"
-            >
-              <Info className="h-3.5 w-3.5" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80 space-y-2 p-3 text-xs">
-            {COMO_SE_CALCULA.map((linha) => (
-              <p key={linha}>{linha}</p>
-            ))}
-          </PopoverContent>
-        </Popover>
+        <DicaDaConta rotulo="o custo da OS" linhas={COMO_SE_CALCULA} className="h-3.5 w-3.5" />
         {podeCorrigir && CORRIGIVEL.has(status) && !corrigindo && (
           <Button type="button" variant="outline" size="sm" className="ml-auto h-8" onClick={abrirCorrecao}>
             <Pencil className="mr-1 h-3.5 w-3.5" />

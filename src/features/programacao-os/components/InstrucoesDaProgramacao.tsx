@@ -9,6 +9,7 @@ import { instrucoesApi, opcaoDaInstrucao } from '@/services/instrucoes.services'
 import { formatApiError } from '@/utils/api-error';
 import { distintas, useInstrucoesDaOrigem, type InstrucaoResumida, type OrigemDasInstrucoes } from './InstrucoesDaOrigem';
 import { RecursosDaOrigem } from './RecursosDaOrigem';
+import { HerancaDaProposta } from './HerancaDaProposta';
 import type { RecursosDaProgramacao } from '@/features/programacao-os/utils/recursos-das-instrucoes';
 
 interface InstrucoesDaProgramacaoProps extends OrigemDasInstrucoes {
@@ -139,6 +140,8 @@ export function InstrucoesDaProgramacao({
 
   return (
     <div className="space-y-2">
+      {/* A programação nova de uma solicitação recebe da proposta revisada (29/out/2026) */}
+      {semearDaOrigem && origem.tipo === 'SOLICITACAO_SERVICO' && <HerancaDaProposta solicitacaoId={origem.solicitacaoId} />}
       {recursosAplicados}
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-medium">Instruções</span>

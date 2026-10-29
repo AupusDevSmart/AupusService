@@ -25,7 +25,7 @@ const NOME: Record<AtalhoParaProgramacaoProps['tipo'], string> = {
 export function AtalhoParaProgramacao({ tipo, id, status }: AtalhoParaProgramacaoProps) {
   const navigate = useNavigate();
   const temPermissao = useUserStore((s) => s.hasPermission);
-  const atalho = atalhoDaOrigem(status);
+  const atalho = atalhoDaOrigem(status, tipo);
 
   if (!id?.trim() || !atalho || !temPermissao(atalho.permissao)) return null;
 

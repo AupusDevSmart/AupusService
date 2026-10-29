@@ -5,10 +5,14 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Trash2,
   Loader2,
+  FileCheck,
+  FileX,
+  RotateCcw,
   type LucideIcon,
 } from 'lucide-react';
 
-export type PendingAction = 'excluir';
+/** As ações que pedem confirmação; as da proposta (29/out/2026) mudam o status da solicitação */
+export type PendingAction = 'excluir' | 'revisar' | 'reabrir' | 'nao_aprovada';
 
 const actionConfig: Record<PendingAction, {
   confirmLabel: string;
@@ -17,11 +21,35 @@ const actionConfig: Record<PendingAction, {
   inputLabel?: string;
   inputPlaceholder?: string;
   inputRequired?: boolean;
+  /** O que a ação faz, antes de confirmar */
+  aviso?: string;
 }> = {
   excluir: {
     confirmLabel: 'Confirmar Exclusão',
     icon: Trash2,
     variant: 'destructive',
+  },
+  revisar: {
+    confirmLabel: 'Revisar proposta',
+    icon: FileCheck,
+    variant: 'default',
+    aviso: 'Revisada, a proposta trava para edição e a solicitação pode ser programada. A programação herda dela as instruções, os valores e a logística.',
+  },
+  reabrir: {
+    confirmLabel: 'Reabrir proposta',
+    icon: RotateCcw,
+    variant: 'default',
+    inputLabel: 'Por que reabrir (opcional)',
+    inputPlaceholder: 'Ex.: o cliente pediu outra data',
+    aviso: 'A proposta volta à edição; para programar, revise-a de novo.',
+  },
+  nao_aprovada: {
+    confirmLabel: 'Marcar como não aprovada',
+    icon: FileX,
+    variant: 'destructive',
+    inputLabel: 'Por que o cliente não aprovou',
+    inputPlaceholder: 'Ex.: achou caro, adiou o serviço',
+    inputRequired: true,
   },
 };
 
@@ -51,6 +79,7 @@ export function ActionConfirmPanel({ action, onConfirm }: ActionConfirmPanelProp
   return (
     <div className="border-t mt-6 pt-4 space-y-3">
       <h3 className="text-sm font-medium">Confirmar ação</h3>
+      {config.aviso && <p className="text-sm text-muted-foreground">{config.aviso}</p>}
 
       {config.inputLabel && (
         <div>

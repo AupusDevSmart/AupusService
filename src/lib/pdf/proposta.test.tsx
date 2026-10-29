@@ -1,42 +1,53 @@
 // @vitest-environment node
 import { renderToBuffer } from '@react-pdf/renderer';
+import type { ReactElement } from 'react';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Proposta } from '@/services/proposta.services';
 import { entradasVazias, imagensEmbutidas, tabelasToUnicode, textosDesenhados } from '@/test-utils/pdf';
 import { DocumentoAupus, prepararFontes } from './documento';
-import { pdfDaProposta, resumoDoEscopo } from './proposta';
+import { PropostaDocumento, pdfDaProposta, resumoDoEscopo } from './proposta';
 
 /**
  * A proposta comercial desenhada de verdade (SN-92): capa numa página própria,
  * seções numeradas, o total no painel e a Lexend embutida. Estilo que o
  * react-pdf não aceita só aparece ao renderizar, não no tipo.
  */
+/** A proposta na conta de imposto e margem (29/out/2026), como o servidor a devolve */
 const proposta = (mudar: Partial<Proposta> = {}): Proposta => ({
+  conta_da_proposta: 'IMPOSTO_MARGEM',
   itens: [
-    { instrucao_id: 'i1', descricao: 'TR-01 · Inspeção sensitiva do transformador', quantidade: 1, preco_unitario: 1850 },
-    { instrucao_id: 'i2', descricao: 'TR-03 · Ensaios elétricos do transformador', quantidade: 1, preco_unitario: 6420.5 },
+    { instrucao_id: 'i1', descricao: 'TR-01 · Inspeção sensitiva do transformador', quantidade: 1, preco_unitario: 1850, valor_venda: 2846.15 },
+    { instrucao_id: 'i2', descricao: 'TR-03 · Ensaios elétricos do transformador', quantidade: 1, preco_unitario: 6420.5, valor_venda: 9877.69 },
   ],
   outros_custos: [
-    { descricao: 'Deslocamento (460 km)', valor: 1288, faturamento_direto: false },
+    { descricao: 'ART', valor: 104, faturamento_direto: false },
     { descricao: 'Locação do gerador 150 kVA', valor: 2200, faturamento_direto: true },
   ],
-  bdi_regime: 'SEM_REIDI',
-  bdi_administracao_central: 4,
-  bdi_seguro_garantia: 0.8,
-  bdi_taxa_risco: 1.27,
-  bdi_despesas_financeiras: 1.23,
-  bdi_lucro: 7.4,
-  bdi_pis: 0.65,
-  bdi_cofins: 3,
-  bdi_cprb: 0,
-  bdi_issqn: 5,
-  bdi_percentual: 30.44,
-  total_custo: 11758.5,
-  total_bdi: 2909.94,
-  total_geral: 14668.44,
+  logistica: [{ tabela: 'DESLOCAMENTO', ativo: true, descricao: 'Picape 4x4', dias: 2, valor_unitario: 0, km: 920, valor_km: 1.4, total: 1288 }],
+  imposto_percentual: 15,
+  margem_percentual: 20,
+  adm_servicos_percentual: 5,
+  adm_fd_percentual: 2,
+  distancia_km: 460,
+  distancia_ida_volta_km: 920,
+  dias_previstos: 2,
+  pessoas_previstas: 2,
+  noites_fora: 1,
+  validade_proposta: '2026-11-30',
+  condicoes_comerciais: 'Pagamento em 30 dias da entrega do relatório.',
+  total_custo: 11962.5,
+  total_servicos: 9762.5,
+  total_fd: 2200,
+  total_administracao: 626,
+  total_aupus: 15645.85,
+  valor_imposto: 2346.88,
+  margem_efetiva: 22.6,
+  total_geral: 17845.85,
   desconto_tipo: null,
   desconto_valor: null,
   total_desconto: 0,
+  fechamento: null,
+  venda: { logistica: 1981.54, adicionais: 160 },
   ...mudar,
 });
 
@@ -50,6 +61,12 @@ const escopo = [
     ],
   },
 ];
+
+/** Os textos que o documento desenha (o `textosDesenhados` quer o Document: o do timbrado, desembrulhado) */
+const desenhados = async (p: Proposta) => {
+  const timbrado = PropostaDocumento({ proposta: p, escopo: [] }) as ReactElement<Parameters<typeof DocumentoAupus>[0]>;
+  return (await textosDesenhados(DocumentoAupus(timbrado.props))).map((t) => t.texto).join(' | ');
+};
 
 const paginas = (arquivo: Buffer) => arquivo.toString('latin1').match(/\/Type\s*\/Page\b/g)!.length;
 
@@ -86,6 +103,28 @@ describe('PDF da proposta', () => {
     const arquivo = await renderToBuffer(pdfDaProposta({ proposta: comDesconto, escopo: [] }));
     expect(arquivo.subarray(0, 5).toString('latin1')).toBe('%PDF-');
     expect(entradasVazias(arquivo)).toBe(0);
+  }, 30_000);
+
+  // A spec: nunca o custo, a margem nem as tabelas de logística no PDF; a venda numa linha
+  it('a conta nova mostra a venda de cada serviço e os três totais, sem custo nem margem', async () => {
+    const textos = await desenhados(proposta());
+    // O formato de moeda do pt-BR põe um espaço não separável depois do "R$"
+    expect(textos).toMatch(/R\$\s2\.846,15/);
+    expect(textos).toContain('Logística e mobilização');
+    expect(textos).toContain('Total faturado pela Aupus');
+    expect(textos).toContain('Investimento global');
+    expect(textos).toContain('30/11/2026');
+    expect(textos).not.toContain('1.850,00');
+    expect(textos).not.toContain('Picape');
+    expect(textos).not.toMatch(/margem/i);
+  }, 30_000);
+
+  // A proposta de antes (BDI) sai como foi enviada ao cliente
+  it('a proposta de antes (BDI) desenha o custo, o BDI e o total, como foi', async () => {
+    const deAntes = proposta({ conta_da_proposta: 'BDI', bdi_percentual: 30.44, total_bdi: 2909.94, total_custo: 11758.5, total_geral: 14668.44, venda: null });
+    const textos = await desenhados(deAntes);
+    expect(textos).toContain('BDI (30,44%)');
+    expect(textos).toMatch(/R\$\s14\.668,44/);
   }, 30_000);
 });
 

@@ -24,7 +24,11 @@ export type OrigemSolicitacao =
   | 'SISTEMA'
   | 'APLICATIVO';
 
-export type StatusSolicitacaoServico = 'REGISTRADA' | 'PROGRAMADA' | 'FINALIZADA';
+/**
+ * REGISTRADA (a proposta em edição) -> PROPOSTA_REVISADA (pronta para programar)
+ * -> PROGRAMADA -> FINALIZADA; NAO_APROVADA quando o cliente recusa (29/out/2026)
+ */
+export type StatusSolicitacaoServico = 'REGISTRADA' | 'PROPOSTA_REVISADA' | 'PROGRAMADA' | 'FINALIZADA' | 'NAO_APROVADA';
 
 // Interface principal da solicitação
 export interface SolicitacaoServico extends BaseEntity {

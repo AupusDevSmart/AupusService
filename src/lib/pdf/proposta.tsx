@@ -56,11 +56,102 @@ export function resumoDoEscopo(rotulos: string[]): string | undefined {
   return resto > 0 ? `${primeiros} e mais ${resto}` : primeiros;
 }
 
+/** "30/11/2026" do "2026-11-30" (o dia de calendário, sem fuso) */
+const diaDoPdf = (dia: string) => dia.split('-').reverse().join('/');
+
+/**
+ * As seções do preço na conta de imposto e margem (29/out/2026): o preço de venda
+ * de cada instrução, a logística e os adicionais numa linha cada (as tabelas de
+ * frete, deslocamento e diárias nunca vão ao cliente), a administração, o
+ * faturamento direto à parte e os três totais da spec.
+ */
+function precosDaContaNova(proposta: Proposta): { secoes: Secao[]; parcelas: Array<[string, string]>; total: [string, number] } {
+  const venda = proposta.venda ?? { logistica: 0, adicionais: 0 };
+  const custosFD = proposta.outros_custos.filter((c) => c.faturamento_direto);
+  const linhasDeServico = [
+    ...proposta.itens.map((item) => ({ descricao: item.descricao, valor: item.valor_venda ?? 0 })),
+    ...(venda.logistica > 0 ? [{ descricao: 'Logística e mobilização (deslocamento, frete e diárias)', valor: venda.logistica }] : []),
+    ...(venda.adicionais > 0 ? [{ descricao: 'Custos adicionais', valor: venda.adicionais }] : []),
+    ...((proposta.total_administracao ?? 0) > 0 ? [{ descricao: 'Administração', valor: proposta.total_administracao ?? 0 }] : []),
+  ];
+  const secoes: Secao[] = [];
+  if (linhasDeServico.length > 0) {
+    secoes.push({ titulo: 'Investimento por serviço', conteudo: <Valores titulo="Serviço · faturado pela Aupus" linhas={linhasDeServico} /> });
+  }
+  /* Faturamento direto em bloco separado: o cliente paga ao fornecedor, não à
+     Aupus. Misturado com o resto, daria a entender que está sendo faturado aqui. */
+  if (custosFD.length > 0) {
+    secoes.push({
+      titulo: 'Faturamento direto',
+      conteudo: (
+        <View>
+          <Text style={[estilos.fraco, { marginBottom: 8 }]}>Pago pelo cliente direto ao fornecedor, não à Aupus.</Text>
+          <Valores titulo="Fornecimento · faturado pelo fornecedor" linhas={custosFD.map((c) => ({ descricao: c.descricao, valor: c.valor ?? 0 }))} />
+        </View>
+      ),
+    });
+  }
+  const parcelas: Array<[string, string]> = [
+    ...(proposta.total_desconto > 0
+      ? [
+          [
+            proposta.desconto_tipo === 'PERCENTUAL' ? `Desconto (${percentualDoPdf(proposta.desconto_valor ?? 0)}%)` : 'Desconto',
+            `- ${moeda(proposta.total_desconto)}`,
+          ] as [string, string],
+        ]
+      : []),
+    ['Total faturado pela Aupus', moeda(proposta.total_aupus ?? 0)],
+    ...((proposta.total_fd ?? 0) > 0 ? [['Total faturado pelos fornecedores', moeda(proposta.total_fd ?? 0)] as [string, string]] : []),
+  ];
+  return { secoes, parcelas, total: ['Investimento global', proposta.total_geral ?? 0] };
+}
+
+/** A proposta de antes (BDI), impressa como foi: o custo, o BDI em % e o total */
+function precosDoBdi(proposta: Proposta): { secoes: Secao[]; parcelas: Array<[string, string]>; total: [string, number] } {
+  const custosFD = proposta.outros_custos.filter((c) => c.faturamento_direto);
+  const custosComuns = proposta.outros_custos.filter((c) => !c.faturamento_direto);
+  // O faturamento direto fica fora da base do BDI, então sai do custo e volta como linha própria
+  const totalFD = custosFD.reduce((soma, c) => soma + (c.valor || 0), 0);
+  const custoBase = (proposta.total_custo ?? 0) - totalFD;
+  const bdi = (proposta.bdi_percentual ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const secoes: Array<Secao | false> = [
+    proposta.itens.length > 0 && {
+      titulo: 'Instruções',
+      conteudo: <Valores titulo="Instrução" linhas={proposta.itens.map((item) => ({ descricao: item.descricao, valor: item.preco_unitario ?? 0 }))} />,
+    },
+    custosComuns.length > 0 && { titulo: 'Outros custos', conteudo: <Valores titulo="Custo" linhas={custosComuns.map((c) => ({ descricao: c.descricao, valor: c.valor ?? 0 }))} /> },
+    custosFD.length > 0 && {
+      titulo: 'Faturamento direto',
+      conteudo: (
+        <View>
+          <Text style={[estilos.fraco, { marginBottom: 8 }]}>Pago pelo cliente direto ao fornecedor, não à Aupus.</Text>
+          <Valores titulo="Custo" linhas={custosFD.map((c) => ({ descricao: c.descricao, valor: c.valor ?? 0 }))} />
+        </View>
+      ),
+    },
+  ];
+  const parcelas: Array<[string, string]> = [
+    ['Custo', moeda(custoBase)],
+    [`BDI (${bdi}%)`, moeda(proposta.total_bdi ?? 0)],
+    ...(totalFD > 0 ? [['Faturamento direto', moeda(totalFD)] as [string, string]] : []),
+    ...(proposta.total_desconto > 0
+      ? [
+          [
+            proposta.desconto_tipo === 'PERCENTUAL' ? `Desconto (${percentualDoPdf(proposta.desconto_valor ?? 0)}%)` : 'Desconto',
+            `- ${moeda(proposta.total_desconto)}`,
+          ] as [string, string],
+        ]
+      : []),
+  ];
+  return { secoes: secoes.filter((x): x is Secao => Boolean(x)), parcelas, total: ['Total da proposta · à vista', proposta.total_geral ?? 0] };
+}
+
 /**
  * A proposta comercial no papel timbrado (SN-92): capa como a do modelo, as
- * seções numeradas e o total no painel navy.
+ * seções numeradas e o total no painel navy. Nunca o custo, a margem nem as
+ * tabelas de logística (a spec): só o que é comercialmente pertinente.
  */
-function PropostaDocumento({
+export function PropostaDocumento({
   proposta,
   numero,
   titulo,
@@ -68,17 +159,11 @@ function PropostaDocumento({
   escopo,
 }: DadosProposta & { escopo: EscopoDaInstrucao[] }) {
   const hoje = new Date().toLocaleDateString('pt-BR');
-
-  const custosFD = proposta.outros_custos.filter((c) => c.faturamento_direto);
-  const custosComuns = proposta.outros_custos.filter((c) => !c.faturamento_direto);
-
-  // O faturamento direto fica fora da base do BDI, então sai do custo e volta
-  // como linha própria — assim as três parcelas fecham o total à vista.
-  const totalFD = custosFD.reduce((soma, c) => soma + (c.valor || 0), 0);
-  const custoBase = proposta.total_custo - totalFD;
-
-  const bdi = (Number.isFinite(proposta.bdi_percentual) ? proposta.bdi_percentual : 0)
-    .toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const precos = proposta.conta_da_proposta === 'BDI' ? precosDoBdi(proposta) : precosDaContaNova(proposta);
+  const condicoes = [
+    ...(proposta.dias_previstos ? [`Execução prevista em ${percentualDoPdf(proposta.dias_previstos)} ${proposta.dias_previstos === 1 ? 'dia' : 'dias'}.`] : []),
+    ...(proposta.validade_proposta ? [`Proposta válida até ${diaDoPdf(proposta.validade_proposta)}.`] : []),
+  ];
 
   const secoes: Array<Secao | false> = [
     /* As etapas vêm antes do preço de propósito: quem lê uma proposta quer
@@ -105,46 +190,22 @@ function PropostaDocumento({
         </View>
       )),
     },
-    /* Uma linha por instrução, com o valor fechado dela. Sem coluna de
-       quantidade ou unitário: o que a proposta promete é o serviço inteiro,
-       não uma composição de insumos. */
-    proposta.itens.length > 0 && {
-      titulo: 'Instruções',
-      conteudo: <Valores titulo="Instrução" linhas={proposta.itens.map((item) => ({ descricao: item.descricao, valor: item.preco_unitario }))} />,
-    },
-    custosComuns.length > 0 && {
-      titulo: 'Outros custos',
-      conteudo: <Valores titulo="Custo" linhas={custosComuns.map((c) => ({ descricao: c.descricao, valor: c.valor }))} />,
-    },
-    /* Faturamento direto em bloco separado: é dinheiro que o cliente paga ao
-       fornecedor, não à Aupus. Misturado com o resto, daria a entender que
-       está sendo faturado aqui. */
-    custosFD.length > 0 && {
-      titulo: 'Faturamento direto',
+    ...precos.secoes,
+    (condicoes.length > 0 || Boolean(proposta.condicoes_comerciais)) && {
+      titulo: 'Prazo e condições',
       conteudo: (
         <View>
-          <Text style={[estilos.fraco, { marginBottom: 8 }]}>Pago pelo cliente direto ao fornecedor, não à Aupus.</Text>
-          <Valores titulo="Custo" linhas={custosFD.map((c) => ({ descricao: c.descricao, valor: c.valor }))} />
+          {condicoes.map((linha) => (
+            <Text key={linha} style={estilos.paragrafo}>
+              {linha}
+            </Text>
+          ))}
+          {proposta.condicoes_comerciais && <Text style={estilos.paragrafo}>{proposta.condicoes_comerciais}</Text>}
         </View>
       ),
     },
   ];
   const presentes = secoes.filter((s): s is Secao => Boolean(s));
-
-  const parcelas: Array<[string, string]> = [
-    ['Custo', moeda(custoBase)],
-    [`BDI (${bdi}%)`, moeda(proposta.total_bdi)],
-    ...(totalFD > 0 ? [['Faturamento direto', moeda(totalFD)] as [string, string]] : []),
-    // O desconto sai do total inteiro (28/out/2026); o painel já mostra o total com ele
-    ...(proposta.total_desconto > 0
-      ? [
-          [
-            proposta.desconto_tipo === 'PERCENTUAL' ? `Desconto (${percentualDoPdf(proposta.desconto_valor ?? 0)}%)` : 'Desconto',
-            `- ${moeda(proposta.total_desconto)}`,
-          ] as [string, string],
-        ]
-      : []),
-  ];
 
   return (
     <DocumentoAupus
@@ -171,9 +232,9 @@ function PropostaDocumento({
       <View wrap={false}>
         <SecaoPdf numero={presentes.length + 1} titulo="Investimento">
           {/* As parcelas fecham o total, que vai uma vez só: no painel */}
-          <TotaisPdf parcelas={parcelas} />
+          <TotaisPdf parcelas={precos.parcelas} />
           <View style={{ marginTop: 14 }}>
-            <PainelPdf rotulo="Total da proposta · à vista" valor={moeda(proposta.total_geral)} />
+            <PainelPdf rotulo={precos.total[0]} valor={moeda(precos.total[1])} />
           </View>
         </SecaoPdf>
       </View>

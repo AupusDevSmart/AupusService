@@ -143,7 +143,8 @@ async function buscarPeloId<T>(busca: Promise<T>, naoEncontrada: string, naoCarr
 }
 
 /**
- * As origens programáveis (SN-77): anomalias e solicitações REGISTRADAS e os
+ * As origens programáveis (SN-77): anomalias REGISTRADAS, solicitações com a
+ * proposta revisada (29/out/2026) e os
  * planos vinculados a um equipamento. Todas, por rolagem infinita e busca no
  * servidor — eram 100 de cada, filtradas no navegador, e a 101ª não aparecia.
  * Só a lista do tipo escolhido busca.
@@ -166,7 +167,7 @@ export const useOrigemDados = (tipoAtivo?: TipoDeOrigemResolvivel | string) => {
     chave: ['origem-da-os', 'solicitacoes'],
     ativa: tipoAtivo === 'SOLICITACAO_SERVICO',
     buscarPagina: async (page, search) => {
-      const resposta = await solicitacoesServicoService.findAll({ page, limit: POR_PAGINA, search, status: 'REGISTRADA' });
+      const resposta = await solicitacoesServicoService.findAll({ page, limit: POR_PAGINA, search, status: 'PROPOSTA_REVISADA' });
       return { itens: resposta.data.map(paraSolicitacaoDisponivel), temMais: temMais(page, resposta.pagination?.totalPages) };
     },
   });
@@ -228,8 +229,11 @@ export const useOrigemDados = (tipoAtivo?: TipoDeOrigemResolvivel | string) => {
           'Não foi possível carregar a solicitação agora. Tente de novo.',
         );
         if ('motivo' in busca) return busca;
-        if (busca.achado.status !== 'REGISTRADA') {
-          return { motivo: `A solicitação está ${String(busca.achado.status).toLowerCase()} e não pode ser programada agora.` };
+        if (busca.achado.status === 'REGISTRADA') {
+          return { motivo: 'A proposta da solicitação ainda não foi revisada: revise-a na tela das solicitações antes de programar.' };
+        }
+        if (busca.achado.status !== 'PROPOSTA_REVISADA') {
+          return { motivo: `A solicitação está ${String(busca.achado.status).toLowerCase().replace('_', ' ')} e não pode ser programada agora.` };
         }
         const item = paraSolicitacaoDisponivel(busca.achado);
         guardar(tipo, item);

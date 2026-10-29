@@ -1,10 +1,11 @@
 // src/features/solicitacoes-servico/components/InstrucoesSelector.tsx
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, X } from 'lucide-react';
+import { ListPlus, Plus, X } from 'lucide-react';
 import { Combobox } from '@/core';
 import { toast } from 'sonner';
 import { instrucoesApi, opcaoDaInstrucao } from '@/services/instrucoes.services';
+import { planosManutencaoApi } from '@/services/planos-manutencao.services';
 import { formatApiError } from '@/utils/api-error';
 import { InstrucaoExpandableCard } from '@/components/common/InstrucaoExpandableCard';
 import { AbrirInstrucaoContext, ValoresDaPropostaContext } from './proposta-contexto';
@@ -135,6 +136,58 @@ export function InstrucoesSelector({ value, onChange, disabled, entity }: Instru
 
   const availableOptions = options.filter(opt => !selectedIds.includes(opt.value));
 
+  // Importar de um plano (29/out/2026): as instruções das tarefas do plano entram de uma vez,
+  // cada uma uma vez só (a repetida no plano e a que já estava não se repetem). Atalho: depois
+  // de importadas, são instruções como as outras, e se tiram uma a uma
+  const [escolhendoPlano, setEscolhendoPlano] = React.useState(false);
+  const [planos, setPlanos] = React.useState<Array<{ value: string; label: string }> | null>(null);
+  const [importando, setImportando] = React.useState(false);
+
+  const abrirPlanos = () => {
+    setEscolhendoPlano(true);
+    setAdding(false);
+    if (planos) return;
+    void (async () => {
+      try {
+        // Todos os planos (os modelos), página a página: uma página só escondia o 101º
+        const todos: Array<{ value: string; label: string }> = [];
+        for (let page = 1; page <= 50; page++) {
+          const resposta = await planosManutencaoApi.findAll({ page, limit: 100, sort_by: 'nome', sort_order: 'asc' });
+          todos.push(...resposta.data.map((p) => ({ value: String(p.id).trim(), label: p.nome })));
+          if (page >= (resposta.pagination?.pages ?? 1)) break;
+        }
+        setPlanos(todos);
+      } catch (erro) {
+        toast.error('Erro ao carregar os planos de manutenção', { description: formatApiError(erro) });
+        setEscolhendoPlano(false);
+      }
+    })();
+  };
+
+  const importarDoPlano = async (planoId: string) => {
+    setEscolhendoPlano(false);
+    if (!planoId) return;
+    setImportando(true);
+    try {
+      const plano = await planosManutencaoApi.findOne(planoId.trim(), true);
+      const doPlano = [...new Set((plano.tarefas ?? []).map((t) => apararId(t.instrucao_id)).filter(Boolean))];
+      const novas = doPlano.filter((id) => !selectedIds.includes(id));
+      if (doPlano.length === 0) {
+        toast.info(`O plano ${plano.nome} não tem tarefa com instrução`);
+        return;
+      }
+      if (novas.length > 0) onChange([...selectedIds, ...novas]);
+      const jaEstavam = doPlano.length - novas.length;
+      toast.success(`${novas.length} ${novas.length === 1 ? 'instrução vinculada' : 'instruções vinculadas'} do plano ${plano.nome}`, {
+        description: jaEstavam > 0 ? `${jaEstavam} já ${jaEstavam === 1 ? 'estava' : 'estavam'} na solicitação.` : undefined,
+      });
+    } catch (erro) {
+      toast.error('Não foi possível importar as instruções do plano', { description: formatApiError(erro) });
+    } finally {
+      setImportando(false);
+    }
+  };
+
   const handleAdd = (id: string) => {
     if (id && !selectedIds.includes(id)) {
       onChange([...selectedIds, id]);
@@ -157,19 +210,59 @@ export function InstrucoesSelector({ value, onChange, disabled, entity }: Instru
       <div className="flex items-center justify-between">
         <label className="text-sm font-medium">Instruções Vinculadas</label>
         {!disabled && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setAdding(true)}
-            disabled={!loaded || availableOptions.length === 0}
-            title="Vincular instrução"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={abrirPlanos}
+              disabled={importando}
+              title="Importar as instruções de um plano de manutenção"
+              aria-label="Importar as instruções de um plano de manutenção"
+            >
+              <ListPlus className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                setEscolhendoPlano(false);
+                setAdding(true);
+              }}
+              disabled={!loaded || availableOptions.length === 0}
+              title="Vincular instrução"
+              aria-label="Vincular instrução"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         )}
       </div>
+
+      {escolhendoPlano && !disabled && (
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            {planos ? (
+              <Combobox
+                options={planos}
+                value={undefined}
+                onValueChange={(val) => void importarDoPlano(val)}
+                placeholder="Buscar plano de manutenção..."
+                searchPlaceholder="Digite para buscar..."
+                emptyText="Nenhum plano"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">Carregando os planos...</p>
+            )}
+          </div>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setEscolhendoPlano(false)} aria-label="Cancelar">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
 
       {adding && !disabled && (
         <div className="flex items-center gap-2">

@@ -11,8 +11,10 @@ const statusConfig: Record<
   { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
 > = {
   REGISTRADA: { label: 'Registrada', variant: 'outline' },
+  PROPOSTA_REVISADA: { label: 'Proposta revisada', variant: 'secondary' },
   PROGRAMADA: { label: 'Programada', variant: 'default' },
   FINALIZADA: { label: 'Finalizada', variant: 'secondary' },
+  NAO_APROVADA: { label: 'Não aprovada', variant: 'outline' },
 };
 
 export function StatusCell({ status }: StatusCellProps) {

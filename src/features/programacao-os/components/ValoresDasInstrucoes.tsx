@@ -37,7 +37,7 @@ export function ValoresDasInstrucoes({ linhas, ajustes, onChange, disabled, cria
   if (criando) {
     return (
       <p className="text-xs text-muted-foreground">
-        Cada instrução entra com o valor do cadastro. Para ajustar o valor só nesta programação, salve e abra em Editar.
+        Cada instrução entra com o valor do cadastro (a de solicitação, com o da proposta revisada). Para ajustar o valor só nesta programação, salve e abra em Editar.
       </p>
     );
   }

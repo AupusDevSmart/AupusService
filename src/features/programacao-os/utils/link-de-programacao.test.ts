@@ -10,6 +10,13 @@ describe('atalhoDaOrigem', () => {
     expect(atalhoDaOrigem('PROGRAMADA')).toEqual({ rotulo: 'Ver programação', permissao: 'programacao_os.view' });
   });
 
+  it('a solicitação se programa com a proposta revisada; registrada, a proposta ainda está em edição', () => {
+    expect(atalhoDaOrigem('PROPOSTA_REVISADA', 'SOLICITACAO_SERVICO')).toEqual({ rotulo: 'Programar', permissao: 'programacao_os.manage' });
+    expect(atalhoDaOrigem('REGISTRADA', 'SOLICITACAO_SERVICO')).toBeNull();
+    expect(atalhoDaOrigem('NAO_APROVADA', 'SOLICITACAO_SERVICO')).toBeNull();
+    expect(atalhoDaOrigem('PROGRAMADA', 'SOLICITACAO_SERVICO')).toEqual({ rotulo: 'Ver programação', permissao: 'programacao_os.view' });
+  });
+
   it('finalizada ou sem status: nenhum atalho', () => {
     expect(atalhoDaOrigem('FINALIZADA')).toBeNull();
     expect(atalhoDaOrigem(undefined)).toBeNull();

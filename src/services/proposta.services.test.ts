@@ -1,120 +1,72 @@
 // src/services/proposta.services.test.ts
 import { describe, expect, it } from 'vitest';
-import {
-  BDI_GOINFRA,
-  calcularBdi,
-  calcularRascunho,
-  descontoEmReais,
-  propostaVazia,
-  somaImpostos,
-  type OutroCusto,
-  type Proposta,
-} from './proposta.services';
+import { calcularRascunho, propostaVazia, type Proposta } from '@/services/proposta.services';
 
 /**
- * O BDI é a única conta que o front repete — o rascunho precisa de total antes
- * de a solicitação existir no banco. Estes testes prendem o resultado à tabela
- * de referência (GOINFRA) e ao acórdão 2.622/2013 do TCU, para a cópia não
- * derivar da do servidor sem ninguém notar.
+ * O rascunho do cadastro (29/out/2026): a proposta antes de a solicitação existir
+ * usa a cópia da conta do servidor (`conta-da-proposta.ts`, com os números
+ * presos no teste dela). Aqui, o que o rascunho grava em cada campo.
  */
-describe('BDI', () => {
-  it('reproduz os 30,44% da tabela de referência', () => {
-    const p = propostaVazia();
-
-    expect(somaImpostos(p)).toBeCloseTo(14.65, 4);
-    expect(calcularBdi(p) * 100).toBeCloseTo(30.44, 2);
-  });
-
-  it('cai para 25,09% com o REIDI, que desonera PIS e COFINS', () => {
-    const p: Proposta = { ...propostaVazia(), bdi_regime: 'COM_REIDI', bdi_pis: 0, bdi_cofins: 0 };
-
-    expect(somaImpostos(p)).toBeCloseTo(11, 4);
-    expect(calcularBdi(p) * 100).toBeCloseTo(25.09, 2);
-  });
-
-  it('não explode quando os impostos somam 100% ou mais', () => {
-    // O campo é editável: um dígito a mais faria a divisão por (1-I) estourar.
-    const p: Proposta = { ...propostaVazia(), bdi_issqn: 100 };
-
-    expect(calcularBdi(p)).toBe(0);
-  });
-});
-
 describe('totais do rascunho', () => {
-  const custo = (descricao: string, valor: number, fd = false): OutroCusto => ({
-    descricao,
-    valor,
-    faturamento_direto: fd,
-    ordem: 1,
-  });
-
-  it('deixa o faturamento direto fora da base do BDI', () => {
-    // 1.000 de item + 500 de FD, com o BDI padrão de 30,44%.
-    const total = calcularRascunho({
-      ...propostaVazia(),
-      itens: [{ descricao: 'Item', quantidade: 1, preco_unitario: 1000 }],
-      outros_custos: [custo('Equipamento do fornecedor', 500, true)],
-    });
-
-    expect(total.total_custo).toBe(1500); // o custo mostra tudo
-    expect(total.total_bdi).toBe(304.38); // mas o BDI só incide sobre os 1.000
-    expect(total.total_geral).toBe(1804.38);
-    expect(total.bdi_percentual).toBeCloseTo(30.438, 3);
-  });
-
-  it('cobra BDI do custo comum, que passa pela empresa', () => {
-    const total = calcularRascunho({
-      ...propostaVazia(),
-      itens: [{ descricao: 'Item', quantidade: 2, preco_unitario: 250 }],
-      outros_custos: [custo('Deslocamento', 500)],
-    });
-
-    // (500 + 500) × 1,3044 — mesma base do caso anterior, e mesmo total.
-    expect(total.total_bdi).toBe(304.38);
-    expect(total.total_geral).toBe(1304.38);
-  });
-
-  it('zera sem itens', () => {
-    const total = calcularRascunho(propostaVazia());
-
-    expect(total.total_custo).toBe(0);
-    expect(total.total_bdi).toBe(0);
-    expect(total.total_geral).toBe(0);
-  });
-});
-
-/**
- * O desconto no rascunho (28/out/2026): a mesma conta do servidor, sobre o total
- * inteiro (o faturamento direto junto), para o cadastro mostrar o total antes de
- * a solicitação existir.
- */
-describe('desconto do rascunho', () => {
   const base = (): Proposta => ({
     ...propostaVazia(),
-    itens: [{ descricao: 'Item', quantidade: 1, preco_unitario: 1000 }],
-    outros_custos: [{ descricao: 'Guindaste', valor: 200, faturamento_direto: true }],
+    itens: [{ descricao: 'Termografia', quantidade: 1, preco_unitario: 10000 }],
+    outros_custos: [{ descricao: 'Guindaste', valor: 5000, faturamento_direto: true }],
   });
 
-  it('percentual sobre o total inteiro: 10% de 1.504,38', () => {
-    const total = calcularRascunho({ ...base(), desconto_tipo: 'PERCENTUAL', desconto_valor: 10 });
-    expect(total.total_desconto).toBe(150.44);
-    expect(total.total_geral).toBe(1353.94);
+  const padroes = { imposto_percentual: 15, margem_percentual: 20, adm_servicos_percentual: 5, adm_fd_percentual: 2 };
+
+  it('com os padrões da empresa, os totais da conta: o global é a Aupus mais o faturamento direto', () => {
+    const total = calcularRascunho({ ...base(), ...padroes });
+    expect(total).toMatchObject({
+      imposto_percentual: 15,
+      margem_percentual: 20,
+      total_servicos: 10000,
+      total_fd: 5000,
+      total_administracao: 705.88,
+      total_aupus: 16090.5,
+      valor_imposto: 2413.57,
+      total_geral: 21090.5,
+      total_desconto: 0,
+    });
+    expect(total.itens[0].valor_venda).toBe(15384.62);
+    expect(total.fechamento).toMatchObject({ custo_servicos: 10000, preco_servicos: 15384.62 });
   });
 
-  it('em reais; maior que o total, para no total', () => {
-    expect(calcularRascunho({ ...base(), desconto_tipo: 'VALOR', desconto_valor: 500 }).total_geral).toBe(1004.38);
-    const demais = calcularRascunho({ ...base(), desconto_tipo: 'VALOR', desconto_valor: 5000 });
-    expect([demais.total_desconto, demais.total_geral]).toEqual([1504.38, 0]);
+  it('os padrões que a página lê da API entram no lugar dos da spec', () => {
+    const comOutros = calcularRascunho({
+      ...propostaVazia({ imposto_percentual: 10, margem_percentual: 10, adm_servicos_percentual: 0, adm_fd_percentual: 0 }),
+      itens: base().itens,
+    });
+    expect(comOutros.total_aupus).toBe(12500);
   });
 
-  it('sem tipo ou sem valor, nada', () => {
-    expect(descontoEmReais(null, 10, 100)).toBe(0);
-    expect(descontoEmReais('VALOR', null, 100)).toBe(0);
-    expect(calcularRascunho(base()).total_geral).toBe(1504.38);
+  it('a logística ganha o total de cada linha e entra no custo dos serviços', () => {
+    const total = calcularRascunho({
+      ...base(),
+      ...padroes,
+      logistica: [
+        { tabela: 'DESLOCAMENTO', ativo: true, descricao: 'Picape', dias: 3, valor_unitario: 200, km: 240, valor_km: 2, total: null },
+        { tabela: 'DIARIA', ativo: false, descricao: 'Pernoite', quantidade: 2, valor_unitario: 200, total: null },
+      ],
+    });
+    expect(total.logistica.map((l) => l.total)).toEqual([1080, 400]);
+    expect(total.total_servicos).toBe(11080);
+    // A linha sem nome (que não se grava) não entra na conta
+    expect(calcularRascunho({ ...total, logistica: [...total.logistica, { tabela: 'FRETE', ativo: true, descricao: ' ', quantidade: 1, km: 10, valor_km: 100, total: null }] }).total_servicos).toBe(11080);
+    expect(total.venda?.logistica).toBeGreaterThan(1080);
   });
 
-  it('o rascunho nasce com o BDI que lhe derem (o padrão da empresa)', () => {
-    const comLucro10 = calcularRascunho({ ...base(), ...propostaVazia({ ...BDI_GOINFRA, bdi_lucro: 10 }), itens: base().itens });
-    expect(comLucro10.bdi_percentual).toBeCloseTo(36.65, 2);
+  it('o desconto sobre o total inteiro sai do faturamento da Aupus', () => {
+    const total = calcularRascunho({ ...base(), ...padroes, desconto_tipo: 'PERCENTUAL', desconto_valor: 10 });
+    expect(total).toMatchObject({ total_desconto: 2109.05, total_aupus: 13981.45, total_geral: 18981.45 });
+  });
+
+  it('antes de os padrões chegarem, sem percentual: o preço é o custo', () => {
+    expect(calcularRascunho(base())).toMatchObject({ imposto_percentual: null, total_aupus: 10000, total_geral: 15000 });
+  });
+
+  it('zera sem nada', () => {
+    expect(calcularRascunho(propostaVazia())).toMatchObject({ total_geral: 0, total_aupus: 0, margem_efetiva: null });
   });
 });

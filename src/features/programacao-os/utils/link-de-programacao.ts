@@ -17,14 +17,17 @@ export type OrigemDoAtalho = 'ANOMALIA' | 'SOLICITACAO_SERVICO' | 'PLANO_MANUTEN
 
 /**
  * O botão que a tela da anomalia/solicitação mostra, pelo status dela.
- * Registrada pode ser programada; programada já tem a sua (uma por origem);
- * finalizada não tem para onde ir.
+ * A anomalia registrada e a solicitação com a proposta revisada (29/out/2026: a
+ * registrada ainda tem a proposta em edição) podem ser programadas; programada
+ * já tem a sua (uma por origem); finalizada não tem para onde ir.
  */
 export function atalhoDaOrigem(
   status: string | undefined | null,
+  tipo: 'ANOMALIA' | 'SOLICITACAO_SERVICO' = 'ANOMALIA',
 ): { rotulo: 'Programar' | 'Ver programação'; permissao: Permissao } | null {
   const s = status?.toUpperCase();
-  if (s === 'REGISTRADA') return { rotulo: 'Programar', permissao: 'programacao_os.manage' };
+  const programavel = tipo === 'SOLICITACAO_SERVICO' ? 'PROPOSTA_REVISADA' : 'REGISTRADA';
+  if (s === programavel) return { rotulo: 'Programar', permissao: 'programacao_os.manage' };
   if (s === 'PROGRAMADA') return { rotulo: 'Ver programação', permissao: 'programacao_os.view' };
   return null;
 }

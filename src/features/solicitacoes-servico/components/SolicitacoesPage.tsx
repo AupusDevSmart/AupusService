@@ -9,9 +9,9 @@ import { BaseModal } from '@/core';
 import { Plus, FilePenLine, RotateCcw, Percent } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatApiError } from '@/utils/api-error';
-import { componentesDe, propostaApi, type Proposta } from '@/services/proposta.services';
+import { propostaApi, type Proposta, type TabelaDeLogistica } from '@/services/proposta.services';
 import { PropostaSection } from './PropostaSection';
-import { BdiPadraoSheet } from './BdiPadraoSheet';
+import { PadroesDaPropostaSheet } from './PadroesDaPropostaSheet';
 import { PropostaCorrenteProvider, comBotaoDePdf } from './BotaoGerarPdf';
 import { AbrirInstrucaoContext, ValoresDaPropostaContext, type ValoresDaProposta } from './proposta-contexto';
 import { EditarInstrucaoSheet } from '@/features/instrucoes/components/EditarInstrucaoSheet';
@@ -58,8 +58,10 @@ const initialFilters = {
 const initialStats: SolicitacoesStats = {
   total: 0,
   registradas: 0,
+  revisadas: 0,
   programadas: 0,
   finalizadas: 0,
+  nao_aprovadas: 0,
   porTipo: {},
   porPrioridade: {},
 };
@@ -119,6 +121,9 @@ export function SolicitacoesPage() {
       onView: solicitacoesActions.handleView,
       onEdit: solicitacoesActions.handleEdit,
       onDelete: solicitacoesActions.handleDelete,
+      onRevisar: solicitacoesActions.handleRevisar,
+      onReabrir: solicitacoesActions.handleReabrir,
+      onNaoAprovada: solicitacoesActions.handleNaoAprovada,
       onProgramacao: (solicitacao) => navigate(linkDeProgramacao('SOLICITACAO_SERVICO', String(solicitacao.id))),
       temPermissao,
     });
@@ -208,26 +213,43 @@ export function SolicitacoesPage() {
   /**
    * Grava o rascunho em sequencia: cada rota devolve os totais recalculados.
    *
-   * O BDI e o desconto vao por ultimo, numa escrita so: o `create` ja nasce com
-   * o BDI padrao, mas o rascunho pode te-lo ajustado — e o que a pessoa viu na
-   * tela e o que se grava. O desconto em reais e conferido contra o total, que
-   * so existe depois dos valores.
+   * Os valores primeiro (instrucoes, custos adicionais e as tabelas de frete,
+   * deslocamento e diarias; a linha sem nome fica de fora, como na tela), depois
+   * as condicoes (os percentuais, o planejamento, a validade): o `create` ja nasce
+   * com os padroes, mas o rascunho pode te-los ajustado — e o que a pessoa viu na
+   * tela e o que se grava. O desconto por ultimo: ele e conferido contra o
+   * faturamento da Aupus, que so existe depois dos valores.
    */
   const gravarRascunhoProposta = async (id: string, rascunho: Proposta) => {
-    if (rascunho.itens.length > 0) {
-      await propostaApi.salvarItens(id, rascunho.itens);
+    const comNome = <T extends { descricao: string }>(linhas: T[]) => linhas.filter((l) => l.descricao.trim());
+    const custos = comNome(rascunho.outros_custos);
+    const logistica = comNome(rascunho.logistica);
+    if (rascunho.itens.length > 0) await propostaApi.salvarItens(id, rascunho.itens);
+    if (custos.length > 0) await propostaApi.salvarOutrosCustos(id, custos);
+    for (const tabela of ['FRETE', 'DESLOCAMENTO', 'DIARIA'] as TabelaDeLogistica[]) {
+      const linhas = logistica.filter((l) => l.tabela === tabela);
+      if (linhas.length > 0) await propostaApi.salvarLogistica(id, tabela, linhas);
     }
-    if (rascunho.outros_custos.length > 0) {
-      await propostaApi.salvarOutrosCustos(id, rascunho.outros_custos);
-    }
-    if (rascunho.itens.length === 0 && rascunho.outros_custos.length === 0) return;
-    // Separados: o desconto recusado nao leva o BDI junto
-    await propostaApi.salvarCondicoes(id, componentesDe(rascunho));
+    if (rascunho.itens.length === 0 && custos.length === 0 && logistica.length === 0) return;
+    // Separados: o desconto recusado nao leva os percentuais junto
+    await propostaApi.salvarCondicoes(id, {
+      imposto_percentual: rascunho.imposto_percentual,
+      margem_percentual: rascunho.margem_percentual,
+      adm_servicos_percentual: rascunho.adm_servicos_percentual,
+      adm_fd_percentual: rascunho.adm_fd_percentual,
+      distancia_km: rascunho.distancia_km,
+      distancia_ida_volta_km: rascunho.distancia_ida_volta_km,
+      dias_previstos: rascunho.dias_previstos,
+      pessoas_previstas: rascunho.pessoas_previstas,
+      noites_fora: rascunho.noites_fora,
+      validade_proposta: rascunho.validade_proposta,
+      condicoes_comerciais: rascunho.condicoes_comerciais,
+    });
     if (rascunho.desconto_tipo && rascunho.desconto_valor) {
-      // O desconto em reais que passou do total (uma instrucao saiu depois) vale ate o
-      // total, como a tela mostrou; inteiro, a API o recusaria
-      const totalSemDesconto = rascunho.total_geral + rascunho.total_desconto;
-      const valor = rascunho.desconto_tipo === 'VALOR' ? Math.min(rascunho.desconto_valor, totalSemDesconto) : rascunho.desconto_valor;
+      // O desconto em reais que passou do faturamento da Aupus (uma instrucao saiu depois) vale
+      // ate ele, como a tela mostrou; inteiro, a API o recusaria
+      const aupus = rascunho.fechamento?.total_aupus_sem_desconto ?? 0;
+      const valor = rascunho.desconto_tipo === 'VALOR' ? Math.min(rascunho.desconto_valor, aupus) : rascunho.desconto_valor;
       await propostaApi.salvarCondicoes(id, { desconto_tipo: rascunho.desconto_tipo, desconto_valor: Math.round(valor * 100) / 100 });
     }
   };
@@ -243,8 +265,8 @@ export function SolicitacoesPage() {
     setValoresProposta(null);
   };
 
-  /** O BDI padrao da empresa, configurado pelo botao do cabecalho (28/out/2026) */
-  const [bdiPadraoAberto, setBdiPadraoAberto] = useState(false);
+  /** Os percentuais padrao da proposta, configurados pelo botao do cabecalho (29/out/2026) */
+  const [padroesAbertos, setPadroesAbertos] = useState(false);
 
   /**
    * O render da proposta e montado aqui, e nao no form-config, porque so a
@@ -361,6 +383,9 @@ export function SolicitacoesPage() {
     if (modalState.mode === 'create') return 'Nova Solicitação';
     if (modalState.mode === 'edit') return 'Editar Solicitação';
     if (solicitacoesActions.pendingAction === 'excluir') return 'Excluir Solicitação';
+    if (solicitacoesActions.pendingAction === 'revisar') return 'Revisar a proposta';
+    if (solicitacoesActions.pendingAction === 'reabrir') return 'Reabrir a proposta';
+    if (solicitacoesActions.pendingAction === 'nao_aprovada') return 'Proposta não aprovada';
     return 'Visualizar Solicitação';
   };
 
@@ -393,15 +418,15 @@ export function SolicitacoesPage() {
                   <RotateCcw className="mr-2 h-4 w-4" />
                   <span>Limpar Filtros</span>
                 </button>
-                {/* O lugar de configurar o BDI: quem monta proposta (solicitacoes.manage) */}
+                {/* O lugar de configurar imposto, margem e administração: quem monta proposta */}
                 {temPermissao('solicitacoes.manage') && (
                   <button
-                    onClick={() => setBdiPadraoAberto(true)}
+                    onClick={() => setPadroesAbertos(true)}
                     className="btn-minimal-primary w-full sm:w-auto whitespace-nowrap flex-shrink-0 justify-center"
-                    title="O BDI que as solicitações novas recebem"
+                    title="O imposto, a margem e a administração que as solicitações novas recebem"
                   >
                     <Percent className="mr-2 h-4 w-4" />
-                    <span>BDI padrão</span>
+                    <span>Percentuais</span>
                   </button>
                 )}
                 <button
@@ -498,7 +523,7 @@ export function SolicitacoesPage() {
             </AbrirInstrucaoContext.Provider>
           </PropostaCorrenteProvider>
         )}
-        <BdiPadraoSheet aberto={bdiPadraoAberto} onClose={() => setBdiPadraoAberto(false)} />
+        <PadroesDaPropostaSheet aberto={padroesAbertos} onClose={() => setPadroesAbertos(false)} />
       </Layout.Main>
     </Layout>
   );

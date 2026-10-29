@@ -1,6 +1,9 @@
 // src/features/solicitacoes-servico/hooks/useSolicitacoesActions.ts
 import { useCallback, useState } from 'react';
+import { toast } from 'sonner';
 import { solicitacoesServicoService } from '@/services/solicitacoes-servico.service';
+import { propostaApi } from '@/services/proposta.services';
+import { formatApiError } from '@/utils/api-error';
 import { SolicitacaoServico } from '../types';
 import { PendingAction } from '../components/ActionConfirmPanel';
 
@@ -94,13 +97,23 @@ export function useSolicitacoesActions({
     [openViewWithAction]
   );
 
+  // A revisão da proposta (29/out/2026): revisar, reabrir e não aprovada, pelo sheet aberto
+  const handleRevisar = useCallback((solicitacao: SolicitacaoServico) => openViewWithAction(solicitacao, 'revisar'), [openViewWithAction]);
+  const handleReabrir = useCallback((solicitacao: SolicitacaoServico) => openViewWithAction(solicitacao, 'reabrir'), [openViewWithAction]);
+  const handleNaoAprovada = useCallback((solicitacao: SolicitacaoServico) => openViewWithAction(solicitacao, 'nao_aprovada'), [openViewWithAction]);
+
   const confirmAction = useCallback(
-    async (_input?: string) => {
+    async (input?: string) => {
       if (!pendingAction || !actionEntity) return;
+      const id = String(actionEntity.id).trim();
 
       try {
-        if (pendingAction === 'excluir') {
-          await deleteItem(actionEntity.id);
+        if (pendingAction === 'excluir') await deleteItem(id);
+        if (pendingAction === 'revisar') await propostaApi.revisar(id);
+        if (pendingAction === 'reabrir') await propostaApi.reabrir(id, input);
+        if (pendingAction === 'nao_aprovada') await propostaApi.naoAprovada(id, input ?? '');
+        if (pendingAction !== 'excluir') {
+          toast.success({ revisar: 'Proposta revisada: já pode ser programada', reabrir: 'Proposta reaberta para edição', nao_aprovada: 'Proposta marcada como não aprovada' }[pendingAction]);
         }
 
         closeModal();
@@ -108,7 +121,7 @@ export function useSolicitacoesActions({
         await onSuccess();
       } catch (error) {
         console.error(`Erro ao executar ação ${pendingAction}:`, error);
-        alert('Erro ao executar ação. Tente novamente.');
+        toast.error('Não foi possível concluir a ação', { description: formatApiError(error) });
       }
     },
     [pendingAction, actionEntity, deleteItem, closeModal, clearPendingAction, onSuccess]
@@ -119,6 +132,9 @@ export function useSolicitacoesActions({
     abrirPorId,
     handleEdit,
     handleDelete,
+    handleRevisar,
+    handleReabrir,
+    handleNaoAprovada,
     pendingAction,
     confirmAction,
     clearPendingAction,
