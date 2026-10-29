@@ -106,11 +106,43 @@ describe('PDF da proposta', () => {
     expect(textos).toContain('Escopo do serviço');
     expect(textos).toContain('TR-03 · Ensaios elétricos do transformador');
     expect(textos).toContain('30/11/2026');
-    expect(textos).not.toMatch(/Logística|Administração|Total faturado|Faturamento direto|Locação do gerador/);
-    expect(textos).not.toContain('Picape');
+    expect(textos).not.toMatch(/Administração|Total faturado|Desconto/);
     expect(textos).not.toMatch(/margem/i);
-    // Nem o planejamento da logística (km, pessoas, pernoites): é a composição do preço
-    expect(textos).not.toMatch(/920|pernoite|pessoas/i);
+    // Os valores das linhas (R$ por km, total da linha, custo do adicional) nunca
+    expect(textos).not.toMatch(/1,40|1\.288|104,00|2\.200/);
+  }, 30_000);
+
+  // Pedido do usuário (29/out/2026): o deslocamento, o frete, as diárias, o planejamento
+  // e os adicionais vão ao PDF, pelo nome e pelas quantidades
+  it('a mobilização e os adicionais vão pelo nome e pelas quantidades, sem valor', async () => {
+    const comLogistica = proposta({
+      logistica: [
+        { tabela: 'DESLOCAMENTO', ativo: true, descricao: 'Picape 4x4', dias: 2, valor_unitario: 0, km: 920, valor_km: 1.4, total: 1288 },
+        { tabela: 'FRETE', ativo: true, descricao: 'Caminhão munck', quantidade: 1, km: 460, valor_km: 6, total: 2760 },
+        { tabela: 'FRETE', ativo: false, descricao: 'Carreta (desligada)', quantidade: 1, km: 460, valor_km: 9, total: 4140 },
+        { tabela: 'DIARIA', ativo: true, descricao: 'Alimentação', quantidade: 4, valor_unitario: 60, total: 240 },
+      ],
+    });
+    const textos = await desenhados(comLogistica);
+    expect(textos).toContain('Mobilização e logística');
+    expect(textos).toContain('Distância até o local: 460 km (920 km ida e volta).');
+    expect(textos).toContain('Equipe prevista: 2 pessoas.');
+    expect(textos).toContain('Pernoites previstos: 1.');
+    expect(textos).toMatch(/Deslocamento \| .*Picape 4x4 \| 2 dias · 920 km/);
+    expect(textos).toMatch(/Frete \| .*Caminhão munck \| 1 viagem · 460 km por viagem/);
+    expect(textos).toMatch(/Diárias \| .*Alimentação \| 4 diárias/);
+    expect(textos).not.toContain('Carreta');
+    expect(textos).toContain('Custos adicionais');
+    expect(textos).toContain('ART');
+    expect(textos).toMatch(/Faturamento direto \| Pago pelo cliente direto ao fornecedor.* \| .*Locação do gerador 150 kVA/);
+    // O único valor continua o final
+    expect(textos.match(/R\$/g)).toHaveLength(1);
+    expect(textos).not.toMatch(/2\.760|240,00|60,00/);
+  }, 30_000);
+
+  it('sem planejamento, logística nem adicionais: a seção não entra', async () => {
+    const textos = await desenhados(proposta({ logistica: [], outros_custos: [], distancia_km: null, distancia_ida_volta_km: null, pessoas_previstas: null, noites_fora: null }));
+    expect(textos).not.toMatch(/Mobilização|Custos adicionais/);
   }, 30_000);
 
   // A proposta de antes (BDI) também: o total, sem o custo nem o BDI
@@ -119,7 +151,7 @@ describe('PDF da proposta', () => {
     const textos = await desenhados(deAntes);
     expect(textos).toMatch(/R\$\s14\.668,44/);
     expect(textos.match(/R\$/g)).toHaveLength(1);
-    expect(textos).not.toMatch(/BDI|Custo/);
+    expect(textos).not.toMatch(/BDI|30,44|11\.758,50/);
   }, 30_000);
 
   // Sem o passo a passo (29/out/2026): a capa resume os serviços dos itens
