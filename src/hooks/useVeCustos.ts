@@ -1,13 +1,15 @@
 import { useUserStore } from '@/store/useUserStore';
 
 /**
- * Quem vê o dinheiro da OS e da programação (SERV-10): quem executa (o técnico de
- * campo confere os outros custos no Executar) e quem programa ou gerencia. O
- * cliente só lê e não vê dinheiro nenhum — a API já não manda; aqui a tela tira
- * as colunas e os quadros que ficariam vazios. A mesma lista do
+ * Quem vê o dinheiro (da OS, da programação, dos preços de instrução e plano):
+ * quem programa ou gerencia. O cliente (SERV-10) e, desde 28/out/2026, o técnico
+ * de campo não veem — a API já não manda; aqui a tela tira as colunas e os
+ * quadros que ficariam vazios. O técnico ainda confere as despesas de campo no
+ * Executar (a API as manda só para quem executa). A mesma lista do
  * `quem-ve-os-custos.ts` da API.
  */
-export const PERMISSOES_QUE_VEEM_CUSTOS = ['execucao_os.executar', 'execucao_os.manage', 'programacao_os.manage'];
+// Quem edita instrução ou monta proposta também: sem o preço, salvaria de volta o preço vazio
+export const PERMISSOES_QUE_VEEM_CUSTOS = ['execucao_os.manage', 'programacao_os.manage', 'manutencao.manage', 'solicitacoes.manage'];
 
 const podeVer = (acessivel: string[]) => PERMISSOES_QUE_VEEM_CUSTOS.some((p) => acessivel.includes(p));
 

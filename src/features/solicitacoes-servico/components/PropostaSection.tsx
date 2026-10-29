@@ -338,7 +338,8 @@ export function PropostaSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valores, definir, editavel, semPreco, refazer]);
 
-  const bdi = calcularBdi(proposta) * 100;
+  // Salva, o percentual do servidor: o cliente não recebe os componentes (a margem), só o resultado
+  const bdi = rascunho ? calcularBdi(proposta) * 100 : proposta.bdi_percentual;
   // O BDI e o desconto são de quem monta proposta: o cliente que cadastra não grava a proposta
   const ajustaCondicoes = editavel && montaProposta;
 

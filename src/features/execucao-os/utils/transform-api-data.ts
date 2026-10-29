@@ -127,7 +127,8 @@ export function transformApiResponseToExecucaoOS(apiData: OrdemServicoDaApi): Ex
     // Custos
     orcamento_previsto: apiData.orcamento_previsto,
     custo_real: apiData.custo_real,
-    itens_orcamento: apiData.itens_orcamento || [],
+    // Ausente (a linha da lista) fica ausente: [] diria "não há despesas", e o Executar apagaria as não previstas
+    itens_orcamento: apiData.itens_orcamento,
 
     // Observações
     observacoes: apiData.observacoes,

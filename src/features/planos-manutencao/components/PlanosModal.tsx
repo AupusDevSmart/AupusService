@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { BaseModal } from '@/core';
 import { Layers } from 'lucide-react';
+import { useVeCustos } from '@/hooks/useVeCustos';
 import { PlanoManutencaoApiResponse, type CreatePlanoManutencaoApiData } from '@/services/planos-manutencao.services';
 import { FormField } from '@/types/base';
 import type { DadosDoFormulario } from '@/core/types/base';
@@ -36,6 +37,7 @@ export function PlanosModal({
   onClose,
   onSubmit,
 }: PlanosModalProps) {
+  const veCusto = useVeCustos();
   const getModalTitle = () => {
     const titles = {
       create: 'Novo Plano de Manutenção',
@@ -98,7 +100,7 @@ export function PlanosModal({
         },
         {
           key: 'tarefas_e_valores',
-          title: 'Tarefas e valores',
+          title: veCusto ? 'Tarefas e valores' : 'Tarefas',
           fields: ['tarefas_e_valores']
         }
       ]}

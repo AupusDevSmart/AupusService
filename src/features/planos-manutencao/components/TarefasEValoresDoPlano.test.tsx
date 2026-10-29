@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TarefasEValoresDoPlano } from './TarefasEValoresDoPlano';
+import { useUserStore } from '@/store/useUserStore';
+
+// O planejador vê os valores; o cliente e o técnico, não (28/out/2026, o último teste)
+beforeEach(() => useUserStore.setState({ acessivel: ['programacao_os.manage'] }));
 import type { PlanoManutencaoApiResponse, TarefaResumoDto } from '@/services/planos-manutencao.services';
 
 /**
@@ -85,6 +89,17 @@ describe('TarefasEValoresDoPlano', () => {
 
     expect(screen.getByText(/inativa/)).toBeInTheDocument();
     expect(screen.getByText(/das 1 tarefa ativa/i)).toBeInTheDocument();
+  });
+
+  it('quem não vê custos (cliente, técnico) vê as tarefas sem valor e sem total', () => {
+    useUserStore.setState({ acessivel: ['manutencao.view', 'execucao_os.executar'] });
+    render(<TarefasEValoresDoPlano plano={plano([tarefa('1', 'Inspecao visual', { frequencia: 'MENSAL', valor: null })])} />);
+
+    expect(screen.getByText('Inspecao visual')).toBeInTheDocument();
+    expect(screen.getByText('Mensal')).toBeInTheDocument();
+    expect(screen.queryByText('Valor')).not.toBeInTheDocument();
+    expect(screen.queryByText('Valor total do plano')).not.toBeInTheDocument();
+    expect(screen.queryByText(/R\$/)).not.toBeInTheDocument();
   });
 
   it('plano sem tarefas diz que nao ha', () => {

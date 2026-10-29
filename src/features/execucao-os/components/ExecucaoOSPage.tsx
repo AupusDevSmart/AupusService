@@ -106,12 +106,13 @@ export function ExecucaoOSPage() {
   const openViewWithAction = async (execucao: ExecucaoOS, action: PendingAction) => {
     try {
       const dadosCompletos = await fetchOne(execucao.id);
+      if (!dadosCompletos) throw new Error('A OS não veio da API');
       setPendingAction(action);
-      openModal('view', dadosCompletos || execucao);
+      openModal('view', dadosCompletos);
     } catch (error) {
-      console.error('Erro ao buscar detalhes:', error);
-      setPendingAction(action);
-      openModal('view', execucao);
+      // A ação não abre sobre a linha da tabela: ela vem sem as despesas, e o Executar
+      // mandaria a lista vazia, que apaga as não previstas
+      toast({ title: 'Não foi possível abrir a OS', description: formatApiError(error), variant: 'destructive' });
     }
   };
 

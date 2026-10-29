@@ -1,5 +1,6 @@
 // src/features/planos-manutencao/components/TarefasEValoresDoPlano.tsx
 import { formatCurrency } from '@/lib/utils';
+import { useVeCustos } from '@/hooks/useVeCustos';
 import type { PlanoManutencaoApiResponse, TarefaResumoDto } from '@/services/planos-manutencao.services';
 import { ROTULO_FREQUENCIA } from '../utils/frequencia';
 
@@ -29,6 +30,8 @@ const rotuloDaFrequencia = (tarefa: TarefaResumoDto): string => {
 
 export function TarefasEValoresDoPlano({ plano }: TarefasEValoresDoPlanoProps) {
   const tarefas = plano?.tarefas;
+  // O valor só para quem vê custos: o cliente e o técnico leem as tarefas sem ele (a API não manda)
+  const veCusto = useVeCustos();
 
   // Sem a lista (a busca do plano falhou e o sheet abriu com a linha da tabela),
   // "nenhuma tarefa" seria mentira: o plano pode ter dez.
@@ -55,7 +58,7 @@ export function TarefasEValoresDoPlano({ plano }: TarefasEValoresDoPlanoProps) {
       <div className="flex items-center gap-3 pb-1.5 text-[11px] uppercase tracking-wide text-muted-foreground/70">
         <div className="min-w-0 flex-1">Tarefa</div>
         <div className="hidden sm:block w-28 flex-shrink-0">Frequência</div>
-        <div className="w-28 flex-shrink-0 text-right">Valor</div>
+        {veCusto && <div className="w-28 flex-shrink-0 text-right">Valor</div>}
       </div>
 
       <div className="divide-y border-t">
@@ -84,7 +87,7 @@ export function TarefasEValoresDoPlano({ plano }: TarefasEValoresDoPlanoProps) {
                 {rotuloDaFrequencia(tarefa)}
               </div>
 
-              <div className="w-28 flex-shrink-0 text-right">
+              {veCusto && <div className="w-28 flex-shrink-0 text-right">
                 {typeof tarefa.valor === 'number' ? (
                   <>
                     <p className="text-sm tabular-nums">{formatCurrency(tarefa.valor)}</p>
@@ -102,12 +105,14 @@ export function TarefasEValoresDoPlano({ plano }: TarefasEValoresDoPlanoProps) {
                     -
                   </p>
                 )}
-              </div>
+              </div>}
             </div>
           );
         })}
       </div>
 
+      {veCusto && (
+      <>
       <div className="flex items-center gap-3 border-t pt-3">
         <div className="min-w-0 flex-1 text-sm font-semibold text-foreground">Valor total do plano</div>
         <div className="w-28 flex-shrink-0 text-right text-sm font-semibold tabular-nums">
@@ -121,6 +126,8 @@ export function TarefasEValoresDoPlano({ plano }: TarefasEValoresDoPlanoProps) {
         {semPreco > 0 &&
           ` ${semPreco} ${semPreco === 1 ? 'tarefa tem' : 'tarefas têm'} instrução com item sem preço: o total pode estar abaixo do custo.`}
       </p>
+      </>
+      )}
     </div>
   );
 }

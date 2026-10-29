@@ -64,6 +64,18 @@ const SolicitanteRender = ({ value, onChange, mode, entity }: FormFieldProps & {
   );
 };
 
+/**
+ * A proposta (28/out/2026): quem a monta (`solicitacoes.manage`) e o cliente dono
+ * da solicitação (só leitura, como no PDF dele); o técnico não vê dinheiro, e a API
+ * já a manda sem valores para ele.
+ */
+const veAProposta = (entidade?: unknown) => {
+  const { hasPermission, user } = useUserStore.getState();
+  if (hasPermission('solicitacoes.manage')) return true;
+  const dono = (entidade as { proprietario_id?: string | null } | null | undefined)?.proprietario_id?.trim();
+  return Boolean(dono && dono === String(user?.id ?? '').trim());
+};
+
 /** Os papéis que veem só as próprias plantas (a regra do escopo da API) */
 const temEscopoPorPlanta = () => ['proprietario', 'operador'].includes(useUserStore.getState().getUserRole() ?? '');
 
@@ -203,6 +215,7 @@ export const solicitacoesFormFields: FormField[] = [
     type: 'custom',
     colSpan: 2,
     excludeFromSubmit: true,
+    condition: (entidade) => veAProposta(entidade),
   },
   // O solicitante fecha o formulario, sempre — e quem pediu, nao parte do que
   // sera feito.

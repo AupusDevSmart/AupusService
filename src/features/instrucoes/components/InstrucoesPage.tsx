@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { formatApiError } from '@/utils/api-error';
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { useUserStore } from '@/store/useUserStore';
+import { useVeCustos } from '@/hooks/useVeCustos';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
 import { InstrucaoApiResponse, QueryInstrucoesApiParams, DashboardInstrucoesDto } from '@/services/instrucoes.services';
 import { instrucoesTableColumns } from '../config/table-config';
@@ -46,6 +47,7 @@ const initialDashboard: DashboardInstrucoesDto = {
 export function InstrucoesPage() {
   // Ler: todos; escrever (nova, importar, editar, excluir): quem gerencia manutenção.
   const podeGerenciar = usePermission('manutencao.manage');
+  const veCusto = useVeCustos();
   const { user } = useUserStore();
 
   const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('instrucoes');
@@ -223,7 +225,9 @@ export function InstrucoesPage() {
               <BaseFilters filters={filters} config={filterConfig} onFilterChange={handleFilterChange} />
             </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
-              <PlanilhaDoCadastro
+              {/* A planilha leva o preço de cada linha: só para quem vê custos (o cliente e o técnico leriam
+                  "sem preço" onde há preço) */}
+              {veCusto && <PlanilhaDoCadastro
                 cadastro="instrucoes"
                 titulo="Instruções"
                 exportar={() => {
@@ -236,7 +240,7 @@ export function InstrucoesPage() {
                   void loadDashboard();
                 }}
                 podeImportar={podeGerenciar}
-              />
+              />}
               {podeGerenciar && (
                 <button onClick={() => openModal('create')} className="btn-minimal-primary w-full lg:w-auto lg:mt-0 whitespace-nowrap">
                   <Plus className="mr-2 h-4 w-4" />

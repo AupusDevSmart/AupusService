@@ -13,6 +13,7 @@ import { descreverFaixa, numeroOuNulo } from '@/utils/leitura';
 import { formatarHoras } from '@/utils/horas';
 import { rotuloCategoria } from '@/services/recursos.services';
 import { descreverUso } from '@/features/instrucoes/utils/custo-da-linha';
+import { useVeCustos } from '@/hooks/useVeCustos';
 
 /** "leitura 580 a 620 V", "leitura em V", "leitura" (SN-58) */
 function rotuloDaLeitura(sub: SubInstrucaoApiResponse) {
@@ -55,6 +56,8 @@ export function InstrucaoExpandableCard({
   valorEditavel = true,
   semPrecoNoCadastro = false,
 }: InstrucaoExpandableCardProps) {
+  // O preço da instrução só para quem vê custos (28/out/2026)
+  const veCusto = useVeCustos();
   const [expanded, setExpanded] = useState(false);
   const [details, setDetails] = useState<InstrucaoApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -184,10 +187,13 @@ export function InstrucaoExpandableCard({
                   value={details.horas_dos_passos ? formatarHoras(details.horas_dos_passos) : '-'}
                   icon={<Clock className="h-3.5 w-3.5" />}
                 />
-                <InfoItem
-                  label="Valor da instrução"
-                  value={details.custo === null ? 'falta preço' : details.custo === undefined ? '-' : moeda(details.custo)}
-                />
+                {/* Para quem não vê custos (cliente, técnico) a API manda sem preço: "falta preço" seria mentira */}
+                {veCusto && (
+                  <InfoItem
+                    label="Valor da instrução"
+                    value={details.custo === null ? 'falta preço' : details.custo === undefined ? '-' : moeda(details.custo)}
+                  />
+                )}
               </div>
 
               {/* Descricao */}
@@ -262,7 +268,7 @@ export function InstrucaoExpandableCard({
                         rotulo={rotuloCategoria(rec.recurso.categoria)}
                         nome={rec.recurso.nome}
                         uso={descreverUso(rec.recurso, rec)}
-                        subtotal={rec.fornecido_pelo_cliente ? 'do cliente' : rec.subtotal}
+                        subtotal={rec.fornecido_pelo_cliente ? 'do cliente' : veCusto ? rec.subtotal : undefined}
                       />
                     ))}
                   </div>
@@ -282,7 +288,7 @@ export function InstrucaoExpandableCard({
                         key={maq.id}
                         nome={maq.maquinario.nome}
                         uso={descreverUso(maq.maquinario, maq)}
-                        subtotal={maq.subtotal}
+                        subtotal={veCusto ? maq.subtotal : undefined}
                       />
                     ))}
                   </div>
@@ -355,7 +361,8 @@ function ValorDaInstrucao({
 }
 
 /** Uma linha de recurso ou maquinário: o que é, quanto se usa e quanto custa (do servidor) */
-function LinhaDeCusto({ rotulo, nome, uso, subtotal }: { rotulo?: string; nome: string; uso: string; subtotal: number | null | string }) {
+/** `subtotal` ausente: quem não vê custos (a linha mostra o que é e quanto se usa, sem preço) */
+function LinhaDeCusto({ rotulo, nome, uso, subtotal }: { rotulo?: string; nome: string; uso: string; subtotal?: number | null | string }) {
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm pl-1">
       {rotulo && (
@@ -363,9 +370,11 @@ function LinhaDeCusto({ rotulo, nome, uso, subtotal }: { rotulo?: string; nome: 
       )}
       <span className="min-w-0 flex-1">{nome}</span>
       <span className="text-xs text-muted-foreground flex-shrink-0">{uso}</span>
-      <span className="text-xs text-foreground flex-shrink-0">
-        {typeof subtotal === 'string' ? subtotal : subtotal === null ? 'sem preço' : moeda(subtotal)}
-      </span>
+      {subtotal !== undefined && (
+        <span className="text-xs text-foreground flex-shrink-0">
+          {typeof subtotal === 'string' ? subtotal : subtotal === null ? 'sem preço' : moeda(subtotal)}
+        </span>
+      )}
     </div>
   );
 }

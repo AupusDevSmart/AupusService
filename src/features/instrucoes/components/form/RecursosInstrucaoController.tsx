@@ -8,6 +8,7 @@ import { recursosApi, type RecursoApiResponse } from '@/services/recursos.servic
 import { maquinariosApi, type MaquinarioApiResponse } from '@/services/maquinarios.services';
 import { somarSubtotais, subtotalDaLinha } from '@/features/instrucoes/utils/custo-da-linha';
 import { LinhasDeCusto, type ItemDoCatalogo, type LinhaDeCustoDoFormulario } from './LinhasDeCusto';
+import { useVeCustos } from '@/hooks/useVeCustos';
 
 const moeda = (valor: number) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -39,6 +40,7 @@ interface Props {
  * servidor espelhada na tela (`custo-da-linha.ts`); ao salvar, vale a do servidor.
  */
 export function RecursosInstrucaoController({ value, onChange, maquinarios, onMaquinarios, passos, disabled }: Props) {
+  const veCusto = useVeCustos();
   const [recursos, setRecursos] = React.useState<RecursoApiResponse[]>([]);
   const [maquinas, setMaquinas] = React.useState<MaquinarioApiResponse[]>([]);
   const [carregando, setCarregando] = React.useState(true);
@@ -135,7 +137,8 @@ export function RecursosInstrucaoController({ value, onChange, maquinarios, onMa
         onChange={(novas) => trocarGrupo('materiais', novas)}
         catalogo={recursos.filter((r) => r.categoria === 'MATERIAL')}
       />
-      {subtotais.length > 0 && (
+      {/* Para quem não vê custos o preço não vem: "falta preço" seria mentira (28/out/2026) */}
+      {veCusto && subtotais.length > 0 && (
         <p className="flex items-center justify-end gap-1.5 text-sm text-muted-foreground">
           <Wallet className="h-4 w-4" />
           Valor da instrução:

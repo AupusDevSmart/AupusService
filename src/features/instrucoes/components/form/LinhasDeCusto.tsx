@@ -16,6 +16,7 @@ import {
   unidadesDaLinha,
 } from '@/features/instrucoes/utils/custo-da-linha';
 import { NovoItemDoCatalogo, type GrupoDaLinha } from './NovoItemDoCatalogo';
+import { useVeCustos } from '@/hooks/useVeCustos';
 
 export type ItemDoCatalogo = RecursoApiResponse | MaquinarioApiResponse;
 /** O item na linha: do cadastro carregado, ou o resumo que a linha trouxe */
@@ -77,6 +78,9 @@ interface Props {
  * lista volta pelo nome do item.
  */
 export function LinhasDeCusto({ grupo, titulo, linhas, onChange, catalogo, carregando, horasDosPassos, onItemCriado, disabled }: Props) {
+  // O valor e o total só para quem vê custos: o cliente e o técnico leem a instrução sem preço (28/out/2026)
+  const veCusto = useVeCustos();
+  const comPreco = <T,>(...colunas: T[]) => (veCusto ? colunas : []);
   const chave = grupo === 'maquinario' ? 'maquinario_id' : 'recurso_id';
 
   const porId = React.useMemo(() => new Map(catalogo.map((i) => [i.id.trim(), i])), [catalogo]);
@@ -312,8 +316,8 @@ export function LinhasDeCusto({ grupo, titulo, linhas, onChange, catalogo, carre
 
   const colunas =
     grupo === 'materiais'
-      ? [colunaDoItem, colunaDaQuantidade, colunaDaPerda, colunaDoFd, colunaDoValor, colunaDoTotal]
-      : [colunaDoItem, colunaDaQuantidade, colunaDoUso, colunaDoValor, colunaDoTotal];
+      ? [colunaDoItem, colunaDaQuantidade, colunaDaPerda, colunaDoFd, ...comPreco(colunaDoValor, colunaDoTotal)]
+      : [colunaDoItem, colunaDaQuantidade, colunaDoUso, ...comPreco(colunaDoValor, colunaDoTotal)];
 
   const totalDoGrupo = somarSubtotais(linhas.filter((l) => itemDaLinha(l)).map(subtotal));
 
@@ -326,7 +330,7 @@ export function LinhasDeCusto({ grupo, titulo, linhas, onChange, catalogo, carre
       textoAdicionar={`Adicionar ${grupo === 'maquinario' ? 'maquinário' : grupo === 'materiais' ? 'material' : 'recurso'}`}
       titulo={titulo}
       resumo={
-        linhas.length
+        linhas.length && veCusto
           ? [
               {
                 icone: <Wallet className="h-3.5 w-3.5" />,

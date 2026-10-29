@@ -106,6 +106,13 @@ export function SolicitacoesPage() {
   const navigate = useNavigate();
   const temPermissao = useUserStore((st) => st.hasPermission);
   const ehCliente = useUserStore((st) => st.getUserRole()) === 'proprietario';
+  // O valor da proposta: quem a monta e o cliente (a das plantas dele); o técnico não vê dinheiro,
+  // e a coluna ficaria sempre vazia (28/out/2026)
+  const veValor = temPermissao('solicitacoes.manage') || ehCliente;
+  const colunas = useMemo(
+    () => (veValor ? solicitacoesTableColumns : solicitacoesTableColumns.filter((c) => c.key !== 'total_geral')),
+    [veValor],
+  );
 
   const customActions = useMemo(() => {
     const tableActions = createSolicitacoesTableActions({
@@ -225,6 +232,17 @@ export function SolicitacoesPage() {
     }
   };
 
+  /**
+   * A proposta da solicitacao que fechou nao vai para a proxima. A secao, quando
+   * monta, publica a dela; mas para quem nao a ve (o tecnico, o cliente na de
+   * outro) ela nao monta, e o "Gerar PDF" imprimia a da solicitacao anterior.
+   */
+  const esquecerProposta = () => {
+    setRascunhoProposta(null);
+    setPropostaAtual(null);
+    setValoresProposta(null);
+  };
+
   /** O BDI padrao da empresa, configurado pelo botao do cabecalho (28/out/2026) */
   const [bdiPadraoAberto, setBdiPadraoAberto] = useState(false);
 
@@ -282,6 +300,7 @@ export function SolicitacoesPage() {
       }
 
       closeModal();
+      esquecerProposta();
       solicitacoesActions.clearPendingAction();
       await reloadData();
     } catch (error) {
@@ -295,8 +314,7 @@ export function SolicitacoesPage() {
     // Comentário digitado e não enviado não some calado ao fechar (SN-48)
     if (rascunhoDoComentario.current && !window.confirm('Há um comentário não enviado. Fechar e descartar?')) return;
     rascunhoDoComentario.current = false;
-    // O rascunho do cadastro cancelado nao vai para o proximo cadastro
-    setRascunhoProposta(null);
+    esquecerProposta();
     closeModal();
     solicitacoesActions.clearPendingAction();
   };
@@ -388,7 +406,7 @@ export function SolicitacoesPage() {
                 )}
                 <button
                   onClick={() => {
-                    setRascunhoProposta(null);
+                    esquecerProposta();
                     openModal('create');
                   }}
                   className="btn-minimal-primary w-full sm:w-auto whitespace-nowrap flex-shrink-0 justify-center"
@@ -403,7 +421,7 @@ export function SolicitacoesPage() {
           <div className="sm:flex-1 sm:min-h-0">
             <BaseTable
               data={solicitacoes}
-              columns={solicitacoesTableColumns}
+              columns={colunas}
               pagination={{
                 page: currentPage,
                 limit: filters.limit || LINHAS_POR_PAGINA_PADRAO,
