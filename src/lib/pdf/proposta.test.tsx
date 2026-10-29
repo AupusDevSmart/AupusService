@@ -51,20 +51,9 @@ const proposta = (mudar: Partial<Proposta> = {}): Proposta => ({
   ...mudar,
 });
 
-const escopo = [
-  {
-    id: 'i1',
-    rotulo: 'TR-01 · Inspeção sensitiva do transformador',
-    etapas: [
-      { descricao: 'Conferir o nível e a temperatura do óleo', duracao_horas: 0.5 },
-      { descricao: 'Medir a resistência de isolamento (mínimo 1 GΩ)', duracao_horas: 1.5 },
-    ],
-  },
-];
-
 /** Os textos que o documento desenha (o `textosDesenhados` quer o Document: o do timbrado, desembrulhado) */
 const desenhados = async (p: Proposta) => {
-  const timbrado = PropostaDocumento({ proposta: p, escopo: [] }) as ReactElement<Parameters<typeof DocumentoAupus>[0]>;
+  const timbrado = PropostaDocumento({ proposta: p }) as ReactElement<Parameters<typeof DocumentoAupus>[0]>;
   return (await textosDesenhados(DocumentoAupus(timbrado.props))).map((t) => t.texto).join(' | ');
 };
 
@@ -75,7 +64,7 @@ describe('PDF da proposta', () => {
   beforeAll(() => prepararFontes(), 30_000);
 
   it('capa numa página própria, conteúdo depois, e a fonte da identidade embutida', async () => {
-    const arquivo = await renderToBuffer(pdfDaProposta({ proposta: proposta(), numero: 'PRG-2026-014', titulo: 'Manutenção do transformador', cliente: 'Laticínio Vale Verde', escopo }));
+    const arquivo = await renderToBuffer(pdfDaProposta({ proposta: proposta(), numero: 'PRG-2026-014', titulo: 'Manutenção do transformador', cliente: 'Laticínio Vale Verde' }));
 
     expect(arquivo.subarray(0, 5).toString('latin1')).toBe('%PDF-');
     expect(paginas(arquivo)).toBeGreaterThanOrEqual(2);
@@ -84,47 +73,59 @@ describe('PDF da proposta', () => {
     expect(imagensEmbutidas(arquivo)).toBe(0);
   }, 30_000);
 
-  it('sem escopo, sem cliente e sem número: desenha do mesmo jeito', async () => {
-    const arquivo = await renderToBuffer(pdfDaProposta({ proposta: proposta({ outros_custos: [] }), escopo: [] }));
+  it('sem instrução, sem cliente e sem número: desenha do mesmo jeito', async () => {
+    const arquivo = await renderToBuffer(pdfDaProposta({ proposta: proposta({ itens: [], outros_custos: [] }) }));
     expect(arquivo.subarray(0, 5).toString('latin1')).toBe('%PDF-');
   }, 30_000);
 
   // Sem as fontes preparadas, este caso (sem cliente nem número) saía com o "c" sem letra
   // no ToUnicode da Lexend SemiBold: o total copiado do PDF virava "132433415"
   it('o texto do PDF tem a letra de todo glifo: copiar o total dá o total', async () => {
-    const arquivo = await renderToBuffer(pdfDaProposta({ proposta: proposta(), escopo: [] }));
+    const arquivo = await renderToBuffer(pdfDaProposta({ proposta: proposta() }));
     expect(tabelasToUnicode(arquivo).length).toBeGreaterThan(1);
     expect(entradasVazias(arquivo)).toBe(0);
   }, 30_000);
 
-  // O desconto (28/out/2026) entra nas parcelas, e o painel leva o total com ele
-  it('com desconto: desenha, e o texto segue legível', async () => {
+  // Com desconto, o painel leva o total com ele, e o desconto não aparece
+  it('com desconto: desenha só o total final, e o texto segue legível', async () => {
     const comDesconto = proposta({ desconto_tipo: 'PERCENTUAL', desconto_valor: 12.5, total_desconto: 1833.56, total_geral: 12834.88 });
-    const arquivo = await renderToBuffer(pdfDaProposta({ proposta: comDesconto, escopo: [] }));
+    const arquivo = await renderToBuffer(pdfDaProposta({ proposta: comDesconto }));
     expect(arquivo.subarray(0, 5).toString('latin1')).toBe('%PDF-');
     expect(entradasVazias(arquivo)).toBe(0);
+    const textos = await desenhados(comDesconto);
+    expect(textos).toMatch(/R\$\s12\.834,88/);
+    expect(textos).not.toMatch(/desconto|1\.833,56/i);
   }, 30_000);
 
-  // A spec: nunca o custo, a margem nem as tabelas de logística no PDF; a venda numa linha
-  it('a conta nova mostra a venda de cada serviço e os três totais, sem custo nem margem', async () => {
+  // De valor, só o final (29/out/2026); e a spec: nunca o custo, a margem, as horas nem as tabelas
+  it('a conta nova mostra os serviços pelo nome e só o valor final', async () => {
     const textos = await desenhados(proposta());
     // O formato de moeda do pt-BR põe um espaço não separável depois do "R$"
-    expect(textos).toMatch(/R\$\s2\.846,15/);
-    expect(textos).toContain('Logística e mobilização');
-    expect(textos).toContain('Total faturado pela Aupus');
-    expect(textos).toContain('Investimento global');
+    expect(textos).toMatch(/Investimento global \| R\$\s17\.845,85/);
+    expect(textos.match(/R\$/g)).toHaveLength(1);
+    expect(textos).toContain('Escopo do serviço');
+    expect(textos).toContain('TR-03 · Ensaios elétricos do transformador');
     expect(textos).toContain('30/11/2026');
-    expect(textos).not.toContain('1.850,00');
+    expect(textos).not.toMatch(/Logística|Administração|Total faturado|Faturamento direto|Locação do gerador/);
     expect(textos).not.toContain('Picape');
     expect(textos).not.toMatch(/margem/i);
+    // Nem o planejamento da logística (km, pessoas, pernoites): é a composição do preço
+    expect(textos).not.toMatch(/920|pernoite|pessoas/i);
   }, 30_000);
 
-  // A proposta de antes (BDI) sai como foi enviada ao cliente
-  it('a proposta de antes (BDI) desenha o custo, o BDI e o total, como foi', async () => {
+  // A proposta de antes (BDI) também: o total, sem o custo nem o BDI
+  it('a proposta de antes (BDI) desenha só o total', async () => {
     const deAntes = proposta({ conta_da_proposta: 'BDI', bdi_percentual: 30.44, total_bdi: 2909.94, total_custo: 11758.5, total_geral: 14668.44, venda: null });
     const textos = await desenhados(deAntes);
-    expect(textos).toContain('BDI (30,44%)');
     expect(textos).toMatch(/R\$\s14\.668,44/);
+    expect(textos.match(/R\$/g)).toHaveLength(1);
+    expect(textos).not.toMatch(/BDI|Custo/);
+  }, 30_000);
+
+  // Sem o passo a passo (29/out/2026): a capa resume os serviços dos itens
+  it('a capa resume os serviços dos itens', async () => {
+    const textos = await desenhados(proposta());
+    expect(textos).toContain('TR-01 · Inspeção sensitiva do transformador · TR-03 · Ensaios elétricos do transformador');
   }, 30_000);
 });
 
