@@ -44,7 +44,7 @@ function TamanhoDoTexto({ tamanho }: { tamanho: number }) {
  * Mora dentro do <form> do sheet: todo botão é type="button", senão comentar
  * enviava o formulário e fechava o sheet.
  */
-export function ComentariosDoRegistro({ alvo, registroId, podeComentar, ehCliente, onRascunho }: Props) {
+export function ComentariosDoRegistro({ alvo, registroId, podeComentar, ehCliente, onRascunho, semTitulo = false }: Props & { semTitulo?: boolean }) {
   const { lista, comentar, editar, excluir } = useComentarios(alvo, registroId);
   const [texto, setTexto] = useState('');
   const [interno, setInterno] = useState(false);
@@ -93,7 +93,8 @@ export function ComentariosDoRegistro({ alvo, registroId, podeComentar, ehClient
 
   return (
     <section aria-labelledby={`comentarios-${registroId}`} className="space-y-3">
-      <h3 id={`comentarios-${registroId}`} className="flex items-center gap-2 text-sm font-medium">
+      {/* `semTitulo`: dentro de uma seção que já tem o título (a "Conversa" da solicitação, 30/out/2026) */}
+      <h3 id={`comentarios-${registroId}`} className={semTitulo ? 'sr-only' : 'flex items-center gap-2 text-sm font-medium'}>
         <MessageSquare className="h-4 w-4 text-muted-foreground" />
         Comentários{comentarios.length > 0 ? ` (${comentarios.length})` : ''}
       </h3>

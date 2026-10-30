@@ -1,5 +1,5 @@
 // src/components/common/base-modal/BaseForm.tsx - VERSÃO CORRIGIDA
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import { Input } from '@/core/components/ui/input';
 import { Label } from '@/core/components/ui/label';
 import {
@@ -10,6 +10,7 @@ import {
   SelectValue
 } from '@/core/components/ui/select';
 import { Textarea } from '@/core/components/ui/textarea';
+import { SecaoRecolhivel } from '@/core/components/common/base-modal/SecaoRecolhivel';
 import { Checkbox } from '@/core/components/ui/checkbox';
 import { Separator } from '@/core/components/ui/separator';
 import { DateTimePicker } from '@/core/components/ui/datetime-picker';
@@ -239,6 +240,14 @@ export function BaseForm({
     const currentValue = getValue(field);
     return currentValue === value;
   };
+
+  // Os grupos recolhíveis (30/out/2026): o aberto/fechado de cada um; o que a pessoa não mexeu vale o inicial
+  const [gruposAbertos, setGruposAbertos] = useState<Record<string, boolean>>({});
+  // O grupo fechado com campo em erro abre: senão o "Salvar" falhava sem mostrar onde
+  useEffect(() => {
+    const comErro = (groups ?? []).filter((g) => g.recolhivel && g.fields?.some((campo) => errors[campo]));
+    if (comErro.length > 0) setGruposAbertos((atual) => ({ ...atual, ...Object.fromEntries(comErro.map((g) => [g.key, true])) }));
+  }, [errors, groups]);
 
   const groupedFields = (() => {
     if (groups && groups.length > 0) {
@@ -575,7 +584,8 @@ export function BaseForm({
   }, [data.origem]);
 
   return (
-    <div className="space-y-6">
+    // Os recolhíveis se separam pelo traço da própria seção, sem o espaço entre grupos
+    <div className={groups?.some((g) => g.recolhivel) ? 'space-y-0' : 'space-y-6'}>
       {/* Grupo sem campo visivel sai antes de contar o indice: senao o
           primeiro grupo visivel ganhava a linha de separacao no topo. */}
       {Object.entries(groupedFields).filter(([, groupFields]) => groupFields.length > 0).map(([groupName, groupFields], groupIndex) => {
@@ -584,20 +594,7 @@ export function BaseForm({
         // ✅ Grid é o padrão - só desativa se explicitamente definir layout: 'single' ou fullWidth: true
         const useGridLayout = currentGroup?.layout !== 'single' && !currentGroup?.fullWidth;
 
-        return (
-          <div key={groupName}>
-            {groupIndex > 0 && <Separator className="my-6" />}
-
-            {groupName !== 'main' && (
-              <div className="mb-4">
-                {/* Só a chave crua ("dados_tecnicos") ganha maiúsculas: o título escrito sai como está
-                    ("Histórico da OS" virava "Histórico Da OS") */}
-                <h3 className={cn('text-base font-semibold text-foreground border-b pb-2', !currentGroup?.title && 'capitalize')}>
-                  {currentGroup?.title || groupName.replace(/_/g, ' ')}
-                </h3>
-              </div>
-            )}
-
+        const grade = (
             <div
               className={
                 useGridLayout
@@ -647,6 +644,39 @@ export function BaseForm({
                 );
               })}
             </div>
+        );
+
+        if (currentGroup?.recolhivel) {
+          const inicial = typeof currentGroup.abertoInicial === 'function' ? currentGroup.abertoInicial(mode ?? 'create') : (currentGroup.abertoInicial ?? true);
+          return (
+            <SecaoRecolhivel
+              key={groupName}
+              titulo={currentGroup.title}
+              resumo={currentGroup.resumo?.(data as Record<string, unknown>)}
+              primeira={groupIndex === 0}
+              aberta={gruposAbertos[groupName] ?? inicial}
+              onAlternar={(aberta) => setGruposAbertos((atual) => ({ ...atual, [groupName]: aberta }))}
+            >
+              {grade}
+            </SecaoRecolhivel>
+          );
+        }
+
+        return (
+          <div key={groupName}>
+            {groupIndex > 0 && <Separator className="my-6" />}
+
+            {groupName !== 'main' && (
+              <div className="mb-4">
+                {/* Só a chave crua ("dados_tecnicos") ganha maiúsculas: o título escrito sai como está
+                    ("Histórico da OS" virava "Histórico Da OS") */}
+                <h3 className={cn('text-base font-semibold text-foreground border-b pb-2', !currentGroup?.title && 'capitalize')}>
+                  {currentGroup?.title || groupName.replace(/_/g, ' ')}
+                </h3>
+              </div>
+            )}
+
+            {grade}
           </div>
         );
       })}

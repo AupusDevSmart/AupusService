@@ -59,6 +59,8 @@ interface BaseModalProps<T extends BaseEntity, D = DadosDoFormulario> {
    * reserva o espaço.
    */
   acaoDestrutiva?: React.ReactNode;
+  /** Uma linha no rodapé, acima do salvar (o total da proposta, 30/out/2026): sempre à vista */
+  rodape?: React.ReactNode;
   submitButtonText?: string;
   cancelButtonText?: string;
   onBeforeSubmit?: (data: D) => Promise<boolean> | boolean;
@@ -85,6 +87,7 @@ export function BaseModal<T extends BaseEntity, D = DadosDoFormulario>({
   closeOnEscape = true,
   showFooter = true,
   acaoDestrutiva,
+  rodape,
   submitButtonText,
   cancelButtonText,
   onBeforeSubmit,
@@ -571,6 +574,7 @@ export function BaseModal<T extends BaseEntity, D = DadosDoFormulario>({
           {showFooter && (
             <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t px-4 py-3 md:px-6 md:py-4 shrink-0">
               <div className="flex flex-col gap-2">
+                {rodape}
                 {!isViewMode && (
                   <Button 
                     type="submit" 

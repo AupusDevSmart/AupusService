@@ -12,7 +12,12 @@ import { formatApiError } from '@/utils/api-error';
 import { propostaApi, type Proposta, type TabelaDeLogistica } from '@/services/proposta.services';
 import { PropostaSection } from './PropostaSection';
 import { PadroesDaPropostaSheet } from './PadroesDaPropostaSheet';
-import { PropostaCorrenteProvider, comBotaoDePdf } from './BotaoGerarPdf';
+import { PropostaCorrenteProvider, PdfDaSolicitacao } from './BotaoGerarPdf';
+import { SecaoRecolhivel } from '@/core/components/common/base-modal/SecaoRecolhivel';
+import type { GrupoDoFormulario } from '@/core/types/base';
+import { useComentarios } from '@/features/comentarios/hooks/useComentarios';
+import { moeda, percentualNaTela } from '@/services/proposta.services';
+import { horasNaTela } from '@/features/solicitacoes-servico/utils/duracao-da-proposta';
 import { AbrirInstrucaoContext, ValoresDaPropostaContext, type ValoresDaProposta } from './proposta-contexto';
 import { EditarInstrucaoSheet } from '@/features/instrucoes/components/EditarInstrucaoSheet';
 import type { FormField, FormFieldProps } from '@/types/base';
@@ -29,8 +34,18 @@ interface PropsDoCampo {
    * nao do `entity`: o entity e o que esta gravado, e a proposta precisa
    * reagir no instante em que a instrucao e escolhida, antes de salvar.
    */
-  formData?: { instrucoes_ids?: string[] };
+  formData?: { instrucoes_ids?: string[]; titulo?: unknown; cliente_nome?: unknown };
 }
+
+/** Quantos comentários a conversa tem, no título da seção (a mesma consulta da lista: uma ida só) */
+function ContagemDeComentarios({ id }: { id: string }) {
+  const { lista } = useComentarios('solicitacao_servico', id);
+  const total = lista.data?.length ?? 0;
+  return <>{total === 0 ? 'Nenhum comentário' : `${total} ${total === 1 ? 'comentário' : 'comentários'}`}</>;
+}
+
+const rotuloDaOpcao = (campos: FormField[], chave: string, valor: unknown) =>
+  campos.find((c) => c.key === chave)?.options?.find((o) => o.value === valor)?.label;
 import { useGenericModal } from '@/hooks/useGenericModal';
 import { useAbrirPelaUrl } from '@/hooks/useAbrirPelaUrl';
 import { SolicitacaoServico, SolicitacaoServicoFormData, SolicitacoesFilters } from '../types';
@@ -306,15 +321,67 @@ export function SolicitacoesPage() {
                   onRascunhoChange={setRascunhoProposta}
                   onPropostaChange={setPropostaAtual}
                   onValoresChange={setValoresProposta}
+                  acoes={<PdfDaSolicitacao entity={entity} formData={formData as Record<string, unknown> | undefined} />}
                 />
               ),
             }
-          : campo.key === 'solicitante'
-            ? { ...campo, render: comBotaoDePdf(campo.render) }
-            : campo,
+          : campo,
       ),
     [formFields],
   );
+
+  /**
+   * O sheet em partes que recolhem (30/out/2026, "layout muito desorganizado"):
+   * fechada, cada uma diz o que tem. No cadastro tudo abre; ao editar, os dados
+   * (já preenchidos) começam fechados e a proposta, aberta.
+   */
+  const gruposDoSheet = useMemo<GrupoDoFormulario[]>(() => {
+    const instrucoesIds = (dados: Record<string, unknown>) => (Array.isArray(dados.instrucoes_ids) ? dados.instrucoes_ids.length : 0);
+    const horas = propostaAtual?.planejamento_calculado?.horas_dos_passos ?? 0;
+    const dias = propostaAtual?.planejamento_calculado?.dias ?? propostaAtual?.dias_previstos ?? null;
+    return [
+      {
+        key: 'dados',
+        title: 'Dados da solicitação',
+        fields: ['titulo', 'localizacao', 'proprietario_id', 'planta_id', 'unidade_id', 'cliente_nome', 'descricao', 'tipo', 'prioridade', 'data_necessidade', 'local', 'solicitante'],
+        recolhivel: true,
+        abertoInicial: (mode) => mode !== 'edit',
+        resumo: (dados) =>
+          [rotuloDaOpcao(formFields, 'tipo', dados.tipo), rotuloDaOpcao(formFields, 'prioridade', dados.prioridade) && `prioridade ${rotuloDaOpcao(formFields, 'prioridade', dados.prioridade)?.toLowerCase()}`]
+            .filter(Boolean)
+            .join(' · '),
+      },
+      {
+        key: 'instrucoes',
+        title: 'Instruções',
+        fields: ['instrucoes_ids'],
+        layout: 'single',
+        recolhivel: true,
+        resumo: (dados) => {
+          const n = instrucoesIds(dados);
+          if (n === 0) return 'Nenhuma';
+          return [`${n} ${n === 1 ? 'instrução' : 'instruções'}`, horas > 0 && `${horasNaTela(horas)} de serviço`].filter(Boolean).join(' · ');
+        },
+      },
+      {
+        key: 'proposta',
+        title: 'Proposta comercial',
+        fields: ['proposta'],
+        layout: 'single',
+        recolhivel: true,
+        resumo: () =>
+          propostaAtual
+            ? [
+                moeda(propostaAtual.total_geral ?? 0),
+                dias && `${dias} ${dias === 1 ? 'dia' : 'dias'}`,
+                propostaAtual.margem_efetiva !== null && propostaAtual.fechamento && `margem ${percentualNaTela(propostaAtual.margem_efetiva)}%`,
+              ]
+                .filter(Boolean)
+                .join(' · ')
+            : undefined,
+      },
+    ];
+  }, [formFields, propostaAtual]);
 
   const handleSubmit = async (data: SolicitacaoServicoFormData) => {
     try {
@@ -501,6 +568,16 @@ export function SolicitacoesPage() {
                 closeOnEscape={!instrucaoAberta}
                 closeOnBackdropClick={!instrucaoAberta}
                 width="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[800px]"
+                groups={gruposDoSheet}
+                // O total da proposta à vista, onde se salva (30/out/2026)
+                rodape={
+                  propostaAtual ? (
+                    <div className="flex items-baseline justify-between gap-3 pb-1">
+                      <span className="text-sm text-muted-foreground">Investimento global</span>
+                      <span className="text-lg font-semibold tabular-nums">{moeda(propostaAtual.total_geral ?? 0)}</span>
+                    </div>
+                  ) : undefined
+                }
                 topo={
                   modalState.mode !== 'create' ? (
                     <AtalhoParaProgramacao
@@ -513,16 +590,17 @@ export function SolicitacoesPage() {
               >
                 {/* Conversa com quem pediu, no fim do sheet; o interno não aparece para o cliente (SN-48) */}
                 {modalState.mode !== 'create' && modalState.entity?.id && (
-                  // Um traço em cima separa a conversa, como a proposta: sem a caixa em volta
-                  <div className="mt-6 border-t border-border pt-5">
+                  // Mais uma parte que recolhe, como as do formulário
+                  <SecaoRecolhivel titulo="Conversa" resumo={<ContagemDeComentarios id={modalState.entity.id} />} abertaInicial={modalState.mode === 'view'}>
                     <ComentariosDoRegistro
                       alvo="solicitacao_servico"
                       registroId={modalState.entity.id}
                       podeComentar={temPermissao('solicitacoes.manage', 'solicitacoes.create')}
                       ehCliente={ehCliente}
                       onRascunho={(tem) => (rascunhoDoComentario.current = tem)}
+                      semTitulo
                     />
-                  </div>
+                  </SecaoRecolhivel>
                 )}
 
                 {/* Painel de confirmação de ação - aparece no final do form em modo view */}

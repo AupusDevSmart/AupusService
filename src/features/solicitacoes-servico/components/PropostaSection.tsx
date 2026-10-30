@@ -1,5 +1,5 @@
 // src/features/solicitacoes-servico/components/PropostaSection.tsx
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,7 @@ import { comLogisticaAutomatica, padroesDaLogistica, type PadroesDaLogistica } f
 import { useUserStore } from '@/store/useUserStore';
 import type { ValoresDaProposta } from './proposta-contexto';
 import { PlanejamentoDaProposta } from './PlanejamentoDaProposta';
-import { TabelaDaLogistica } from './TabelaDaLogistica';
+import { ListaDaLogistica } from './TabelaDaLogistica';
 import { CustosAdicionais } from './CustosAdicionais';
 import { FechamentoDaProposta } from './FechamentoDaProposta';
 import { PainelComoSeCalcula, type Explicacao } from '@/components/common/ComoSeCalcula';
@@ -47,14 +47,8 @@ const comAsPendentes = (doServidor: Proposta, daTela: Proposta): Proposta => ({
   outros_custos: [...doServidor.outros_custos, ...daTela.outros_custos.filter(semNome)],
   logistica: [...doServidor.logistica, ...daTela.logistica.filter(semNome)],
 });
-const TABELAS: TabelaDeLogistica[] = ['FRETE', 'DESLOCAMENTO', 'DIARIA'];
-const TITULO_DA_TABELA: Record<TabelaDeLogistica, string> = { FRETE: 'Frete', DESLOCAMENTO: 'Deslocamento', DIARIA: 'Diárias' };
-
-/** A conta da tabela e o que vale para as três (o catálogo, a linha desmarcada, o PDF), no ícone dela */
-const explicacaoDaTabela = (tabelas: Explicacao[], tabela: TabelaDeLogistica): Explicacao => ({
-  rotulo: TITULO_DA_TABELA[tabela],
-  linhas: tabelas.filter((e) => e.rotulo === TITULO_DA_TABELA[tabela] || e.rotulo === 'As três tabelas').flatMap((e) => e.linhas),
-});
+/** A conta de cada tipo de linha e o que vale para todas, no ícone do título da logística */
+const explicacaoDaLogistica = (tabelas: Explicacao[]): Explicacao => ({ rotulo: 'Logística', linhas: tabelas.flatMap((e) => e.linhas) });
 
 interface PropostaSectionProps {
   /** Nulo enquanto a solicitação não foi salva. Aí a seção vira rascunho. */
@@ -77,6 +71,8 @@ interface PropostaSectionProps {
    * formulário e não se alcançam. A página faz a ponte.
    */
   onValoresChange?: (valores: ValoresDaProposta | null) => void;
+  /** As ações de quem monta a seção, ao lado do "Como se calcula" (o "Gerar PDF") */
+  acoes?: ReactNode;
 }
 
 /**
@@ -101,6 +97,7 @@ export function PropostaSection({
   onRascunhoChange,
   onPropostaChange,
   onValoresChange,
+  acoes,
 }: PropostaSectionProps) {
   const rascunho = !solicitacaoId;
   const [proposta, setProposta] = useState<Proposta>(propostaVazia);
@@ -447,20 +444,14 @@ export function PropostaSection({
     );
   }
 
-  const linhasDa = (tabela: TabelaDeLogistica) => proposta.logistica.filter((l) => l.tabela === tabela);
-  const custoDaLogistica = proposta.logistica.filter((l) => l.ativo).reduce((s, l) => s + (l.total ?? 0), 0);
-
-  // Uma linha só separa a proposta do formulário de cima; dentro dela, as partes se separam
-  // pelo espaço e pelo título discreto, e só o fechamento tem fundo (30/out/2026: menos borda)
+  // O título é o da seção do sheet ("Proposta comercial", que recolhe); dentro, as partes se
+  // separam pelo espaço e pelo título discreto, e só o fechamento tem fundo (30/out/2026)
   return (
-    <section className="space-y-6 border-t border-border pt-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-base font-semibold">Proposta comercial</h3>
-          <p className="text-xs text-muted-foreground">
-            {rascunho ? 'Gravada junto com a solicitação.' : 'O valor de cada instrução se edita no card dela, acima.'}
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="min-w-0 text-xs text-muted-foreground">
+          {rascunho ? 'Gravada junto com a solicitação.' : 'O valor de cada instrução se edita no card dela, em Instruções.'}
+        </p>
         <div className="flex shrink-0 items-center gap-1">
           {(salvando || carregando) && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
           <PainelComoSeCalcula
@@ -488,6 +479,7 @@ export function PropostaSection({
               <RefreshCw className="h-4 w-4" />
             </Button>
           )}
+          {acoes}
         </div>
       </div>
 
@@ -499,20 +491,13 @@ export function PropostaSection({
             onChange={(dados) => salvarCondicoes(dados, 'o planejamento')}
             explicacao={explicacoes.planejamento}
           />
-          <div className="space-y-3">
-            <TituloDaSecao titulo="Logística" explicacao={explicacoes.tabelas.find((e) => e.rotulo === 'Linhas automáticas')} valor={custoDaLogistica} />
-            {TABELAS.map((tabela) => (
-              <TabelaDaLogistica
-                key={tabela}
-                tabela={tabela}
-                linhas={linhasDa(tabela)}
-                editavel={editavel}
-                planejamento={proposta}
-                onChange={(linhas) => salvarLogistica(tabela, linhas)}
-                explicacao={explicacaoDaTabela(explicacoes.tabelas, tabela)}
-              />
-            ))}
-          </div>
+          <ListaDaLogistica
+            linhas={proposta.logistica}
+            editavel={editavel}
+            planejamento={proposta}
+            onChange={(tabela, linhas) => salvarLogistica(tabela, linhas)}
+            explicacao={explicacaoDaLogistica(explicacoes.tabelas)}
+          />
           <CustosAdicionais custos={proposta.outros_custos} editavel={editavel} onChange={salvarCustos} explicacao={explicacoes.adicionais} />
         </>
       )}
@@ -520,7 +505,7 @@ export function PropostaSection({
       <FechamentoDaProposta proposta={proposta} ajusta={ajusta} onChange={salvarCondicoes} explicacoes={explicacoes.conta} />
 
       <CondicoesComerciais proposta={proposta} ajusta={ajusta} onChange={salvarCondicoes} />
-    </section>
+    </div>
   );
 }
 

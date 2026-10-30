@@ -136,6 +136,14 @@ export interface GrupoDoFormulario {
   /** 'single' (ou fullWidth) desliga a grade: um campo por linha. */
   layout?: string;
   fullWidth?: boolean;
+  /**
+   * O grupo recolhe pelo título (30/out/2026): fechado, mostra o `resumo`. O grupo
+   * com campo em erro abre sozinho no salvar. Sem isto, o grupo é como sempre foi.
+   */
+  recolhivel?: boolean;
+  /** Aberto ao abrir o sheet (padrão: sim); pode depender do modo */
+  abertoInicial?: boolean | ((mode: string) => boolean);
+  resumo?: (data: Record<string, unknown>) => ReactNode;
 }
 
 export interface TableColumn<T = unknown> {

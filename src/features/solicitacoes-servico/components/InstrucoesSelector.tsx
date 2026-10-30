@@ -208,7 +208,8 @@ export function InstrucoesSelector({ value, onChange, disabled, entity }: Instru
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium">Instruções Vinculadas</label>
+        {/* O título é o da seção do sheet ("Instruções", 30/out/2026); aqui, só de onde vem o quê */}
+        <span className="text-xs text-muted-foreground">Os passos, as horas e o valor vêm do cadastro de cada instrução.</span>
         {!disabled && (
           <div className="flex items-center gap-1">
             <Button

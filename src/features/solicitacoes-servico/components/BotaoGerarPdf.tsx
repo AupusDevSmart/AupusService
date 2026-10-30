@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { formatApiError } from '@/utils/api-error';
 import type { Proposta } from '@/services/proposta.services';
-import type { FormFieldProps } from '@/types/base';
 import type { SolicitacaoServico } from '../types';
 
 /**
@@ -81,27 +80,17 @@ export function BotaoGerarPdf({ numero, titulo, cliente }: BotaoGerarPdfProps) {
 const textoDoFormulario = (valor: unknown) => (typeof valor === 'string' && valor.trim() ? valor.trim() : undefined);
 
 /**
- * O solicitante com o botão de PDF na mesma linha, fechando o formulário.
- *
- * O render original vem do form-config e usa hooks próprios, então é montado
- * como componente — chamá-lo como função inlinearia os hooks dele aqui.
+ * O "Gerar PDF" da solicitação, no cabeçalho da proposta (30/out/2026: antes ficava
+ * ao lado do solicitante, no fim do sheet, longe da proposta que ele imprime).
+ * No cadastro ainda não há entidade: o título e o cliente vêm do que foi digitado.
  */
-export function comBotaoDePdf(original: ((props: FormFieldProps) => ReactNode) | undefined) {
-  return function SolicitanteComPdf(props: FormFieldProps & { entity?: SolicitacaoServico | null }) {
-    const tituloDigitado = props?.formData?.titulo;
-    const Original = original;
-
-    return (
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-0 flex-1">{Original ? <Original {...props} /> : null}</div>
-        {/* No cadastro ainda não há entidade: o título vem do que foi digitado. */}
-        <BotaoGerarPdf
-          numero={props?.entity?.numero}
-          titulo={props?.entity?.titulo ?? (typeof tituloDigitado === 'string' ? tituloDigitado : undefined)}
-          // Sem planta cadastrada, o cliente digitado (o do formulário, que pode ter acabado de mudar)
-          cliente={props?.entity?.planta?.nome ?? textoDoFormulario(props?.formData?.cliente_nome) ?? props?.entity?.cliente_nome ?? undefined}
-        />
-      </div>
-    );
-  };
+export function PdfDaSolicitacao({ entity, formData }: { entity?: SolicitacaoServico | null; formData?: Record<string, unknown> }) {
+  return (
+    <BotaoGerarPdf
+      numero={entity?.numero}
+      titulo={entity?.titulo ?? textoDoFormulario(formData?.titulo)}
+      // Sem planta cadastrada, o cliente digitado (o do formulário, que pode ter acabado de mudar)
+      cliente={entity?.planta?.nome ?? textoDoFormulario(formData?.cliente_nome) ?? entity?.cliente_nome ?? undefined}
+    />
+  );
 }
