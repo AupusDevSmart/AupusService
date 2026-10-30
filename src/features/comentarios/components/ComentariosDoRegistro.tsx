@@ -114,7 +114,8 @@ export function ComentariosDoRegistro({ alvo, registroId, podeComentar, ehClient
       ) : (
         <ul className="space-y-2">
           {comentarios.map((c) => (
-            <li key={c.id} className="rounded-md border px-3 py-2">
+            // Fundo leve no lugar da borda (30/out/2026: menos borda no sheet)
+            <li key={c.id} className="rounded-md bg-muted px-3 py-2">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <p className="text-sm font-medium">
                   {c.autor}

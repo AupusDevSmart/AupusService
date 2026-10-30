@@ -21,6 +21,7 @@ import {
   type TabelaDeLogistica,
 } from '@/services/proposta.services';
 import { instrucoesApi } from '@/services/instrucoes.services';
+import { comLogisticaAutomatica, padroesDaLogistica, type PadroesDaLogistica } from '@/services/planejamento-da-proposta';
 import { useUserStore } from '@/store/useUserStore';
 import type { ValoresDaProposta } from './proposta-contexto';
 import { PlanejamentoDaProposta } from './PlanejamentoDaProposta';
@@ -28,6 +29,7 @@ import { TabelaDaLogistica } from './TabelaDaLogistica';
 import { CustosAdicionais } from './CustosAdicionais';
 import { FechamentoDaProposta } from './FechamentoDaProposta';
 import { PainelComoSeCalcula, type Explicacao } from '@/components/common/ComoSeCalcula';
+import { TituloDaSecao } from './TituloDaSecao';
 import { explicacoesDaProposta } from '../utils/como-se-calcula';
 
 /** A linha sem nome fica só na tela até ganhar um: a API a recusaria */
@@ -102,6 +104,8 @@ export function PropostaSection({
 }: PropostaSectionProps) {
   const rascunho = !solicitacaoId;
   const [proposta, setProposta] = useState<Proposta>(propostaVazia);
+  /** Os padrões da logística: no rascunho as linhas automáticas se calculam aqui (com id, no servidor) */
+  const [padroesLogistica, setPadroesLogistica] = useState<PadroesDaLogistica | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
@@ -133,14 +137,21 @@ export function PropostaSection({
       .obterPadroes()
       .then((padroes) => {
         if (cancelado) return;
+        const logistica = padroesDaLogistica(padroes);
+        setPadroesLogistica(logistica);
+        const { imposto_percentual, margem_percentual, adm_servicos_percentual, adm_fd_percentual } = padroes;
         setProposta((atual) => {
-          const calculado = calcularRascunho({ ...atual, ...padroes });
+          const calculado = calcularRascunho(comLogisticaAutomatica({ ...atual, imposto_percentual, margem_percentual, adm_servicos_percentual, adm_fd_percentual }, logistica));
           onRascunhoChange?.(calculado);
           return calculado;
         });
       })
       .catch((erro) => {
-        if (!cancelado) toast.error('Não foi possível ler os percentuais padrão', { description: `${formatApiError(erro)}. Ajuste o imposto e a margem no fechamento antes de salvar.` });
+        if (!cancelado) {
+          toast.error('Não foi possível ler os padrões da proposta', {
+            description: `${formatApiError(erro)}. Ajuste o imposto e a margem no fechamento; o km e as refeições automáticos só aparecem depois de salvar.`,
+          });
+        }
       });
     return () => {
       cancelado = true;
@@ -166,7 +177,8 @@ export function PropostaSection({
       // Sobre a proposta de agora, não a do render que chamou: a montagem das
       // linhas e o BDI padrão chegam de awaits diferentes, e um apagava o outro
       setProposta((atual) => {
-        const calculado = calcularRascunho(mudanca(atual));
+        // As linhas automáticas seguem o planejamento, como o servidor fará ao gravar
+        const calculado = calcularRascunho(comLogisticaAutomatica(mudanca(atual), padroesLogistica));
         onRascunhoChange?.(calculado);
         return calculado;
       });
@@ -332,14 +344,16 @@ export function PropostaSection({
     const centavos = (v: number | null | undefined) => Math.round((v ?? 0) * 100);
     const mudouOValor = centavos(atual.preco_unitario_original ?? atual.preco_unitario) !== centavos(linha.preco_unitario);
     const mudouONome = atual.descricao !== linha.descricao;
-    if (!mudouOValor && !mudouONome) return;
+    // As horas dos passos dão os dias do rascunho (30/out/2026): só elas mudando, a linha também se refaz
+    const mudouAsHoras = (atual.horas_dos_passos ?? 0) !== (linha.horas_dos_passos ?? 0);
+    if (!mudouOValor && !mudouONome && !mudouAsHoras) return;
     salvarItens((p) => ({
       ...p,
       itens: p.itens.map((it) =>
         daInstrucao(it)
           ? mudouOValor
             ? { ...it, ...linha, sem_preco_no_cadastro: linha.sem_preco_no_cadastro }
-            : { ...it, descricao: linha.descricao }
+            : { ...it, descricao: linha.descricao, horas_dos_passos: linha.horas_dos_passos }
           : it,
       ),
     }));
@@ -434,14 +448,20 @@ export function PropostaSection({
   }
 
   const linhasDa = (tabela: TabelaDeLogistica) => proposta.logistica.filter((l) => l.tabela === tabela);
+  const custoDaLogistica = proposta.logistica.filter((l) => l.ativo).reduce((s, l) => s + (l.total ?? 0), 0);
 
+  // Uma linha só separa a proposta do formulário de cima; dentro dela, as partes se separam
+  // pelo espaço e pelo título discreto, e só o fechamento tem fundo (30/out/2026: menos borda)
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">
-          {rascunho ? 'A proposta será gravada junto com a solicitação.' : 'Os valores das instruções se editam no card de cada uma, acima.'}
-        </p>
-        <div className="flex items-center gap-1">
+    <section className="space-y-6 border-t border-border pt-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold">Proposta comercial</h3>
+          <p className="text-xs text-muted-foreground">
+            {rascunho ? 'Gravada junto com a solicitação.' : 'O valor de cada instrução se edita no card dela, acima.'}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
           {(salvando || carregando) && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
           <PainelComoSeCalcula
             descricao="Como cada número da proposta é calculado, com os percentuais desta proposta, e o caminho dela até a programação."
@@ -479,17 +499,20 @@ export function PropostaSection({
             onChange={(dados) => salvarCondicoes(dados, 'o planejamento')}
             explicacao={explicacoes.planejamento}
           />
-          {TABELAS.map((tabela) => (
-            <TabelaDaLogistica
-              key={tabela}
-              tabela={tabela}
-              linhas={linhasDa(tabela)}
-              editavel={editavel}
-              planejamento={proposta}
-              onChange={(linhas) => salvarLogistica(tabela, linhas)}
-              explicacao={explicacaoDaTabela(explicacoes.tabelas, tabela)}
-            />
-          ))}
+          <div className="space-y-3">
+            <TituloDaSecao titulo="Logística" explicacao={explicacoes.tabelas.find((e) => e.rotulo === 'Linhas automáticas')} valor={custoDaLogistica} />
+            {TABELAS.map((tabela) => (
+              <TabelaDaLogistica
+                key={tabela}
+                tabela={tabela}
+                linhas={linhasDa(tabela)}
+                editavel={editavel}
+                planejamento={proposta}
+                onChange={(linhas) => salvarLogistica(tabela, linhas)}
+                explicacao={explicacaoDaTabela(explicacoes.tabelas, tabela)}
+              />
+            ))}
+          </div>
           <CustosAdicionais custos={proposta.outros_custos} editavel={editavel} onChange={salvarCustos} explicacao={explicacoes.adicionais} />
         </>
       )}
@@ -497,7 +520,7 @@ export function PropostaSection({
       <FechamentoDaProposta proposta={proposta} ajusta={ajusta} onChange={salvarCondicoes} explicacoes={explicacoes.conta} />
 
       <CondicoesComerciais proposta={proposta} ajusta={ajusta} onChange={salvarCondicoes} />
-    </div>
+    </section>
   );
 }
 
@@ -509,8 +532,8 @@ function CondicoesComerciais({ proposta, ajusta, onChange }: { proposta: Propost
 
   return (
     <div className="space-y-2">
-      <span className="text-sm font-medium">Validade e condições</span>
-      <label className="flex flex-col gap-0.5 text-xs text-muted-foreground sm:w-48">
+      <TituloDaSecao titulo="Validade e condições" />
+      <label className="flex flex-col gap-1 text-xs text-muted-foreground sm:w-48">
         Válida até
         <input
           type="date"
@@ -520,7 +543,7 @@ function CondicoesComerciais({ proposta, ajusta, onChange }: { proposta: Propost
           onChange={(e) => onChange({ validade_proposta: e.target.value || null }, 'a validade')}
         />
       </label>
-      <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
         Condições comerciais
         <Textarea
           value={texto}

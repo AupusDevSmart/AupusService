@@ -30,6 +30,8 @@ export interface ItemProposta {
    * alguma linha sem preço no cadastro. No rascunho é daqui; salva, da leitura
    */
   sem_preco_no_cadastro?: boolean;
+  /** Só na tela: as horas dos passos da instrução, para o rascunho calcular os dias (30/out/2026) */
+  horas_dos_passos?: number;
 }
 
 export interface OutroCusto {
@@ -65,6 +67,10 @@ export interface LinhaDeLogistica {
   valor_km?: number | null;
   valor_fixo?: number | null;
   total: number | null;
+  /** A linha que o planejamento calcula (30/out/2026): KM, CAFE, ALMOCO, JANTAR ou PERNOITE */
+  automatica?: 'KM' | 'CAFE' | 'ALMOCO' | 'JANTAR' | 'PERNOITE' | null;
+  /** A automática que a pessoa ajustou à mão: deixa de acompanhar o planejamento */
+  ajustada?: boolean;
   ordem?: number;
 }
 
@@ -76,13 +82,36 @@ export interface PercentuaisDaProposta {
   adm_fd_percentual: number | null;
 }
 
-/** O planejamento que a conta e a programação usam */
+/** O planejamento que a conta e a programação usam; vazio vale o calculado (30/out/2026) */
 export interface PlanejamentoDaProposta {
   distancia_km: number | null;
-  distancia_ida_volta_km: number | null;
+  /** O km rodado na obra (total); vazio = o padrão, % da ida e volta */
+  deslocamento_interno_km: number | null;
   dias_previstos: number | null;
   pessoas_previstas: number | null;
   noites_fora: number | null;
+}
+
+/** O que se calcula do planejamento (30/out/2026): o que vale em cada campo vazio, a viagem e os veículos */
+export interface PlanejamentoCalculado {
+  /** A soma das horas dos passos das instruções da proposta (a base dos dias) */
+  horas_dos_passos: number;
+  /** As horas de cada instrução (o detalhe da duração) */
+  horas_por_instrucao?: { descricao: string; horas: number }[];
+  /** As que valem: as digitadas ou as padrão */
+  pessoas: number | null;
+  ida_e_volta_km: number | null;
+  interno_km: number | null;
+  interno_sugerido_km: number | null;
+  /** As horas de estrada de um trecho */
+  horas_por_trecho: number | null;
+  bate_volta: boolean | null;
+  dias_sugeridos: number | null;
+  dias: number | null;
+  noites_sugeridas: number | null;
+  noites: number | null;
+  veiculos: number | null;
+  km_por_veiculo: number | null;
 }
 
 /** A memória da conta, para o fechamento da tela (interna: o cliente não a recebe) */
@@ -107,8 +136,14 @@ export interface Proposta extends PercentuaisDaProposta, PlanejamentoDaProposta 
   logistica: LinhaDeLogistica[];
   /** As instruções cujo valor sugerido conta como zero alguma linha sem preço no cadastro (SN-86) */
   instrucoes_sem_preco?: string[];
-  /** As horas dos passos das instruções em jornadas de 8 h, arredondado para cima */
+  /** Os dias pelas horas dos passos e a viagem, em jornadas de 8 h, arredondado para cima */
   dias_sugeridos?: number | null;
+  /** O dobro da ida (gravado pelo servidor) */
+  distancia_ida_volta_km?: number | null;
+  /** Nulo para quem não vê o planejamento (o cliente) */
+  planejamento_calculado?: PlanejamentoCalculado | null;
+  /** As linhas automáticas acompanham o planejamento (a de antes, com a logística digitada, nasce desligada) */
+  logistica_automatica?: boolean | null;
   /** "AAAA-MM-DD" */
   validade_proposta: string | null;
   condicoes_comerciais: string | null;
@@ -137,18 +172,35 @@ export interface Proposta extends PercentuaisDaProposta, PlanejamentoDaProposta 
 
 /** O que as condições gravam: percentuais, planejamento, validade, condições comerciais e desconto */
 export type CondicoesDaProposta = Partial<PercentuaisDaProposta & PlanejamentoDaProposta> & {
+  /** Ligar a logística automática numa proposta de antes */
+  logistica_automatica?: boolean;
   validade_proposta?: string | null;
   condicoes_comerciais?: string | null;
   desconto_tipo?: TipoDeDesconto | null;
   desconto_valor?: number | null;
 };
 
-/** Os percentuais padrão da empresa (29/out/2026, no lugar do BDI padrão) */
+/** Os padrões da empresa: os percentuais (29/out/2026, no lugar do BDI padrão) e a logística automática (30/out/2026) */
 export interface PadroesDaProposta {
   imposto_percentual: number;
   margem_percentual: number;
   adm_servicos_percentual: number;
   adm_fd_percentual: number;
+  /** R$ por km rodado */
+  valor_km: number;
+  horas_por_100_km: number;
+  /** O deslocamento interno quando vazio: % da ida e volta */
+  interno_percentual: number;
+  /** Por pessoa */
+  cafe_valor: number;
+  almoco_valor: number;
+  jantar_valor: number;
+  pernoite_valor: number;
+  pessoas_por_veiculo: number;
+  /** Até quantas horas de ida a equipe volta no mesmo dia */
+  bate_volta_horas: number;
+  /** As pessoas quando a proposta não diz (0 = não supor) */
+  pessoas_padrao: number;
 }
 
 /**
@@ -234,6 +286,8 @@ class PropostaApiService {
         km: l.km ?? null,
         valor_km: l.valor_km ?? null,
         valor_fixo: l.valor_fixo ?? null,
+        automatica: l.automatica ?? null,
+        ajustada: Boolean(l.automatica && l.ajustada),
       })),
     });
     return normalizar(this.desembrulhar<Proposta>(resposta));
@@ -311,6 +365,8 @@ function normalizar(p: Proposta): Proposta {
     total_desconto: Number(p?.total_desconto) || 0,
     fechamento: p?.fechamento ?? null,
     venda: p?.venda ?? null,
+    deslocamento_interno_km: p?.deslocamento_interno_km ?? null,
+    planejamento_calculado: p?.planejamento_calculado ?? null,
   };
 }
 
@@ -330,6 +386,8 @@ export const propostaVazia = (padroes: PercentuaisDaProposta = SEM_PADROES): Pro
   ...padroes,
   distancia_km: null,
   distancia_ida_volta_km: null,
+  deslocamento_interno_km: null,
+  planejamento_calculado: null,
   dias_previstos: null,
   pessoas_previstas: null,
   noites_fora: null,
@@ -474,6 +532,7 @@ export interface InstrucaoParaAProposta {
   nome: string;
   recursos?: Array<{ subtotal?: number | string | null }> | null;
   maquinarios?: Array<{ subtotal?: number | string | null }> | null;
+  sub_instrucoes?: Array<{ duracao_horas?: number | string | null }> | null;
 }
 
 /**
@@ -499,6 +558,8 @@ export function linhaDaInstrucao(instrucao: InstrucaoParaAProposta): ItemPropost
     preco_unitario: valor,
     // A linha sem preço entrou como zero: a tela avisa, senão o valor parece completo
     ...(linhas.some((linha) => linha.subtotal == null) && { sem_preco_no_cadastro: true }),
+    // Os dias do rascunho saem das horas dos passos (o servidor soma as mesmas ao gravar)
+    horas_dos_passos: (instrucao.sub_instrucoes ?? []).reduce((soma, passo) => soma + (Number(passo.duracao_horas ?? 0) || 0), 0),
   };
 }
 

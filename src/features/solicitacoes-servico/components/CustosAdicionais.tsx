@@ -1,11 +1,12 @@
 // src/features/solicitacoes-servico/components/CustosAdicionais.tsx
-import { Plus, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CampoDeNumero } from '@/components/common/CampoDeNumero';
-import { DicaDaConta, type Explicacao } from '@/components/common/ComoSeCalcula';
+import type { Explicacao } from '@/components/common/ComoSeCalcula';
 import { AVISO_DE_DINHEIRO, dinheiroNoCampo, lerDinheiroDigitado } from '@/utils/leitura';
 import type { OutroCusto } from '@/services/proposta.services';
 import { TextoDaLinha } from './TabelaDaLogistica';
+import { BotaoAdicionar, TituloDaSecao } from './TituloDaSecao';
 
 interface CustosAdicionaisProps {
   custos: OutroCusto[];
@@ -21,73 +22,60 @@ interface CustosAdicionaisProps {
  */
 export function CustosAdicionais({ custos, editavel, onChange, explicacao }: CustosAdicionaisProps) {
   const trocar = (indice: number, dados: Partial<OutroCusto>) => onChange(custos.map((c, i) => (i === indice ? { ...c, ...dados } : c)));
+  const total = custos.reduce((s, c) => s + (c.valor ?? 0), 0);
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-sm font-medium">
-          Custos adicionais
-          {explicacao && <DicaDaConta {...explicacao} />}
-        </span>
-        {editavel && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            title="Adicionar custo"
-            aria-label="Adicionar custo"
-            onClick={() => onChange([...custos, { descricao: '', valor: 0, faturamento_direto: false }])}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
+    <div className="space-y-1">
+      <TituloDaSecao titulo="Custos adicionais" explicacao={explicacao} valor={custos.length > 0 ? total : undefined}>
+        {editavel && <BotaoAdicionar descricao="Adicionar custo" onClick={() => onChange([...custos, { descricao: '', valor: 0, faturamento_direto: false }])} />}
+      </TituloDaSecao>
 
-      {custos.map((custo, indice) => (
-        <div key={custo.id ?? `novo-${indice}`} className="flex items-center gap-2">
-          <TextoDaLinha valor={custo.descricao} editavel={editavel} placeholder="Ex.: ART, locação" onChange={(descricao) => trocar(indice, { descricao })} />
-          <span className="shrink-0 text-xs text-muted-foreground">R$</span>
-          <CampoDeNumero
-            className="h-8 w-24 shrink-0 text-right"
-            value={custo.valor}
-            disabled={!editavel}
-            onChange={(valor) => trocar(indice, { valor: valor ?? 0 })}
-            ler={lerDinheiroDigitado}
-            mostrar={dinheiroNoCampo}
-            aviso={AVISO_DE_DINHEIRO}
-            avisoCurto
-            aria-label="Valor do custo"
-          />
-          {/* FD na tela, nome por extenso no hover: cabe na linha num sheet estreito */}
-          <label
-            className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
-            title="Faturamento direto: o cliente paga o fornecedor. Fora do imposto e da margem da Aupus."
-          >
-            <input
-              type="checkbox"
-              className="h-3.5 w-3.5"
-              checked={custo.faturamento_direto}
-              disabled={!editavel}
-              onChange={(e) => trocar(indice, { faturamento_direto: e.target.checked })}
-            />
-            FD
-          </label>
-          {editavel && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-              title="Remover"
-              aria-label="Remover custo"
-              onClick={() => onChange(custos.filter((_, i) => i !== indice))}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          )}
+      {custos.length > 0 && (
+        <div className="space-y-2 pt-1">
+          {custos.map((custo, indice) => (
+            <div key={custo.id ?? `novo-${indice}`} className="flex flex-wrap items-center gap-2">
+              <TextoDaLinha valor={custo.descricao} editavel={editavel} placeholder="Ex.: ART, locação" onChange={(descricao) => trocar(indice, { descricao })} />
+              <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+                R$
+                <CampoDeNumero
+                  className="h-7 w-24 text-right text-sm"
+                  value={custo.valor}
+                  disabled={!editavel}
+                  onChange={(valor) => trocar(indice, { valor: valor ?? 0 })}
+                  ler={lerDinheiroDigitado}
+                  mostrar={dinheiroNoCampo}
+                  aviso={AVISO_DE_DINHEIRO}
+                  avisoCurto
+                  aria-label="Valor do custo"
+                />
+              </span>
+              <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground" title="O cliente paga o fornecedor: fora do imposto e da margem da Aupus">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 accent-foreground"
+                  checked={custo.faturamento_direto}
+                  disabled={!editavel}
+                  onChange={(e) => trocar(indice, { faturamento_direto: e.target.checked })}
+                />
+                Faturamento direto
+              </label>
+              {editavel && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                  title="Remover custo"
+                  aria-label="Remover custo"
+                  onClick={() => onChange(custos.filter((_, i) => i !== indice))}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }

@@ -30,6 +30,7 @@ const proposta = (mudar: Partial<Proposta> = {}): Proposta => ({
   adm_fd_percentual: 2,
   distancia_km: 460,
   distancia_ida_volta_km: 920,
+  deslocamento_interno_km: null,
   dias_previstos: 2,
   pessoas_previstas: 2,
   noites_fora: 1,
@@ -121,6 +122,8 @@ describe('PDF da proposta', () => {
         { tabela: 'FRETE', ativo: true, descricao: 'Caminhão munck', quantidade: 1, km: 460, valor_km: 6, total: 2760 },
         { tabela: 'FRETE', ativo: false, descricao: 'Carreta (desligada)', quantidade: 1, km: 460, valor_km: 9, total: 4140 },
         { tabela: 'DIARIA', ativo: true, descricao: 'Alimentação', quantidade: 4, valor_unitario: 60, total: 240 },
+        // A automática zerada (sem noites) não vai
+        { tabela: 'DIARIA', ativo: true, descricao: 'Pernoite', quantidade: 0, valor_unitario: 100, total: 0, automatica: 'PERNOITE' },
       ],
     });
     const textos = await desenhados(comLogistica);
@@ -128,16 +131,26 @@ describe('PDF da proposta', () => {
     expect(textos).toContain('Distância até o local: 460 km (920 km ida e volta).');
     expect(textos).toContain('Equipe prevista: 2 pessoas.');
     expect(textos).toContain('Pernoites previstos: 1.');
-    expect(textos).toMatch(/Deslocamento \| .*Picape 4x4 \| 2 dias · 920 km/);
+    expect(textos).toMatch(/Deslocamento \| .*Picape 4x4 \| 1 veículo · 920 km/);
     expect(textos).toMatch(/Frete \| .*Caminhão munck \| 1 viagem · 460 km por viagem/);
-    expect(textos).toMatch(/Diárias \| .*Alimentação \| 4 diárias/);
+    expect(textos).toMatch(/Diárias \| .*Alimentação \| 4 unidades/);
     expect(textos).not.toContain('Carreta');
+    expect(textos).not.toContain('| Pernoite |');
     expect(textos).toContain('Custos adicionais');
     expect(textos).toContain('ART');
     expect(textos).toMatch(/Faturamento direto \| Pago pelo cliente direto ao fornecedor.* \| .*Locação do gerador 150 kVA/);
     // O único valor continua o final
     expect(textos.match(/R\$/g)).toHaveLength(1);
     expect(textos).not.toMatch(/2\.760|240,00|60,00/);
+  }, 30_000);
+
+  // Campo vazio vale o calculado (30/out/2026): o PDF diz os dias, as noites e o interno que a conta usou
+  it('os dias, as noites e o interno vazios saem do planejamento calculado', async () => {
+    const calculado = { horas_dos_passos: 12, pessoas: 2, ida_e_volta_km: 920, interno_km: 92, interno_sugerido_km: 92, horas_por_trecho: 6.9, bate_volta: false, dias_sugeridos: 3, dias: 3, noites_sugeridas: 2, noites: 2, veiculos: 1, km_por_veiculo: 1012 };
+    const textos = await desenhados(proposta({ dias_previstos: null, noites_fora: null, planejamento_calculado: calculado }));
+    expect(textos).toContain('Deslocamento interno na obra: 92 km.');
+    expect(textos).toContain('Pernoites previstos: 2.');
+    expect(textos).toContain('Execução prevista em 3 dias.');
   }, 30_000);
 
   it('sem planejamento, logística nem adicionais: a seção não entra', async () => {

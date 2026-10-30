@@ -6,7 +6,7 @@ import { TitleCard } from '@/components/common/title-card';
 import { BaseTable } from '@/core';
 import { BaseFilters } from '@/core';
 import { BaseModal } from '@/core';
-import { Plus, FilePenLine, RotateCcw, Percent } from 'lucide-react';
+import { Plus, FilePenLine, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatApiError } from '@/utils/api-error';
 import { propostaApi, type Proposta, type TabelaDeLogistica } from '@/services/proposta.services';
@@ -89,6 +89,18 @@ export function SolicitacoesPage() {
 
   const { filterConfigs, formFields, loadFilterOptions } = useSolicitacoesFilters(filters);
   const { modalState, openModal, closeModal } = useGenericModal<SolicitacaoServico>();
+
+  /**
+   * O sheet abre com as instruções no formato do campo (os ids aparados): a
+   * solicitação vem com a lista `instrucoes`, e o campo `instrucoes_ids` se
+   * preenchia ao montar, e o sheet abria dizendo "Alterações não salvas" sem
+   * ninguém ter mexido (30/out/2026).
+   */
+  const entidadeDoSheet = useMemo(() => {
+    const entidade = modalState.entity as (SolicitacaoServico & { instrucoes?: Array<{ id?: string | null }>; instrucoes_ids?: string[] }) | null;
+    if (!entidade || Array.isArray(entidade.instrucoes_ids) || !Array.isArray(entidade.instrucoes) || entidade.instrucoes.length === 0) return entidade;
+    return { ...entidade, instrucoes_ids: entidade.instrucoes.map((i) => String(i.id ?? '').trim()).filter(Boolean) };
+  }, [modalState.entity]);
 
   const reloadData = async () => {
     await fetchSolicitacoes(filters);
@@ -224,27 +236,35 @@ export function SolicitacoesPage() {
     const comNome = <T extends { descricao: string }>(linhas: T[]) => linhas.filter((l) => l.descricao.trim());
     const custos = comNome(rascunho.outros_custos);
     const logistica = comNome(rascunho.logistica);
+    const planejado = [rascunho.distancia_km, rascunho.deslocamento_interno_km, rascunho.dias_previstos, rascunho.pessoas_previstas, rascunho.noites_fora].some((v) => v !== null);
+    if (rascunho.itens.length === 0 && custos.length === 0 && logistica.length === 0 && !planejado) return;
     if (rascunho.itens.length > 0) await propostaApi.salvarItens(id, rascunho.itens);
     if (custos.length > 0) await propostaApi.salvarOutrosCustos(id, custos);
-    for (const tabela of ['FRETE', 'DESLOCAMENTO', 'DIARIA'] as TabelaDeLogistica[]) {
-      const linhas = logistica.filter((l) => l.tabela === tabela);
-      if (linhas.length > 0) await propostaApi.salvarLogistica(id, tabela, linhas);
-    }
-    if (rascunho.itens.length === 0 && custos.length === 0 && logistica.length === 0) return;
-    // Separados: o desconto recusado nao leva os percentuais junto
+    // O planejamento antes das tabelas (30/out/2026): gravado, o servidor ja cria as linhas
+    // automaticas; as do rascunho chegam depois com os mesmos nomes e o que foi ajustado.
+    // Recusadas as condicoes, as tabelas vao do mesmo jeito (antes elas ja estavam gravadas
+    // a essa altura) e o erro sobe no fim. Separados: o desconto recusado nao leva os percentuais
+    let recusadas: unknown = null;
     await propostaApi.salvarCondicoes(id, {
       imposto_percentual: rascunho.imposto_percentual,
       margem_percentual: rascunho.margem_percentual,
       adm_servicos_percentual: rascunho.adm_servicos_percentual,
       adm_fd_percentual: rascunho.adm_fd_percentual,
       distancia_km: rascunho.distancia_km,
-      distancia_ida_volta_km: rascunho.distancia_ida_volta_km,
+      deslocamento_interno_km: rascunho.deslocamento_interno_km,
       dias_previstos: rascunho.dias_previstos,
       pessoas_previstas: rascunho.pessoas_previstas,
       noites_fora: rascunho.noites_fora,
       validade_proposta: rascunho.validade_proposta,
       condicoes_comerciais: rascunho.condicoes_comerciais,
+    }).catch((erro: unknown) => {
+      recusadas = erro;
     });
+    for (const tabela of ['FRETE', 'DESLOCAMENTO', 'DIARIA'] as TabelaDeLogistica[]) {
+      const linhas = logistica.filter((l) => l.tabela === tabela);
+      if (linhas.length > 0) await propostaApi.salvarLogistica(id, tabela, linhas);
+    }
+    if (recusadas) throw recusadas;
     if (rascunho.desconto_tipo && rascunho.desconto_valor) {
       // O desconto em reais que passou do faturamento da Aupus (uma instrucao saiu depois) vale
       // ate ele, como a tela mostrou; inteiro, a API o recusaria
@@ -418,15 +438,15 @@ export function SolicitacoesPage() {
                   <RotateCcw className="mr-2 h-4 w-4" />
                   <span>Limpar Filtros</span>
                 </button>
-                {/* O lugar de configurar imposto, margem e administração: quem monta proposta */}
+                {/* O lugar de configurar os percentuais e a logística automática: quem monta proposta */}
                 {temPermissao('solicitacoes.manage') && (
                   <button
                     onClick={() => setPadroesAbertos(true)}
                     className="btn-minimal-primary w-full sm:w-auto whitespace-nowrap flex-shrink-0 justify-center"
-                    title="O imposto, a margem e a administração que as solicitações novas recebem"
+                    title="O imposto, a margem, a administração e os valores da logística automática (km, refeições, pernoite)"
                   >
-                    <Percent className="mr-2 h-4 w-4" />
-                    <span>Percentuais</span>
+                    <SlidersHorizontal className="mr-2 h-4 w-4" />
+                    <span>Padrões</span>
                   </button>
                 )}
                 <button
@@ -472,7 +492,7 @@ export function SolicitacoesPage() {
               <BaseModal
                 isOpen={modalState.isOpen}
                 mode={modalState.mode}
-                entity={modalState.entity}
+                entity={entidadeDoSheet}
                 title={getModalTitle()}
                 icon={<FilePenLine className="h-4 w-4 md:h-5 md:w-5 text-primary" />}
                 formFields={camposDoSheet}
@@ -493,7 +513,8 @@ export function SolicitacoesPage() {
               >
                 {/* Conversa com quem pediu, no fim do sheet; o interno não aparece para o cliente (SN-48) */}
                 {modalState.mode !== 'create' && modalState.entity?.id && (
-                  <div className="mt-6 rounded-md border p-4">
+                  // Um traço em cima separa a conversa, como a proposta: sem a caixa em volta
+                  <div className="mt-6 border-t border-border pt-5">
                     <ComentariosDoRegistro
                       alvo="solicitacao_servico"
                       registroId={modalState.entity.id}

@@ -69,12 +69,16 @@ const n = (valor: number | null | undefined) => (typeof valor === 'number' && Nu
 /**
  * O total de uma linha, pela tabela dela (campo vazio é zero):
  *   FRETE:        km por viagem × viagens (quantidade) × R$/km + valor fixo
- *   DESLOCAMENTO: dias × diária do veículo (valor_unitario) + km × R$/km
+ *   DESLOCAMENTO: veículos (quantidade; vazio é 1) × (dias × diária do veículo + km × R$/km)
  *   DIARIA:       quantidade × valor
  */
 export function totalDaLinha(linha: ColunasDaLogistica): number {
   if (linha.tabela === 'FRETE') return centavos(n(linha.km) * n(linha.quantidade) * n(linha.valor_km) + n(linha.valor_fixo));
-  if (linha.tabela === 'DESLOCAMENTO') return centavos(n(linha.dias) * n(linha.valor_unitario) + n(linha.km) * n(linha.valor_km));
+  if (linha.tabela === 'DESLOCAMENTO') {
+    // Os veículos (30/out/2026): a linha de antes não tinha a quantidade, e vazio é um veículo
+    const veiculos = linha.quantidade === null || linha.quantidade === undefined ? 1 : n(linha.quantidade);
+    return centavos(veiculos * (n(linha.dias) * n(linha.valor_unitario) + n(linha.km) * n(linha.valor_km)));
+  }
   return centavos(n(linha.quantidade) * n(linha.valor_unitario));
 }
 

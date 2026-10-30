@@ -50,19 +50,33 @@ const LOGISTICA_NO_PDF: Array<[TabelaDeLogistica, string]> = [
 function detalheDaLinha(linha: LinhaDeLogistica): string | undefined {
   const partes =
     linha.tabela === 'DESLOCAMENTO'
-      ? [linha.dias ? quantos(linha.dias, 'dia', 'dias') : null, linha.km ? `${numeroDoPdf(linha.km)} km` : null]
+      ? [
+          // Os veículos e o km (30/out/2026: a diária do veículo, e com ela os dias, saiu do preço)
+          quantos(linha.quantidade ?? 1, 'veículo', 'veículos'),
+          linha.km ? `${numeroDoPdf(linha.km)} km` : null,
+        ]
       : linha.tabela === 'FRETE'
         ? [linha.quantidade ? quantos(linha.quantidade, 'viagem', 'viagens') : null, linha.km ? `${numeroDoPdf(linha.km)} km por viagem` : null]
-        : [linha.quantidade ? quantos(linha.quantidade, 'diária', 'diárias') : null];
+        : // "2 diárias" de jantar não diz nada (o usuário, 30/out/2026): unidades
+          [linha.quantidade ? quantos(linha.quantidade, 'unidade', 'unidades') : null];
   return partes.filter(Boolean).join(' · ') || undefined;
 }
 
-/** O planejamento da execução em frases (o que estiver preenchido) */
+/** Os dias e as noites que valem: o digitado ou, no vazio, o calculado (30/out/2026) */
+const diasValendo = (p: Proposta) => p.dias_previstos ?? p.planejamento_calculado?.dias ?? null;
+const noitesValendo = (p: Proposta) => p.noites_fora ?? p.planejamento_calculado?.noites ?? null;
+
+/** O planejamento da execução em frases (o que estiver preenchido ou calculado) */
 function frasesDoPlanejamento(proposta: Proposta): string[] {
-  const { distancia_km: ida, distancia_ida_volta_km: idaEVolta, pessoas_previstas: pessoas, noites_fora: noites } = proposta;
+  const ida = proposta.distancia_km;
+  // O km de ida é o de volta (30/out/2026)
+  const idaEVolta = proposta.planejamento_calculado?.ida_e_volta_km ?? (ida ? ida * 2 : null);
+  const interno = proposta.deslocamento_interno_km ?? proposta.planejamento_calculado?.interno_km ?? null;
+  const pessoas = proposta.pessoas_previstas;
+  const noites = noitesValendo(proposta);
   return [
     ida ? `Distância até o local: ${numeroDoPdf(ida)} km${idaEVolta ? ` (${numeroDoPdf(idaEVolta)} km ida e volta)` : ''}.` : null,
-    !ida && idaEVolta ? `Percurso de ${numeroDoPdf(idaEVolta)} km ida e volta.` : null,
+    interno ? `Deslocamento interno na obra: ${numeroDoPdf(interno)} km.` : null,
     pessoas ? `Equipe prevista: ${quantos(pessoas, 'pessoa', 'pessoas')}.` : null,
     noites ? `Pernoites previstos: ${numeroDoPdf(noites)}.` : null,
   ].filter((frase): frase is string => Boolean(frase));
@@ -99,9 +113,10 @@ function secoesDaExecucao(proposta: Proposta): Secao[] {
   const planejamento = frasesDoPlanejamento(proposta);
   const grupos = LOGISTICA_NO_PDF.map(([tabela, titulo]) => ({
     titulo,
-    // A linha desligada fica na proposta, fora da conta: fora do PDF também
+    // A linha desligada fica na proposta, fora da conta: fora do PDF também; e a automática
+    // zerada (as noites voltaram a zero e o pernoite ficou com quantidade 0)
     itens: (proposta.logistica ?? [])
-      .filter((l) => l.tabela === tabela && l.ativo && l.descricao.trim())
+      .filter((l) => l.tabela === tabela && l.ativo && l.descricao.trim() && l.quantidade !== 0)
       .map((l) => ({ texto: l.descricao.trim(), detalhe: detalheDaLinha(l) })),
   })).filter((g) => g.itens.length > 0);
   const adicionais = proposta.outros_custos.filter((c) => c.descricao.trim());
@@ -159,8 +174,9 @@ function secoesDaExecucao(proposta: Proposta): Secao[] {
 export function PropostaDocumento({ proposta, numero, titulo, cliente }: DadosProposta) {
   const hoje = new Date().toLocaleDateString('pt-BR');
   const servicos = proposta.itens.map((item) => item.descricao.trim()).filter(Boolean);
+  const dias = diasValendo(proposta);
   const condicoes = [
-    ...(proposta.dias_previstos ? [`Execução prevista em ${quantos(proposta.dias_previstos, 'dia', 'dias')}.`] : []),
+    ...(dias ? [`Execução prevista em ${quantos(dias, 'dia', 'dias')}.`] : []),
     ...(proposta.validade_proposta ? [`Proposta válida até ${diaDoPdf(proposta.validade_proposta)}.`] : []),
   ];
 

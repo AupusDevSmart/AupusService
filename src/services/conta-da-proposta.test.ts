@@ -49,6 +49,9 @@ describe('a conta da proposta (rascunho)', () => {
     );
     expect(conta).toMatchObject({ custoLogistica: 2030, custoAdicionais: 150, custoServicos: 12180 });
     expect([totalDaLinha({ tabela: 'FRETE', km: 100 }), totalDaLinha({ tabela: 'DIARIA', quantidade: 6, valor_unitario: 45 })]).toEqual([0, 270]);
+    // Os veículos do deslocamento (30/out/2026): vazio é um, dois dobram
+    expect(totalDaLinha({ tabela: 'DESLOCAMENTO', km: 240, valor_km: 2 })).toBe(480);
+    expect(totalDaLinha({ tabela: 'DESLOCAMENTO', quantidade: 2, km: 240, valor_km: 2 })).toBe(960);
   });
 
   it('a venda de cada parte soma o preço dos serviços', () => {

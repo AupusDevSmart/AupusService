@@ -17,22 +17,34 @@ export function explicacoesDaProposta(p: Proposta, interna: boolean) {
   const planejamento: Explicacao = {
     rotulo: 'Planejamento',
     linhas: [
-      'Dias sugeridos: as horas dos passos das instruções, uma depois da outra, em jornadas de 8 h, arredondado para cima (6h20 dá 1 dia; 9 h, 2).',
-      'Ida e volta: o dobro da distância, até você mudar.',
-      'Os números enchem as linhas novas das tabelas: deslocamento com os dias e o km de ida e volta; diárias com pessoas × dias (pernoite e hospedagem: pessoas × noites fora).',
+      'Basta a distância de ida: o resto se calcula com os valores do botão "Padrões" da página. Campo vazio usa o calculado (em cinza); o digitado manda.',
+      'Ida e volta: o dobro da ida. Interno na obra: vazio, uma parte da ida e volta. Pessoas: vazio, as do padrão.',
+      'Estrada: o tempo a cada 100 km do padrão. Se a ida passa do limite do bate-volta, a equipe dorme no local; as noites digitadas mandam (com noites, dorme; com zero, volta todo dia).',
+      'Dias: as horas dos passos das instruções, uma depois da outra, em jornadas de 8 h, para cima. Dormindo no local, a viagem de ida e de volta soma às horas; no bate-volta, sai de cada dia.',
+      'Noites fora: dormindo no local, os dias menos um; no bate-volta, nenhuma.',
+      'Veículos: as pessoas ÷ as pessoas por veículo do padrão, para cima. Km de cada um: a ida e volta (no bate-volta, uma por dia) + o interno.',
+      'A revisão grava o calculado nos campos: a proposta revisada e o PDF dela não mudam com os padrões de depois.',
       'Equipe, reserva do veículo e km de verdade são da programação e da execução.',
     ],
   };
   const tabelas: Explicacao[] = [
     { rotulo: 'Frete', linhas: ['Total = viagens × km por viagem × R$ por km + valor fixo.'] },
-    { rotulo: 'Deslocamento', linhas: ['Total = dias × diária do veículo + km × R$ por km.'] },
-    { rotulo: 'Diárias', linhas: ['Total = quantidade × valor (café, almoço, jantar, pernoite).'] },
+    { rotulo: 'Deslocamento', linhas: ['Total = veículos × km × R$ por km. Veículos vazio é 1.'] },
+    { rotulo: 'Diárias', linhas: ['Total = unidades × valor (café, almoço, jantar, pernoite).'] },
+    {
+      rotulo: 'Linhas automáticas',
+      linhas: [
+        'Calculadas pelo planejamento (o ícone de varinha): "Veículo da equipe" (veículos × km por veículo × R$ por km), almoço (pessoas × dias), café da manhã, jantar e pernoite (pessoas × noites fora).',
+        'Acompanham quando o km, os dias, as pessoas ou as noites mudam. O preço é o padrão do dia em que a linha nasceu, e se ajusta na linha. A que o planejamento não pede mais (sem noites, o pernoite) fica com zero e volta com o preço que tinha.',
+        'Mudar a quantidade, os dias ou o km de uma delas a deixa "ajustada": ela para de acompanhar até você clicar em "ajustada" para voltar ao automático.',
+        'Para tirar uma da conta, desmarque-a: removida, ela voltaria no próximo cálculo.',
+      ],
+    },
     {
       rotulo: 'As três tabelas',
       linhas: [
-        '"Do catálogo" copia o nome e o preço do recurso: reajustar o catálogo depois não muda esta proposta.',
         'A linha desmarcada fica na proposta, fora da conta. A linha sem nome não se grava.',
-        'No PDF do cliente, as três viram uma linha só: "Logística e mobilização", pelo preço de venda.',
+        'No PDF do cliente vão o nome e as quantidades de cada linha, sem valor: de valor, só o investimento global.',
       ],
     },
   ];

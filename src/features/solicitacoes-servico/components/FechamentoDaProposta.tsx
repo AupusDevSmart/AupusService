@@ -6,6 +6,7 @@ import { CampoDeNumero } from '@/components/common/CampoDeNumero';
 import { DicaDaConta, type Explicacao } from '@/components/common/ComoSeCalcula';
 import { AVISO_DE_DINHEIRO, dinheiroNoCampo, lerDinheiroDigitado, numeroNoCampo } from '@/utils/leitura';
 import { moeda, percentualNaTela, type CondicoesDaProposta, type Proposta, type TipoDeDesconto } from '@/services/proposta.services';
+import { TituloDaSecao } from './TituloDaSecao';
 
 interface FechamentoDaPropostaProps {
   proposta: Proposta;
@@ -21,6 +22,8 @@ interface FechamentoDaPropostaProps {
  * o preço, a administração (com o imposto dela), o desconto sobre o total
  * inteiro, e os três totais da spec: o faturado pela Aupus, o direto e o
  * investimento global. Quem não monta proposta (o cliente) vê só os preços.
+ * É a parte de destaque da proposta (30/out/2026): um painel de fundo neutro, a
+ * conta em cima e os totais embaixo, o investimento global maior.
  */
 export function FechamentoDaProposta({ proposta, ajusta, onChange, explicacoes = [] }: FechamentoDaPropostaProps) {
   const dica = (rotulo: string) => {
@@ -96,9 +99,10 @@ export function FechamentoDaProposta({ proposta, ajusta, onChange, explicacoes =
     );
 
   return (
-    <div className="space-y-2">
-      <span className="text-sm font-medium">Fechamento</span>
-      <dl className="space-y-1">
+    // O contorno só no claro: lá o cinza do painel é quase o do sheet; no escuro, o fundo basta
+    <div className="space-y-2 rounded-lg border border-border bg-muted p-4 dark:border-transparent">
+      <TituloDaSecao titulo="Fechamento" />
+      <dl className="space-y-1.5">
         {f && (
           <>
             <Linha rotulo="Instruções" valor={f.custo_instrucoes} />
@@ -140,7 +144,7 @@ export function FechamentoDaProposta({ proposta, ajusta, onChange, explicacoes =
               {ajusta ? (
                 <>
                   <Select value={tipoDoDesconto ?? 'NENHUM'} onValueChange={trocarTipoDeDesconto}>
-                    <SelectTrigger className="h-8 w-[92px]" aria-label="Como é o desconto">
+                    <SelectTrigger className="h-8 w-[108px]" aria-label="Como é o desconto">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -177,9 +181,11 @@ export function FechamentoDaProposta({ proposta, ajusta, onChange, explicacoes =
           </p>
         )}
 
-        <Linha rotulo="Total faturado pela Aupus" valor={proposta.total_aupus ?? 0} forte dica={dica('Total faturado pela Aupus')} />
-        {(proposta.total_fd ?? 0) > 0 && <Linha rotulo="Faturamento direto (fornecedores)" valor={proposta.total_fd ?? 0} dica={dica('Faturamento direto')} />}
-        <Linha rotulo="Investimento global" valor={proposta.total_geral ?? 0} destaque dica={dica('Investimento global')} />
+        <div className="space-y-1.5 border-t border-border pt-2.5">
+          <Linha rotulo="Total faturado pela Aupus" valor={proposta.total_aupus ?? 0} forte dica={dica('Total faturado pela Aupus')} />
+          {(proposta.total_fd ?? 0) > 0 && <Linha rotulo="Faturamento direto (fornecedores)" valor={proposta.total_fd ?? 0} dica={dica('Faturamento direto')} />}
+          <Linha rotulo="Investimento global" valor={proposta.total_geral ?? 0} destaque dica={dica('Investimento global')} />
+        </div>
       </dl>
 
       {f && (
@@ -197,11 +203,11 @@ export function FechamentoDaProposta({ proposta, ajusta, onChange, explicacoes =
 function Linha({ rotulo, valor, forte, destaque, dica }: { rotulo: string; valor: number; forte?: boolean; destaque?: boolean; dica?: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <dt className={`flex items-center gap-1.5 ${destaque || forte ? 'text-sm font-medium' : 'text-sm text-muted-foreground'}`}>
+      <dt className={`flex items-center gap-1.5 ${destaque ? 'text-sm font-semibold' : forte ? 'text-sm font-medium' : 'text-sm text-muted-foreground'}`}>
         {rotulo}
         {dica}
       </dt>
-      <dd className={`tabular-nums ${destaque ? 'text-base font-semibold' : forte ? 'text-sm font-medium' : 'text-sm'}`}>{moeda(valor)}</dd>
+      <dd className={`tabular-nums ${destaque ? 'text-lg font-semibold' : forte ? 'text-sm font-medium' : 'text-sm'}`}>{moeda(valor)}</dd>
     </div>
   );
 }
