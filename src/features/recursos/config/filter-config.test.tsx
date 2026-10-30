@@ -16,8 +16,19 @@ describe('filtros da lista de recursos', () => {
   it('a categoria vem antes da busca, as duas na linha inteira', () => {
     expect(recursosFilterConfig.map((f) => [f.key, f.className])).toEqual([
       ['categoria', 'col-span-full'],
+      ['situacao', 'col-span-full'],
       ['search', 'col-span-full'],
     ]);
+  });
+
+  // 30/out/2026: os inativos à vista, para excluir de uma vez
+  it('a situação: ativos e inativos (o vazio), só ativos, só inativos', () => {
+    const situacao = recursosFilterConfig.find((f) => f.key === 'situacao')!;
+    const onChange = vi.fn();
+    render(<>{situacao.render!({ value: '', onChange, disabled: false })}</>);
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Ativos e inativos', 'Ativos', 'Inativos']);
+    fireEvent.click(screen.getByRole('button', { name: 'Inativos' }));
+    expect(onChange).toHaveBeenCalledWith('INATIVO');
   });
 
   it('um botão por categoria, no plural, depois de "Todos"', () => {

@@ -12,10 +12,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Plus, Package } from 'lucide-react';
+import { Plus, Package, Trash2 } from 'lucide-react';
 import { useUserStore } from '@/store/useUserStore';
 import { useLinhasPorPagina, LINHAS_POR_PAGINA_PADRAO } from '@/store/usePreferenciasDeTabela';
-import type { CategoriaRecurso, QueryRecursosParams, RecursoApiResponse } from '@/services/recursos.services';
+import { ROTULO_PLURAL_DA_CATEGORIA, type CategoriaRecurso, type PedidoDeExclusaoEmLote, type QueryRecursosParams, type RecursoApiResponse } from '@/services/recursos.services';
 
 /** Os filtros como a tela guarda: a categoria vazia (ou 'all') é "Todos". */
 type FiltrosDaTela = Omit<QueryRecursosParams, 'categoria'> & { categoria?: CategoriaRecurso | 'all' | '' };
@@ -25,6 +25,7 @@ import { useRecursos } from '../hooks/useRecursos';
 import { RecursoModal } from './RecursoModal';
 import { PlanilhaDoCadastro } from '@/components/common/PlanilhaDoCadastro';
 import { exportarRecursos, lerRecursos } from '../utils/planilha';
+import { ExcluirEmLoteDialog } from './ExcluirEmLoteDialog';
 
 const FILTROS_INICIAIS: QueryRecursosParams = { search: '', page: 1, limit: LINHAS_POR_PAGINA_PADRAO };
 
@@ -53,9 +54,10 @@ export function RecursosPage() {
   // "Todos" (vazio, ou o "all" de antes) não vai para a API: viraria uma
   // categoria inexistente e a lista voltaria vazia.
   const filtros = useMemo<QueryRecursosParams>(() => {
-    const { categoria, page, limit } = filtrosBrutos;
+    const { categoria, situacao, page, limit } = filtrosBrutos;
     return {
       ...(categoria && categoria !== 'all' ? { categoria } : {}),
+      ...(situacao === 'ATIVO' || situacao === 'INATIVO' ? { situacao } : {}),
       ...(buscaAplicada ? { search: buscaAplicada } : {}),
       page: page || 1,
       limit: limit || LINHAS_POR_PAGINA_PADRAO,
@@ -72,8 +74,25 @@ export function RecursosPage() {
 
   const [aRemover, setARemover] = useState<RecursoApiResponse | null>(null);
 
+  // Excluir vários (30/out/2026): os marcados na tabela, ou todos os inativos do filtro
+  const [marcados, setMarcados] = useState<string[]>([]);
+  const [emLote, setEmLote] = useState<{ pedido: PedidoDeExclusaoEmLote; descricao: string } | null>(null);
+  // A busca vale 350 ms depois da última tecla: até lá, o botão espera (sairia sem a busca)
+  const buscaPendente = (filtrosBrutos.search ?? '') !== buscaAplicada;
+  const excluirInativos = () => {
+    const categoria = filtros.categoria;
+    const busca = filtros.search?.trim();
+    const doFiltro = [categoria && `de ${ROTULO_PLURAL_DA_CATEGORIA[categoria]}`, busca && `com "${busca}" no nome`].filter(Boolean).join(' ');
+    setEmLote({
+      pedido: { inativos: true, ...(categoria && { categoria }), ...(busca && { search: busca }) },
+      descricao: `todos os recursos inativos${doFiltro ? ` ${doFiltro}` : ''}, em todas as páginas`,
+    });
+  };
+
+  // Trocar o filtro desmarca: o marcado que sumiu da tela não sai sem a pessoa ver
   const mudarFiltro = (novos: Partial<FiltrosDaTela>) => {
     setFiltrosBrutos((atuais) => ({ ...atuais, ...novos, page: 1 }));
+    setMarcados([]);
   };
 
   // Volta para a pagina 1: na pagina 4 de 10 linhas, trocar para 100 pediria
@@ -106,6 +125,17 @@ export function RecursosPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+              {podeGerenciar && (
+                <button
+                  onClick={excluirInativos}
+                  disabled={buscaPendente}
+                  className="btn-minimal-outline w-full lg:w-auto whitespace-nowrap disabled:opacity-50"
+                  title="Exclui de uma vez todos os inativos da categoria e da busca escolhidas, em todas as páginas (o que está em uso fica)"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir inativos
+                </button>
+              )}
               <PlanilhaDoCadastro
                 cadastro="recursos"
                 titulo="Recursos"
@@ -127,6 +157,28 @@ export function RecursosPage() {
             </div>
           </div>
 
+          {marcados.length > 0 && (
+            <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm">
+              <span className="font-medium">
+                {marcados.length} {marcados.length === 1 ? 'marcado' : 'marcados'}
+              </span>
+              <span className="flex-1" />
+              <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => setMarcados([])}>
+                Desmarcar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="h-8"
+                onClick={() => setEmLote({ pedido: { ids: marcados }, descricao: `${marcados.length === 1 ? 'o recurso marcado' : `os ${marcados.length} recursos marcados`}` })}
+              >
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                Excluir marcados
+              </Button>
+            </div>
+          )}
+
           <div className="sm:flex-1 sm:min-h-0">
             <BaseTable
               data={recursos}
@@ -141,7 +193,10 @@ export function RecursosPage() {
                   : undefined
               }
               onDelete={podeGerenciar ? (recurso) => setARemover(recurso) : undefined}
-              emptyMessage="Nenhum recurso cadastrado."
+              {...(podeGerenciar && { selecionados: marcados, onSelecionadosChange: setMarcados })}
+              emptyMessage={
+                filtros.situacao === 'INATIVO' ? 'Nenhum recurso inativo.' : filtros.categoria || filtros.search || filtros.situacao ? 'Nenhum recurso com esse filtro.' : 'Nenhum recurso cadastrado.'
+              }
               emptyIcon={<Package className="h-8 w-8 text-muted-foreground/50" />}
             />
           </div>
@@ -154,6 +209,16 @@ export function RecursosPage() {
           salvando={salvando}
           onClose={() => setModal({ aberto: false, modo: 'create', recurso: null })}
           onSubmit={salvar}
+        />
+
+        <ExcluirEmLoteDialog
+          pedido={emLote?.pedido ?? null}
+          descricao={emLote?.descricao ?? ''}
+          onClose={() => setEmLote(null)}
+          onExcluidos={() => {
+            setMarcados([]);
+            void recarregar();
+          }}
         />
 
         <Dialog open={!!aRemover} onOpenChange={(aberto: boolean) => !aberto && setARemover(null)}>

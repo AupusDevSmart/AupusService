@@ -161,8 +161,32 @@ export interface QueryRecursosParams {
   categoria?: CategoriaRecurso;
   search?: string;
   apenas_ativos?: boolean;
+  /** O filtro da tela (30/out/2026): só os ativos ou só os inativos; sem ele, todos */
+  situacao?: 'ATIVO' | 'INATIVO';
   page?: number;
   limit?: number;
+}
+
+/**
+ * Excluir vários (30/out/2026): os marcados, ou todos os inativos do filtro. A API só
+ * exclui com `previa: false`, e com `esperados` (o número da prévia) recusa (409) se a
+ * lista mudou no meio.
+ */
+export type PedidoDeExclusaoEmLote = ({ ids: string[] } | { inativos: true; categoria?: CategoriaRecurso; search?: string }) & {
+  previa?: boolean;
+  esperados?: number;
+};
+
+export interface ResultadoDaExclusaoEmLote {
+  previa: boolean;
+  /** Quantos saem (na prévia) ou saíram */
+  excluidos: number;
+  /** Os primeiros nomes do que sai */
+  nomes: string[];
+  /** O que fica por estar em uso em instruções */
+  em_uso: { id: string; nome: string; instrucoes: number }[];
+  /** Os marcados que já não existiam (excluídos por outra pessoa) */
+  nao_encontrados?: number;
 }
 
 export interface ListaRecursosResposta {
@@ -237,6 +261,12 @@ class RecursosApiService {
 
   async remover(id: string): Promise<void> {
     await api.delete(`${this.endpoint}/${id.trim()}`);
+  }
+
+  async excluirEmLote(pedido: PedidoDeExclusaoEmLote): Promise<ResultadoDaExclusaoEmLote> {
+    const corpo = 'ids' in pedido ? { ...pedido, ids: pedido.ids.map((id) => id.trim()) } : pedido;
+    const response = await api.post<unknown>(`${this.endpoint}/excluir-em-lote`, corpo);
+    return desembrulhar<ResultadoDaExclusaoEmLote>(response);
   }
 }
 

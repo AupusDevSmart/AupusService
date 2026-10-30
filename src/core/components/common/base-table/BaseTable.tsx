@@ -79,6 +79,33 @@ interface BaseTableProps<T extends BaseEntity> {
   expandedRowId?: string | number | null;
   onRowToggle?: (entity: T) => void;
   isRowExpandable?: (entity: T) => boolean;
+  /**
+   * Marcar linhas (30/out/2026, a exclusão em lote dos recursos): com os dois, a
+   * tabela ganha a coluna de marcar, e o cabeçalho marca a página inteira. Os ids
+   * vão aparados. Sem eles, a tabela é como sempre foi.
+   */
+  selecionados?: string[];
+  onSelecionadosChange?: (ids: string[]) => void;
+}
+
+/** A caixa de marcar da tabela: nativa, na cor do texto (sem o azul do navegador) */
+function CaixaDeMarcar({ marcada, parcial = false, rotulo, onChange }: { marcada: boolean; parcial?: boolean; rotulo: string; onChange: () => void }) {
+  const ref = React.useRef<HTMLInputElement>(null);
+  React.useEffect(() => {
+    if (ref.current) ref.current.indeterminate = parcial && !marcada;
+  }, [parcial, marcada]);
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      className="h-4 w-4 cursor-pointer accent-foreground"
+      checked={marcada}
+      onChange={onChange}
+      onClick={(event) => event.stopPropagation()}
+      aria-label={rotulo}
+      title={rotulo}
+    />
+  );
 }
 
 /**
@@ -133,7 +160,9 @@ export function BaseTable<T extends BaseEntity>({
   renderExpandedRow,
   expandedRowId = null,
   onRowToggle,
-  isRowExpandable
+  isRowExpandable,
+  selecionados,
+  onSelecionadosChange,
 }: BaseTableProps<T>) {
   const hasDefaultActions = onView || onEdit || onDelete;
   const hasCustomActions = customActions.length > 0;
@@ -154,8 +183,22 @@ export function BaseTable<T extends BaseEntity>({
     expandedRowId !== undefined &&
     normalizeId(entity.id) === normalizeId(expandedRowId);
 
+  // Marcar linhas: só quando a tela pede
+  const marca = Boolean(onSelecionadosChange);
+  const marcados = new Set((selecionados ?? []).map((id) => id.trim()));
+  const idDaLinha = (entity: T) => String(entity.id).trim();
+  const idsDaPagina = data.map(idDaLinha);
+  const paginaMarcada = idsDaPagina.length > 0 && idsDaPagina.every((id) => marcados.has(id));
+  const paginaEmParte = idsDaPagina.some((id) => marcados.has(id));
+  const alternarLinha = (entity: T) => {
+    const id = idDaLinha(entity);
+    onSelecionadosChange?.(marcados.has(id) ? [...marcados].filter((m) => m !== id) : [...marcados, id]);
+  };
+  const alternarPagina = () =>
+    onSelecionadosChange?.(paginaMarcada ? [...marcados].filter((id) => !idsDaPagina.includes(id)) : [...new Set([...marcados, ...idsDaPagina])]);
+
   // Total de colunas renderizadas, usado no colSpan da linha expandida e do vazio.
-  const totalColumns = columns.length + (isExpandableTable ? 1 : 0) + (hasActions ? 1 : 0);
+  const totalColumns = columns.length + (isExpandableTable ? 1 : 0) + (hasActions ? 1 : 0) + (marca ? 1 : 0);
 
   /**
    * As opções do seletor sempre incluem o tamanho atual.
@@ -329,6 +372,7 @@ export function BaseTable<T extends BaseEntity>({
           <Table>
             <TableHeader>
               <TableRow>
+                {marca && <TableHead className="w-10" />}
                 {isExpandableTable && <TableHead className="w-10" />}
                 {columns.map((column, index) => (
                   <TableHead key={index} className={column.className}>
@@ -341,6 +385,11 @@ export function BaseTable<T extends BaseEntity>({
             <TableBody>
               {Array.from({ length: 5 }).map((_, index) => (
                 <TableRow key={index}>
+                  {marca && (
+                    <TableCell>
+                      <Skeleton className="h-4 w-4" />
+                    </TableCell>
+                  )}
                   {isExpandableTable && (
                     <TableCell>
                       <Skeleton className="h-4 w-4" />
@@ -425,6 +474,11 @@ export function BaseTable<T extends BaseEntity>({
                     onClick={expandable ? () => onRowToggle?.(entity) : undefined}
                   >
                     <div className="flex items-start gap-2">
+                      {marca && (
+                        <span className="mt-0.5 shrink-0">
+                          <CaixaDeMarcar marcada={marcados.has(idDaLinha(entity))} rotulo="Marcar" onChange={() => alternarLinha(entity)} />
+                        </span>
+                      )}
                       {expandable && (
                         <ChevronDown
                           className={`mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
@@ -477,6 +531,11 @@ export function BaseTable<T extends BaseEntity>({
         <Table className="table-minimal min-w-full">
           <TableHeader>
             <TableRow>
+              {marca && (
+                <TableHead className="w-10">
+                  <CaixaDeMarcar marcada={paginaMarcada} parcial={paginaEmParte} rotulo="Marcar a página" onChange={alternarPagina} />
+                </TableHead>
+              )}
               {isExpandableTable && <TableHead className="w-10" />}
               {columns.map((column, index) => (
                 <TableHead
@@ -514,6 +573,11 @@ export function BaseTable<T extends BaseEntity>({
                   }`}
                   onClick={expandable ? () => onRowToggle?.(entity) : undefined}
                 >
+                  {marca && (
+                    <TableCell className="w-10 align-middle">
+                      <CaixaDeMarcar marcada={marcados.has(idDaLinha(entity))} rotulo="Marcar" onChange={() => alternarLinha(entity)} />
+                    </TableCell>
+                  )}
                   {isExpandableTable && (
                     <TableCell className="w-10 align-middle">
                       {expandable && (
