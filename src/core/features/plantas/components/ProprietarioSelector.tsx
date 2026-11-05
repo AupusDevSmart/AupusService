@@ -1,4 +1,5 @@
 // src/features/plantas/components/ProprietarioSelector.tsx - ATUALIZADO COM COMBOBOX
+import { toast } from 'sonner';
 import React, { useEffect, useState } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/core/components/ui/button';
@@ -64,7 +65,9 @@ export function ProprietarioSelector({ value, onChange, disabled }: Proprietario
                 ]);
               }
             }
-          }).catch((err) => {
+          }).catch(() => {
+            // Calado, o combobox mostrava "Selecione" com o dono ainda gravado: parecia planta sem dono
+            toast.error('Não foi possível carregar o proprietário atual da planta');
           });
         }
       }

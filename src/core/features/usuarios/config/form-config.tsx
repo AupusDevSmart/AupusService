@@ -540,7 +540,8 @@ export const usuariosFormFields: FormField[] = [
     key: 'status',
     label: 'Status',
     type: 'select',
-    required: true,
+    // Sem escolha, nasce ativo (o padrão do servidor); 05/nov/2026: só nome, e-mail e tipo são exigidos
+    required: false,
     defaultValue: 'Ativo',
     options: [
       { value: 'Ativo', label: 'Ativo' },

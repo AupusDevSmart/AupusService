@@ -182,7 +182,8 @@ export const PlantasSelector: React.FC<PlantasSelectorProps> = ({
                   </span>
                 </div>
                 <div className="text-xs text-muted-foreground truncate">
-                  CNPJ: {planta.cnpj} • {planta.endereco.cidade}/{planta.endereco.uf}
+                  {/* CNPJ e endereço opcionais desde 05/nov/2026: só o que existe */}
+                  {[planta.cnpj && `CNPJ: ${planta.cnpj}`, [planta.endereco?.cidade, planta.endereco?.uf].filter(Boolean).join('/')].filter(Boolean).join(' • ') || 'Sem CNPJ nem endereço'}
                 </div>
               </div>
             </div>

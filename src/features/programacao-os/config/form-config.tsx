@@ -121,7 +121,8 @@ export const programacaoOSFormFields: FormField[] = [
     type: 'textarea',
     required: true,
     placeholder: 'Descreva o serviço a ser executado',
-    group: 'identificacao',
+    // Mora no grupo "Serviço" (a lista do grupo manda)
+    group: 'classificacao',
     colSpan:2,
     computeDisabled: (entity?: ProgramacaoAberta | null) => {
       return entity?.status && entity.status !== 'PENDENTE';
@@ -768,7 +769,9 @@ export const programacaoOSFormGroups = [
     // ATENCAO: com `groups` declarado, o BaseForm monta cada grupo por ESTA
     // lista, e ignora o `group:` do campo. Campo que nao esta aqui simplesmente
     // nao renderiza, sem erro nenhum.
-    fields: ['origem', 'origemCard', 'instrucoes_origem', 'planosManutencaoDetalhes']
+    // O campo das instruções é `instrucoes_ids` desde o SN-86: a lista dizia o nome
+    // antigo, e as instruções (com os recursos delas) nunca chegavam ao sheet
+    fields: ['origem', 'origemCard', 'instrucoes_ids']
   },
   {
     key: 'classificacao',

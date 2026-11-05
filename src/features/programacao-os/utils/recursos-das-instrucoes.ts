@@ -29,6 +29,10 @@ import type { NaturezaDoOutroCusto } from '@/features/execucao-os/types/custos';
  * linha e a base de cálculo), repartido pela quantidade que a OS planeja. A
  * linha sem preço no cadastro entra sem custo, e no orçamento com a marca
  * "(sem preço no cadastro)": valor zero ali se leria como de graça.
+ *
+ * O servidor tem a mesma conta (`programacao-os/planejado-das-instrucoes.ts`),
+ * para a programação que nasce sem esta tela (o cron, as rotas `from-*`):
+ * **mudou a regra aqui, muda lá junto.**
  */
 export interface RecursosDaProgramacao {
   materiais: MaterialItem[];
@@ -133,14 +137,22 @@ function doRecurso(linha: RecursoInstrucaoApiResponse, saida: RecursosDaPrograma
       saida.materiais.push({
         descricao: nome,
         quantidade_planejada: planejada,
-        unidade: linha.recurso?.unidade?.trim() || '',
+        // A linha de material exige unidade (vazia, o salvar dava 400); o material é cobrado por unidade
+        unidade: linha.recurso?.unidade?.trim() || 'un',
         ...(custo != null && { custo_unitario: casas(custo / planejada, 2) }),
       });
       return;
     }
-    case 'MAO_DE_OBRA':
-      saida.tecnicos.push(...vagasDaMaoDeObra(linha));
+    case 'MAO_DE_OBRA': {
+      const vagas = vagasDaMaoDeObra(linha);
+      saida.tecnicos.push(...vagas);
+      // Cobrada sem horas (valor fechado): o custo não cabe na hora da vaga e sumia do
+      // orçamento calado. Vai como outro custo; a vaga fica, pedindo as horas
+      if (custo != null && custo > 0 && vagas.every((v) => v.custo_hora === undefined)) {
+        saida.itens_orcamento.push({ descricao: `Mão de obra: ${nome}`, valor: casas(custo, 2), natureza: 'OUTRO' });
+      }
       return;
+    }
     case 'INSTRUMENTO':
       saida.ferramentas.push({ descricao: nome, quantidade: casas(quantidade, 3), unidade: linha.recurso?.unidade?.trim() || undefined });
       saida.itens_orcamento.push(...noOrcamento(`${rotuloCategoria(categoria)}: ${nome}`, custo, naturezaDaCategoria(categoria)));

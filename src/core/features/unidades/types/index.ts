@@ -39,15 +39,16 @@ export interface Unidade {
   id: string;
   plantaId: string;
   nome: string;
-  tipo: TipoUnidade;
+  // Opcionais desde 05/nov/2026: só o nome e a planta são exigidos
+  tipo: TipoUnidade | null;
 
   // Localização
-  estado: string;
-  cidade: string;
-  latitude: number;
-  longitude: number;
+  estado: string | null;
+  cidade: string | null;
+  latitude: number | null;
+  longitude: number | null;
 
-  potencia: number;
+  potencia: number | null;
   status: StatusUnidade;
   pontosMedicao?: unknown; // JSON (a rota declara string[]; o formulario aceita qualquer JSON)
 
@@ -95,13 +96,13 @@ export interface Unidade {
 export interface CreateUnidadeDto {
   planta_id: string;
   nome: string;
-  tipo: TipoUnidade;
-  estado: string;
-  cidade: string;
-  latitude: number;
-  longitude: number;
-  potencia: number;
-  status: StatusUnidade;
+  tipo?: TipoUnidade | null;
+  estado?: string | null;
+  cidade?: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  potencia: number | null;
+  status?: StatusUnidade;
   pontos_medicao?: unknown;
   irrigante?: boolean;
   grupo?: GrupoUnidade;
@@ -228,6 +229,16 @@ export interface UnidadeFormData {
 
 // ===== UTILITÁRIOS DE CONVERSÃO =====
 
+/** O número digitado, ou null quando o campo ficou vazio (ou não é número) */
+const numeroOuNulo = (valor: number | string | null | undefined): number | null => {
+  if (valor === null || valor === undefined) return null;
+  if (typeof valor === 'number') return Number.isFinite(valor) ? valor : null;
+  const texto = valor.trim().replace(',', '.');
+  if (texto === '') return null;
+  const numero = Number(texto);
+  return Number.isFinite(numero) ? numero : null;
+};
+
 /**
  * Converter FormData para DTO da API
  */
@@ -264,9 +275,10 @@ export const formDataToDto = (formData: UnidadeFormData): CreateUnidadeDto => {
     tipo: formData.tipo,
     estado: formData.estado,
     cidade: formData.cidade,
-    latitude: typeof formData.latitude === 'string' ? parseFloat(formData.latitude) : formData.latitude,
-    longitude: typeof formData.longitude === 'string' ? parseFloat(formData.longitude) : formData.longitude,
-    potencia: formData.potencia ? (typeof formData.potencia === 'string' ? parseFloat(formData.potencia) : formData.potencia) : 0,
+    // Opcionais desde 05/nov/2026: o vazio vai null ("sem valor"), nunca NaN nem 0
+    latitude: numeroOuNulo(formData.latitude),
+    longitude: numeroOuNulo(formData.longitude),
+    potencia: numeroOuNulo(formData.potencia),
     status: formData.status,
     irrigante: formData.irrigante,
     grupo: formData.grupo,

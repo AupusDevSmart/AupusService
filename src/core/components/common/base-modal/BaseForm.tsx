@@ -125,23 +125,18 @@ export function BaseForm({
     onChange(newData);
   };
 
+  // Também sobre o latestDataRef, pelo mesmo motivo do handleFieldChange: duas
+  // escritas seguidas antes do re-render (os recursos das instruções e, logo
+  // depois, "terminei de calcular") se somam. Mesclando sobre o `data` do
+  // closure, a segunda apagava a primeira, e a programação nascia sem os
+  // materiais, a equipe e o orçamento das instruções da origem.
   const handleMultipleFieldsChange = (updates: Record<string, unknown>) => {
-    const preservedFields = ['status', 'criticidade', 'categoria', 'tipo_manutencao'];
-    const preserved: Record<string, unknown> = {};
-
-    // Apenas preservar campos que NÃO estão sendo atualizados explicitamente
-    preservedFields.forEach(field => {
-      if (!(field in updates) && data[field] !== undefined && data[field] !== null && data[field] !== '') {
-        preserved[field] = data[field];
-      }
-    });
-
     const newData = {
-      ...data,
+      ...(latestDataRef.current ?? data),
       ...updates,
-      ...preserved
     };
 
+    latestDataRef.current = newData;
     onChange(newData);
   };
 

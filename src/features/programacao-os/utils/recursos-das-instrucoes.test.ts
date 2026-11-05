@@ -72,7 +72,7 @@ describe('contribuicaoDaInstrucao', () => {
         recurso('INSTRUMENTO', 'Escada', { subtotal: 0, fornecido_pelo_cliente: true }),
       ]),
     );
-    expect(c.materiais).toEqual([{ descricao: 'Fusível', quantidade_planejada: 2, unidade: '' }]);
+    expect(c.materiais).toEqual([{ descricao: 'Fusível', quantidade_planejada: 2, unidade: 'un' }]); // sem unidade no cadastro: 'un' (a linha recusa vazia)
     expect(c.itens_orcamento).toEqual([{ descricao: `Terceiro: Ensaio ${SEM_PRECO}`, valor: 0, natureza: 'TERCEIRO' }]);
     expect(c.ferramentas.map((f) => f.descricao)).toEqual(['Escada']);
   });
@@ -112,6 +112,12 @@ describe('contribuicaoDaInstrucao', () => {
   it('mão de obra sem duração: vaga sem horas (a programação preenche), com o preço da hora do cadastro', () => {
     const c = contribuicaoDaInstrucao(instrucao([recurso('MAO_DE_OBRA', 'Ajudante', { quantidade: 1, base: 'hora', preco_base: 35 })]));
     expect(c.tecnicos).toEqual([{ nome: '', especialidade: 'Ajudante', horas_estimadas: 0, custo_hora: 35 }]);
+  });
+
+  it('mão de obra de valor fechado (sem horas): a vaga pede as horas e o custo vai ao orçamento (sumia calado)', () => {
+    const c = contribuicaoDaInstrucao(instrucao([recurso('MAO_DE_OBRA', 'Eletricista', { base: 'fechado', subtotal: 500 })]));
+    expect(c.tecnicos).toEqual([{ nome: '', especialidade: 'Eletricista', horas_estimadas: 0 }]);
+    expect(c.itens_orcamento).toEqual([{ descricao: 'Mão de obra: Eletricista', valor: 500, natureza: 'OUTRO' }]);
   });
 
   it('a mesma linha duas vezes na instrução vira uma', () => {

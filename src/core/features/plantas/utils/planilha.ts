@@ -46,12 +46,10 @@ function cabecalho(refs: Referencia[]): Campo<Planta>[] {
 
   return [
     texto('NOME', 'nome', (p) => p.nome, 'Nome da planta (de 2 a 100 caracteres).', { obrigatorio: 'Sim', exemplo: 'Fazenda Boa Vista' }),
-    texto('CNPJ', 'cnpj', (p) => p.cnpj, 'CNPJ com pontuação: 00.000.000/0000-00. Não pode repetir o de outra planta.', {
-      obrigatorio: 'Sim',
+    texto('CNPJ', 'cnpj', (p) => p.cnpj, 'CNPJ com pontuação: 00.000.000/0000-00. Não pode repetir o de outra planta. Vazio = sem CNPJ.', {
       exemplo: '12.345.678/0001-90',
     }),
-    texto('PROPRIETÁRIO', 'proprietario', (p) => p.proprietario?.nome ?? null, 'O dono da planta, pelo nome como na aba REFERÊNCIAS.', {
-      obrigatorio: 'Sim',
+    texto('PROPRIETÁRIO', 'proprietario', (p) => p.proprietario?.nome ?? null, 'O dono da planta, pelo nome como na aba REFERÊNCIAS. Vazio = sem proprietário.', {
       lista: referencia(refs, 'proprietarios'),
     }),
     {
@@ -63,20 +61,15 @@ function cabecalho(refs: Referencia[]): Campo<Planta>[] {
       valor: (p) => p.proprietarioId?.trim() ?? null,
     },
     texto('Nº DA UC', 'numero_uc', (p) => p.numeroUc ?? null, 'Número da unidade consumidora da planta.'),
-    texto('HORÁRIO DE FUNCIONAMENTO', 'horarioFuncionamento', (p) => p.horarioFuncionamento, 'Texto livre (de 5 a 50 caracteres).', {
-      obrigatorio: 'Sim',
+    texto('HORÁRIO DE FUNCIONAMENTO', 'horarioFuncionamento', (p) => p.horarioFuncionamento, 'Texto livre (até 50 caracteres).', {
       exemplo: '08:00 às 18:00',
     }),
-    texto('LOCALIZAÇÃO', 'localizacao', (p) => p.localizacao, 'Como chegar ou onde fica (de 5 a 200 caracteres).', { obrigatorio: 'Sim' }),
-    texto('CEP', 'endereco.cep', (p) => p.endereco?.cep ?? null, 'No formato 00000-000.', { obrigatorio: 'Sim', exemplo: '74000-000' }),
-    texto('LOGRADOURO', 'endereco.logradouro', (p) => p.endereco?.logradouro ?? null, 'Rua, rodovia, número (de 5 a 200 caracteres).', {
-      obrigatorio: 'Sim',
-    }),
-    texto('BAIRRO', 'endereco.bairro', (p) => p.endereco?.bairro ?? null, 'Bairro ou região (de 2 a 100 caracteres).', {
-      obrigatorio: 'Na planta nova',
-    }),
-    texto('CIDADE', 'endereco.cidade', (p) => p.endereco?.cidade ?? null, 'Nome da cidade.', { obrigatorio: 'Sim' }),
-    texto('UF', 'endereco.uf', (p) => p.endereco?.uf ?? null, 'Sigla do estado, em duas letras.', { obrigatorio: 'Sim', exemplo: 'GO' }),
+    texto('LOCALIZAÇÃO', 'localizacao', (p) => p.localizacao, 'Como chegar ou onde fica (até 200 caracteres).'),
+    texto('CEP', 'endereco.cep', (p) => p.endereco?.cep ?? null, 'No formato 00000-000.', { exemplo: '74000-000' }),
+    texto('LOGRADOURO', 'endereco.logradouro', (p) => p.endereco?.logradouro ?? null, 'Rua, rodovia, número (até 200 caracteres).'),
+    texto('BAIRRO', 'endereco.bairro', (p) => p.endereco?.bairro ?? null, 'Bairro ou região (até 100 caracteres).'),
+    texto('CIDADE', 'endereco.cidade', (p) => p.endereco?.cidade ?? null, 'Nome da cidade.'),
+    texto('UF', 'endereco.uf', (p) => p.endereco?.uf ?? null, 'Sigla do estado, em duas letras.', { exemplo: 'GO' }),
   ];
 }
 
@@ -102,7 +95,6 @@ function secaoDeUnidades(refs: Referencia[]) {
         caminho: 'tipo',
         tipo: 'opcao',
         rotulos: PERFIS,
-        obrigatorio: 'Sim',
         explicacao: 'Se a instalação consome, gera ou os dois.',
         exemplo: 'Geração',
         valor: (u) => u.tipo,
@@ -149,19 +141,17 @@ function secaoDeUnidades(refs: Referencia[]) {
         titulo: 'LATITUDE',
         caminho: 'latitude',
         tipo: 'numero',
-        obrigatorio: 'Sim',
-        explicacao: 'Em graus decimais, de -90 a 90.',
+        explicacao: 'Em graus decimais, de -90 a 90. Vazio = sem coordenada.',
         exemplo: '-16,6869',
-        valor: (u) => Number(u.latitude),
+        valor: (u) => (u.latitude == null ? null : Number(u.latitude)),
       },
       {
         titulo: 'LONGITUDE',
         caminho: 'longitude',
         tipo: 'numero',
-        obrigatorio: 'Sim',
-        explicacao: 'Em graus decimais, de -180 a 180.',
+        explicacao: 'Em graus decimais, de -180 a 180. Vazio = sem coordenada.',
         exemplo: '-49,2648',
-        valor: (u) => Number(u.longitude),
+        valor: (u) => (u.longitude == null ? null : Number(u.longitude)),
       },
       {
         titulo: 'CONCESSIONÁRIA',

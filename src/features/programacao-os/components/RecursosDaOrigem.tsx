@@ -60,7 +60,13 @@ export function RecursosDaOrigem({ instrucaoIds, carregando, comecaVazio, recurs
   onCalculandoRef.current = onCalculando;
   const naFilaRef = useRef(0);
   const montadoRef = useRef(true);
-  useEffect(() => () => void (montadoRef.current = false), []);
+  // Volta a true no efeito: o StrictMode monta, desmonta e monta de novo, e só
+  // com a limpeza o componente ficava "desmontado" para sempre, descartando
+  // todo resultado (os recursos nunca entravam e o Salvar esperava sem fim)
+  useEffect(() => {
+    montadoRef.current = true;
+    return () => void (montadoRef.current = false);
+  }, []);
 
   useEffect(() => {
     if (carregando) return;
@@ -97,8 +103,13 @@ export function RecursosDaOrigem({ instrucaoIds, carregando, comecaVazio, recurs
         }
         return pedida;
       };
-      const lidas = async (lista: string[]) =>
-        (await Promise.all(lista.map(contribuicao))).filter((c): c is RecursosDaProgramacao => c !== null);
+      const lidas = async (lista: string[]) => {
+        const todas = await Promise.all(lista.map(contribuicao));
+        return {
+          lidas: todas.filter((c): c is RecursosDaProgramacao => c !== null),
+          falharam: lista.filter((_, i) => todas[i] === null),
+        };
+      };
 
       const [mais, menos, ficam] = await Promise.all([
         lidas(entraram),
@@ -108,10 +119,17 @@ export function RecursosDaOrigem({ instrucaoIds, carregando, comecaVazio, recurs
       // Sem aplicar, a base não anda: a troca fica para a próxima vez que der
       if (!montadoRef.current || !onRecursosRef.current) return;
 
-      const novo = trocarInstrucoes(recursosRef.current, { entraram: mais, sairam: menos, ficam });
+      const novo = trocarInstrucoes(recursosRef.current, { entraram: mais.lidas, sairam: menos.lidas, ficam: ficam.lidas });
       recursosRef.current = novo;
       onRecursosRef.current(novo);
-      baseRef.current = destino;
+      // A que entrou e não se leu fica fora da base: na próxima troca ela é somada de novo.
+      // A que saiu e não se leu continua na base: o que ela trouxe ainda está no planejado
+      baseRef.current = [...destino.filter((id) => !mais.falharam.includes(id)), ...menos.falharam];
+      if (mais.falharam.length || menos.falharam.length) {
+        toast.error('Os recursos de uma instrução não foram ajustados', {
+          description: `Não foi possível ler ${mais.falharam.length + menos.falharam.length} instrução(ões). Confira materiais, equipe e orçamento antes de salvar, ou tire e ponha a instrução de novo.`,
+        });
+      }
     })
       // Uma troca que falha avisa e não para a fila: sem o catch, as seguintes eram puladas caladas
       .catch((erro: unknown) => {

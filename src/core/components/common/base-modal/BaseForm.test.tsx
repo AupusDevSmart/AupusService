@@ -24,3 +24,29 @@ describe('BaseForm: título do grupo', () => {
     expect(screen.getByRole('heading', { name: 'dados tecnicos' })).toHaveClass('capitalize');
   });
 });
+
+describe('BaseForm: onMultipleChange', () => {
+  it('duas escritas seguidas, antes do re-render, se somam', () => {
+    // Os recursos das instruções e, logo depois, "terminei de calcular": a segunda
+    // mesclava sobre o formulário de antes da primeira e apagava os recursos
+    let escrever: ((mudancas: Record<string, unknown>) => void) | undefined;
+    const campos = [
+      {
+        key: 'recursos',
+        label: '',
+        type: 'custom',
+        render: ({ onMultipleChange }: { onMultipleChange?: (m: Record<string, unknown>) => void }) => {
+          escrever = onMultipleChange;
+          return null;
+        },
+      },
+    ] as unknown as FormField[];
+    const onChange = vi.fn();
+    render(<BaseForm fields={campos} data={{ descricao: 'Troca' }} errors={{}} disabled={false} onChange={onChange} mode="create" />);
+
+    escrever?.({ materiais: [{ descricao: 'Cabo' }] });
+    escrever?.({ recursos_em_calculo: false });
+
+    expect(onChange).toHaveBeenLastCalledWith({ descricao: 'Troca', materiais: [{ descricao: 'Cabo' }], recursos_em_calculo: false });
+  });
+});

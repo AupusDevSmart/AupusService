@@ -329,7 +329,8 @@ export const unidadesFormFields: FormField[] = [
     // e renomear coluna por causa de rotulo de tela nao se paga.
     label: 'Perfil',
     type: 'select',
-    required: true,
+    // Opcionais por enquanto (05/nov/2026): só o nome e a planta são exigidos
+    required: false,
     options: [
       { value: TipoUnidade.CARGA, label: 'Carga' },
       { value: TipoUnidade.GERACAO, label: 'Geração' },
@@ -356,7 +357,7 @@ export const unidadesFormFields: FormField[] = [
     key: 'status',
     label: 'Status',
     type: 'select',
-    required: true,
+    required: false,
     defaultValue: StatusUnidade.ATIVO,
     options: [
       { value: StatusUnidade.ATIVO, label: 'Ativo' },
@@ -367,10 +368,10 @@ export const unidadesFormFields: FormField[] = [
     key: 'latitude',
     label: 'Latitude',
     type: 'number',
-    required: true,
+    required: false,
     placeholder: 'Ex: -23.5505',
     validation: (value) => {
-      if (!value) return 'Latitude é obrigatória';
+      if (value === undefined || value === null || String(value).trim() === '') return null;
       const num = parseFloat(value as string);
       if (isNaN(num) || num < -90 || num > 90) return 'Latitude deve estar entre -90 e 90';
       return null;
@@ -380,10 +381,10 @@ export const unidadesFormFields: FormField[] = [
     key: 'longitude',
     label: 'Longitude',
     type: 'number',
-    required: true,
+    required: false,
     placeholder: 'Ex: -46.6333',
     validation: (value) => {
-      if (!value) return 'Longitude é obrigatória';
+      if (value === undefined || value === null || String(value).trim() === '') return null;
       const num = parseFloat(value as string);
       if (isNaN(num) || num < -180 || num > 180) return 'Longitude deve estar entre -180 e 180';
       return null;

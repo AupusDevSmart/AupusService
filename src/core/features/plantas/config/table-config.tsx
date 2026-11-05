@@ -48,7 +48,8 @@ export const plantasTableColumns: TableColumn<PlantaApiResponse>[] = [
       <div className="flex items-center gap-2">
         <MapPin className="h-3 w-3 text-muted-foreground" />
         <span className="text-sm">
-          {planta.endereco.cidade}/{planta.endereco.uf}
+          {/* Cidade e UF são opcionais desde 05/nov/2026: sem elas, "-" e não "/" solto */}
+          {[planta.endereco?.cidade, planta.endereco?.uf].filter(Boolean).join('/') || '-'}
         </span>
       </div>
     )
@@ -58,7 +59,7 @@ export const plantasTableColumns: TableColumn<PlantaApiResponse>[] = [
     label: 'Endereço',
     hideOnTablet: true,
     render: (planta) => {
-      const parts = [planta.endereco.logradouro, planta.endereco.bairro, planta.endereco.cep].filter(Boolean);
+      const parts = [planta.endereco?.logradouro, planta.endereco?.bairro, planta.endereco?.cep].filter(Boolean);
       const full = parts.join(', ');
       return (
         <span className="text-sm truncate max-w-64 block" title={full}>

@@ -482,7 +482,8 @@ export function ProgramacaoOSPage() {
         materiais: data.materiais?.map((m) => ({
           descricao: m.descricao,
           quantidade_planejada: parseFloat(String(m.quantidade_planejada || m.quantidade || 1)),
-          unidade: m.unidade || 'UN',
+          // A mesma de recursos-das-instrucoes e do servidor: com 'UN', a linha não casava ao tirar a instrução
+          unidade: m.unidade || 'un',
           custo_unitario: parseFloat(String(m.custo_unitario || 0))
         })) || [],
 
