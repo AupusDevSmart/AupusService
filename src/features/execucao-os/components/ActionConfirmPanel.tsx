@@ -362,6 +362,8 @@ interface ActionConfirmPanelProps {
   onConfirm: (data: DadosDaConfirmacao) => Promise<void>;
   /** Desiste desta ação e volta para a lista de ações */
   onVoltar?: () => void;
+  /** O texto do botão de desistir ("Escolher outra ação"; no fim do sheet, "Fechar sem concluir") */
+  rotuloVoltar?: string;
   /**
    * Executar: tarefas ainda pendentes. Cada uma precisa de motivo — fica "não
    * feita" e volta para a agenda (D2). Não bloqueia a execução.
@@ -379,6 +381,7 @@ export function ActionConfirmPanel({
   entity,
   onConfirm,
   onVoltar,
+  rotuloVoltar = 'Escolher outra ação',
   tarefasPendentes = [],
   podeInformarValorDaHora = false,
 }: ActionConfirmPanelProps) {
@@ -581,16 +584,10 @@ export function ActionConfirmPanel({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-medium">Confirmar ação</h3>
+      <h3 className="text-sm font-medium">{action === 'executar' ? 'Concluir a execução' : 'Confirmar ação'}</h3>
 
-      <div className="space-y-3">{principais.map(campo)}</div>
-
-      {/* Fora do "Mais detalhes": recolhido, o aviso não se via e o botão ficava cinza sem motivo */}
-      {avisoDaParada && (
-        <p role="alert" className="text-xs text-destructive">{avisoDaParada}</p>
-      )}
-      {!avisoDaParada && tempoParado && <p className="text-xs text-muted-foreground">Parado por {tempoParado}</p>}
-
+      {/* Executar: primeiro o que faltou (06/nov/2026). O painel fica no fim do sheet, depois de
+          "O que foi feito": marca-se o que fez, desce, justifica o que sobrou e conclui */}
       {pendentes.length > 0 && (
         <div className="space-y-3 rounded-md border p-3">
           <div>
@@ -632,6 +629,14 @@ export function ActionConfirmPanel({
           )}
         </div>
       )}
+
+      <div className="space-y-3">{principais.map(campo)}</div>
+
+      {/* Fora do "Mais detalhes": recolhido, o aviso não se via e o botão ficava cinza sem motivo */}
+      {avisoDaParada && (
+        <p role="alert" className="text-xs text-destructive">{avisoDaParada}</p>
+      )}
+      {!avisoDaParada && tempoParado && <p className="text-xs text-muted-foreground">Parado por {tempoParado}</p>}
 
       {action === 'executar' && (
         <div className="space-y-1.5">
@@ -676,7 +681,7 @@ export function ActionConfirmPanel({
 
       {onVoltar && (
         <Button type="button" variant="ghost" size="sm" onClick={onVoltar} disabled={submitting} className="w-full">
-          Escolher outra ação
+          {rotuloVoltar}
         </Button>
       )}
     </div>

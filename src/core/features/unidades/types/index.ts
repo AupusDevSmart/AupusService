@@ -205,12 +205,13 @@ export interface UnidadeFormData {
   plantaId: string;
   proprietarioId?: string; // ✅ ID do proprietário (para filtrar plantas)
   nome: string;
-  tipo: TipoUnidade;
-  estado: string;
-  cidade: string;
-  latitude: number | string;
-  longitude: number | string;
-  potencia: number | string;
+  // Vazios desde 05/nov/2026 (a instalação sem tipo, cidade ou coordenadas)
+  tipo: TipoUnidade | null;
+  estado: string | null;
+  cidade: string | null;
+  latitude: number | string | null;
+  longitude: number | string | null;
+  potencia: number | string | null;
   status: StatusUnidade;
   pontosMedicao?: string; // JSON como string no form
   irrigante?: boolean;

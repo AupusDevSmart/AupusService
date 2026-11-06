@@ -129,19 +129,19 @@ class UnidadesService {
       return false;
     }
 
-    if ('potencia' in dados && dados.potencia !== undefined && dados.potencia < 0) {
+    if ('potencia' in dados && dados.potencia != null && dados.potencia < 0) {
       alert('Potência deve ser um valor positivo.');
       return false;
     }
 
-    if ('latitude' in dados && dados.latitude !== undefined) {
+    if ('latitude' in dados && dados.latitude != null) {
       if (dados.latitude < -90 || dados.latitude > 90) {
         alert('Latitude deve estar entre -90 e 90.');
         return false;
       }
     }
 
-    if ('longitude' in dados && dados.longitude !== undefined) {
+    if ('longitude' in dados && dados.longitude != null) {
       if (dados.longitude < -180 || dados.longitude > 180) {
         alert('Longitude deve estar entre -180 e 180.');
         return false;

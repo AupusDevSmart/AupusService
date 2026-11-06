@@ -95,13 +95,14 @@ export interface Unidade {
 export interface CreateUnidadeDto {
   planta_id: string;
   nome: string;
-  tipo: TipoUnidade;
-  estado: string;
-  cidade: string;
-  latitude: number;
-  longitude: number;
-  potencia: number;
-  status: StatusUnidade;
+  // Opcionais desde 05/nov/2026, como no core: só o nome e a planta são exigidos
+  tipo?: TipoUnidade | null;
+  estado?: string | null;
+  cidade?: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  potencia: number | null;
+  status?: StatusUnidade;
   pontos_medicao?: unknown;
   irrigante?: boolean;
   grupo?: GrupoUnidade;

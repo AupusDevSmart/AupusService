@@ -30,7 +30,9 @@ import {
   tarefasPendentes,
   type ProgressoDaExecucao,
 } from '../utils/progresso-da-execucao';
-import { statusDaExecucao } from '../config/actions-config';
+import { acoesDisponiveis, statusDaExecucao } from '../config/actions-config';
+import { RecursosUsados } from './RecursosUsados';
+import { ConcluirExecucao } from './ConcluirExecucao';
 
 // Tipos
 import type { ExecucaoOS, ExecucaoOSFilters } from '../types';
@@ -312,7 +314,12 @@ export function ExecucaoOSPage() {
         await execucaoOSApi.registrarFerramentas(entity.id, registros.ferramentas);
       }
       const total = registros.materiais.length + registros.ferramentas.length;
-      toast({ title: total > 0 ? 'Execução salva' : 'Nada a salvar' });
+      // Na OS em andamento, o consumo e o uso gravam na hora, na seção do topo: "Nada a salvar"
+      // fazia parecer que o registrado lá não tinha ido
+      toast({
+        title: total > 0 ? 'Execução salva' : 'Nada a salvar no formulário',
+        ...(total === 0 && { description: 'Materiais e ferramentas usados são salvos na hora, ao registrar.' }),
+      });
       closeModal();
       await fetchItems(toApiParams);
     } catch (error) {
@@ -458,10 +465,26 @@ export function ExecucaoOSPage() {
                     const emExecucao = status === 'EM_EXECUCAO' || status === 'PAUSADA';
                     const executada = status === 'EXECUTADA' || status === 'AUDITADA' || status === 'FINALIZADA';
                     const temProgresso = progresso.tarefas.length > 0;
+                    const podeExecutar = temPermissao('execucao_os.manage', 'execucao_os.executar');
+                    // A OS em andamento se lê de cima para baixo (06/nov/2026): o que foi feito, o que
+                    // foi usado, as fotos e, no fim, concluir — com o motivo do que faltou e o botão.
+                    // O Executar sai do topo: lá, convidava a concluir antes de marcar
+                    const concluirNoFim = emExecucao && acoesDisponiveis(status, temPermissao).some((a) => a.acao === 'executar');
+                    const pendentes = tarefasPendentes(progresso).map((t) => ({ id: t.id, nome: t.nome }));
+                    const anexos = (
+                      <div className="rounded-md border p-4">
+                        <AnexosDaOS
+                          osId={modalState.entity!.id}
+                          status={status}
+                          soGerais={(emExecucao || executada) && temProgresso}
+                          podeEditar={podeExecutar}
+                        />
+                      </div>
+                    );
                     return (
                       <div className="space-y-4">
                         <div className="rounded-md border p-4">
-                          {pendingAction ? (
+                          {pendingAction && !(concluirNoFim && pendingAction === 'executar') ? (
                             // Confirmação da ação escolhida (na tabela ou aqui)
                             <ActionConfirmPanel
                               key={pendingAction}
@@ -469,7 +492,7 @@ export function ExecucaoOSPage() {
                               entity={modalState.entity}
                               onConfirm={handleConfirmAction}
                               onVoltar={() => setPendingAction(null)}
-                              tarefasPendentes={tarefasPendentes(progresso).map((t) => ({ id: t.id, nome: t.nome }))}
+                              tarefasPendentes={pendentes}
                               podeInformarValorDaHora={temPermissao('execucao_os.manage')}
                             />
                           ) : (
@@ -479,6 +502,9 @@ export function ExecucaoOSPage() {
                                 temPermissao={temPermissao}
                                 alteracoesPendentes={alteracoesPendentes}
                                 onAcao={setPendingAction}
+                                ocultar={concluirNoFim ? ['executar'] : []}
+                                aviso={concluirNoFim ? 'Marque o que foi feito e o que foi usado; para concluir, desça até o fim.' : undefined}
+                                bloqueadas={pendingAction === 'executar' ? 'Feche o painel "Concluir a execução", no fim, para escolher outra ação.' : undefined}
                               />
                               {/* O PDF da OS (SN-62): prévia antes de finalizar, com o código depois */}
                               <BotaoPdfDaOS os={modalState.entity!} />
@@ -494,10 +520,42 @@ export function ExecucaoOSPage() {
                               status={status}
                               osId={modalState.entity!.id}
                               progresso={progresso}
-                              editavel={emExecucao && temPermissao('execucao_os.manage', 'execucao_os.executar')}
+                              editavel={emExecucao && podeExecutar}
                               onChange={setProgresso}
                             />
                           </div>
+                        )}
+
+                        {/* O que foi usado, registrado no próprio sheet (no Visualizar também) */}
+                        {emExecucao && (
+                          <div className="rounded-md border p-4">
+                            <RecursosUsados
+                              key={modalState.entity!.id}
+                              osId={modalState.entity!.id}
+                              materiais={modalState.entity!.materiaisConsumidos}
+                              ferramentas={modalState.entity!.ferramentasUtilizadas}
+                              editavel={podeExecutar}
+                            />
+                          </div>
+                        )}
+
+                        {concluirNoFim && (
+                          <>
+                            {anexos}
+                            <div className="rounded-md border p-4">
+                              <ConcluirExecucao
+                                aberto={pendingAction === 'executar'}
+                                onAbrir={() => setPendingAction('executar')}
+                                onFechar={() => setPendingAction(null)}
+                                entity={modalState.entity}
+                                onConfirm={handleConfirmAction}
+                                tarefasPendentes={pendentes}
+                                totalDeTarefas={progresso.tarefas.length}
+                                podeInformarValorDaHora={temPermissao('execucao_os.manage')}
+                                bloqueado={pendingAction && pendingAction !== 'executar' ? 'Termine ou feche a ação aberta no topo antes de concluir.' : undefined}
+                              />
+                            </div>
+                          </>
                         )}
 
                         {/* SN-93: o custo com destaque, logo depois do que foi feito — o real contra o
@@ -524,15 +582,9 @@ export function ExecucaoOSPage() {
                           </div>
                         )}
 
-                        {/* A prova do que foi feito: fotos e documentos, com quem enviou e quando. */}
-                        <div className="rounded-md border p-4">
-                          <AnexosDaOS
-                            osId={modalState.entity!.id}
-                            status={status}
-                            soGerais={(emExecucao || executada) && temProgresso}
-                            podeEditar={temPermissao('execucao_os.manage', 'execucao_os.executar')}
-                          />
-                        </div>
+                        {/* A prova do que foi feito: fotos e documentos, com quem enviou e quando.
+                            Na OS em andamento, vem antes de concluir */}
+                        {!concluirNoFim && anexos}
 
                         {/* Conversa da equipe sobre a OS; o interno não aparece para o cliente (SN-48) */}
                         <div className="rounded-md border p-4">

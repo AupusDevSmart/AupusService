@@ -25,6 +25,21 @@ describe('AcoesDaOS', () => {
     expect(botoes()).toEqual(esperado);
   });
 
+  it('o Executar da OS em andamento sai do topo (fica no fim do sheet), com o aviso de onde ele esta', () => {
+    render(<AcoesDaOS status="EM_EXECUCAO" onAcao={() => {}} ocultar={['executar']} aviso="Para concluir, desça até o fim." />);
+
+    expect(botoes()).toEqual(['Pausar', 'Cancelar']);
+    expect(screen.getByText('Para concluir, desça até o fim.')).toBeInTheDocument();
+    expect(screen.queryByText(/nenhuma ação disponível/)).not.toBeInTheDocument();
+  });
+
+  it('com o Concluir aberto no fim, as acoes do topo esperam (trocar apagaria o que foi digitado)', () => {
+    render(<AcoesDaOS status="EM_EXECUCAO" onAcao={() => {}} ocultar={['executar']} bloqueadas="Feche o painel antes." />);
+
+    expect(screen.getByRole('button', { name: /Pausar/ })).toBeDisabled();
+    expect(screen.getByText('Feche o painel antes.')).toBeInTheDocument();
+  });
+
   it('OS encerrada diz que nao ha acao, em vez de ficar vazia', () => {
     render(<AcoesDaOS status="FINALIZADA" onAcao={() => {}} />);
 

@@ -60,6 +60,18 @@ const exibirListaSe = (...chaves: string[]) => (entity?: (BaseEntity & CamposDaO
 
 const TODOS_OS_STATUS = ['PENDENTE', ...DEPOIS_DE_INICIAR];
 
+/**
+ * Materiais e ferramentas na OS em andamento: o consumo e o uso se registram na
+ * seção "Materiais e ferramentas usados", no topo do sheet (06/nov/2026). O
+ * cartão daqui repetiria a lista, e só gravava no modo Editar.
+ */
+const EM_ANDAMENTO = ['EM_EXECUCAO', 'PAUSADA'];
+const listaForaDoAndamento = (...chaves: string[]) => {
+  const lista = exibirListaSe(...chaves);
+  return (entity?: (BaseEntity & CamposDaOS) | null, formData?: CamposDaOS) =>
+    !EM_ANDAMENTO.includes((formData?.statusExecucao || entity?.statusExecucao) ?? '') && lista(entity, formData);
+};
+
 export const execucaoOSFormFields: FormField[] = [
   // Seleção da Programação - GRUPO: selecao
   {
@@ -330,7 +342,7 @@ export const execucaoOSFormFields: FormField[] = [
     defaultValue: [],
     group: 'recursos',
     colSpan: 2, // ✅ Ocupa 2 colunas (largura total)
-    condition: exibirListaSe('materiaisConsumidos')
+    condition: listaForaDoAndamento('materiaisConsumidos')
   },
 
   // Recursos Utilizados - Ferramentas - GRUPO: recursos
@@ -349,7 +361,7 @@ export const execucaoOSFormFields: FormField[] = [
     defaultValue: [],
     group: 'recursos',
     colSpan: 2, // ✅ Ocupa 2 colunas (largura total) - linha separada
-    condition: exibirListaSe('ferramentasUtilizadas')
+    condition: listaForaDoAndamento('ferramentasUtilizadas')
   },
 
   // Os custos adicionais (o número antigo, sem descrição) aparecem na seção "Custos" (SN-93)
