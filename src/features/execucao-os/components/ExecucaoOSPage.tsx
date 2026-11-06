@@ -16,7 +16,7 @@ import { useExecucaoOSApi } from '../hooks/useExecucaoOSApi';
 import { useExecucaoOSFilters } from '../hooks/useExecucaoOSFilters';
 import { execucaoOSTableColumns } from '../config/table-config';
 import { createExecucaoOSTableActions } from '../config/actions-config';
-import { ActionConfirmPanel, type PendingAction, type DadosDaConfirmacao } from './ActionConfirmPanel';
+import { ActionConfirmPanel, type PendingAction, type DadosDaConfirmacao, type RascunhoDoExecutar } from './ActionConfirmPanel';
 import { AcoesDaOS } from './AcoesDaOS';
 import { OQueFoiFeito } from './OQueFoiFeito';
 import { CustosDaOS } from './CustosDaOS';
@@ -33,7 +33,8 @@ import {
 import { acoesDisponiveis, statusDaExecucao } from '../config/actions-config';
 import { RecursosUsados } from './RecursosUsados';
 import { ConcluirExecucao } from './ConcluirExecucao';
-import { custoDoMaterialUsado, type MaterialUsado } from '../utils/recursos-usados';
+import { custoDoMaterialUsado, materiaisDaExecucao, type MaterialUsado } from '../utils/recursos-usados';
+import { maoDeObraDasHoras, outrosDoPainel } from '../utils/custo-ate-agora';
 
 // Tipos
 import type { ExecucaoOS, ExecucaoOSFilters } from '../types';
@@ -80,6 +81,8 @@ export function ExecucaoOSPage() {
   const [progresso, setProgresso] = useState<ProgressoDaExecucao>({ tarefas: [] });
   // O material registrado na seção "usados", vivo: o custo até agora muda a cada registro
   const [materiaisVivos, setMateriaisVivos] = useState<MaterialUsado[] | null>(null);
+  // As horas e os outros custos digitados no painel de concluir, ainda não gravados
+  const [rascunho, setRascunho] = useState<RascunhoDoExecutar | null>(null);
 
   // Hook de API
   const {
@@ -559,7 +562,18 @@ export function ExecucaoOSPage() {
                               status={status ?? ''}
                               custos={modalState.entity.custos}
                               itensOrcamento={modalState.entity.itens_orcamento}
-                              materialAoVivo={emExecucao && materiaisVivos ? custoDoMaterialUsado(materiaisVivos) : null}
+                              aoVivo={
+                                emExecucao
+                                  ? {
+                                      // O material da OS lida é a base: a seção "usados" só avisa quando muda
+                                      // (o efeito do filho roda antes do reset do pai, e a OS sem material
+                                      // ficava sem custo até agora)
+                                      material: custoDoMaterialUsado(materiaisVivos ?? materiaisDaExecucao(modalState.entity.materiaisConsumidos ?? [])),
+                                      maoDeObra: rascunho ? maoDeObraDasHoras(rascunho.horas, modalState.entity.tecnicos) : null,
+                                      outros: rascunho && modalState.entity.itens_orcamento ? outrosDoPainel(rascunho.outros) : null,
+                                    }
+                                  : null
+                              }
                               // Na auditada, só quem gerencia: o auditor aprovou um custo (a API recusa igual)
                               podeCorrigir={
                                 status === 'AUDITADA'
@@ -612,6 +626,7 @@ export function ExecucaoOSPage() {
                   totalDeTarefas={progresso.tarefas.length}
                   podeInformarValorDaHora={temPermissao('execucao_os.manage')}
                   bloqueado={pendingAction && pendingAction !== 'executar' ? 'Termine ou feche a ação aberta no topo antes de concluir.' : undefined}
+                  onRascunho={setRascunho}
                 />
               </div>
             )}

@@ -1,5 +1,5 @@
 // src/features/execucao-os/components/ActionConfirmPanel.tsx
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -374,6 +374,17 @@ interface ActionConfirmPanelProps {
    * entrou na execução; quem só executa informa as horas (SN-93: a API recusa)
    */
   podeInformarValorDaHora?: boolean;
+  /**
+   * Executar: as horas e os outros custos como estão no painel, a cada mudança,
+   * e null ao fechar. O quadro de custos mostra o custo até agora com eles.
+   */
+  onRascunho?: (rascunho: RascunhoDoExecutar | null) => void;
+}
+
+/** O que o painel do Executar tem digitado e ainda não gravou */
+export interface RascunhoDoExecutar {
+  horas: LinhaDeHoras[];
+  outros: LinhaDeOutroCusto[];
 }
 
 export function ActionConfirmPanel({
@@ -384,6 +395,7 @@ export function ActionConfirmPanel({
   rotuloVoltar = 'Escolher outra ação',
   tarefasPendentes = [],
   podeInformarValorDaHora = false,
+  onRascunho,
 }: ActionConfirmPanelProps) {
   const config = actionConfig[action];
   const Icon = config.icon;
@@ -417,6 +429,14 @@ export function ActionConfirmPanel({
     action === 'executar' ? linhasDosOutrosCustos(entity?.itens_orcamento) : [],
   );
   const pendenciaOutros = action === 'executar' ? pendenciaDosOutrosCustos(outros) : null;
+  useEffect(() => {
+    if (action === 'executar') onRascunho?.({ horas, outros });
+    // Só quando o digitado muda; quem recebe guarda num estado
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [horas, outros]);
+  // Fechou (ou confirmou): o custo volta a ser o da OS lida
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => onRascunho?.(null), []);
   const [submitting, setSubmitting] = useState(false);
 
   const setValue = (key: string, value: unknown) => setValues((prev) => ({ ...prev, [key]: value }));

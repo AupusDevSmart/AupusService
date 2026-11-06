@@ -26,6 +26,7 @@ import {
   type LinhaDeOutroCusto,
 } from '@/features/execucao-os/utils/outros-custos';
 import { OutrosCustosEditor } from './OutrosCustosEditor';
+import { naturezasAteAgora, totalAteAgora, type CustoAoVivo } from '@/features/execucao-os/utils/custo-ate-agora';
 
 /** Os status em que o custo real já foi apurado (o Executar grava as horas e os outros custos) */
 const APURADO = new Set(['EXECUTADA', 'AUDITADA', 'FINALIZADA']);
@@ -60,11 +61,12 @@ interface CustosDaOSProps {
   /** Depois de corrigir: a OS relida, com o resumo novo (a conta é da API) */
   onCorrigido: () => Promise<void>;
   /**
-   * OS em andamento: o custo do material registrado agora na seção "usados"
-   * (consumido × custo unitário). Com ele, o quadro mostra o custo até agora,
-   * que muda a cada registro; sem ele, o real só aparece depois do Executar.
+   * OS em andamento: o que a tela já sabe melhor que a OS lida (o material
+   * registrado agora; com o painel de concluir aberto, as horas e os outros
+   * custos digitados). Com ele, o quadro mostra o custo até agora, que muda a
+   * cada registro; sem ele, o real só aparece depois do Executar.
    */
-  materialAoVivo?: number | null;
+  aoVivo?: CustoAoVivo | null;
 }
 
 /**
@@ -73,26 +75,25 @@ interface CustosDaOSProps {
  * conta é da API (a mesma do PDF e do custo real gravado). Os outros custos se
  * corrigem aqui até a auditoria.
  */
-export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir, onCorrigido, materialAoVivo = null }: CustosDaOSProps) {
+export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir, onCorrigido, aoVivo: vivo = null }: CustosDaOSProps) {
   const [corrigindo, setCorrigindo] = useState(false);
   const [linhas, setLinhas] = useState<LinhaDeOutroCusto[]>([]);
   const [gravando, setGravando] = useState(false);
   if (!custos) return null;
 
   const apurado = APURADO.has(status);
-  // Até agora (06/nov/2026): a API já soma o material registrado, a mão de obra pelas horas
-  // previstas e os outros custos pelo previsto; o material vem da tela, que muda sem reler a OS
-  const aoVivo = !apurado && materialAoVivo !== null;
-  const materialDaApi = custos.naturezas.find((n) => n.natureza === 'MATERIAL')?.real ?? 0;
-  const ateAgora = aoVivo ? Math.round((custos.real - materialDaApi + materialAoVivo) * 100) / 100 : null;
+  // Até agora (06/nov/2026): a conta da API com o que a tela já sabe por cima, natureza a
+  // natureza (custo-ate-agora.ts); o total é a soma delas, como o real da API
+  const aoVivo = !apurado && vivo !== null;
+  const todasAsNaturezas = aoVivo ? naturezasAteAgora(custos.naturezas, vivo) : custos.naturezas;
+  const ateAgora = aoVivo ? totalAteAgora(todasAsNaturezas) : null;
   const mostraReal = apurado || aoVivo;
-  const realDaNatureza = (n: { natureza: string; real: number | null }) =>
-    aoVivo && n.natureza === 'MATERIAL' ? materialAoVivo : n.real;
+  const comHorasDigitadas = aoVivo && vivo.maoDeObra !== null && vivo.maoDeObra !== undefined;
   // Na OS finalizada antes do SN-93 os outros custos ficam fora do real: o previsto comparado também
   const previsto = custos.outros_fora_do_total ? custos.previsto : (custos.orcamento_previsto ?? custos.previsto);
   const diferenca = diferencaDoPrevisto(previsto, ateAgora ?? custos.real);
   const pendencia = corrigindo ? pendenciaDosOutrosCustos(linhas) : null;
-  const naturezas = custos.naturezas.filter((n) => n.previsto > 0 || (realDaNatureza(n) ?? 0) > 0);
+  const naturezas = todasAsNaturezas.filter((n) => n.previsto > 0 || (n.real ?? 0) > 0);
   const resumo = resumoDasInstrucoes(custos);
 
   const abrirCorrecao = () => {
@@ -144,7 +145,11 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
             {apurado ? formatCurrency(custos.real) : ateAgora !== null ? formatCurrency(ateAgora) : '—'}
           </p>
           {aoVivo && (
-            <p className="text-xs text-muted-foreground">material usado, mão de obra prevista e outros custos; as horas trabalhadas entram ao concluir</p>
+            <p className="text-xs text-muted-foreground">
+              {comHorasDigitadas
+                ? 'com as horas e os outros custos do painel de concluir; grava ao confirmar'
+                : 'material usado, mão de obra prevista e outros custos previstos; as horas trabalhadas entram ao concluir'}
+            </p>
           )}
         </div>
         <div className="rounded-md border p-3">
@@ -178,7 +183,7 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
             </div>
             {naturezas.map((n) => {
               // Fora do total (OS finalizada antes do SN-93): sem real nem diferença, que leria como economia
-              const real = realDaNatureza(n);
+              const real = n.real;
               const comReal = mostraReal && real !== null;
               const d = diferencaDoPrevisto(n.previsto, real ?? 0);
               return (

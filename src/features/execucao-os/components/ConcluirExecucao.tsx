@@ -2,7 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ActionConfirmPanel, type DadosDaConfirmacao } from './ActionConfirmPanel';
+import { ActionConfirmPanel, type DadosDaConfirmacao, type RascunhoDoExecutar } from './ActionConfirmPanel';
 
 type EntidadeDoPainel = Parameters<typeof ActionConfirmPanel>[0]['entity'];
 
@@ -19,6 +19,8 @@ interface ConcluirExecucaoProps {
   podeInformarValorDaHora: boolean;
   /** Outro painel de ação aberto no topo (pausar, cancelar): o botão espera, com o motivo */
   bloqueado?: string;
+  /** As horas e os outros custos digitados, para o custo até agora */
+  onRascunho?: (rascunho: RascunhoDoExecutar | null) => void;
 }
 
 /**
@@ -40,6 +42,7 @@ export function ConcluirExecucao({
   totalDeTarefas,
   podeInformarValorDaHora,
   bloqueado,
+  onRascunho,
 }: ConcluirExecucaoProps) {
   // O Executar escolhido na tabela abre o sheet com o painel já aberto, no fim:
   // sem rolar, ele ficava fora da tela
@@ -60,6 +63,7 @@ export function ConcluirExecucao({
           rotuloVoltar="Fechar sem concluir"
           tarefasPendentes={tarefasPendentes}
           podeInformarValorDaHora={podeInformarValorDaHora}
+          onRascunho={onRascunho}
         />
       </div>
     );
