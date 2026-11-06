@@ -201,7 +201,7 @@ describe('documento da OS (PDF)', () => {
       ['INS-7 · Trocar ventilador', 'Inversor 03', 'Feita', 'R$ 850,00', 'ajustado; cadastro R$ 902,08'],
       ['Termografia', '', 'Não feita', 'R$ 400,00', 'do cadastro de hoje'],
     ]);
-    expect(sem(c.resumoDasInstrucoes!)).toBe('1 de 2 feitas · R$ 850,00 de R$ 1.250,00');
+    expect(sem(c.resumoDasInstrucoes!)).toBe('1 de 2 feitas · custo programado das feitas R$ 850,00 de R$ 1.250,00');
     expect(c.outros.map((o) => [o.natureza, sem(o.previsto), sem(o.real)])).toEqual([
       ['Veículo', 'R$ 1.310,00', 'R$ 1.402,50'],
       ['Veículo · não previsto', '—', 'R$ 0,00 (não conferido)'],

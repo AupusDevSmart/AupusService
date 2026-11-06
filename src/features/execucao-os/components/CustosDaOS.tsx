@@ -47,7 +47,7 @@ const COR_DA_DIFERENCA: Record<SentidoDaDiferenca, string> = {
 const COMO_SE_CALCULA = [
   'Custo real = mão de obra (horas trabalhadas × valor da hora de cada pessoa) + material (quantidade consumida × custo unitário) + outros custos (veículo, hospedagem, alimentação, instrumentos, maquinário e terceiros, pelo valor conferido no Executar; o previsto quando não foi conferido) + os não previstos.',
   'Previsto = o orçamento aprovado na programação: as horas estimadas, o material planejado e os outros custos do orçamento.',
-  'Cada instrução tem o valor do cadastro no vínculo, ou o ajustado na programação; o total das feitas mostra o que foi entregue, ao lado do que foi gasto.',
+  'Custo programado por instrução = a soma dos recursos e maquinários dela (o do cadastro no vínculo, ou o ajustado na programação). O real não se mede por instrução: os recursos das instruções vão juntos para a OS, e o real sai deles, por natureza.',
 ];
 
 interface CustosDaOSProps {
@@ -200,7 +200,8 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
 
       {custos.instrucoes.length > 0 && (
         <div>
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Por instrução</p>
+          <p className="text-xs font-medium text-muted-foreground">Custo programado por instrução</p>
+          <p className="mb-1.5 text-xs text-muted-foreground">O real é medido por natureza, no quadro acima.</p>
           <ul className="divide-y rounded-md border text-sm">
             {custos.instrucoes.map((i, indice) => {
               const valor = valorDaInstrucao(i);

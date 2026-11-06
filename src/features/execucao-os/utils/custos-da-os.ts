@@ -31,7 +31,9 @@ export function resumoDasInstrucoes(custos: ResumoDoCusto): string | null {
   const total = custos.instrucoes.length;
   if (total === 0) return null;
   const feitas = `${custos.instrucoes_feitas} de ${total} ${total === 1 ? 'feita' : 'feitas'}`;
-  return `${feitas} · ${formatCurrency(custos.instrucoes_feitas_total)} de ${formatCurrency(custos.instrucoes_total)}`;
+  // É o custo programado das feitas (o valor da instrução é a soma dos recursos dela), não o que se cobra
+  // nem o real: "R$ 902 de R$ 1.804" sozinho lia como faturamento (06/nov/2026)
+  return `${feitas} · custo programado das feitas ${formatCurrency(custos.instrucoes_feitas_total)} de ${formatCurrency(custos.instrucoes_total)}`;
 }
 
 /** O valor da instrução com o que ele é: ajustado nesta OS, ou o do cadastro de hoje (OS antiga) */

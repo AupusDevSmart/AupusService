@@ -53,7 +53,8 @@ describe('CustosDaOS', () => {
     // Cada instrução com o equipamento e a situação; o total das feitas
     expect(screen.getByText('Inversor 01 · Feita')).toBeInTheDocument();
     expect(screen.getByText('Inversor 05 · Não feita')).toBeInTheDocument();
-    expect(sem(screen.getByText(/^Instruções 1 de 2 feitas/).textContent)).toBe('Instruções 1 de 2 feitas · R$ 902,08 de R$ 1.804,16');
+    expect(sem(screen.getByText(/^Instruções 1 de 2 feitas/).textContent)).toBe('Instruções 1 de 2 feitas · custo programado das feitas R$ 902,08 de R$ 1.804,16');
+    expect(screen.getByText('Custo programado por instrução')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Corrigir outros custos/ })).toBeNull();
   });
 

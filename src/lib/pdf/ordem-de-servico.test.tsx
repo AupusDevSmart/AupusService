@@ -74,7 +74,7 @@ describe('PDF da OS', () => {
   // SN-93: o custo aberto logo depois do resultado, e o equipamento de cada tarefa
   it('a seção de custos e o equipamento da tarefa saem desenhados', async () => {
     const desenhados = (await textosDesenhados(documentoDoPdfDaOS(documento()))).map((t) => t.texto);
-    for (const texto of ['Custos', 'Custo real', 'R$ 1.855,50', 'Por natureza', 'Por instrução', 'R$ 902,08', 'Outros custos', 'R$ 273,00']) {
+    for (const texto of ['Custos', 'Custo real', 'R$ 1.855,50', 'Por natureza', 'Custo programado por instrução', 'R$ 902,08', 'Outros custos', 'R$ 273,00']) {
       expect(desenhados.some((t) => t.includes(texto)), texto).toBe(true);
     }
     // A tarefa e a instrução dizem de qual inversor

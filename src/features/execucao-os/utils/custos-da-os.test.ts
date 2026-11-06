@@ -39,7 +39,7 @@ describe('custo da OS em texto', () => {
 
   it('as instruções feitas: quantas e quanto, de quanto', () => {
     const custos = { instrucoes: [instrucao(), instrucao({ feita: false })], instrucoes_feitas: 1, instrucoes_feitas_total: 902.08, instrucoes_total: 1804.16 };
-    expect(sem(resumoDasInstrucoes(custos as ResumoDoCusto)!)).toBe('1 de 2 feitas · R$ 902,08 de R$ 1.804,16');
+    expect(sem(resumoDasInstrucoes(custos as ResumoDoCusto)!)).toBe('1 de 2 feitas · custo programado das feitas R$ 902,08 de R$ 1.804,16');
     expect(resumoDasInstrucoes({ ...custos, instrucoes: [] } as unknown as ResumoDoCusto)).toBeNull();
   });
 

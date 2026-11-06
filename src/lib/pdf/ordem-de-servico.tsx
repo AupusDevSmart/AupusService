@@ -78,13 +78,13 @@ function CustosDaOS({ custos }: { custos: NonNullable<DocumentoDaOS['custos']> }
       {custos.instrucoes.length > 0 && (
         <>
           <Text style={estilos.subtitulo} minPresenceAhead={60}>
-            Por instrução
+            Custo programado por instrução
           </Text>
           <TabelaPdf
             colunas={[
               { titulo: 'Instrução', largura: '52%' },
               { titulo: 'Situação', largura: '16%' },
-              { titulo: 'Valor', largura: '32%', alinhar: 'right' },
+              { titulo: 'Custo programado', largura: '32%', alinhar: 'right' },
             ]}
             linhas={custos.instrucoes.map((i) => [
               { texto: i.nome, detalhe: i.equipamento || undefined },
@@ -94,7 +94,7 @@ function CustosDaOS({ custos }: { custos: NonNullable<DocumentoDaOS['custos']> }
           />
           {custos.resumoDasInstrucoes && (
             <Text style={[estilos.fraco, { marginTop: 4 }]}>
-              Instruções {custos.resumoDasInstrucoes}. O valor de cada instrução é o do cadastro no vínculo, ou o ajustado na programação.
+              Instruções {custos.resumoDasInstrucoes}. O custo de cada instrução é a soma dos recursos dela (o do cadastro no vínculo, ou o ajustado na programação); o real é medido por natureza.
             </Text>
           )}
         </>
