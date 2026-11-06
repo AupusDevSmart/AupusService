@@ -57,6 +57,20 @@ describe('CustosDaOS', () => {
     expect(screen.queryByRole('button', { name: /Corrigir outros custos/ })).toBeNull();
   });
 
+  it('em execução, com o material da tela: o custo até agora muda a cada registro', () => {
+    // A API somou R$ 0 de material (nada registrado quando a OS foi lida); a tela já registrou R$ 120
+    const resumo = custos({ naturezas: [...custos().naturezas.slice(0, 1), { natureza: 'MATERIAL', rotulo: 'Material', previsto: 0, real: 0 }, custos().naturezas[2]] });
+    const { rerender } = render(<CustosDaOS osId="OS1" status="EM_EXECUCAO" custos={resumo} podeCorrigir={false} onCorrigido={vi.fn()} materialAoVivo={120} />);
+
+    expect(sem(screen.getByText('Custo até agora').nextElementSibling!.textContent)).toBe('R$ 7.363,14');
+    expect(screen.getByText(/as horas trabalhadas entram ao concluir/)).toBeInTheDocument();
+    // A linha do material aparece com o valor da tela
+    expect(screen.getByText('Material')).toBeInTheDocument();
+
+    rerender(<CustosDaOS osId="OS1" status="EM_EXECUCAO" custos={resumo} podeCorrigir={false} onCorrigido={vi.fn()} materialAoVivo={150} />);
+    expect(sem(screen.getByText('Custo até agora').nextElementSibling!.textContent)).toBe('R$ 7.393,14');
+  });
+
   it('antes de executar, o real ainda não existe: só o previsto', () => {
     render(<CustosDaOS osId="OS1" status="PENDENTE" custos={custos()} podeCorrigir onCorrigido={vi.fn()} />);
     expect(screen.getByText('Custo real (sai no Executar)').nextElementSibling).toHaveTextContent('—');

@@ -9,6 +9,8 @@ export interface MaterialUsado {
   planejada: number;
   /** null: ninguém registrou ainda (diferente de 0, "não usei") */
   consumida: number | null;
+  /** Só para o custo até agora (o cliente não recebe: a API não manda o valor) */
+  custoUnitario: number | null;
   observacoes?: string;
 }
 
@@ -42,6 +44,7 @@ export function materiaisDaExecucao(materiais: MaterialOS[]): MaterialUsado[] {
       unidade: m.unidade || 'un',
       planejada: numero(m.quantidade_planejada),
       consumida: numeroOuNulo(m.quantidade_consumida),
+      custoUnitario: numeroOuNulo(m.custo_unitario),
       observacoes: texto(m.observacoes),
     }));
 }
@@ -78,6 +81,15 @@ export const pedidoDaFerramenta = (f: FerramentaUsada): RegistroDeFerramenta => 
   ...(f.condicao_depois ? { condicao_depois: f.condicao_depois } : {}),
   ...(f.observacoes ? { observacoes: f.observacoes } : {}),
 });
+
+/**
+ * O custo do material registrado até agora: consumido × custo unitário, a conta
+ * do custo real da API (`resumo-do-custo.ts`). O não registrado não entra.
+ */
+export function custoDoMaterialUsado(materiais: MaterialUsado[]): number {
+  const total = materiais.reduce((soma, m) => soma + (m.consumida ?? 0) * (m.custoUnitario ?? 0), 0);
+  return Math.round(total * 100) / 100;
+}
 
 /** Troca na lista os itens de mesmo id, na ordem que estavam */
 export function trocarPorId<T extends { id: string }>(lista: T[], novos: T[]): T[] {

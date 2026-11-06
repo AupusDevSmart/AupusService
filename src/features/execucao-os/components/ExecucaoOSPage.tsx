@@ -33,6 +33,7 @@ import {
 import { acoesDisponiveis, statusDaExecucao } from '../config/actions-config';
 import { RecursosUsados } from './RecursosUsados';
 import { ConcluirExecucao } from './ConcluirExecucao';
+import { custoDoMaterialUsado, type MaterialUsado } from '../utils/recursos-usados';
 
 // Tipos
 import type { ExecucaoOS, ExecucaoOSFilters } from '../types';
@@ -77,6 +78,8 @@ export function ExecucaoOSPage() {
   // Tarefas e checklist da OS aberta, vivos: a seção "O que foi feito" grava
   // item a item, e o painel de Executar precisa saber o que ainda está pendente.
   const [progresso, setProgresso] = useState<ProgressoDaExecucao>({ tarefas: [] });
+  // O material registrado na seção "usados", vivo: o custo até agora muda a cada registro
+  const [materiaisVivos, setMateriaisVivos] = useState<MaterialUsado[] | null>(null);
 
   // Hook de API
   const {
@@ -99,6 +102,7 @@ export function ExecucaoOSPage() {
   useEffect(() => {
     const os = modalState.entity;
     setProgresso(montarProgresso(os?.tarefas_os ?? [], os?.checklist ?? []));
+    setMateriaisVivos(null);
   }, [modalState.entity]);
 
   // ============================
@@ -450,7 +454,20 @@ export function ExecucaoOSPage() {
         </div>
 
         {/* Modal Genérico */}
-        {modalState.entity && (
+        {modalState.entity && (() => {
+          const status = statusDaExecucao(modalState.entity);
+          const emExecucao = status === 'EM_EXECUCAO' || status === 'PAUSADA';
+          const executada = status === 'EXECUTADA' || status === 'AUDITADA' || status === 'FINALIZADA';
+          const temProgresso = progresso.tarefas.length > 0;
+          const podeExecutar = temPermissao('execucao_os.manage', 'execucao_os.executar');
+          // A OS em andamento se lê de cima para baixo (06/nov/2026): o que foi feito, o que foi
+          // usado, as fotos, o custo até agora, os comentários e, por último, depois de tudo,
+          // concluir — com o motivo do que faltou e o botão. O Executar sai do topo: lá, convidava
+          // a concluir antes de marcar
+          const concluirNoFim =
+            modalState.mode !== 'create' && emExecucao && acoesDisponiveis(status, temPermissao).some((a) => a.acao === 'executar');
+          const pendentes = tarefasPendentes(progresso).map((t) => ({ id: t.id, nome: t.nome }));
+          return (
           <BaseModal
             isOpen={modalState.isOpen}
             mode={modalState.mode}
@@ -461,16 +478,6 @@ export function ExecucaoOSPage() {
             topo={
               modalState.mode === 'view' || modalState.mode === 'edit'
                 ? ({ alteracoesPendentes }) => {
-                    const status = statusDaExecucao(modalState.entity);
-                    const emExecucao = status === 'EM_EXECUCAO' || status === 'PAUSADA';
-                    const executada = status === 'EXECUTADA' || status === 'AUDITADA' || status === 'FINALIZADA';
-                    const temProgresso = progresso.tarefas.length > 0;
-                    const podeExecutar = temPermissao('execucao_os.manage', 'execucao_os.executar');
-                    // A OS em andamento se lê de cima para baixo (06/nov/2026): o que foi feito, o que
-                    // foi usado, as fotos e, no fim, concluir — com o motivo do que faltou e o botão.
-                    // O Executar sai do topo: lá, convidava a concluir antes de marcar
-                    const concluirNoFim = emExecucao && acoesDisponiveis(status, temPermissao).some((a) => a.acao === 'executar');
-                    const pendentes = tarefasPendentes(progresso).map((t) => ({ id: t.id, nome: t.nome }));
                     const anexos = (
                       <div className="rounded-md border p-4">
                         <AnexosDaOS
@@ -535,28 +542,13 @@ export function ExecucaoOSPage() {
                               materiais={modalState.entity!.materiaisConsumidos}
                               ferramentas={modalState.entity!.ferramentasUtilizadas}
                               editavel={podeExecutar}
+                              onMateriais={setMateriaisVivos}
                             />
                           </div>
                         )}
 
-                        {concluirNoFim && (
-                          <>
-                            {anexos}
-                            <div className="rounded-md border p-4">
-                              <ConcluirExecucao
-                                aberto={pendingAction === 'executar'}
-                                onAbrir={() => setPendingAction('executar')}
-                                onFechar={() => setPendingAction(null)}
-                                entity={modalState.entity}
-                                onConfirm={handleConfirmAction}
-                                tarefasPendentes={pendentes}
-                                totalDeTarefas={progresso.tarefas.length}
-                                podeInformarValorDaHora={temPermissao('execucao_os.manage')}
-                                bloqueado={pendingAction && pendingAction !== 'executar' ? 'Termine ou feche a ação aberta no topo antes de concluir.' : undefined}
-                              />
-                            </div>
-                          </>
-                        )}
+                        {/* Na OS em andamento, as fotos vêm logo depois do que foi usado */}
+                        {concluirNoFim && anexos}
 
                         {/* SN-93: o custo com destaque, logo depois do que foi feito — o real contra o
                             previsto, por natureza e por instrução; os outros custos se corrigem aqui */}
@@ -567,6 +559,7 @@ export function ExecucaoOSPage() {
                               status={status ?? ''}
                               custos={modalState.entity.custos}
                               itensOrcamento={modalState.entity.itens_orcamento}
+                              materialAoVivo={emExecucao && materiaisVivos ? custoDoMaterialUsado(materiaisVivos) : null}
                               // Na auditada, só quem gerencia: o auditor aprovou um custo (a API recusa igual)
                               podeCorrigir={
                                 status === 'AUDITADA'
@@ -605,8 +598,26 @@ export function ExecucaoOSPage() {
             onSubmit={handleSubmit}
             width="w-[1200px]"
             loading={loading}
-          />
-        )}
+          >
+            {/* O último do sheet, depois dos custos, dos comentários e do formulário: o botão fica lá embaixo */}
+            {concluirNoFim && (
+              <div className="rounded-md border p-4">
+                <ConcluirExecucao
+                  aberto={pendingAction === 'executar'}
+                  onAbrir={() => setPendingAction('executar')}
+                  onFechar={() => setPendingAction(null)}
+                  entity={modalState.entity}
+                  onConfirm={handleConfirmAction}
+                  tarefasPendentes={pendentes}
+                  totalDeTarefas={progresso.tarefas.length}
+                  podeInformarValorDaHora={temPermissao('execucao_os.manage')}
+                  bloqueado={pendingAction && pendingAction !== 'executar' ? 'Termine ou feche a ação aberta no topo antes de concluir.' : undefined}
+                />
+              </div>
+            )}
+          </BaseModal>
+          );
+        })()}
         <ConferirCodigo
           aberto={conferencia.aberta}
           onAbertoChange={(aberta) => setConferencia((atual) => ({ ...atual, aberta }))}

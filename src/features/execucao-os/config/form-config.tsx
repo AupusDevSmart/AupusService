@@ -288,7 +288,9 @@ export const execucaoOSFormFields: FormField[] = [
     defaultValue: [],
     group: 'equipe',
     colSpan: 2, // ✅ Ocupa 2 colunas (largura total)
-    condition: exibirListaSe('tecnicos')
+    // Na OS em andamento, as horas de quem trabalhou se informam ao concluir: aqui o cartão mostrava
+    // "Presente" e "H. trab." desabilitados, e parecia que era para marcar (06/nov/2026)
+    condition: listaForaDoAndamento('tecnicos')
   },
 
   // Atividades e Checklist - GRUPO: atividades

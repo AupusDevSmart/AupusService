@@ -59,6 +59,12 @@ interface CustosDaOSProps {
   podeCorrigir: boolean;
   /** Depois de corrigir: a OS relida, com o resumo novo (a conta é da API) */
   onCorrigido: () => Promise<void>;
+  /**
+   * OS em andamento: o custo do material registrado agora na seção "usados"
+   * (consumido × custo unitário). Com ele, o quadro mostra o custo até agora,
+   * que muda a cada registro; sem ele, o real só aparece depois do Executar.
+   */
+  materialAoVivo?: number | null;
 }
 
 /**
@@ -67,18 +73,26 @@ interface CustosDaOSProps {
  * conta é da API (a mesma do PDF e do custo real gravado). Os outros custos se
  * corrigem aqui até a auditoria.
  */
-export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir, onCorrigido }: CustosDaOSProps) {
+export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir, onCorrigido, materialAoVivo = null }: CustosDaOSProps) {
   const [corrigindo, setCorrigindo] = useState(false);
   const [linhas, setLinhas] = useState<LinhaDeOutroCusto[]>([]);
   const [gravando, setGravando] = useState(false);
   if (!custos) return null;
 
   const apurado = APURADO.has(status);
+  // Até agora (06/nov/2026): a API já soma o material registrado, a mão de obra pelas horas
+  // previstas e os outros custos pelo previsto; o material vem da tela, que muda sem reler a OS
+  const aoVivo = !apurado && materialAoVivo !== null;
+  const materialDaApi = custos.naturezas.find((n) => n.natureza === 'MATERIAL')?.real ?? 0;
+  const ateAgora = aoVivo ? Math.round((custos.real - materialDaApi + materialAoVivo) * 100) / 100 : null;
+  const mostraReal = apurado || aoVivo;
+  const realDaNatureza = (n: { natureza: string; real: number | null }) =>
+    aoVivo && n.natureza === 'MATERIAL' ? materialAoVivo : n.real;
   // Na OS finalizada antes do SN-93 os outros custos ficam fora do real: o previsto comparado também
   const previsto = custos.outros_fora_do_total ? custos.previsto : (custos.orcamento_previsto ?? custos.previsto);
-  const diferenca = diferencaDoPrevisto(previsto, custos.real);
+  const diferenca = diferencaDoPrevisto(previsto, ateAgora ?? custos.real);
   const pendencia = corrigindo ? pendenciaDosOutrosCustos(linhas) : null;
-  const naturezas = custos.naturezas.filter((n) => n.previsto > 0 || (n.real ?? 0) > 0);
+  const naturezas = custos.naturezas.filter((n) => n.previsto > 0 || (realDaNatureza(n) ?? 0) > 0);
   const resumo = resumoDasInstrucoes(custos);
 
   const abrirCorrecao = () => {
@@ -123,8 +137,15 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
       {/* O número que importa, em destaque: o real contra o previsto */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <div className="rounded-md border bg-muted p-3">
-          <p className="text-xs text-muted-foreground">{apurado ? 'Custo real' : 'Custo real (sai no Executar)'}</p>
-          <p className="text-2xl font-semibold leading-tight">{apurado ? formatCurrency(custos.real) : '—'}</p>
+          <p className="text-xs text-muted-foreground">
+            {apurado ? 'Custo real' : aoVivo ? 'Custo até agora' : 'Custo real (sai no Executar)'}
+          </p>
+          <p className="text-2xl font-semibold leading-tight">
+            {apurado ? formatCurrency(custos.real) : ateAgora !== null ? formatCurrency(ateAgora) : '—'}
+          </p>
+          {aoVivo && (
+            <p className="text-xs text-muted-foreground">material usado, mão de obra prevista e outros custos; as horas trabalhadas entram ao concluir</p>
+          )}
         </div>
         <div className="rounded-md border p-3">
           <p className="text-xs text-muted-foreground">Previsto</p>
@@ -139,8 +160,8 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
         </div>
         <div className="rounded-md border p-3">
           <p className="text-xs text-muted-foreground">Diferença</p>
-          <p className={`text-lg font-medium leading-tight ${apurado ? COR_DA_DIFERENCA[diferenca.sentido] : 'text-muted-foreground'}`}>
-            {apurado ? diferenca.texto : '—'}
+          <p className={`text-lg font-medium leading-tight ${mostraReal ? COR_DA_DIFERENCA[diferenca.sentido] : 'text-muted-foreground'}`}>
+            {mostraReal ? diferenca.texto : '—'}
           </p>
         </div>
       </div>
@@ -157,14 +178,15 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
             </div>
             {naturezas.map((n) => {
               // Fora do total (OS finalizada antes do SN-93): sem real nem diferença, que leria como economia
-              const comReal = apurado && n.real !== null;
-              const d = diferencaDoPrevisto(n.previsto, n.real ?? 0);
+              const real = realDaNatureza(n);
+              const comReal = mostraReal && real !== null;
+              const d = diferencaDoPrevisto(n.previsto, real ?? 0);
               return (
                 <div key={n.natureza} className="grid grid-cols-[1fr_auto_auto] gap-3 px-3 py-1.5 sm:grid-cols-[1fr_7rem_7rem_9rem]">
                   <span className="min-w-0 truncate">{n.rotulo}</span>
                   <span className="w-24 text-right tabular-nums sm:w-auto">{n.previsto > 0 ? formatCurrency(n.previsto) : '—'}</span>
-                  <span className={`w-24 text-right tabular-nums sm:w-auto ${n.real === null ? 'text-xs text-muted-foreground' : ''}`}>
-                    {n.real === null ? 'fora do total' : apurado ? formatCurrency(n.real) : '—'}
+                  <span className={`w-24 text-right tabular-nums sm:w-auto ${real === null ? 'text-xs text-muted-foreground' : ''}`}>
+                    {real === null ? 'fora do total' : mostraReal ? formatCurrency(real) : '—'}
                   </span>
                   <span className={`hidden text-right text-xs sm:block ${comReal ? COR_DA_DIFERENCA[d.sentido] : 'text-muted-foreground'}`}>
                     {comReal ? d.texto : '—'}

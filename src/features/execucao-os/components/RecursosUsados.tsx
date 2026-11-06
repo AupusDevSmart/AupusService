@@ -1,5 +1,5 @@
 // src/features/execucao-os/components/RecursosUsados.tsx
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CheckCheck, Package, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CampoDeNumero } from '@/components/common/CampoDeNumero';
@@ -26,6 +26,8 @@ interface RecursosUsadosProps {
   ferramentas?: FerramentaOS[];
   /** OS em execução ou pausada, e quem olha pode registrar; senão, só leitura */
   editavel: boolean;
+  /** O material como está na tela, a cada mudança: o custo até agora vem daqui */
+  onMateriais?: (materiais: MaterialUsado[]) => void;
 }
 
 /**
@@ -37,10 +39,15 @@ interface RecursosUsadosProps {
  * marcar. Só o que a OS já tem (as rotas `PATCH :id/materiais` e
  * `:id/ferramentas` não criam item).
  */
-export function RecursosUsados({ osId, materiais = [], ferramentas = [], editavel }: RecursosUsadosProps) {
+export function RecursosUsados({ osId, materiais = [], ferramentas = [], editavel, onMateriais }: RecursosUsadosProps) {
   const [mats, setMats] = useState<MaterialUsado[]>(() => materiaisDaExecucao(materiais));
   const [ferrs, setFerrs] = useState<FerramentaUsada[]>(() => ferramentasDaExecucao(ferramentas));
   const [gravando, setGravando] = useState(false);
+  useEffect(() => {
+    onMateriais?.(mats);
+    // Só quando o material muda: quem recebe guarda num estado
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mats]);
   // Um pedido por vez: dois PATCH do mesmo material saindo juntos (sair do campo com "3" e clicar
   // em "Tudo") podiam chegar fora de ordem, e o banco ficava com o mais velho enquanto a tela
   // mostrava o mais novo. A fila guarda a ordem em que a pessoa mexeu

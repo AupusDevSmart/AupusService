@@ -121,6 +121,20 @@ describe('RecursosUsados', () => {
     expect(screen.getByLabelText('Termovisor usada')).not.toBeChecked();
   });
 
+  it('repassa o material da tela a cada registro (o custo até agora vem daqui)', async () => {
+    const onMateriais = vi.fn();
+    const comPreco = [{ ...materiais[0], custo_unitario: '40' as unknown as number }] as MaterialOS[];
+    render(<RecursosUsados osId="OS1" materiais={comPreco} ferramentas={[]} editavel onMateriais={onMateriais} />);
+
+    const campo = screen.getByLabelText('Quantidade usada de Graxa');
+    fireEvent.change(campo, { target: { value: '2' } });
+    fireEvent.blur(campo);
+
+    await waitFor(() => expect(onMateriais).toHaveBeenLastCalledWith([expect.objectContaining({ consumida: 2, custoUnitario: 40 })]));
+    const { custoDoMaterialUsado } = await import('../utils/recursos-usados');
+    expect(custoDoMaterialUsado(onMateriais.mock.lastCall![0])).toBe(80);
+  });
+
   it('sem permissão, só leitura', () => {
     render(<RecursosUsados osId="OS1" materiais={materiais} ferramentas={ferramentas} editavel={false} />);
 
