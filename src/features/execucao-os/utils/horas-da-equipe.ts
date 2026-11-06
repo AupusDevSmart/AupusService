@@ -15,6 +15,8 @@ export interface TecnicoDaOS {
   especialidade?: string | null;
   tecnico_id?: string | null;
   horas_trabalhadas?: number | null;
+  /** As horas previstas da vaga (da programação, vindas das instruções) */
+  horas_estimadas?: number | string | null;
   custo_hora?: number | null;
 }
 
@@ -28,6 +30,8 @@ export interface LinhaDeHoras {
   nome: string;
   detalhe: string;
   horas: number | null;
+  /** As previstas da vaga: aparecem ao lado, e o atalho "Usar as horas previstas" as copia */
+  previstas?: number | null;
   extra: boolean;
   /** O texto no campo não dá para ler: confirmar mandaria o valor anterior calado */
   ilegivel?: boolean;
@@ -71,6 +75,7 @@ export function linhasIniciais(tecnicos: TecnicoDaOS[] = [], tempoEfetivoMinutos
       nome: nomeDaLinha(t),
       detalhe: t.nome?.trim() ? t.especialidade?.trim() ?? '' : '',
       horas: t.horas_trabalhadas ?? sugestao,
+      previstas: t.horas_estimadas === null || t.horas_estimadas === undefined || t.horas_estimadas === '' ? null : Number(t.horas_estimadas),
       extra: false,
       registradaAntes: t.horas_trabalhadas !== null && t.horas_trabalhadas !== undefined,
     }));

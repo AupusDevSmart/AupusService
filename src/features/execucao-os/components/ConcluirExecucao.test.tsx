@@ -41,6 +41,17 @@ describe('ConcluirExecucao', () => {
     expect(screen.getByRole('button', { name: 'Fechar sem concluir' })).toBeInTheDocument();
   });
 
+  it('aberto: o quadro de custos vem depois das horas e dos outros custos, logo antes do botão', () => {
+    render(
+      <ConcluirExecucao {...base} aberto tarefasPendentes={[]} custos={<p>Quadro de custos</p>} />,
+    );
+    const quadro = screen.getByText('Quadro de custos');
+    const horas = screen.getByText('Horas trabalhadas');
+    const confirmar = screen.getByRole('button', { name: /Confirmar execução/ });
+    expect(horas.compareDocumentPosition(quadro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(quadro.compareDocumentPosition(confirmar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('com tudo feito, não pede motivo', () => {
     render(<ConcluirExecucao {...base} aberto={false} tarefasPendentes={[]} />);
     expect(screen.getByText(/Todas as tarefas estão feitas/)).toBeInTheDocument();

@@ -470,6 +470,41 @@ export function ExecucaoOSPage() {
           const concluirNoFim =
             modalState.mode !== 'create' && emExecucao && acoesDisponiveis(status, temPermissao).some((a) => a.acao === 'executar');
           const pendentes = tarefasPendentes(progresso).map((t) => ({ id: t.id, nome: t.nome }));
+          // Concluindo: o painel do Executar aberto no fim (os custos vão para dentro dele)
+          const concluindo = concluirNoFim && pendingAction === 'executar';
+          const quadroDeCustos = modalState.entity?.custos ? (
+            <div className="rounded-md border p-4">
+              <CustosDaOS
+                osId={modalState.entity.id}
+                status={status ?? ''}
+                custos={modalState.entity.custos}
+                itensOrcamento={modalState.entity.itens_orcamento}
+                aoVivo={
+                  emExecucao
+                    ? {
+                        // O material da OS lida é a base: a seção "usados" só avisa quando muda
+                        // (o efeito do filho roda antes do reset do pai, e a OS sem material
+                        // ficava sem custo até agora)
+                        material: custoDoMaterialUsado(materiaisVivos ?? materiaisDaExecucao(modalState.entity.materiaisConsumidos ?? [])),
+                        maoDeObra: rascunho ? maoDeObraDasHoras(rascunho.horas, modalState.entity.tecnicos) : null,
+                        outros: rascunho && modalState.entity.itens_orcamento ? outrosDoPainel(rascunho.outros) : null,
+                      }
+                    : null
+                }
+                // Na auditada, só quem gerencia: o auditor aprovou um custo (a API recusa igual)
+                podeCorrigir={
+                  status === 'AUDITADA'
+                    ? temPermissao('execucao_os.manage')
+                    : temPermissao('execucao_os.manage', 'execucao_os.executar')
+                }
+                onCorrigido={async () => {
+                  // A lista da tabela também tem o custo real
+                  const [atual] = await Promise.all([fetchOne(modalState.entity!.id), fetchItems(toApiParams)]);
+                  if (atual) openModal(modalState.mode, atual);
+                }}
+              />
+            </div>
+          ) : null;
           return (
           <BaseModal
             isOpen={modalState.isOpen}
@@ -553,41 +588,9 @@ export function ExecucaoOSPage() {
                         {/* Na OS em andamento, as fotos vêm logo depois do que foi usado */}
                         {concluirNoFim && anexos}
 
-                        {/* SN-93: o custo com destaque, logo depois do que foi feito — o real contra o
-                            previsto, por natureza e por instrução; os outros custos se corrigem aqui */}
-                        {modalState.entity?.custos && (
-                          <div className="rounded-md border p-4">
-                            <CustosDaOS
-                              osId={modalState.entity.id}
-                              status={status ?? ''}
-                              custos={modalState.entity.custos}
-                              itensOrcamento={modalState.entity.itens_orcamento}
-                              aoVivo={
-                                emExecucao
-                                  ? {
-                                      // O material da OS lida é a base: a seção "usados" só avisa quando muda
-                                      // (o efeito do filho roda antes do reset do pai, e a OS sem material
-                                      // ficava sem custo até agora)
-                                      material: custoDoMaterialUsado(materiaisVivos ?? materiaisDaExecucao(modalState.entity.materiaisConsumidos ?? [])),
-                                      maoDeObra: rascunho ? maoDeObraDasHoras(rascunho.horas, modalState.entity.tecnicos) : null,
-                                      outros: rascunho && modalState.entity.itens_orcamento ? outrosDoPainel(rascunho.outros) : null,
-                                    }
-                                  : null
-                              }
-                              // Na auditada, só quem gerencia: o auditor aprovou um custo (a API recusa igual)
-                              podeCorrigir={
-                                status === 'AUDITADA'
-                                  ? temPermissao('execucao_os.manage')
-                                  : temPermissao('execucao_os.manage', 'execucao_os.executar')
-                              }
-                              onCorrigido={async () => {
-                                // A lista da tabela também tem o custo real
-                                const [atual] = await Promise.all([fetchOne(modalState.entity!.id), fetchItems(toApiParams)]);
-                                if (atual) openModal(modalState.mode, atual);
-                              }}
-                            />
-                          </div>
-                        )}
+                        {/* SN-93: o custo com destaque. Com o painel de concluir aberto, ele vai para
+                            dentro do painel, depois das horas e dos outros custos e antes do botão */}
+                        {!concluindo && quadroDeCustos}
 
                         {/* A prova do que foi feito: fotos e documentos, com quem enviou e quando.
                             Na OS em andamento, vem antes de concluir */}
@@ -627,6 +630,7 @@ export function ExecucaoOSPage() {
                   podeInformarValorDaHora={temPermissao('execucao_os.manage')}
                   bloqueado={pendingAction && pendingAction !== 'executar' ? 'Termine ou feche a ação aberta no topo antes de concluir.' : undefined}
                   onRascunho={setRascunho}
+                  custos={quadroDeCustos}
                 />
               </div>
             )}

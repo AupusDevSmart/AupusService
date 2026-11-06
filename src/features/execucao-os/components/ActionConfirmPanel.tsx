@@ -1,5 +1,5 @@
 // src/features/execucao-os/components/ActionConfirmPanel.tsx
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -379,6 +379,8 @@ interface ActionConfirmPanelProps {
    * e null ao fechar. O quadro de custos mostra o custo até agora com eles.
    */
   onRascunho?: (rascunho: RascunhoDoExecutar | null) => void;
+  /** Logo antes do botão de confirmar: no Executar, o quadro de custos com o que foi digitado */
+  antesDoBotao?: ReactNode;
 }
 
 /** O que o painel do Executar tem digitado e ainda não gravou */
@@ -396,6 +398,7 @@ export function ActionConfirmPanel({
   tarefasPendentes = [],
   podeInformarValorDaHora = false,
   onRascunho,
+  antesDoBotao,
 }: ActionConfirmPanelProps) {
   const config = actionConfig[action];
   const Icon = config.icon;
@@ -687,6 +690,8 @@ export function ActionConfirmPanel({
           <div className="mt-3 space-y-3">{detalhes.map(campo)}</div>
         </details>
       )}
+
+      {antesDoBotao}
 
       <Button
         type="button"

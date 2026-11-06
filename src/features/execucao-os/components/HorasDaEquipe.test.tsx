@@ -80,6 +80,27 @@ describe('HorasDaEquipe — quem entrou na hora', () => {
   });
 
   // SN-93 (revisão de segurança): o valor da hora é custo; quem só executa não o informa
+  it('cada vaga mostra as horas previstas, e o atalho as copia (o tempo efetivo é igual para todos)', async () => {
+    const vagas = linhasIniciais(
+      [
+        { id: 'T1', especialidade: 'Hora técnica', horas_estimadas: '6.5' },
+        { id: 'T2', especialidade: 'Eletricista', horas_estimadas: 5.25 },
+      ],
+      86,
+    );
+    renderWithProviders(<ComEstado inicial={vagas} />);
+    const usuario = userEvent.setup();
+
+    expect(screen.getByText('previstas 6h30')).toBeInTheDocument();
+    expect(screen.getByText('previstas 5h15')).toBeInTheDocument();
+    expect(screen.getByTestId('linhas').textContent).toBe('Hora técnica (sem pessoa)=1.43;Eletricista (sem pessoa)=1.43');
+
+    await usuario.click(screen.getByRole('button', { name: 'Usar as horas previstas' }));
+
+    expect(screen.getByTestId('linhas').textContent).toBe('Hora técnica (sem pessoa)=6.5;Eletricista (sem pessoa)=5.25');
+    expect(screen.queryByRole('button', { name: 'Usar as horas previstas' })).toBeNull();
+  });
+
   it('o valor da hora de quem entrou só aparece para quem gerencia a OS', async () => {
     const extra = [...ana, { chave: 'U2', tecnicoId: 'U2', nome: 'Paula Planejadora', detalhe: '', horas: 1, extra: true, registradaAntes: false }];
     const { unmount } = renderWithProviders(<ComEstado inicial={extra} />);

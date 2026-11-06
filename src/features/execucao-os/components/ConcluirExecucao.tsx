@@ -1,5 +1,5 @@
 // src/features/execucao-os/components/ConcluirExecucao.tsx
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ActionConfirmPanel, type DadosDaConfirmacao, type RascunhoDoExecutar } from './ActionConfirmPanel';
@@ -21,6 +21,8 @@ interface ConcluirExecucaoProps {
   bloqueado?: string;
   /** As horas e os outros custos digitados, para o custo até agora */
   onRascunho?: (rascunho: RascunhoDoExecutar | null) => void;
+  /** O quadro de custos: dentro do painel, depois das horas e dos outros custos e antes do botão */
+  custos?: ReactNode;
 }
 
 /**
@@ -43,6 +45,7 @@ export function ConcluirExecucao({
   podeInformarValorDaHora,
   bloqueado,
   onRascunho,
+  custos,
 }: ConcluirExecucaoProps) {
   // O Executar escolhido na tabela abre o sheet com o painel já aberto, no fim:
   // sem rolar, ele ficava fora da tela
@@ -64,6 +67,7 @@ export function ConcluirExecucao({
           tarefasPendentes={tarefasPendentes}
           podeInformarValorDaHora={podeInformarValorDaHora}
           onRascunho={onRascunho}
+          antesDoBotao={custos}
         />
       </div>
     );

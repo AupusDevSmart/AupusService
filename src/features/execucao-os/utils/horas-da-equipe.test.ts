@@ -20,8 +20,8 @@ describe('horas da equipe', () => {
 
   it('cada linha começa no tempo efetivo; a linha de perfil aparece pelo perfil', () => {
     expect(linhasIniciais(equipe, 200)).toEqual([
-      { chave: 'T1', id: 'T1', tecnicoId: 'U1', nome: 'Ana Técnica', detalhe: 'Técnico Elétrico', horas: 3.33, extra: false, registradaAntes: false },
-      { chave: 'T2', id: 'T2', nome: 'Auxiliar (sem pessoa)', detalhe: '', horas: 3.33, extra: false, registradaAntes: false },
+      { chave: 'T1', id: 'T1', tecnicoId: 'U1', nome: 'Ana Técnica', detalhe: 'Técnico Elétrico', horas: 3.33, previstas: null, extra: false, registradaAntes: false },
+      { chave: 'T2', id: 'T2', nome: 'Auxiliar (sem pessoa)', detalhe: '', horas: 3.33, previstas: null, extra: false, registradaAntes: false },
     ]);
   });
 

@@ -38,6 +38,10 @@ export function HorasDaEquipe({ osId, linhas, onChange, tempoEfetivoMinutos, hhE
     if (nome) onChange((atuais) => [...atuais, linhaExtra(tecnicoId, nome, tempoEfetivoMinutos)]);
   };
   const tirar = (chave: string) => onChange((atuais) => atuais.filter((l) => l.chave !== chave));
+  // O tempo efetivo é o de quem foi do começo ao fim; a vaga com horas previstas diferentes (o
+  // eletricista 5h15, o ajudante 6h) começa melhor pelas previstas (06/nov/2026)
+  const comPrevistas = linhas.filter((l) => !l.extra && l.previstas !== null && l.previstas !== undefined);
+  const usarPrevistas = () => onChange((atuais) => atuais.map((l) => (!l.extra && l.previstas != null ? { ...l, horas: l.previstas, ilegivel: false } : l)));
 
   return (
     <div className="space-y-3 rounded-md border p-3">
@@ -65,9 +69,15 @@ export function HorasDaEquipe({ osId, linhas, onChange, tempoEfetivoMinutos, hhE
             <label htmlFor={`${idBase}-${linha.chave}`} className="block truncate text-sm">
               {linha.nome}
             </label>
-            {(linha.detalhe || linha.registradaAntes) && (
+            {(linha.detalhe || linha.registradaAntes || linha.previstas != null) && (
               <span className="block truncate text-xs text-muted-foreground">
-                {[linha.detalhe, linha.registradaAntes && 'registradas antes'].filter(Boolean).join(' · ')}
+                {[
+                  linha.detalhe,
+                  linha.previstas != null && `previstas ${formatarHoras(linha.previstas)}`,
+                  linha.registradaAntes && 'registradas antes',
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
               </span>
             )}
             {passaDoTempo(linha.horas, tempoEfetivoMinutos) && (
@@ -125,6 +135,12 @@ export function HorasDaEquipe({ osId, linhas, onChange, tempoEfetivoMinutos, hhE
             emptyText="Ninguém com esse nome."
           />
         )
+      )}
+
+      {comPrevistas.length > 0 && comPrevistas.some((l) => l.horas !== l.previstas) && (
+        <Button type="button" variant="outline" size="sm" onClick={usarPrevistas}>
+          Usar as horas previstas
+        </Button>
       )}
 
       {linhas.length > 0 && (
