@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ActionConfirmPanel } from './ActionConfirmPanel';
+import { linhasDosOutrosCustos, linhaNaoPrevista } from '@/features/execucao-os/utils/outros-custos';
+import { linhasIniciais } from '@/features/execucao-os/utils/horas-da-equipe';
 
 // As pessoas para quem entrou na hora (SN-61) têm o teste delas em HorasDaEquipe.test
 vi.mock('@/features/execucao-os/hooks/usePessoasDaOS', () => ({ usePessoasDaOS: () => ({ data: undefined, isError: false }) }));
@@ -23,28 +25,24 @@ describe('ActionConfirmPanel — executar', () => {
     expect(detalhes).not.toHaveAttribute('open');
     expect(detalhes).toHaveTextContent('Recomendações');
     expect(detalhes).toHaveTextContent('Incidente de segurança');
-    // SN-93 (D2): o número único de custos adicionais saiu; o não previsto se lança com descrição
+    // SN-93 (D2): o número único de custos adicionais saiu. As horas e os outros custos se informam
+    // nas seções Equipe e Outros custos do sheet, ao lado do previsto (07/nov/2026), não aqui
     expect(screen.queryByText('Custos adicionais (R$)')).toBeNull();
-    expect(screen.getByText('Outros custos')).toBeInTheDocument();
+    expect(screen.queryByText('Outros custos')).toBeNull();
+    expect(screen.queryByText('Horas trabalhadas')).toBeNull();
   });
 
   // SN-93 (D2): até aqui veículo, hospedagem e alimentação ficavam só no orçamento, fora do custo real
-  it('os outros custos vêm com o previsto preenchido, para confirmar ou corrigir', async () => {
+  it('os outros custos da seção vão no payload, um por item, com o valor conferido', async () => {
     const onConfirm = vi.fn().mockResolvedValue(undefined);
     const itens_orcamento = [
       { id: 'I1', descricao: 'Veículo: Picape 4x4', valor: 1316, natureza: 'VEICULO' as const },
       { id: 'I2', descricao: 'Despesa de campo: Hospedagem', valor: 1380, natureza: 'DESPESA_CAMPO' as const },
     ];
-    render(<ActionConfirmPanel action="executar" entity={{ itens_orcamento }} onConfirm={onConfirm} />);
+    // O que a seção Outros custos tem: o previsto preenchido, e a picape corrigida
+    const outros = linhasDosOutrosCustos(itens_orcamento).map((l) => (l.chave === 'I1' ? { ...l, valor: 1402.5 } : l));
+    render(<ActionConfirmPanel action="executar" entity={{ itens_orcamento }} outros={outros} onConfirm={onConfirm} />);
     fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'Feito' } });
-    expect(screen.getByText(/previsto R\$\s*1\.316,00/)).toBeInTheDocument();
-
-    const picape = screen.getByLabelText('Quanto custou: Veículo: Picape 4x4');
-    // Dinheiro com as 2 casas no campo (mostrava "1316" e "181,5")
-    expect(picape).toHaveValue('1.316,00');
-    fireEvent.change(picape, { target: { value: '1402,5' } });
-    fireEvent.blur(picape);
-    expect(picape).toHaveValue('1.402,50');
     fireEvent.click(screen.getByRole('button', { name: /Confirmar Execu/i }));
 
     await waitFor(() => expect(onConfirm).toHaveBeenCalled());
@@ -54,20 +52,18 @@ describe('ActionConfirmPanel — executar', () => {
     ]);
   });
 
-  it('o não previsto precisa de descrição e de valor, e vai com a natureza', async () => {
+  it('o não previsto sem descrição ou sem valor trava o confirmar, dizendo a seção', async () => {
     const onConfirm = vi.fn().mockResolvedValue(undefined);
-    render(<ActionConfirmPanel action="executar" entity={{ itens_orcamento: [] }} onConfirm={onConfirm} />);
+    const semNada = linhaNaoPrevista();
+    const { rerender } = render(<ActionConfirmPanel action="executar" entity={{ itens_orcamento: [] }} outros={[semNada]} onConfirm={onConfirm} />);
     fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'Feito' } });
-    fireEvent.click(screen.getByRole('button', { name: /Lançar custo não previsto/ }));
     const confirmar = screen.getByRole('button', { name: /Confirmar Execu/i });
 
     expect(confirmar).toBeDisabled();
-    expect(screen.getByText('Diga o que é cada custo não previsto.')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Descrição do custo não previsto'), { target: { value: 'Pedágio' } });
-    expect(screen.getByText(/Informe quanto custou Pedágio/)).toBeInTheDocument();
-    const valor = screen.getByLabelText('Quanto custou: Pedágio');
-    fireEvent.change(valor, { target: { value: '85' } });
-    fireEvent.blur(valor);
+    expect(screen.getByText('Outros custos: Diga o que é cada custo não previsto.')).toBeInTheDocument();
+    rerender(<ActionConfirmPanel action="executar" entity={{ itens_orcamento: [] }} outros={[{ ...semNada, descricao: 'Pedágio' }]} onConfirm={onConfirm} />);
+    expect(screen.getByText(/Outros custos: Informe quanto custou Pedágio/)).toBeInTheDocument();
+    rerender(<ActionConfirmPanel action="executar" entity={{ itens_orcamento: [] }} outros={[{ ...semNada, descricao: 'Pedágio', valor: 85 }]} onConfirm={onConfirm} />);
     fireEvent.click(confirmar);
 
     await waitFor(() => expect(onConfirm).toHaveBeenCalled());
@@ -75,19 +71,21 @@ describe('ActionConfirmPanel — executar', () => {
   });
 
   // Revisão de falha silenciosa: o não previsto tirado no reexecutar ficava no custo (a lista vazia não ia)
-  it('a lista vai inteira, mesmo vazia; sem a lista da OS, não há o que conferir e nada vai', async () => {
+  it('a lista vai inteira, mesmo vazia; sem a lista da OS, nada vai', async () => {
     const onConfirm = vi.fn().mockResolvedValue(undefined);
-    const itens_orcamento = [{ id: 'N1', descricao: 'Pedágio', valor: 0, natureza: 'VEICULO' as const, valor_real: 80, nao_previsto: true }];
-    const { unmount } = render(<ActionConfirmPanel action="executar" entity={{ itens_orcamento }} onConfirm={onConfirm} />);
+    const { unmount } = render(<ActionConfirmPanel action="executar" entity={{ itens_orcamento: [] }} outros={[]} onConfirm={onConfirm} />);
     fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'Feito' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Tirar' }));
     fireEvent.click(screen.getByRole('button', { name: /Confirmar Execu/i }));
-    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
     expect(onConfirm.mock.calls[0][0].outros_custos).toEqual([]);
     unmount();
 
-    render(<ActionConfirmPanel action="executar" entity={{}} onConfirm={onConfirm} />);
-    expect(screen.queryByRole('button', { name: /Lançar custo não previsto/ })).toBeNull();
+    // Sem a lista do orçamento na OS, mandar apagaria os não previstos que já existem
+    render(<ActionConfirmPanel action="executar" entity={{}} outros={[]} onConfirm={onConfirm} />);
+    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'Feito' } });
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar Execu/i }));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(2));
+    expect(onConfirm.mock.calls[1][0]).not.toHaveProperty('outros_custos');
   });
 
   it('com tarefa pendente, exige o motivo de cada uma e manda no payload', async () => {
@@ -348,36 +346,19 @@ describe('ActionConfirmPanel — dados de falha', () => {
 });
 
 describe('ActionConfirmPanel — horas trabalhadas (SN-61)', () => {
+  // As horas se digitam na seção Equipe (HorasDaEquipe.test); o painel confere e manda
   const equipe = [
     { id: 'T1', nome: 'Ana Técnica', especialidade: 'Técnico Elétrico', tecnico_id: 'U1', horas_trabalhadas: null },
     { id: 'T2', nome: null, especialidade: 'Auxiliar', horas_trabalhadas: null },
   ];
   const confirmar = () => screen.getByRole('button', { name: /Confirmar Execu/i });
-  const horasDe = (nome: string) => screen.getByLabelText(nome) as HTMLInputElement;
-  const digitar = (campo: HTMLInputElement, texto: string) => {
-    fireEvent.change(campo, { target: { value: texto } });
-    fireEvent.blur(campo);
-  };
+  const comResultado = () => fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'ok' } });
 
-  it('cada pessoa começa no tempo efetivo da OS, e as horas vão no payload', async () => {
+  it('as horas da seção Equipe vão no payload', async () => {
     const onConfirm = vi.fn().mockResolvedValue(undefined);
-    render(
-      <ActionConfirmPanel
-        action="executar"
-        entity={{ id: 'OS1', tecnicos: equipe, tempo_efetivo_minutos: 200, hh_estimado: 8 }}
-        onConfirm={onConfirm}
-      />,
-    );
-
-    expect(screen.getByText(/Tempo efetivo da OS: 3 h 20 min/)).toBeInTheDocument();
-    expect(horasDe('Ana Técnica').value).toBe('3h20');
-    expect(horasDe('Auxiliar (sem pessoa)').value).toBe('3h20');
-    expect(screen.getByText('Total: 6h40 de 8h previstas')).toBeInTheDocument();
-
-    digitar(horasDe('Auxiliar (sem pessoa)'), '0');
-    digitar(horasDe('Ana Técnica'), '2,5');
-    expect(horasDe('Ana Técnica').value).toBe('2h30');
-    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'ok' } });
+    const horas = linhasIniciais(equipe, null).map((l) => ({ ...l, horas: l.id === 'T1' ? 2.5 : 0 }));
+    render(<ActionConfirmPanel action="executar" entity={{ id: 'OS1' }} horas={horas} onConfirm={onConfirm} />);
+    comResultado();
     fireEvent.click(confirmar());
 
     await waitFor(() => expect(onConfirm).toHaveBeenCalled());
@@ -390,76 +371,25 @@ describe('ActionConfirmPanel — horas trabalhadas (SN-61)', () => {
     });
   });
 
-  it('reexecutar: as horas já registradas, não a sugestão, e o aviso de somar o que veio depois', () => {
-    render(
-      <ActionConfirmPanel
-        action="executar"
-        entity={{ id: 'OS1', tecnicos: [{ ...equipe[0], horas_trabalhadas: 2 }], tempo_efetivo_minutos: 200 }}
-        onConfirm={vi.fn()}
-      />,
-    );
-    expect(horasDe('Ana Técnica').value).toBe('2h');
-    expect(screen.getByText('Técnico Elétrico · registradas antes')).toBeInTheDocument();
-    expect(screen.getByText(/some o que cada um trabalhou depois da reabertura/)).toBeInTheDocument();
-  });
-
-  // Revisão do SN-61: o sheet aberto às 8h05 e o Executar ao meio-dia sugeriam 0h05
-  it('a sugestão parte do tempo de agora, não do de quando a OS foi aberta', () => {
-    const quatroHorasAtras = Date.now() - 4 * 3_600_000;
-    render(
-      <ActionConfirmPanel
-        action="executar"
-        entity={{ id: 'OS1', statusExecucao: 'EM_EXECUCAO', tecnicos: [equipe[0]], tempo_efetivo_minutos: 5, tempo_efetivo_lido_em: quatroHorasAtras }}
-        onConfirm={vi.fn()}
-      />,
-    );
-    expect(horasDe('Ana Técnica').value).toBe('4h05');
-    expect(screen.getByText(/Tempo efetivo da OS: 4 h 5 min/)).toBeInTheDocument();
-  });
-
-  it('sem as horas de alguém, ou com texto ilegível, não confirma e diz por quê', () => {
-    render(<ActionConfirmPanel action="executar" entity={{ id: 'OS1', tecnicos: [equipe[0]], tempo_efetivo_minutos: 60 }} onConfirm={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'ok' } });
-    expect(confirmar()).toBeEnabled();
-
-    digitar(horasDe('Ana Técnica'), '');
+  it('sem as horas de alguém, ou com texto ilegível, não confirma e diz onde corrigir', () => {
+    const [ana] = linhasIniciais([equipe[0]], null);
+    const { rerender } = render(<ActionConfirmPanel action="executar" entity={{ id: 'OS1' }} horas={[ana]} onConfirm={vi.fn()} />);
+    comResultado();
     expect(confirmar()).toBeDisabled();
-    expect(screen.getByText('Informe as horas de Ana Técnica (0 se não trabalhou).')).toBeInTheDocument();
+    expect(screen.getByText('Equipe: Informe as horas de Ana Técnica (0 se não trabalhou).')).toBeInTheDocument();
 
     // O texto ilegível ficava na tela e o confirmar mandava o valor de antes, calado
-    digitar(horasDe('Ana Técnica'), '1h');
-    digitar(horasDe('Ana Técnica'), 'uma hora');
+    rerender(<ActionConfirmPanel action="executar" entity={{ id: 'OS1' }} horas={[{ ...ana, horas: 1, ilegivel: true }]} onConfirm={vi.fn()} />);
     expect(confirmar()).toBeDisabled();
-    expect(screen.getByText('Corrija as horas de Ana Técnica (ex.: 3h30, 45min ou 3,5).')).toBeInTheDocument();
+    expect(screen.getByText('Equipe: Corrija as horas de Ana Técnica (ex.: 3h30, 45min ou 3,5).')).toBeInTheDocument();
 
-    digitar(horasDe('Ana Técnica'), '45min');
+    rerender(<ActionConfirmPanel action="executar" entity={{ id: 'OS1' }} horas={[{ ...ana, horas: 0.75 }]} onConfirm={vi.fn()} />);
     expect(confirmar()).toBeEnabled();
-  });
-
-  it('mais horas que o tempo efetivo: pede conferência, não bloqueia', () => {
-    render(<ActionConfirmPanel action="executar" entity={{ id: 'OS1', tecnicos: [equipe[0]], tempo_efetivo_minutos: 60 }} onConfirm={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'ok' } });
-
-    digitar(horasDe('Ana Técnica'), '3h');
-
-    expect(screen.getByText('Mais que o tempo efetivo da OS: confira.')).toBeInTheDocument();
-    expect(confirmar()).toBeEnabled();
-  });
-
-  it('OS aberta por dias: sem sugestão, pede as horas de cada um', () => {
-    render(<ActionConfirmPanel action="executar" entity={{ id: 'OS1', tecnicos: [equipe[0]], tempo_efetivo_minutos: 276855 }} onConfirm={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'ok' } });
-
-    expect(horasDe('Ana Técnica').value).toBe('');
-    expect(screen.getByText(/A OS ficou aberta mais que uma jornada/)).toBeInTheDocument();
-    expect(confirmar()).toBeDisabled();
   });
 
   it('OS sem equipe: confirma sem horas', () => {
-    render(<ActionConfirmPanel action="executar" entity={{ id: 'OS1', tecnicos: [] }} onConfirm={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/Resultado do serviço/), { target: { value: 'ok' } });
-
-    expect(screen.getByText('Ninguém escalado. Se alguém trabalhou, registre abaixo.')).toBeInTheDocument();
+    render(<ActionConfirmPanel action="executar" entity={{ id: 'OS1' }} horas={[]} onConfirm={vi.fn()} />);
+    comResultado();
     expect(confirmar()).toBeEnabled();
   });
 });

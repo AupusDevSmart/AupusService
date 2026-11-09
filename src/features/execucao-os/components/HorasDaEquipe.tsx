@@ -7,7 +7,14 @@ import { opcoesDePessoas } from '@/features/programacao-os/utils/pessoas';
 import { duracaoLegivel, formatarHoras, horasNoCampo, lerHorasDigitadas } from '@/utils/horas';
 import { AVISO_DE_DINHEIRO, dinheiroNoCampo, lerDinheiroDigitado } from '@/utils/leitura';
 import { usePessoasDaOS } from '@/features/execucao-os/hooks/usePessoasDaOS';
-import { JORNADA_MAXIMA_MIN, linhaExtra, passaDoTempo, totalDasHoras, type LinhaDeHoras } from '@/features/execucao-os/utils/horas-da-equipe';
+import {
+  JORNADA_MAXIMA_MIN,
+  linhaExtra,
+  passaDoTempo,
+  sugestaoDeHoras,
+  totalDasHoras,
+  type LinhaDeHoras,
+} from '@/features/execucao-os/utils/horas-da-equipe';
 
 interface HorasDaEquipeProps {
   osId?: string;
@@ -20,9 +27,14 @@ interface HorasDaEquipeProps {
 }
 
 /**
- * As horas trabalhadas no painel do Executar (SN-61): uma linha por pessoa da
- * equipe, começando no tempo efetivo da OS, e quem entrou na hora escolhido
- * entre as pessoas que podem atuar na planta.
+ * As horas trabalhadas (SN-61), na seção Equipe do sheet, ao lado das previstas
+ * (07/nov/2026; antes, no painel do Executar): uma linha por pessoa da equipe e
+ * quem entrou na hora, escolhido entre as pessoas que podem atuar na planta.
+ *
+ * O campo começa vazio, com as previstas em cinza: preenchido com elas, quem não
+ * mexesse confirmaria a estimativa sem ver (o SN-61 existe para o HH não sair da
+ * estimativa calado). "Usar as horas previstas" e "Usar o tempo efetivo"
+ * preenchem com um clique; o concluir espera até cada pessoa ter horas.
  */
 export function HorasDaEquipe({ osId, linhas, onChange, tempoEfetivoMinutos, hhEstimado, podeInformarValorDaHora = false }: HorasDaEquipeProps) {
   const idBase = useId();
@@ -42,16 +54,20 @@ export function HorasDaEquipe({ osId, linhas, onChange, tempoEfetivoMinutos, hhE
   // eletricista 5h15, o ajudante 6h) começa melhor pelas previstas (06/nov/2026)
   const comPrevistas = linhas.filter((l) => !l.extra && l.previstas !== null && l.previstas !== undefined);
   const usarPrevistas = () => onChange((atuais) => atuais.map((l) => (!l.extra && l.previstas != null ? { ...l, horas: l.previstas, ilegivel: false } : l)));
+  // O tempo efetivo de quem foi do começo ao fim; só até uma jornada (OS aberta por dias sugeria centenas de horas)
+  const sugestao = sugestaoDeHoras(tempoEfetivoMinutos);
+  const daEquipe = linhas.filter((l) => !l.extra);
+  const usarTempoEfetivo = () => onChange((atuais) => atuais.map((l) => (l.extra || sugestao === null ? l : { ...l, horas: sugestao, ilegivel: false })));
 
   return (
     <div className="space-y-3">
       <div>
         <p className="text-sm font-medium">Horas trabalhadas</p>
         <p className="text-xs text-muted-foreground">
-          {tempo ? `Tempo efetivo da OS: ${tempo}, sem as pausas. ` : ''}
           {(tempoEfetivoMinutos ?? 0) > JORNADA_MAXIMA_MIN
             ? 'A OS ficou aberta mais que uma jornada: informe as horas de cada um, e 0 para quem não foi.'
-            : 'Ajuste quem saiu antes, e 0 para quem não foi.'}
+            : 'Informe as horas de cada pessoa, e 0 para quem não foi. Gravam ao concluir a execução.'}
+          {tempo ? ` Tempo efetivo da OS: ${tempo}, sem as pausas.` : ''}
         </p>
         {/* Reexecutar: sem isto, as horas antigas iam de novo e o trabalho depois da reabertura sumia */}
         {linhas.some((l) => l.registradaAntes) && (
@@ -92,7 +108,8 @@ export function HorasDaEquipe({ osId, linhas, onChange, tempoEfetivoMinutos, hhE
             ler={lerHorasDigitadas}
             mostrar={horasNoCampo}
             aviso="Horas como 3h30, 45min ou 3,5"
-            placeholder="ex.: 3h30"
+            // As previstas em cinza no campo vazio: o real se digita ao lado do previsto
+            placeholder={linha.previstas != null ? formatarHoras(linha.previstas) : 'ex.: 3h30'}
             className="h-8 w-28 text-right"
           />
           {linha.extra && (
@@ -137,11 +154,18 @@ export function HorasDaEquipe({ osId, linhas, onChange, tempoEfetivoMinutos, hhE
         )
       )}
 
-      {comPrevistas.length > 0 && comPrevistas.some((l) => l.horas !== l.previstas) && (
-        <Button type="button" variant="outline" size="sm" onClick={usarPrevistas}>
-          Usar as horas previstas
-        </Button>
-      )}
+      <div className="flex flex-wrap gap-2">
+        {comPrevistas.length > 0 && comPrevistas.some((l) => l.horas !== l.previstas) && (
+          <Button type="button" variant="outline" size="sm" onClick={usarPrevistas}>
+            Usar as horas previstas
+          </Button>
+        )}
+        {sugestao !== null && sugestao > 0 && daEquipe.length > 0 && daEquipe.some((l) => l.horas !== sugestao) && (
+          <Button type="button" variant="outline" size="sm" onClick={usarTempoEfetivo}>
+            Usar o tempo efetivo ({formatarHoras(sugestao)})
+          </Button>
+        )}
+      </div>
 
       {linhas.length > 0 && (
         <p className="text-right text-xs text-muted-foreground">

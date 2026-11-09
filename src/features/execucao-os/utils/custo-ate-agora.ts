@@ -11,17 +11,17 @@ import type { LinhaDeOutroCusto } from './outros-custos';
  * outros custos pelo previsto (ou o conferido). A tela troca, por natureza, o
  * que já sabe melhor que a OS lida:
  *   - Material: o consumo registrado agora na seção "usados";
- *   - Mão de obra: as horas digitadas no painel de concluir × o valor da hora;
- *   - Outros custos: o valor conferido no painel de concluir.
+ *   - Mão de obra: as horas da seção Equipe × o valor da hora;
+ *   - Outros custos: o valor conferido na seção Outros custos.
  * O total é a soma das naturezas, a mesma do custo real da API. Nada disso
  * grava: o real gravado sai do Executar.
  */
 export interface CustoAoVivo {
   /** Consumido × custo unitário do material registrado na tela */
   material: number;
-  /** Com o painel de concluir aberto: as horas digitadas × o valor da hora */
+  /** As horas da seção Equipe × o valor da hora (as previstas enquanto vazias) */
   maoDeObra?: number | null;
-  /** Com o painel de concluir aberto: o conferido de cada natureza (o não previsto em NAO_PREVISTO) */
+  /** O conferido de cada natureza na seção Outros custos (o não previsto em NAO_PREVISTO) */
   outros?: Record<string, number> | null;
 }
 
@@ -57,17 +57,18 @@ export const totalAteAgora = (naturezas: Natureza[]) => centavos(naturezas.reduc
 
 /**
  * As horas digitadas × o valor da hora: o da linha da equipe, ou o informado
- * para quem entrou na hora. Quem entrou sem valor fica de fora (a API usa o da
- * mesma especialidade, que a tela não sabe).
+ * para quem entrou na hora. A pessoa ainda sem horas conta pelas previstas (o
+ * custo até agora não cai a zero enquanto a seção está vazia). Quem entrou sem
+ * valor fica de fora (a API usa o da mesma especialidade, que a tela não sabe).
  */
 export function maoDeObraDasHoras(linhas: LinhaDeHoras[], tecnicos: TecnicoDaOS[] = []): number {
   const valorDa = new Map(tecnicos.filter((t) => t.id?.trim()).map((t) => [t.id!.trim(), Number(t.custo_hora) || 0]));
   return centavos(
-    linhas.reduce((s, l) => s + (l.horas ?? 0) * (l.extra ? Number(l.custoHora) || 0 : valorDa.get(l.id ?? '') ?? 0), 0),
+    linhas.reduce((s, l) => s + (l.horas ?? l.previstas ?? 0) * (l.extra ? Number(l.custoHora) || 0 : valorDa.get(l.id ?? '') ?? 0), 0),
   );
 }
 
-/** O conferido de cada natureza no painel: o valor digitado, ou o previsto enquanto o campo está vazio */
+/** O conferido de cada natureza: o valor digitado, ou o previsto enquanto o campo está vazio */
 export function outrosDoPainel(linhas: LinhaDeOutroCusto[]): Record<string, number> {
   const porNatureza: Record<string, number> = {};
   for (const l of linhas) {

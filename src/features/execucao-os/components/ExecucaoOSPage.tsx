@@ -180,6 +180,8 @@ export function ExecucaoOSPage() {
       };
       toast({ title: actionLabels[pendingAction] || 'Ação realizada' });
 
+      // Concluiu: as horas e os outros custos foram no Executar, não há o que descartar
+      rascunhoDaExecucao.current = false;
       closeModal();
       setPendingAction(null);
       await fetchItems(toApiParams);
@@ -272,10 +274,18 @@ export function ExecucaoOSPage() {
   };
 
   const rascunhoDoComentario = useRef(false);
+  // Horas e outros custos digitados na OS em andamento: só gravam ao concluir a execução
+  const rascunhoDaExecucao = useRef(false);
   const handleCloseModal = () => {
     // Comentário digitado e não enviado não some calado ao fechar (SN-48)
     if (rascunhoDoComentario.current && !window.confirm('Há um comentário não enviado. Fechar e descartar?')) return;
+    if (
+      rascunhoDaExecucao.current &&
+      !window.confirm('As horas e os outros custos digitados só gravam ao concluir a execução. Fechar e descartar?')
+    )
+      return;
     rascunhoDoComentario.current = false;
+    rascunhoDaExecucao.current = false;
     setPendingAction(null);
     closeModal();
   };
@@ -404,6 +414,7 @@ export function ExecucaoOSPage() {
                 ehCliente={ehCliente}
                 onRecarregar={recarregar}
                 onRascunhoDoComentario={(tem) => (rascunhoDoComentario.current = tem)}
+                onRascunhoDaExecucao={(tem) => (rascunhoDaExecucao.current = tem)}
               />
             }
             onClose={handleCloseModal}

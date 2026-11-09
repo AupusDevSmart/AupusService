@@ -7,7 +7,10 @@ import { acoesDisponiveis, statusDaExecucao, type TemPermissao } from '../../con
 import { montarProgresso, tarefasPendentes, type ProgressoDaExecucao } from '../../utils/progresso-da-execucao';
 import { custoDoMaterialUsado, materiaisDaExecucao, type MaterialUsado } from '../../utils/recursos-usados';
 import { maoDeObraDasHoras, outrosDoPainel } from '../../utils/custo-ate-agora';
-import { ActionConfirmPanel, type DadosDaConfirmacao, type PendingAction, type RascunhoDoExecutar } from '../ActionConfirmPanel';
+import { tempoEfetivoAgora } from '../../utils/horas-da-equipe';
+import { useRascunhoDaExecucao } from '../../hooks/useRascunhoDaExecucao';
+import { ActionConfirmPanel, type DadosDaConfirmacao, type PendingAction } from '../ActionConfirmPanel';
+import { HorasDaEquipe } from '../HorasDaEquipe';
 import { AcoesDaOS } from '../AcoesDaOS';
 import { BotaoPdfDaOS } from '../BotaoPdfDaOS';
 import { OQueFoiFeito } from '../OQueFoiFeito';
@@ -17,6 +20,7 @@ import { CustosDaOS } from '../CustosDaOS';
 import { ConcluirExecucao } from '../ConcluirExecucao';
 import { HistoricoOSCard } from '../HistoricoOSCard';
 import { Secao, SecaoRecolhida } from './blocos';
+import { OutrosCustosDaOS } from './OutrosCustosDaOS';
 import {
   AvaliacaoDaOS,
   EquipeDaOS,
@@ -39,6 +43,8 @@ interface SheetDaExecucaoProps {
   onRecarregar: () => Promise<void>;
   /** Comentário digitado e não enviado: o sheet pergunta antes de fechar */
   onRascunhoDoComentario: (tem: boolean) => void;
+  /** Horas ou outros custos digitados e ainda não gravados (gravam ao concluir): idem */
+  onRascunhoDaExecucao?: (tem: boolean) => void;
 }
 
 const EM_ANDAMENTO = ['EM_EXECUCAO', 'PAUSADA'];
@@ -49,8 +55,12 @@ const EXECUTADA = ['EXECUTADA', 'AUDITADA', 'FINALIZADA'];
  * status, e cada seção aparece quando tem o que mostrar.
  *
  *   Resumo · Ações · O que foi feito · Materiais e ferramentas · Equipe ·
- *   Viatura · Fotos e documentos · Resultado · Avaliação · Custos ·
- *   Comentários · Histórico · Verificação · Concluir a execução
+ *   Outros custos · Viatura · Fotos e documentos · Resultado · Avaliação ·
+ *   Custos · Comentários · Histórico · Verificação · Concluir a execução
+ *
+ * O real de cada recurso se informa ao lado do previsto, na seção dele
+ * (07/nov/2026): material e ferramenta gravam na hora; as horas da equipe e os
+ * outros custos gravam ao concluir, que só confere o que falta.
  *
  * Antes eram dois sheets num: caixas no topo e o formulário desabilitado embaixo
  * (campos cinza que não se digitavam), com o que é a OS só depois do trabalho e
@@ -66,6 +76,7 @@ export function SheetDaExecucao({
   ehCliente,
   onRecarregar,
   onRascunhoDoComentario,
+  onRascunhoDaExecucao,
 }: SheetDaExecucaoProps) {
   const status = statusDaExecucao(os);
   const emAndamento = EM_ANDAMENTO.includes(status ?? '');
@@ -75,13 +86,19 @@ export function SheetDaExecucao({
   // As tarefas e o checklist vivos: "O que foi feito" grava item a item, e o
   // concluir precisa saber o que ainda está pendente
   const [progresso, setProgresso] = useState<ProgressoDaExecucao>(() => montarProgresso(os.tarefas_os ?? [], os.checklist ?? []));
-  // O material registrado agora e o que o painel de concluir tem digitado: o custo até agora
+  // O material registrado agora: o custo até agora
   const [materiaisVivos, setMateriaisVivos] = useState<MaterialUsado[] | null>(null);
-  const [rascunho, setRascunho] = useState<RascunhoDoExecutar | null>(null);
+  // As horas e os outros custos digitados nas seções, que o concluir manda
+  const rascunho = useRascunhoDaExecucao(os);
   useEffect(() => {
     setProgresso(montarProgresso(os.tarefas_os ?? [], os.checklist ?? []));
     setMateriaisVivos(null);
   }, [os]);
+  useEffect(() => {
+    onRascunhoDaExecucao?.(emAndamento && rascunho.alterado);
+    // Só quando muda: quem recebe guarda numa ref
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emAndamento, rascunho.alterado]);
 
   // Gravou; a releitura que falha não pode passar calada (o custo real na tela ficaria o de antes)
   const relerDepoisDeGravar = () => {
@@ -102,25 +119,23 @@ export function SheetDaExecucao({
   const soPlanejado = status === 'PENDENTE' || (status === 'CANCELADA' && !os.data_hora_inicio_real);
   const temRecursos = (os.materiaisConsumidos?.length ?? 0) + (os.ferramentasUtilizadas?.length ?? 0) > 0;
 
+  // Quem informa as horas e confere os outros custos: quem executa, com a OS em andamento
+  const informaNoSheet = emAndamento && podeExecutar;
+
   const custos = os.custos ? (
     <CustosDaOS
-      osId={os.id}
       status={status ?? ''}
       custos={os.custos}
-      itensOrcamento={os.itens_orcamento}
       aoVivo={
         emAndamento
           ? {
               // O material da OS lida é a base: a seção de materiais só avisa quando muda
               material: custoDoMaterialUsado(materiaisVivos ?? materiaisDaExecucao(os.materiaisConsumidos ?? [])),
-              maoDeObra: rascunho ? maoDeObraDasHoras(rascunho.horas, os.tecnicos) : null,
-              outros: rascunho && os.itens_orcamento ? outrosDoPainel(rascunho.outros) : null,
+              maoDeObra: maoDeObraDasHoras(rascunho.horas, os.tecnicos),
+              outros: rascunho.outros ? outrosDoPainel(rascunho.outros) : null,
             }
           : null
       }
-      // Na auditada, só quem gerencia: o auditor aprovou um custo (a API recusa igual)
-      podeCorrigir={status === 'AUDITADA' ? temPermissao('execucao_os.manage') : podeExecutar}
-      onCorrigido={onRecarregar}
     />
   ) : null;
 
@@ -138,7 +153,6 @@ export function SheetDaExecucao({
             onConfirm={onConfirmar}
             onVoltar={() => onAcao(null)}
             tarefasPendentes={pendentes}
-            podeInformarValorDaHora={temPermissao('execucao_os.manage')}
           />
         ) : (
           <div className="space-y-3">
@@ -178,7 +192,32 @@ export function SheetDaExecucao({
         </Secao>
       )}
 
-      <EquipeDaOS os={os} status={status} />
+      {informaNoSheet ? (
+        <Secao titulo="Equipe">
+          <HorasDaEquipe
+            osId={os.id}
+            linhas={rascunho.horas}
+            onChange={rascunho.setHoras}
+            tempoEfetivoMinutos={tempoEfetivoAgora(os)}
+            hhEstimado={os.hh_estimado}
+            podeInformarValorDaHora={temPermissao('execucao_os.manage')}
+          />
+        </Secao>
+      ) : (
+        <EquipeDaOS os={os} status={status} />
+      )}
+
+      <OutrosCustosDaOS
+        os={os}
+        status={status}
+        rascunho={rascunho.outros}
+        onRascunho={rascunho.setOutros}
+        podeConferir={informaNoSheet}
+        // Na auditada, só quem gerencia: o auditor aprovou um custo (a API recusa igual)
+        podeCorrigir={status === 'AUDITADA' ? temPermissao('execucao_os.manage') : podeExecutar}
+        onCorrigido={onRecarregar}
+      />
+
       <ViaturaDaOS os={os} />
 
       <Secao>
@@ -211,9 +250,9 @@ export function SheetDaExecucao({
             onConfirm={onConfirmar}
             tarefasPendentes={pendentes}
             totalDeTarefas={progresso.tarefas.length}
-            podeInformarValorDaHora={temPermissao('execucao_os.manage')}
+            horas={rascunho.horas}
+            outros={rascunho.outros}
             bloqueado={pendingAction && !concluindo ? 'Termine ou feche a ação aberta no topo antes de concluir.' : undefined}
-            onRascunho={setRascunho}
             custos={custos}
           />
         </Secao>

@@ -50,7 +50,7 @@ export function OutrosCustosEditor({ linhas, onChange, explicacao }: OutrosCusto
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-sm font-medium">Outros custos</p>
+        <h3 className="text-sm font-medium">Outros custos</h3>
         <p className="text-xs text-muted-foreground">
           {explicacao ?? 'Veículo, hospedagem, alimentação, instrumentos e terceiros: confira quanto custou cada um. O que não estava previsto, lance abaixo.'}
         </p>

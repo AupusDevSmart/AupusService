@@ -22,6 +22,9 @@ import { dataHora, texto } from './formato';
 export type OSDoSheet = ExecucaoOS & {
   tempoEfetivo?: string;
   hhReal?: string;
+  hh_estimado?: number;
+  tempo_efetivo_minutos?: number | null;
+  tempo_efetivo_lido_em?: number;
   codigoVerificacao?: string;
   finalizada_em?: string | null;
   incidentes_seguranca?: string | null;

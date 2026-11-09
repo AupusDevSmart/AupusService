@@ -101,6 +101,27 @@ describe('HorasDaEquipe — quem entrou na hora', () => {
     expect(screen.queryByRole('button', { name: 'Usar as horas previstas' })).toBeNull();
   });
 
+  it('o campo começa vazio, com as previstas em cinza; "Usar o tempo efetivo" preenche a equipe (o HH não sai da estimativa calado)', async () => {
+    const vagas = linhasIniciais(
+      [
+        { id: 'T1', especialidade: 'Hora técnica', horas_estimadas: 6.5 },
+        { id: 'T2', especialidade: 'Eletricista', horas_estimadas: 5.25 },
+      ],
+      null,
+    );
+    renderWithProviders(<ComEstado inicial={vagas} />);
+    const usuario = userEvent.setup();
+
+    const campo = screen.getByLabelText('Hora técnica (sem pessoa)');
+    expect(campo).toHaveValue('');
+    expect(campo).toHaveAttribute('placeholder', '6h30');
+
+    // O dono de teste tem 90 min de tempo efetivo
+    await usuario.click(screen.getByRole('button', { name: 'Usar o tempo efetivo (1h30)' }));
+    expect(screen.getByTestId('linhas').textContent).toBe('Hora técnica (sem pessoa)=1.5;Eletricista (sem pessoa)=1.5');
+    expect(screen.queryByRole('button', { name: /Usar o tempo efetivo/ })).toBeNull();
+  });
+
   it('o valor da hora de quem entrou só aparece para quem gerencia a OS', async () => {
     const extra = [...ana, { chave: 'U2', tecnicoId: 'U2', nome: 'Paula Planejadora', detalhe: '', horas: 1, extra: true, registradaAntes: false }];
     const { unmount } = renderWithProviders(<ComEstado inicial={extra} />);

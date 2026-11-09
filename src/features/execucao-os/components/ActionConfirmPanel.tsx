@@ -1,5 +1,5 @@
 // src/features/execucao-os/components/ActionConfirmPanel.tsx
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,23 +7,9 @@ import { Play, Pause, RotateCcw, Wrench, ClipboardCheck, CheckCircle, Undo2, Ban
 import { AvaliacaoEstrelas } from './AvaliacaoEstrelas';
 import { CampoDeNumero } from '@/components/common/CampoDeNumero';
 import { AVISO_DE_KM, kmNoCampo, lerKmDigitado } from '@/utils/leitura';
-import { HorasDaEquipe } from './HorasDaEquipe';
-import { OutrosCustosEditor } from './OutrosCustosEditor';
 import { duracaoLegivel } from '@/utils/horas';
-import {
-  horasDoPedido,
-  linhasIniciais,
-  pendenciaDasHoras,
-  tempoEfetivoAgora,
-  type LinhaDeHoras,
-  type TecnicoDaOS,
-} from '@/features/execucao-os/utils/horas-da-equipe';
-import {
-  linhasDosOutrosCustos,
-  outrosCustosDoPedido,
-  pendenciaDosOutrosCustos,
-  type LinhaDeOutroCusto,
-} from '@/features/execucao-os/utils/outros-custos';
+import { horasDoPedido, pendenciaDasHoras, type LinhaDeHoras } from '@/features/execucao-os/utils/horas-da-equipe';
+import { outrosCustosDoPedido, pendenciaDosOutrosCustos, type LinhaDeOutroCusto } from '@/features/execucao-os/utils/outros-custos';
 import type { ItemOrcamento } from '@/features/programacao-os/types';
 import type { OutroCustoPedido } from '@/features/execucao-os/types/custos';
 
@@ -48,16 +34,11 @@ type OSDoPainel =
       problemas_encontrados?: string | null;
       recomendacoes?: string | null;
       incidentes_seguranca?: string | null;
-      // SN-93: os outros custos do orçamento, para conferir no Executar
+      // SN-93: com a lista do orçamento, os outros custos vão no Executar (sem ela, não: apagaria os não previstos)
       itens_orcamento?: ItemOrcamento[];
-      // SN-61: a equipe, para as horas trabalhadas, que começam no tempo efetivo
       id?: string;
       status?: string;
       statusExecucao?: string;
-      tecnicos?: TecnicoDaOS[];
-      tempo_efetivo_minutos?: number | null;
-      tempo_efetivo_lido_em?: number;
-      hh_estimado?: number;
     }
   | null
   | undefined;
@@ -370,23 +351,15 @@ interface ActionConfirmPanelProps {
    */
   tarefasPendentes?: { id: string; nome: string }[];
   /**
-   * Quem gerencia a OS (`execucao_os.manage`) informa o valor da hora de quem
-   * entrou na execução; quem só executa informa as horas (SN-93: a API recusa)
+   * Executar: as horas de cada pessoa e os outros custos, digitados nas seções
+   * Equipe e Outros custos do sheet, ao lado do previsto (07/nov/2026). O painel
+   * não os edita mais: confere (o botão espera, dizendo onde falta) e manda.
    */
-  podeInformarValorDaHora?: boolean;
-  /**
-   * Executar: as horas e os outros custos como estão no painel, a cada mudança,
-   * e null ao fechar. O quadro de custos mostra o custo até agora com eles.
-   */
-  onRascunho?: (rascunho: RascunhoDoExecutar | null) => void;
+  horas?: LinhaDeHoras[];
+  /** null ou ausente: a OS veio sem a lista do orçamento, e nada vai (mandar apagaria os não previstos) */
+  outros?: LinhaDeOutroCusto[] | null;
   /** Logo antes do botão de confirmar: no Executar, o quadro de custos com o que foi digitado */
   antesDoBotao?: ReactNode;
-}
-
-/** O que o painel do Executar tem digitado e ainda não gravou */
-export interface RascunhoDoExecutar {
-  horas: LinhaDeHoras[];
-  outros: LinhaDeOutroCusto[];
 }
 
 export function ActionConfirmPanel({
@@ -396,8 +369,8 @@ export function ActionConfirmPanel({
   onVoltar,
   rotuloVoltar = 'Escolher outra ação',
   tarefasPendentes = [],
-  podeInformarValorDaHora = false,
-  onRascunho,
+  horas = [],
+  outros = null,
   antesDoBotao,
 }: ActionConfirmPanelProps) {
   const config = actionConfig[action];
@@ -420,26 +393,10 @@ export function ActionConfirmPanel({
   const detalhes = visiveis.filter((f) => pela(f.detalhe));
   const obrigatorio = (f: ActionField) => pela(f.required);
   const [motivos, setMotivos] = useState<Record<string, string>>({});
-  // SN-61: as horas de cada pessoa da equipe, e quem entrou na hora. O tempo
-  // efetivo é o de agora, ao escolher Executar, não o de quando o sheet abriu
-  const [tempoEfetivo] = useState(() => (action === 'executar' ? tempoEfetivoAgora(entity) : null));
-  const [horas, setHoras] = useState<LinhaDeHoras[]>(() =>
-    action === 'executar' ? linhasIniciais(entity?.tecnicos, tempoEfetivo) : [],
-  );
+  // SN-61 e SN-93: as horas e os outros custos vêm das seções do sheet; aqui, o que falta neles
   const pendenciaHoras = action === 'executar' ? pendenciaDasHoras(horas) : null;
-  // SN-93 (D2): os outros custos, com o previsto já preenchido para conferir
-  const [outros, setOutros] = useState<LinhaDeOutroCusto[]>(() =>
-    action === 'executar' ? linhasDosOutrosCustos(entity?.itens_orcamento) : [],
-  );
-  const pendenciaOutros = action === 'executar' ? pendenciaDosOutrosCustos(outros) : null;
-  useEffect(() => {
-    if (action === 'executar') onRascunho?.({ horas, outros });
-    // Só quando o digitado muda; quem recebe guarda num estado
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [horas, outros]);
-  // Fechou (ou confirmou): o custo volta a ser o da OS lida
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => () => onRascunho?.(null), []);
+  const listaDosOutros = action === 'executar' && entity?.itens_orcamento && outros ? outros : null;
+  const pendenciaOutros = listaDosOutros ? pendenciaDosOutrosCustos(listaDosOutros) : null;
   const [submitting, setSubmitting] = useState(false);
 
   const setValue = (key: string, value: unknown) => setValues((prev) => ({ ...prev, [key]: value }));
@@ -503,7 +460,7 @@ export function ActionConfirmPanel({
       if (action === 'executar') Object.assign(payload, horasDoPedido(horas));
       // A lista inteira, mesmo vazia: o não previsto tirado no reexecutar ficava no custo, calado. Sem a
       // lista da OS (a linha da tabela não a traz), não vai: a API deixa os itens como estão
-      if (action === 'executar' && entity?.itens_orcamento) payload.outros_custos = outrosCustosDoPedido(outros);
+      if (listaDosOutros) payload.outros_custos = outrosCustosDoPedido(listaDosOutros);
       // As chaves são as dos campos da ação (actionConfig), com o valor já convertido
       await onConfirm(payload as DadosDaConfirmacao);
     } finally {
@@ -661,29 +618,6 @@ export function ActionConfirmPanel({
       )}
       {!avisoDaParada && tempoParado && <p className="text-xs text-muted-foreground">Parado por {tempoParado}</p>}
 
-      {action === 'executar' && (
-        <div className="space-y-1.5">
-          <HorasDaEquipe
-            osId={entity?.id}
-            linhas={horas}
-            onChange={setHoras}
-            tempoEfetivoMinutos={tempoEfetivo}
-            hhEstimado={entity?.hh_estimado}
-            podeInformarValorDaHora={podeInformarValorDaHora}
-          />
-          {/* O botão fica cinza por isto: o motivo à vista */}
-          {pendenciaHoras && <p className="text-xs text-muted-foreground">{pendenciaHoras}</p>}
-        </div>
-      )}
-
-      {/* Só com a lista da OS: sem ela, o que se lançasse aqui não iria (e mandar apagaria os não previstos que já existem) */}
-      {action === 'executar' && entity?.itens_orcamento && (
-        <div className="space-y-1.5">
-          <OutrosCustosEditor linhas={outros} onChange={setOutros} />
-          {pendenciaOutros && <p className="text-xs text-muted-foreground">{pendenciaOutros}</p>}
-        </div>
-      )}
-
       {detalhes.length > 0 && (
         <details>
           <summary className="cursor-pointer text-sm text-muted-foreground">Mais detalhes</summary>
@@ -692,6 +626,14 @@ export function ActionConfirmPanel({
       )}
 
       {antesDoBotao}
+
+      {/* O botão fica cinza por isto: o motivo à vista, e a seção onde se corrige */}
+      {(pendenciaHoras || pendenciaOutros) && (
+        <div className="space-y-1 text-xs text-muted-foreground" role="status">
+          {pendenciaHoras && <p>Equipe: {pendenciaHoras}</p>}
+          {pendenciaOutros && <p>Outros custos: {pendenciaOutros}</p>}
+        </div>
+      )}
 
       <Button
         type="button"

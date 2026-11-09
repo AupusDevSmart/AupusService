@@ -10,7 +10,8 @@ const base = {
   onConfirm: vi.fn().mockResolvedValue(undefined),
   entity: { id: 'OS1', status: 'EM_EXECUCAO', tecnicos: [] },
   totalDeTarefas: 3,
-  podeInformarValorDaHora: false,
+  horas: [],
+  outros: null,
 };
 
 /**
@@ -41,15 +42,14 @@ describe('ConcluirExecucao', () => {
     expect(screen.getByRole('button', { name: 'Fechar sem concluir' })).toBeInTheDocument();
   });
 
-  it('aberto: o quadro de custos vem depois das horas e dos outros custos, logo antes do botão', () => {
-    render(
-      <ConcluirExecucao {...base} aberto tarefasPendentes={[]} custos={<p>Quadro de custos</p>} />,
-    );
+  it('aberto: o quadro de custos vem depois do resultado, logo antes do botão; horas e outros custos ficam nas seções deles', () => {
+    render(<ConcluirExecucao {...base} aberto tarefasPendentes={[]} custos={<p>Quadro de custos</p>} />);
     const quadro = screen.getByText('Quadro de custos');
-    const horas = screen.getByText('Horas trabalhadas');
+    const resultado = screen.getByLabelText(/Resultado do serviço/);
     const confirmar = screen.getByRole('button', { name: /Confirmar execução/ });
-    expect(horas.compareDocumentPosition(quadro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(resultado.compareDocumentPosition(quadro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(quadro.compareDocumentPosition(confirmar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText('Horas trabalhadas')).toBeNull();
   });
 
   it('com tudo feito, não pede motivo', () => {

@@ -29,7 +29,8 @@ const os = (mudar: Partial<OSDoSheet> = {}): OSDoSheet =>
     materiaisConsumidos: [{ id: 'M1', descricao: 'Graxa', quantidade_planejada: 2, unidade: 'kg' }],
     ferramentasUtilizadas: [],
     tecnicos: [{ id: 'T1', nome: '', especialidade: 'Eletricista', horas_estimadas: 5.25 }],
-    custos: { naturezas: [] },
+    custos: { naturezas: [], outros: [] },
+    itens_orcamento: [{ id: 'I1', descricao: 'L200', valor: 75, natureza: 'VEICULO' }],
     historico: [],
     ...mudar,
   }) as unknown as OSDoSheet;
@@ -70,6 +71,7 @@ describe('SheetDaExecucao', () => {
       'O que foi feito',
       'Materiais e ferramentas usados',
       'Equipe',
+      'Outros custos',
       'Fotos e documentos',
       'Custos',
       'Comentários',

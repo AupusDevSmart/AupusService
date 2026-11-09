@@ -1,14 +1,7 @@
 // src/features/execucao-os/components/CustosDaOS.tsx
-import { useState } from 'react';
-import { Loader2, Pencil } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { DicaDaConta } from '@/components/common/ComoSeCalcula';
 import { formatCurrency } from '@/lib/utils';
-import { toast } from '@/hooks/use-toast';
-import { formatApiError } from '@/utils/api-error';
 import { formatarHoras } from '@/utils/horas';
-import { execucaoOSApi } from '@/services/execucao-os.service';
-import type { ItemOrcamento } from '@/features/programacao-os/types';
 import type { ResumoDoCusto } from '@/features/execucao-os/types/custos';
 import {
   diferencaDoPrevisto,
@@ -19,25 +12,10 @@ import {
   valorDaInstrucao,
   type SentidoDaDiferenca,
 } from '@/features/execucao-os/utils/custos-da-os';
-import {
-  linhasDosOutrosCustos,
-  outrosCustosDoPedido,
-  pendenciaDosOutrosCustos,
-  type LinhaDeOutroCusto,
-} from '@/features/execucao-os/utils/outros-custos';
-import { OutrosCustosEditor } from './OutrosCustosEditor';
 import { naturezasAteAgora, totalAteAgora, type CustoAoVivo } from '@/features/execucao-os/utils/custo-ate-agora';
 
 /** Os status em que o custo real já foi apurado (o Executar grava as horas e os outros custos) */
 const APURADO = new Set(['EXECUTADA', 'AUDITADA', 'FINALIZADA']);
-/**
- * Onde os outros custos se corrigem: depois do Executar, antes de finalizar (a
- * finalizada está selada no código). Em execução quem confere é o painel do
- * Executar, que manda a lista inteira: a correção feita com ele aberto era
- * sobrescrita pela lista que ele já tinha.
- */
-const CORRIGIVEL = new Set(['EXECUTADA', 'AUDITADA']);
-
 const COR_DA_DIFERENCA: Record<SentidoDaDiferenca, string> = {
   acima: 'text-amber-600 dark:text-amber-500',
   abaixo: 'text-emerald-600 dark:text-emerald-400',
@@ -52,33 +30,25 @@ const COMO_SE_CALCULA = [
 ];
 
 interface CustosDaOSProps {
-  osId: string;
   status: string;
   custos?: ResumoDoCusto;
-  itensOrcamento?: ItemOrcamento[];
-  /** Quem corrige os outros custos depois do Executar (as permissões de registrar consumo) */
-  podeCorrigir: boolean;
-  /** Depois de corrigir: a OS relida, com o resumo novo (a conta é da API) */
-  onCorrigido: () => Promise<void>;
   /**
    * OS em andamento: o que a tela já sabe melhor que a OS lida (o material
-   * registrado agora; com o painel de concluir aberto, as horas e os outros
-   * custos digitados). Com ele, o quadro mostra o custo até agora, que muda a
-   * cada registro; sem ele, o real só aparece depois do Executar.
+   * registrado, as horas e os outros custos digitados nas seções). Com ele, o
+   * quadro mostra o custo até agora, que muda a cada registro; sem ele, o real
+   * só aparece depois do Executar.
    */
   aoVivo?: CustoAoVivo | null;
 }
 
 /**
  * O custo da OS no sheet (SN-93), com destaque: o real contra o previsto, por
- * natureza, por instrução e o detalhe de cada pessoa, material e outro custo. A
- * conta é da API (a mesma do PDF e do custo real gravado). Os outros custos se
- * corrigem aqui até a auditoria.
+ * natureza, por instrução e, depois de executar, o detalhe de cada pessoa,
+ * material e outro custo. A conta é da API (a mesma do PDF e do custo real
+ * gravado). Desde 07/nov/2026 é só o resumo: as horas, o material e os outros
+ * custos se informam (e se corrigem) nas seções deles, ao lado do previsto.
  */
-export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir, onCorrigido, aoVivo: vivo = null }: CustosDaOSProps) {
-  const [corrigindo, setCorrigindo] = useState(false);
-  const [linhas, setLinhas] = useState<LinhaDeOutroCusto[]>([]);
-  const [gravando, setGravando] = useState(false);
+export function CustosDaOS({ status, custos, aoVivo: vivo = null }: CustosDaOSProps) {
   if (!custos) return null;
 
   const apurado = APURADO.has(status);
@@ -88,51 +58,17 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
   const todasAsNaturezas = aoVivo ? naturezasAteAgora(custos.naturezas, vivo) : custos.naturezas;
   const ateAgora = aoVivo ? totalAteAgora(todasAsNaturezas) : null;
   const mostraReal = apurado || aoVivo;
-  const comHorasDigitadas = aoVivo && vivo.maoDeObra !== null && vivo.maoDeObra !== undefined;
   // Na OS finalizada antes do SN-93 os outros custos ficam fora do real: o previsto comparado também
   const previsto = custos.outros_fora_do_total ? custos.previsto : (custos.orcamento_previsto ?? custos.previsto);
   const diferenca = diferencaDoPrevisto(previsto, ateAgora ?? custos.real);
-  const pendencia = corrigindo ? pendenciaDosOutrosCustos(linhas) : null;
   const naturezas = todasAsNaturezas.filter((n) => n.previsto > 0 || (n.real ?? 0) > 0);
   const resumo = resumoDasInstrucoes(custos);
-
-  const abrirCorrecao = () => {
-    setLinhas(linhasDosOutrosCustos(itensOrcamento));
-    setCorrigindo(true);
-  };
-  const salvar = async () => {
-    if (pendencia || gravando) return;
-    setGravando(true);
-    try {
-      await execucaoOSApi.registrarOutrosCustos(osId, outrosCustosDoPedido(linhas));
-    } catch (error) {
-      toast({ title: 'Não foi possível salvar os outros custos', description: formatApiError(error), variant: 'destructive' });
-      setGravando(false);
-      return;
-    }
-    toast({ title: 'Outros custos salvos' });
-    setCorrigindo(false);
-    // Gravou: a releitura que falha não pode dizer que não salvou
-    try {
-      await onCorrigido();
-    } catch (error) {
-      toast({ title: 'Salvo, mas a OS não foi relida', description: `Feche e abra a OS para ver o custo novo. ${formatApiError(error)}`, variant: 'destructive' });
-    } finally {
-      setGravando(false);
-    }
-  };
 
   return (
     <section className="space-y-4" aria-label="Custos da OS">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-medium">Custos</h3>
         <DicaDaConta rotulo="o custo da OS" linhas={COMO_SE_CALCULA} className="h-3.5 w-3.5" />
-        {podeCorrigir && CORRIGIVEL.has(status) && !corrigindo && (
-          <Button type="button" variant="outline" size="sm" className="ml-auto h-8" onClick={abrirCorrecao}>
-            <Pencil className="mr-1 h-3.5 w-3.5" />
-            Corrigir outros custos
-          </Button>
-        )}
       </div>
 
       {/* O número que importa, em destaque: o real contra o previsto */}
@@ -146,9 +82,7 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
           </p>
           {aoVivo && (
             <p className="text-xs text-muted-foreground">
-              {comHorasDigitadas
-                ? 'com as horas e os outros custos do painel de concluir; grava ao confirmar'
-                : 'material usado, mão de obra prevista e outros custos previstos; as horas trabalhadas entram ao concluir'}
+              material usado, horas da equipe (as previstas enquanto vazias) e outros custos; grava ao concluir
             </p>
           )}
         </div>
@@ -230,25 +164,8 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
         </div>
       )}
 
-      {corrigindo ? (
-        <div className="space-y-2">
-          <OutrosCustosEditor
-            linhas={linhas}
-            onChange={setLinhas}
-            explicacao="Corrija o que custou cada um e lance o que faltou. O custo real da OS é refeito ao salvar."
-          />
-          {pendencia && <p className="text-xs text-muted-foreground">{pendencia}</p>}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setCorrigindo(false)} disabled={gravando}>
-              Cancelar
-            </Button>
-            <Button type="button" size="sm" onClick={salvar} disabled={Boolean(pendencia) || gravando}>
-              {gravando && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-              Salvar outros custos
-            </Button>
-          </div>
-        </div>
-      ) : (
+      {/* Em execução o detalhe repetiria as seções Equipe, Materiais e Outros custos, onde se informa cada um */}
+      {!aoVivo && (
         <details>
           <summary className="cursor-pointer text-sm text-muted-foreground">O detalhe: cada pessoa, material e outro custo</summary>
           <div className="mt-3 space-y-3 text-sm">

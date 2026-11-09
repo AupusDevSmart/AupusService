@@ -2,7 +2,9 @@
 import type { ReactNode } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ActionConfirmPanel, type DadosDaConfirmacao, type RascunhoDoExecutar } from './ActionConfirmPanel';
+import type { LinhaDeHoras } from '../utils/horas-da-equipe';
+import type { LinhaDeOutroCusto } from '../utils/outros-custos';
+import { ActionConfirmPanel, type DadosDaConfirmacao } from './ActionConfirmPanel';
 
 type EntidadeDoPainel = Parameters<typeof ActionConfirmPanel>[0]['entity'];
 
@@ -16,23 +18,22 @@ interface ConcluirExecucaoProps {
   /** As tarefas ainda pendentes: cada uma pede o motivo */
   tarefasPendentes: { id: string; nome: string }[];
   totalDeTarefas: number;
-  podeInformarValorDaHora: boolean;
+  /** As horas e os outros custos digitados nas seções Equipe e Outros custos: vão no Executar */
+  horas: LinhaDeHoras[];
+  outros: LinhaDeOutroCusto[] | null;
   /** Outro painel de ação aberto no topo (pausar, cancelar): o botão espera, com o motivo */
   bloqueado?: string;
-  /** As horas e os outros custos digitados, para o custo até agora */
-  onRascunho?: (rascunho: RascunhoDoExecutar | null) => void;
-  /** O quadro de custos: dentro do painel, depois das horas e dos outros custos e antes do botão */
+  /** O quadro de custos: dentro do painel, logo antes do botão */
   custos?: ReactNode;
 }
 
 /**
  * O fim do sheet da OS em andamento (06/nov/2026): marca-se o que foi feito,
- * registra-se o que foi usado, e aqui, por último, justifica-se o que faltou e
- * conclui-se. Antes o painel do Executar abria no topo, e os motivos das tarefas
- * não feitas vinham antes de marcar as feitas.
+ * registra-se o que foi usado (material, horas, outros custos, cada um ao lado
+ * do previsto) e aqui, por último, justifica-se o que faltou e conclui-se.
  *
- * O painel só monta ao clicar: as horas da equipe começam no tempo efetivo de
- * quando se escolhe concluir, não de quando o sheet abriu.
+ * Nenhuma ação rola o sheet (pedido do usuário, 07/nov/2026): o Executar da
+ * tabela abre o sheet no topo, com este painel já aberto no fim.
  */
 export function ConcluirExecucao({
   aberto,
@@ -42,29 +43,24 @@ export function ConcluirExecucao({
   onConfirm,
   tarefasPendentes,
   totalDeTarefas,
-  podeInformarValorDaHora,
+  horas,
+  outros,
   bloqueado,
-  onRascunho,
   custos,
 }: ConcluirExecucaoProps) {
-  // Sem rolar sozinho (pedido do usuário, 07/nov/2026): nenhuma ação mexe na rolagem do sheet.
-  // O Executar escolhido na tabela abre o sheet no topo, com este painel já aberto no fim
-
   if (aberto) {
     return (
-      <div>
-        <ActionConfirmPanel
-          action="executar"
-          entity={entity}
-          onConfirm={onConfirm}
-          onVoltar={onFechar}
-          rotuloVoltar="Fechar sem concluir"
-          tarefasPendentes={tarefasPendentes}
-          podeInformarValorDaHora={podeInformarValorDaHora}
-          onRascunho={onRascunho}
-          antesDoBotao={custos}
-        />
-      </div>
+      <ActionConfirmPanel
+        action="executar"
+        entity={entity}
+        onConfirm={onConfirm}
+        onVoltar={onFechar}
+        rotuloVoltar="Fechar sem concluir"
+        tarefasPendentes={tarefasPendentes}
+        horas={horas}
+        outros={outros}
+        antesDoBotao={custos}
+      />
     );
   }
 
@@ -75,9 +71,9 @@ export function ConcluirExecucao({
         <h3 className="text-sm font-medium">Concluir a execução</h3>
         <p className="text-xs text-muted-foreground">
           {totalDeTarefas === 0
-            ? 'Ao concluir, informe o resultado do serviço e as horas de quem trabalhou.'
+            ? 'Ao concluir, informe o resultado do serviço.'
             : faltam === 0
-              ? 'Todas as tarefas estão feitas. Ao concluir, informe o resultado e as horas de quem trabalhou.'
+              ? 'Todas as tarefas estão feitas. Ao concluir, informe o resultado do serviço.'
               : `${faltam === 1 ? 'Falta 1 tarefa' : `Faltam ${faltam} tarefas`} de ${totalDeTarefas}. Se não der para fazer, ao concluir você informa o motivo, e ela volta para a agenda.`}
         </p>
       </div>
