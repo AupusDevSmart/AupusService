@@ -36,7 +36,6 @@ export { useExecucaoOSFilters } from './hooks/useExecucaoOSFilters';
 // Exportar configurações
 export { execucaoOSTableColumns } from './config/table-config';
 export { execucaoOSFilterConfig } from './config/filter-config';
-export { execucaoOSFormFields, execucaoOSFormGroups } from './config/form-config';
 export { createExecucaoOSTableActions } from './config/actions-config';
 
 // Exportar utilitários

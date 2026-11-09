@@ -109,7 +109,7 @@ export function HistoricoOSCard({ historico = [] }: HistoricoOSCardProps) {
   );
 
   return (
-    <div className="border border-border rounded-md divide-y divide-border">
+    <div className="divide-y divide-border">
       {entradas.map((entrada) => {
         const quando = formatarQuando(entrada.data);
         const transicao =
@@ -120,7 +120,7 @@ export function HistoricoOSCard({ historico = [] }: HistoricoOSCardProps) {
             : null;
 
         return (
-          <div key={entrada.id} className="px-3 py-2 space-y-0.5">
+          <div key={entrada.id} className="py-2 space-y-0.5">
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-sm font-medium text-foreground">
                 {rotuloDaAcao(entrada.acao)}

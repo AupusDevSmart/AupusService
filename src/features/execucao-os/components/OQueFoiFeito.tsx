@@ -172,7 +172,7 @@ export function OQueFoiFeito({ osId, status, progresso, editavel, onChange }: OQ
       {progresso.tarefas.map((tarefa) => {
         const pendente = tarefa.status === 'PENDENTE';
         return (
-          <div key={tarefa.id} className="rounded-md border p-3 space-y-2">
+          <div key={tarefa.id} className="space-y-2 border-t border-border pt-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex min-w-0 items-center gap-2">
                 {tarefa.status === 'CONCLUIDA' ? (

@@ -1,5 +1,20 @@
 import type { FerramentaOS, MaterialOS } from '../types';
-import type { RegistroDeFerramenta, RegistroDeMaterial } from './registro-da-execucao';
+
+/** O que `PATCH :id/materiais` grava de cada item (só item que a OS já tem) */
+export interface RegistroDeMaterial {
+  id: string;
+  quantidade_consumida: number;
+  observacoes?: string;
+}
+
+/** O que `PATCH :id/ferramentas` grava de cada item */
+export interface RegistroDeFerramenta {
+  id: string;
+  utilizada: boolean;
+  condicao_antes?: string;
+  condicao_depois?: string;
+  observacoes?: string;
+}
 
 /** Material da OS como a seção "Materiais e ferramentas usados" o mostra */
 export interface MaterialUsado {

@@ -1,5 +1,5 @@
 // src/features/execucao-os/components/ConcluirExecucao.tsx
-import { useEffect, useRef, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ActionConfirmPanel, type DadosDaConfirmacao, type RascunhoDoExecutar } from './ActionConfirmPanel';
@@ -47,17 +47,12 @@ export function ConcluirExecucao({
   onRascunho,
   custos,
 }: ConcluirExecucaoProps) {
-  // O Executar escolhido na tabela abre o sheet com o painel já aberto, no fim:
-  // sem rolar, ele ficava fora da tela
-  const lugar = useRef<HTMLDivElement>(null);
-  const abertoAoMontar = useRef(aberto);
-  useEffect(() => {
-    if (abertoAoMontar.current) lugar.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-  }, []);
+  // Sem rolar sozinho (pedido do usuário, 07/nov/2026): nenhuma ação mexe na rolagem do sheet.
+  // O Executar escolhido na tabela abre o sheet no topo, com este painel já aberto no fim
 
   if (aberto) {
     return (
-      <div ref={lugar}>
+      <div>
         <ActionConfirmPanel
           action="executar"
           entity={entity}

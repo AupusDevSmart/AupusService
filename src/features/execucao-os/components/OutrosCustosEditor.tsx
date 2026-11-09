@@ -48,7 +48,7 @@ export function OutrosCustosEditor({ linhas, onChange, explicacao }: OutrosCusto
   );
 
   return (
-    <div className="space-y-3 rounded-md border p-3">
+    <div className="space-y-3">
       <div>
         <p className="text-sm font-medium">Outros custos</p>
         <p className="text-xs text-muted-foreground">

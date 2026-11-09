@@ -24,10 +24,14 @@ interface RecursosUsadosProps {
   osId: string;
   materiais?: MaterialOS[];
   ferramentas?: FerramentaOS[];
-  /** OS em execução ou pausada, e quem olha pode registrar; senão, só leitura */
+  /** Quem olha pode registrar, e a OS aceita (em execução; depois de executar, até a auditoria) */
   editavel: boolean;
+  /** OS que ainda não começou: só o planejado, sem o "usado" */
+  soPlanejado?: boolean;
   /** O material como está na tela, a cada mudança: o custo até agora vem daqui */
   onMateriais?: (materiais: MaterialUsado[]) => void;
+  /** Depois de gravar (na OS executada, a API refaz o custo real: quem chama relê a OS) */
+  onGravado?: () => void;
 }
 
 /**
@@ -39,7 +43,17 @@ interface RecursosUsadosProps {
  * marcar. Só o que a OS já tem (as rotas `PATCH :id/materiais` e
  * `:id/ferramentas` não criam item).
  */
-export function RecursosUsados({ osId, materiais = [], ferramentas = [], editavel, onMateriais }: RecursosUsadosProps) {
+export function RecursosUsados({
+  osId,
+  materiais = [],
+  ferramentas = [],
+  editavel: podeEditar,
+  soPlanejado = false,
+  onMateriais,
+  onGravado,
+}: RecursosUsadosProps) {
+  const editavel = podeEditar && !soPlanejado;
+  const titulo = soPlanejado ? 'Materiais e ferramentas planejados' : 'Materiais e ferramentas usados';
   const [mats, setMats] = useState<MaterialUsado[]>(() => materiaisDaExecucao(materiais));
   const [ferrs, setFerrs] = useState<FerramentaUsada[]>(() => ferramentasDaExecucao(ferramentas));
   const [gravando, setGravando] = useState(false);
@@ -56,7 +70,7 @@ export function RecursosUsados({ osId, materiais = [], ferramentas = [], editave
   if (mats.length === 0 && ferrs.length === 0) {
     return (
       <div className="space-y-1">
-        <h3 className="text-sm font-medium">Materiais e ferramentas usados</h3>
+        <h3 className="text-sm font-medium">{titulo}</h3>
         <p className="text-sm text-muted-foreground">Nenhum material ou ferramenta planejado para esta OS.</p>
       </div>
     );
@@ -76,6 +90,7 @@ export function RecursosUsados({ osId, materiais = [], ferramentas = [], editave
     return naFila(async () => {
       try {
         await execucaoOSApi.registrarMateriais(osId, mudados.map(pedidoDoMaterial));
+        onGravado?.();
       } catch (error) {
         // Volta só o item que ainda mostra o que este pedido mandou: se a pessoa já mudou de novo,
         // o valor novo é o que vale (e vai no pedido seguinte da fila)
@@ -95,6 +110,7 @@ export function RecursosUsados({ osId, materiais = [], ferramentas = [], editave
     return naFila(async () => {
       try {
         await execucaoOSApi.registrarFerramentas(osId, mudadas.map(pedidoDaFerramenta));
+        onGravado?.();
       } catch (error) {
         setFerrs((atuais) =>
           trocarPorId(atuais, antes.filter((a) => atuais.find((x) => x.id === a.id)?.utilizada === mudadas.find((f) => f.id === a.id)?.utilizada)),
@@ -120,7 +136,7 @@ export function RecursosUsados({ osId, materiais = [], ferramentas = [], editave
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-medium">Materiais e ferramentas usados</h3>
+          <h3 className="text-sm font-medium">{titulo}</h3>
           {editavel && (
             <p className="text-xs text-muted-foreground">Informe quanto usou de cada material e marque as ferramentas usadas. Salva sozinho.</p>
           )}
@@ -139,8 +155,9 @@ export function RecursosUsados({ osId, materiais = [], ferramentas = [], editave
             <Package className="h-3.5 w-3.5" aria-hidden />
             Materiais
           </p>
+          <div className="divide-y divide-border">
           {mats.map((m) => (
-            <div key={m.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md border px-3 py-2">
+            <div key={m.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm">{m.descricao}</p>
                 <p className="text-xs text-muted-foreground">Planejado: {quantidadeLegivel(m.planejada, m.unidade)}</p>
@@ -168,11 +185,12 @@ export function RecursosUsados({ osId, materiais = [], ferramentas = [], editave
                     </Button>
                   )}
                 </div>
-              ) : (
+              ) : soPlanejado ? null : (
                 <span className="text-sm">Usado: {quantidadeLegivel(m.consumida, m.unidade)}</span>
               )}
             </div>
           ))}
+          </div>
         </div>
       )}
 
@@ -182,28 +200,32 @@ export function RecursosUsados({ osId, materiais = [], ferramentas = [], editave
             <Wrench className="h-3.5 w-3.5" aria-hidden />
             Ferramentas
           </p>
+          <div className="divide-y divide-border">
           {ferrs.map((f) => (
             <label
               key={f.id}
-              className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm"
+              className="flex items-center justify-between gap-3 py-2 text-sm"
             >
               <span className="min-w-0 flex-1">
                 <span className="block truncate">{f.descricao}</span>
                 <span className="block text-xs text-muted-foreground">{quantidadeLegivel(f.quantidade, f.unidade)}</span>
               </span>
-              <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                {f.utilizada ? 'Usada' : 'Não usada'}
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-border"
-                  checked={f.utilizada}
-                  disabled={!editavel}
-                  onChange={(e) => gravarFerramentas([{ ...f, utilizada: e.target.checked }])}
-                  aria-label={`${f.descricao} usada`}
-                />
-              </span>
+              {!soPlanejado && (
+                <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {f.utilizada ? 'Usada' : 'Não usada'}
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-border"
+                    checked={f.utilizada}
+                    disabled={!editavel}
+                    onChange={(e) => gravarFerramentas([{ ...f, utilizada: e.target.checked }])}
+                    aria-label={`${f.descricao} usada`}
+                  />
+                </span>
+              )}
             </label>
           ))}
+          </div>
         </div>
       )}
     </div>

@@ -44,7 +44,7 @@ export function HorasDaEquipe({ osId, linhas, onChange, tempoEfetivoMinutos, hhE
   const usarPrevistas = () => onChange((atuais) => atuais.map((l) => (!l.extra && l.previstas != null ? { ...l, horas: l.previstas, ilegivel: false } : l)));
 
   return (
-    <div className="space-y-3 rounded-md border p-3">
+    <div className="space-y-3">
       <div>
         <p className="text-sm font-medium">Horas trabalhadas</p>
         <p className="text-xs text-muted-foreground">

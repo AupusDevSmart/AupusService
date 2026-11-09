@@ -137,7 +137,7 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
 
       {/* O número que importa, em destaque: o real contra o previsto */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <div className="rounded-md border bg-muted p-3">
+        <div className="rounded-md bg-muted p-3">
           <p className="text-xs text-muted-foreground">
             {apurado ? 'Custo real' : aoVivo ? 'Custo até agora' : 'Custo real (sai no Executar)'}
           </p>
@@ -152,7 +152,7 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
             </p>
           )}
         </div>
-        <div className="rounded-md border p-3">
+        <div className="p-3">
           <p className="text-xs text-muted-foreground">Previsto</p>
           <p className="text-lg font-medium leading-tight">{formatCurrency(previsto)}</p>
           {custos.outros_fora_do_total ? (
@@ -163,7 +163,7 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
             )
           )}
         </div>
-        <div className="rounded-md border p-3">
+        <div className="p-3">
           <p className="text-xs text-muted-foreground">Diferença</p>
           <p className={`text-lg font-medium leading-tight ${mostraReal ? COR_DA_DIFERENCA[diferenca.sentido] : 'text-muted-foreground'}`}>
             {mostraReal ? diferenca.texto : '—'}
@@ -174,7 +174,7 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
       {naturezas.length > 0 && (
         <div>
           <p className="mb-1.5 text-xs font-medium text-muted-foreground">Por natureza</p>
-          <div className="divide-y rounded-md border text-sm">
+          <div className="divide-y divide-border text-sm">
             <div className="grid grid-cols-[1fr_auto_auto] gap-3 px-3 py-1.5 text-xs text-muted-foreground sm:grid-cols-[1fr_7rem_7rem_9rem]">
               <span>Natureza</span>
               <span className="w-24 text-right sm:w-auto">Previsto</span>
@@ -207,7 +207,7 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
         <div>
           <p className="text-xs font-medium text-muted-foreground">Custo programado por instrução</p>
           <p className="mb-1.5 text-xs text-muted-foreground">O real é medido por natureza, no quadro acima.</p>
-          <ul className="divide-y rounded-md border text-sm">
+          <ul className="divide-y divide-border text-sm">
             {custos.instrucoes.map((i, indice) => {
               const valor = valorDaInstrucao(i);
               return (
@@ -249,7 +249,7 @@ export function CustosDaOS({ osId, status, custos, itensOrcamento, podeCorrigir,
           </div>
         </div>
       ) : (
-        <details className="rounded-md border px-3 py-2">
+        <details>
           <summary className="cursor-pointer text-sm text-muted-foreground">O detalhe: cada pessoa, material e outro custo</summary>
           <div className="mt-3 space-y-3 text-sm">
             {custos.equipe.length > 0 && (

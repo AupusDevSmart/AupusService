@@ -1,7 +1,6 @@
 // src/features/execucao-os/hooks/useExecucaoOSFilters.ts
 import { useMemo } from 'react';
 import { execucaoOSFilterConfig } from '../config/filter-config';
-import { execucaoOSFormFields, execucaoOSFormGroups } from '../config/form-config';
 import type { ExecucaoOSFilters } from '../types';
 import type { QueryExecucaoOSApiParams } from '@/services/execucao-os.service';
 import { filtrosDePlantaEquipamentoPeriodo } from '@/components/common/filtros/filtros-da-lista';
@@ -26,12 +25,6 @@ export function useExecucaoOSFilters(currentFilters: ExecucaoOSFilters) {
     ],
     [plantasDoFiltro.opcoes, plantasDoFiltro.carregando, currentFilters.planta],
   );
-
-  // Retorna os campos do formulário (imutável)
-  const formFields = useMemo(() => execucaoOSFormFields, []);
-
-  // Retorna os grupos do formulário (imutável)
-  const formGroups = useMemo(() => execucaoOSFormGroups, []);
 
   // Converte filtros do frontend para parâmetros da API
   const toApiParams = useMemo(() => {
@@ -83,8 +76,6 @@ export function useExecucaoOSFilters(currentFilters: ExecucaoOSFilters) {
 
   return {
     filterConfigs,
-    formFields,
-    formGroups,
     toApiParams,
   };
 }

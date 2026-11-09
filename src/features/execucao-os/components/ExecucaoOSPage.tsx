@@ -16,25 +16,12 @@ import { useExecucaoOSApi } from '../hooks/useExecucaoOSApi';
 import { useExecucaoOSFilters } from '../hooks/useExecucaoOSFilters';
 import { execucaoOSTableColumns } from '../config/table-config';
 import { createExecucaoOSTableActions } from '../config/actions-config';
-import { ActionConfirmPanel, type PendingAction, type DadosDaConfirmacao, type RascunhoDoExecutar } from './ActionConfirmPanel';
-import { AcoesDaOS } from './AcoesDaOS';
-import { OQueFoiFeito } from './OQueFoiFeito';
-import { CustosDaOS } from './CustosDaOS';
-import { AnexosDaOS } from './AnexosDaOS';
-import { BotaoPdfDaOS } from './BotaoPdfDaOS';
+import type { PendingAction, DadosDaConfirmacao } from './ActionConfirmPanel';
 import { BotaoExportarOS } from './BotaoExportarOS';
 import { ConferirCodigo } from './ConferirCodigo';
-import { ComentariosDoRegistro } from '@/features/comentarios/components/ComentariosDoRegistro';
-import {
-  montarProgresso,
-  tarefasPendentes,
-  type ProgressoDaExecucao,
-} from '../utils/progresso-da-execucao';
-import { acoesDisponiveis, statusDaExecucao } from '../config/actions-config';
-import { RecursosUsados } from './RecursosUsados';
-import { ConcluirExecucao } from './ConcluirExecucao';
-import { custoDoMaterialUsado, materiaisDaExecucao, type MaterialUsado } from '../utils/recursos-usados';
-import { maoDeObraDasHoras, outrosDoPainel } from '../utils/custo-ate-agora';
+import { SheetDaExecucao } from './sheet/SheetDaExecucao';
+import { statusLabels } from '../config/labels';
+import { statusDaExecucao } from '../config/actions-config';
 
 // Tipos
 import type { ExecucaoOS, ExecucaoOSFilters } from '../types';
@@ -42,8 +29,6 @@ import { execucaoOSTransitionsService, type ExecutarOSDto } from '@/services/exe
 import type { IconeDeAcao } from '@/core/types/base';
 import { toast } from '@/hooks/use-toast';
 import { formatApiError } from '@/utils/api-error';
-import { execucaoOSApi } from '@/services/execucao-os.service';
-import { registrosAlterados } from '../utils/registro-da-execucao';
 import { useUserStore } from '@/store/useUserStore';
 
 // Dashboard Component
@@ -63,6 +48,14 @@ const initialFilters: ExecucaoOSFilters = {
   limit: LINHAS_POR_PAGINA_PADRAO,
 };
 
+/** "OSS-2026-0002 · O&M Preventiva... · Em execução": o que é a OS, no título do sheet */
+function tituloDoSheet(os: ExecucaoOS): string {
+  const status = statusDaExecucao(os);
+  return [os.numero_os?.trim() || os.numeroOS, os.descricao?.trim(), status ? (statusLabels[status] ?? status) : null]
+    .filter(Boolean)
+    .join(' · ');
+}
+
 export function ExecucaoOSPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [linhasPorPagina, setLinhasPorPagina] = useLinhasPorPagina('execucao-os');
@@ -75,14 +68,6 @@ export function ExecucaoOSPage() {
   const [conferencia, setConferencia] = useState<{ aberta: boolean; codigo: string | null }>({ aberta: false, codigo: null });
   const temPermissao = useUserStore((s) => s.hasPermission);
   const ehCliente = useUserStore((s) => s.getUserRole()) === 'proprietario';
-
-  // Tarefas e checklist da OS aberta, vivos: a seção "O que foi feito" grava
-  // item a item, e o painel de Executar precisa saber o que ainda está pendente.
-  const [progresso, setProgresso] = useState<ProgressoDaExecucao>({ tarefas: [] });
-  // O material registrado na seção "usados", vivo: o custo até agora muda a cada registro
-  const [materiaisVivos, setMateriaisVivos] = useState<MaterialUsado[] | null>(null);
-  // As horas e os outros custos digitados no painel de concluir, ainda não gravados
-  const [rascunho, setRascunho] = useState<RascunhoDoExecutar | null>(null);
 
   // Hook de API
   const {
@@ -97,16 +82,10 @@ export function ExecucaoOSPage() {
   } = useExecucaoOSApi();
 
   // Hook de filtros
-  const { filterConfigs, formFields, formGroups, toApiParams } = useExecucaoOSFilters(filters);
+  const { filterConfigs, toApiParams } = useExecucaoOSFilters(filters);
 
   // Modal genérico
   const { modalState, openModal, closeModal } = useGenericModal<ExecucaoOS>();
-
-  useEffect(() => {
-    const os = modalState.entity;
-    setProgresso(montarProgresso(os?.tarefas_os ?? [], os?.checklist ?? []));
-    setMateriaisVivos(null);
-  }, [modalState.entity]);
 
   // ============================
   // View-first action handlers
@@ -125,26 +104,24 @@ export function ExecucaoOSPage() {
     }
   };
 
-  // A linha da tabela pode vir sem materiais/ferramentas: o sheet abre com a OS
-  // completa, senão o editar mostraria cartões vazios e salvaria em cima disso.
-  const completa = async (execucao: ExecucaoOS): Promise<ExecucaoOS> => {
+  // O sheet abre com a OS completa: a linha da tabela vem sem checklist, histórico e custos.
+  // Sem ela, abre com a linha e avisa (antes caía na linha calado)
+  const handleView = async (execucao: ExecucaoOS) => {
+    setPendingAction(null);
     try {
-      return (await fetchOne(execucao.id)) || execucao;
-    } catch {
-      return execucao;
+      openModal('view', (await fetchOne(execucao.id)) || execucao);
+    } catch (error) {
+      toast({ title: 'A OS abriu incompleta', description: `Feche e abra de novo. ${formatApiError(error)}`, variant: 'destructive' });
+      openModal('view', execucao);
     }
   };
 
-  const handleView = async (execucao: ExecucaoOS) => {
-    setPendingAction(null);
-    openModal('view', await completa(execucao));
-  };
-
-  const handleEdit = async (execucao: ExecucaoOS) => {
-    setPendingAction(null);
-    const status = (execucao.statusExecucao || execucao.status)?.toUpperCase();
-    const detalhe = await completa(execucao);
-    openModal(status === 'FINALIZADA' || status === 'CANCELADA' ? 'view' : 'edit', detalhe);
+  // Relê a OS aberta (o custo real que a API refez) e a lista
+  const recarregar = async () => {
+    const id = modalState.entity?.id;
+    if (!id) return;
+    const [atual] = await Promise.all([fetchOne(id), fetchItems(toApiParams)]);
+    if (atual) openModal('view', atual);
   };
 
   // Confirm action handler - recebe objeto com todos os campos do painel
@@ -294,47 +271,6 @@ export function ExecucaoOSPage() {
     setFilters(prev => ({ ...prev, page }));
   };
 
-  // O editar grava o que a OS em andamento registra — consumo de material e
-  // uso de ferramenta — e só o que mudou. Antes este submit descartava os dados
-  // e fechava, e quem editava perdia tudo sem aviso (D1 da
-  // SPEC-ATALHOS-E-ACOES-DA-OS). O resto do formulário é só leitura no editar.
-  const handleSubmit = async (data: Partial<ExecucaoOS> & Record<string, unknown>) => {
-    const entity = modalState.entity;
-    if (!entity) return;
-
-    const registros = registrosAlterados(
-      {
-        materiais: entity.materiaisConsumidos ?? [],
-        ferramentas: entity.ferramentasUtilizadas ?? [],
-      },
-      {
-        materiais: data.materiaisConsumidos ?? [],
-        ferramentas: data.ferramentasUtilizadas ?? [],
-      },
-    );
-
-    try {
-      if (registros.materiais.length > 0) {
-        await execucaoOSApi.registrarMateriais(entity.id, registros.materiais);
-      }
-      if (registros.ferramentas.length > 0) {
-        await execucaoOSApi.registrarFerramentas(entity.id, registros.ferramentas);
-      }
-      const total = registros.materiais.length + registros.ferramentas.length;
-      // Na OS em andamento, o consumo e o uso gravam na hora, na seção do topo: "Nada a salvar"
-      // fazia parecer que o registrado lá não tinha ido
-      toast({
-        title: total > 0 ? 'Execução salva' : 'Nada a salvar no formulário',
-        ...(total === 0 && { description: 'Materiais e ferramentas usados são salvos na hora, ao registrar.' }),
-      });
-      closeModal();
-      await fetchItems(toApiParams);
-    } catch (error) {
-      toast({ title: 'Erro ao salvar a execução', description: formatApiError(error), variant: 'destructive' });
-      throw error; // mantém o sheet aberto com o que foi digitado
-    }
-  };
-
   const rascunhoDoComentario = useRef(false);
   const handleCloseModal = () => {
     // Comentário digitado e não enviado não some calado ao fechar (SN-48)
@@ -342,11 +278,6 @@ export function ExecucaoOSPage() {
     rascunhoDoComentario.current = false;
     setPendingAction(null);
     closeModal();
-  };
-
-  const getModalEntity = () => {
-    if (!modalState.entity) return null;
-    return modalState.entity;
   };
 
   // Handlers para filtros do dashboard
@@ -449,195 +380,39 @@ export function ExecucaoOSPage() {
               onPageChange={handlePageChange}
               onLimitChange={handleLimitChange}
               onView={handleView}
-              onEdit={handleEdit}
               emptyMessage="Nenhuma execução de OS encontrada."
               emptyIcon={<Eye className="h-12 w-12 text-gray-400" />}
             />
           </div>
         </div>
 
-        {/* Modal Genérico */}
-        {modalState.entity && (() => {
-          const status = statusDaExecucao(modalState.entity);
-          const emExecucao = status === 'EM_EXECUCAO' || status === 'PAUSADA';
-          const executada = status === 'EXECUTADA' || status === 'AUDITADA' || status === 'FINALIZADA';
-          const temProgresso = progresso.tarefas.length > 0;
-          const podeExecutar = temPermissao('execucao_os.manage', 'execucao_os.executar');
-          // A OS em andamento se lê de cima para baixo (06/nov/2026): o que foi feito, o que foi
-          // usado, as fotos, o custo até agora, os comentários e, por último, depois de tudo,
-          // concluir — com o motivo do que faltou e o botão. O Executar sai do topo: lá, convidava
-          // a concluir antes de marcar
-          const concluirNoFim =
-            modalState.mode !== 'create' && emExecucao && acoesDisponiveis(status, temPermissao).some((a) => a.acao === 'executar');
-          const pendentes = tarefasPendentes(progresso).map((t) => ({ id: t.id, nome: t.nome }));
-          // Concluindo: o painel do Executar aberto no fim (os custos vão para dentro dele)
-          const concluindo = concluirNoFim && pendingAction === 'executar';
-          const quadroDeCustos = modalState.entity?.custos ? (
-            <div className="rounded-md border p-4">
-              <CustosDaOS
-                osId={modalState.entity.id}
-                status={status ?? ''}
-                custos={modalState.entity.custos}
-                itensOrcamento={modalState.entity.itens_orcamento}
-                aoVivo={
-                  emExecucao
-                    ? {
-                        // O material da OS lida é a base: a seção "usados" só avisa quando muda
-                        // (o efeito do filho roda antes do reset do pai, e a OS sem material
-                        // ficava sem custo até agora)
-                        material: custoDoMaterialUsado(materiaisVivos ?? materiaisDaExecucao(modalState.entity.materiaisConsumidos ?? [])),
-                        maoDeObra: rascunho ? maoDeObraDasHoras(rascunho.horas, modalState.entity.tecnicos) : null,
-                        outros: rascunho && modalState.entity.itens_orcamento ? outrosDoPainel(rascunho.outros) : null,
-                      }
-                    : null
-                }
-                // Na auditada, só quem gerencia: o auditor aprovou um custo (a API recusa igual)
-                podeCorrigir={
-                  status === 'AUDITADA'
-                    ? temPermissao('execucao_os.manage')
-                    : temPermissao('execucao_os.manage', 'execucao_os.executar')
-                }
-                onCorrigido={async () => {
-                  // A lista da tabela também tem o custo real
-                  const [atual] = await Promise.all([fetchOne(modalState.entity!.id), fetchItems(toApiParams)]);
-                  if (atual) openModal(modalState.mode, atual);
-                }}
-              />
-            </div>
-          ) : null;
-          return (
+        {/* O sheet da OS: uma ordem só em qualquer status (sheet/SheetDaExecucao.tsx) */}
+        {modalState.entity && (
           <BaseModal
             isOpen={modalState.isOpen}
-            mode={modalState.mode}
-            entity={getModalEntity()!}
-            title={`${modalState.mode === 'view' ? 'Visualizar' : modalState.mode === 'edit' ? 'Editar' : 'Finalizar'} Execução`}
-            formFields={formFields}
-            groups={formGroups}
+            mode="view"
+            entity={modalState.entity}
+            title={tituloDoSheet(modalState.entity)}
+            formFields={[]}
             topo={
-              modalState.mode === 'view' || modalState.mode === 'edit'
-                ? ({ alteracoesPendentes }) => {
-                    const anexos = (
-                      <div className="rounded-md border p-4">
-                        <AnexosDaOS
-                          osId={modalState.entity!.id}
-                          status={status}
-                          soGerais={(emExecucao || executada) && temProgresso}
-                          podeEditar={podeExecutar}
-                        />
-                      </div>
-                    );
-                    return (
-                      <div className="space-y-4">
-                        <div className="rounded-md border p-4">
-                          {pendingAction && !(concluirNoFim && pendingAction === 'executar') ? (
-                            // Confirmação da ação escolhida (na tabela ou aqui)
-                            <ActionConfirmPanel
-                              key={pendingAction}
-                              action={pendingAction}
-                              entity={modalState.entity}
-                              onConfirm={handleConfirmAction}
-                              onVoltar={() => setPendingAction(null)}
-                              tarefasPendentes={pendentes}
-                              podeInformarValorDaHora={temPermissao('execucao_os.manage')}
-                            />
-                          ) : (
-                            <div className="space-y-3">
-                              <AcoesDaOS
-                                status={status}
-                                temPermissao={temPermissao}
-                                alteracoesPendentes={alteracoesPendentes}
-                                onAcao={setPendingAction}
-                                ocultar={concluirNoFim ? ['executar'] : []}
-                                aviso={concluirNoFim ? 'Marque o que foi feito e o que foi usado; para concluir, desça até o fim.' : undefined}
-                                bloqueadas={pendingAction === 'executar' ? 'Feche o painel "Concluir a execução", no fim, para escolher outra ação.' : undefined}
-                              />
-                              {/* O PDF da OS (SN-62): prévia antes de finalizar, com o código depois */}
-                              <BotaoPdfDaOS os={modalState.entity!} />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* O que foi feito: marca-se durante a execução; depois,
-                            é o registro que o auditor e o relatório leem. */}
-                        {(emExecucao || executada) && temProgresso && (
-                          <div className="rounded-md border p-4">
-                            <OQueFoiFeito
-                              status={status}
-                              osId={modalState.entity!.id}
-                              progresso={progresso}
-                              editavel={emExecucao && podeExecutar}
-                              onChange={setProgresso}
-                            />
-                          </div>
-                        )}
-
-                        {/* O que foi usado, registrado no próprio sheet (no Visualizar também) */}
-                        {emExecucao && (
-                          <div className="rounded-md border p-4">
-                            <RecursosUsados
-                              key={modalState.entity!.id}
-                              osId={modalState.entity!.id}
-                              materiais={modalState.entity!.materiaisConsumidos}
-                              ferramentas={modalState.entity!.ferramentasUtilizadas}
-                              editavel={podeExecutar}
-                              onMateriais={setMateriaisVivos}
-                            />
-                          </div>
-                        )}
-
-                        {/* Na OS em andamento, as fotos vêm logo depois do que foi usado */}
-                        {concluirNoFim && anexos}
-
-                        {/* SN-93: o custo com destaque. Com o painel de concluir aberto, ele vai para
-                            dentro do painel, depois das horas e dos outros custos e antes do botão */}
-                        {!concluindo && quadroDeCustos}
-
-                        {/* A prova do que foi feito: fotos e documentos, com quem enviou e quando.
-                            Na OS em andamento, vem antes de concluir */}
-                        {!concluirNoFim && anexos}
-
-                        {/* Conversa da equipe sobre a OS; o interno não aparece para o cliente (SN-48) */}
-                        <div className="rounded-md border p-4">
-                          <ComentariosDoRegistro
-                            alvo="ordem_servico"
-                            registroId={modalState.entity!.id}
-                            podeComentar={temPermissao('execucao_os.manage', 'execucao_os.executar')}
-                            ehCliente={ehCliente}
-                            onRascunho={(tem) => (rascunhoDoComentario.current = tem)}
-                          />
-                        </div>
-                      </div>
-                    );
-                  }
-                : undefined
+              <SheetDaExecucao
+                os={modalState.entity}
+                pendingAction={pendingAction}
+                onAcao={setPendingAction}
+                onConfirmar={handleConfirmAction}
+                temPermissao={temPermissao}
+                ehCliente={ehCliente}
+                onRecarregar={recarregar}
+                onRascunhoDoComentario={(tem) => (rascunhoDoComentario.current = tem)}
+              />
             }
             onClose={handleCloseModal}
-            onSubmit={handleSubmit}
+            onSubmit={async () => {}}
             width="w-[1200px]"
             loading={loading}
-          >
-            {/* O último do sheet, depois dos custos, dos comentários e do formulário: o botão fica lá embaixo */}
-            {concluirNoFim && (
-              <div className="rounded-md border p-4">
-                <ConcluirExecucao
-                  aberto={pendingAction === 'executar'}
-                  onAbrir={() => setPendingAction('executar')}
-                  onFechar={() => setPendingAction(null)}
-                  entity={modalState.entity}
-                  onConfirm={handleConfirmAction}
-                  tarefasPendentes={pendentes}
-                  totalDeTarefas={progresso.tarefas.length}
-                  podeInformarValorDaHora={temPermissao('execucao_os.manage')}
-                  bloqueado={pendingAction && pendingAction !== 'executar' ? 'Termine ou feche a ação aberta no topo antes de concluir.' : undefined}
-                  onRascunho={setRascunho}
-                  custos={quadroDeCustos}
-                />
-              </div>
-            )}
-          </BaseModal>
-          );
-        })()}
-        <ConferirCodigo
+          />
+        )}
+                <ConferirCodigo
           aberto={conferencia.aberta}
           onAbertoChange={(aberta) => setConferencia((atual) => ({ ...atual, aberta }))}
           codigoInicial={conferencia.codigo}

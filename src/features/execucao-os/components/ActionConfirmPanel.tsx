@@ -612,7 +612,7 @@ export function ActionConfirmPanel({
       {/* Executar: primeiro o que faltou (06/nov/2026). O painel fica no fim do sheet, depois de
           "O que foi feito": marca-se o que fez, desce, justifica o que sobrou e conclui */}
       {pendentes.length > 0 && (
-        <div className="space-y-3 rounded-md border p-3">
+        <div className="space-y-3">
           <div>
             <p className="text-sm font-medium">
               {pendentes.length === 1 ? 'Uma tarefa não foi marcada como feita' : `${pendentes.length} tarefas não foram marcadas como feitas`}
@@ -685,7 +685,7 @@ export function ActionConfirmPanel({
       )}
 
       {detalhes.length > 0 && (
-        <details className="rounded-md border px-3 py-2">
+        <details>
           <summary className="cursor-pointer text-sm text-muted-foreground">Mais detalhes</summary>
           <div className="mt-3 space-y-3">{detalhes.map(campo)}</div>
         </details>
