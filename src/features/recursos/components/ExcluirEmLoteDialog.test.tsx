@@ -11,7 +11,9 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
  * sai e o que fica em uso); só depois o excluir, com o mesmo pedido.
  */
 describe('ExcluirEmLoteDialog', () => {
-  beforeEach(() => excluirEmLote.mockReset());
+  beforeEach(() => {
+    excluirEmLote.mockReset();
+  });
 
   it('mostra o que sai e o que fica, e exclui com o mesmo pedido', async () => {
     excluirEmLote

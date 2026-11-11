@@ -1,5 +1,6 @@
 import React from 'react';
 import ErrorBoundary from './ErrorBoundary';
+import { AvisoDeExclusoes } from '@/core/features/sincronizacao/AvisoDeExclusoes';
 
 export function Layout({ children, className = '', asidePosition = 'left' }: { children: React.ReactNode, className?: string, asidePosition?: 'left' | 'right' }) {
   const hasAside = React.Children.toArray(children).some(
@@ -48,6 +49,8 @@ Layout.Main = function Main({ children, className = '', withSidebar = false }: {
       <main
         className={`bg-secondary h-full ${withSidebar ? 'w-full lg:w-5/6' : 'w-full'} flex flex-col items-start justify-start overflow-auto p-6 lg:p-6 gap-6 pt-2 lg:pt-2 ${className}`}
       >
+        {/* As exclusões feitas no NexON esperando decisão (10/11/2026): só para quem gerencia o compartilhamento */}
+        <AvisoDeExclusoes />
         {children}
       </main>
     </ErrorBoundary>

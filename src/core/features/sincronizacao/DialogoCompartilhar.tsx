@@ -92,7 +92,7 @@ export function DialogoCompartilhar({
         await onParar(alvo.id);
         toast({
           title: 'Compartilhamento encerrado',
-          description: `O registro continua no ${OUTRO_PRODUTO}, mas para de receber alterações.`,
+          description: `O registro continua no ${OUTRO_PRODUTO}, e as alterações deixam de atravessar nos dois sentidos.`,
         });
       }
       onFechar();
@@ -168,8 +168,8 @@ export function DialogoCompartilhar({
             ) : (
               <span>
                 <span className="font-medium text-foreground">{alvo.nome}</span> continua no{' '}
-                {OUTRO_PRODUTO}, mas para de receber as alterações feitas aqui.
-                Nada é apagado de lá.
+                {OUTRO_PRODUTO}, e as alterações deixam de atravessar, daqui para lá e de lá para cá. Vale também para
+                o que fica debaixo dele. Nada é apagado de lá.
               </span>
             )}
           </AlertDialogDescription>

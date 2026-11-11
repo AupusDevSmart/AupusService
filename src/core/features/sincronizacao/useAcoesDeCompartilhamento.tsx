@@ -57,7 +57,8 @@ export function useAcoesDeCompartilhamento<T extends RegistroCompartilhavel>({
           key: 'compartilhar',
           label: `Compartilhar com o ${OUTRO_PRODUTO}`,
           icon: <Share2 className="h-4 w-4" />,
-          condition: (r: T) => !estadoDe(r)?.compartilhado,
+          // Também com a recusa de lá: compartilhar de novo manda o vínculo, que religa o outro lado
+          condition: (r: T) => !estadoDe(r)?.compartilhado || !!estadoDe(r)?.recusado,
           handler: (r: T) => setAlvo({ id: r?.id, nome: nome(r), acao: 'ligar' }),
         },
         {

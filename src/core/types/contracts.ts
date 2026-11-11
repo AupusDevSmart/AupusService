@@ -288,7 +288,8 @@ export interface UseUnidadesContract {
   refetch: () => void;
   createUnidade: (data: CreateUnidadeDoApp) => Promise<UnidadeDoApp>;
   updateUnidade: (params: { id: string; data: UpdateUnidadeDoApp }) => Promise<UnidadeDoApp>;
-  deleteUnidade: (id: string) => Promise<void>;
+  /** O id, ou o id com a confirmação de excluir o que é compartilhado com o NexON (409 sem ela) */
+  deleteUnidade: (alvo: string | ExclusaoDeUnidade) => Promise<void>;
   isCreating: boolean;
   isUpdating: boolean;
   isDeleting: boolean;
@@ -578,4 +579,10 @@ export interface SharedPagesProviderProps {
   hooks: SharedHooks;
   stores: SharedStores;
   children: React.ReactNode;
+}
+
+/** A exclusão da instalação com a confirmação do que é compartilhado com o outro produto (10/11/2026) */
+export interface ExclusaoDeUnidade {
+  id: string;
+  confirmarCompartilhado?: boolean;
 }
